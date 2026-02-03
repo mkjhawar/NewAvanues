@@ -5,7 +5,7 @@
  *
  * Author: Manoj Jhawar
  * Created: 2026-01-16
- * Migrated from: LearnAppCore CrossPlatformDetector.kt
+ * Refactored: 2026-02-02 - Consolidated redundant detection methods into generic pattern
  *
  * Detects if app is built with cross-platform framework (Flutter, React Native, etc.)
  * to enable enhanced fallback label generation for unlabeled elements.
@@ -53,6 +53,27 @@ interface NodeInfo {
 }
 
 /**
+ * Configuration for detecting a specific framework.
+ *
+ * @property framework The framework to detect
+ * @property classPatterns Class name patterns to match
+ * @property resourcePatterns Resource ID patterns to match (optional)
+ * @property packagePatterns Package name patterns to match (optional)
+ * @property ignoreCase Whether to ignore case in pattern matching
+ * @property checkHierarchy Whether to check parent chain for surface/framework patterns
+ * @property hierarchyKeywords Keywords to look for in parent chain
+ */
+private data class FrameworkDetectionConfig(
+    val framework: AppFramework,
+    val classPatterns: List<String>,
+    val resourcePatterns: List<String> = emptyList(),
+    val packagePatterns: List<String> = emptyList(),
+    val ignoreCase: Boolean = false,
+    val checkHierarchy: Boolean = false,
+    val hierarchyKeywords: List<String> = emptyList()
+)
+
+/**
  * Cross-Platform Framework Detector
  *
  * Analyzes app view hierarchy to detect underlying framework.
@@ -73,6 +94,79 @@ interface NodeInfo {
 object FrameworkDetector {
     private const val MAX_RECURSION_DEPTH = 3
     private const val MAX_FLUTTER_VERSION_DEPTH = 5
+    private const val MAX_PARENT_DEPTH = 5
+
+    /**
+     * Framework detection configurations in priority order.
+     * Higher priority frameworks (game engines that lack accessibility) are checked first.
+     */
+    private val detectionConfigs = listOf(
+        // Game engines (highest priority - typically lack ALL semantic labels)
+        FrameworkDetectionConfig(
+            framework = AppFramework.UNITY,
+            classPatterns = FrameworkPatterns.unityClassPatterns,
+            packagePatterns = FrameworkPatterns.unityPackagePatterns,
+            checkHierarchy = true,
+            hierarchyKeywords = listOf("Unity")
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.UNREAL,
+            classPatterns = FrameworkPatterns.unrealClassPatterns,
+            packagePatterns = FrameworkPatterns.unrealPackagePatterns,
+            ignoreCase = true,
+            checkHierarchy = true,
+            hierarchyKeywords = listOf("UE", "Game", "Unreal")
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.GODOT,
+            classPatterns = FrameworkPatterns.godotClassPatterns,
+            packagePatterns = FrameworkPatterns.godotPackagePatterns,
+            ignoreCase = true
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.COCOS2D,
+            classPatterns = FrameworkPatterns.cocos2dClassPatterns,
+            packagePatterns = FrameworkPatterns.cocos2dPackagePatterns,
+            ignoreCase = true
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.DEFOLD,
+            classPatterns = FrameworkPatterns.defoldClassPatterns,
+            packagePatterns = FrameworkPatterns.defoldPackagePatterns,
+            ignoreCase = true
+        ),
+        // Cross-platform UI frameworks
+        FrameworkDetectionConfig(
+            framework = AppFramework.FLUTTER,
+            classPatterns = FrameworkPatterns.flutterClassPatterns,
+            resourcePatterns = FrameworkPatterns.flutterResourcePatterns
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.REACT_NATIVE,
+            classPatterns = FrameworkPatterns.reactNativeClassPatterns,
+            resourcePatterns = FrameworkPatterns.reactNativeResourcePatterns
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.COMPOSE,
+            classPatterns = FrameworkPatterns.composeClassPatterns
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.SWIFTUI,
+            classPatterns = FrameworkPatterns.swiftUIClassPatterns
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.XAMARIN,
+            classPatterns = FrameworkPatterns.xamarinClassPatterns,
+            packagePatterns = FrameworkPatterns.xamarinPackagePatterns,
+            ignoreCase = true
+        ),
+        FrameworkDetectionConfig(
+            framework = AppFramework.CORDOVA,
+            classPatterns = FrameworkPatterns.cordovaClassPatterns,
+            packagePatterns = FrameworkPatterns.cordovaPackagePatterns,
+            ignoreCase = true
+        )
+    )
 
     /**
      * Detect if app is built with cross-platform framework
@@ -93,140 +187,28 @@ object FrameworkDetector {
             return FrameworkDetectionResult.native(packageName, currentTimeMillis)
         }
 
-        val signals = mutableListOf<DetectionSignal>()
-
         try {
-            // Check for Unity (HIGHEST PRIORITY - Unity games often lack ALL semantic labels)
-            if (hasUnitySignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.UNITY,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
+            // Check each framework configuration in priority order
+            for (config in detectionConfigs) {
+                val signals = mutableListOf<DetectionSignal>()
 
-            // Check for Unreal Engine (HIGH PRIORITY - similar to Unity)
-            signals.clear()
-            if (hasUnrealSignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.UNREAL,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
+                if (hasFrameworkSignatures(rootNode, packageName, config, signals)) {
+                    // Special handling for Flutter version detection
+                    val flutterVersion = if (config.framework == AppFramework.FLUTTER) {
+                        detectFlutterVersion(rootNode, packageName)
+                    } else {
+                        FlutterVersion.NOT_FLUTTER
+                    }
 
-            // Check for Flutter
-            signals.clear()
-            if (hasFlutterSignatures(rootNode, packageName, signals)) {
-                val flutterVersion = detectFlutterVersion(rootNode, packageName)
-                return FrameworkDetectionResult(
-                    framework = AppFramework.FLUTTER,
-                    confidence = calculateConfidence(signals),
-                    flutterVersion = flutterVersion,
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
-
-            // Check for React Native
-            signals.clear()
-            if (hasReactNativeSignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.REACT_NATIVE,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
-
-            // Check for Compose (Android)
-            signals.clear()
-            if (hasComposeSignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.COMPOSE,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
-
-            // Check for SwiftUI (iOS)
-            signals.clear()
-            if (hasSwiftUISignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.SWIFTUI,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
-
-            // Check for Xamarin
-            signals.clear()
-            if (hasXamarinSignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.XAMARIN,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
-
-            // Check for Cordova/Ionic
-            signals.clear()
-            if (hasCordovaSignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.CORDOVA,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
-
-            // Check for Godot Engine
-            signals.clear()
-            if (hasGodotSignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.GODOT,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
-
-            // Check for Cocos2d-x Engine
-            signals.clear()
-            if (hasCocos2dSignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.COCOS2D,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
-            }
-
-            // Check for Defold Engine
-            signals.clear()
-            if (hasDefoldSignatures(rootNode, packageName, signals)) {
-                return FrameworkDetectionResult(
-                    framework = AppFramework.DEFOLD,
-                    confidence = calculateConfidence(signals),
-                    detectionSignals = signals,
-                    packageName = packageName,
-                    timestamp = currentTimeMillis
-                )
+                    return FrameworkDetectionResult(
+                        framework = config.framework,
+                        confidence = calculateConfidence(signals),
+                        flutterVersion = flutterVersion,
+                        detectionSignals = signals,
+                        packageName = packageName,
+                        timestamp = currentTimeMillis
+                    )
+                }
             }
 
             return FrameworkDetectionResult.native(packageName, currentTimeMillis)
@@ -234,6 +216,105 @@ object FrameworkDetector {
         } catch (e: Exception) {
             return FrameworkDetectionResult.native(packageName, currentTimeMillis)
         }
+    }
+
+    /**
+     * Generic framework signature detection using configuration.
+     *
+     * Checks class names, resource IDs, package names, and optionally
+     * traverses the parent hierarchy for framework-specific patterns.
+     *
+     * @param node The node to check
+     * @param packageName App package name
+     * @param config Framework detection configuration
+     * @param signals List to add detection signals to
+     * @return true if framework signatures are found
+     */
+    private fun hasFrameworkSignatures(
+        node: NodeInfo,
+        packageName: String,
+        config: FrameworkDetectionConfig,
+        signals: MutableList<DetectionSignal>
+    ): Boolean {
+        val className = node.className ?: ""
+        val resourceId = node.resourceId ?: ""
+
+        // Check class name patterns
+        if (matchesPatterns(className, config.classPatterns, config.ignoreCase)) {
+            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
+            return true
+        }
+
+        // Check resource ID patterns
+        if (config.resourcePatterns.isNotEmpty() &&
+            matchesPatterns(resourceId, config.resourcePatterns, config.ignoreCase)) {
+            signals.add(DetectionSignal(SignalType.RESOURCE_ID, resourceId, "root"))
+            return true
+        }
+
+        // Check package name patterns
+        if (config.packagePatterns.isNotEmpty() &&
+            matchesPatterns(packageName, config.packagePatterns, config.ignoreCase)) {
+            signals.add(DetectionSignal(SignalType.PACKAGE_NAME, packageName))
+            return true
+        }
+
+        // Check parent hierarchy for surface/framework patterns (for game engines)
+        if (config.checkHierarchy && config.hierarchyKeywords.isNotEmpty()) {
+            if (checkParentHierarchy(node, config.hierarchyKeywords, signals)) {
+                return true
+            }
+        }
+
+        // Recursively check children
+        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
+            val childClass = childNode.className ?: ""
+            if (matchesPatterns(childClass, config.classPatterns, config.ignoreCase)) {
+                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    /**
+     * Check if text matches any pattern in the list.
+     */
+    private fun matchesPatterns(text: String, patterns: List<String>, ignoreCase: Boolean): Boolean {
+        return patterns.any { pattern ->
+            text.contains(pattern, ignoreCase = ignoreCase)
+        }
+    }
+
+    /**
+     * Check parent hierarchy for framework keywords (used for game engine detection).
+     */
+    private fun checkParentHierarchy(
+        node: NodeInfo,
+        keywords: List<String>,
+        signals: MutableList<DetectionSignal>
+    ): Boolean {
+        val className = node.className ?: ""
+
+        // Check if current node is a rendering surface
+        if (FrameworkPatterns.surfacePatterns.any { className.contains(it) }) {
+            var parent = node.parent
+            var depth = 0
+
+            while (parent != null && depth < MAX_PARENT_DEPTH) {
+                val parentClass = parent.className ?: ""
+                if (keywords.any { parentClass.contains(it, ignoreCase = true) }) {
+                    signals.add(DetectionSignal(SignalType.SURFACE_TYPE, className))
+                    signals.add(DetectionSignal(SignalType.PARENT_CLASS, parentClass))
+                    return true
+                }
+                parent = parent.parent
+                depth++
+            }
+        }
+
+        return false
     }
 
     /**
@@ -242,445 +323,20 @@ object FrameworkDetector {
     private fun calculateConfidence(signals: List<DetectionSignal>): Float {
         if (signals.isEmpty()) return 0.0f
 
-        // Weight different signal types
-        var score = 0.0f
-        for (signal in signals) {
-            score += when (signal.type) {
-                SignalType.CLASS_NAME -> 0.4f
-                SignalType.PACKAGE_NAME -> 0.3f
-                SignalType.RESOURCE_ID -> 0.2f
-                SignalType.HIERARCHY_PATTERN -> 0.3f
-                SignalType.CHILD_CLASS -> 0.2f
-                SignalType.PARENT_CLASS -> 0.2f
-                SignalType.SURFACE_TYPE -> 0.15f
-                SignalType.ACTIVITY_NAME -> 0.25f
+        val score = signals.sumOf { signal ->
+            when (signal.type) {
+                SignalType.CLASS_NAME -> 0.4
+                SignalType.PACKAGE_NAME -> 0.3
+                SignalType.RESOURCE_ID -> 0.2
+                SignalType.HIERARCHY_PATTERN -> 0.3
+                SignalType.CHILD_CLASS -> 0.2
+                SignalType.PARENT_CLASS -> 0.2
+                SignalType.SURFACE_TYPE -> 0.15
+                SignalType.ACTIVITY_NAME -> 0.25
             }
         }
 
-        return minOf(1.0f, score)
-    }
-
-    // ========================================================================
-    // Framework Detection Methods
-    // ========================================================================
-
-    /**
-     * Check if app uses Flutter framework
-     */
-    private fun hasFlutterSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Check for FlutterView class
-        if (FrameworkPatterns.flutterClassPatterns.any { className.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        // Check resource IDs for flutter patterns
-        val resourceId = node.resourceId ?: ""
-        if (FrameworkPatterns.flutterResourcePatterns.any { resourceId.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.RESOURCE_ID, resourceId, "root"))
-            return true
-        }
-
-        // Recursively check children
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (FrameworkPatterns.flutterClassPatterns.any { childClass.contains(it) }) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * Check if app uses React Native framework
-     */
-    private fun hasReactNativeSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Check for ReactRootView class
-        if (FrameworkPatterns.reactNativeClassPatterns.any { className.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        // Check resource IDs for react patterns
-        val resourceId = node.resourceId ?: ""
-        if (FrameworkPatterns.reactNativeResourcePatterns.any { resourceId.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.RESOURCE_ID, resourceId, "root"))
-            return true
-        }
-
-        // Recursively check children
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (FrameworkPatterns.reactNativeClassPatterns.any { childClass.contains(it) }) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * Check if app uses Jetpack Compose
-     */
-    private fun hasComposeSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        if (FrameworkPatterns.composeClassPatterns.any { className.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (FrameworkPatterns.composeClassPatterns.any { childClass.contains(it) }) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * Check if app uses SwiftUI
-     */
-    private fun hasSwiftUISignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        if (FrameworkPatterns.swiftUIClassPatterns.any { className.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (FrameworkPatterns.swiftUIClassPatterns.any { childClass.contains(it) }) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * Check if app uses Xamarin framework
-     */
-    private fun hasXamarinSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Check for mono.android package
-        if (FrameworkPatterns.xamarinClassPatterns.any { className.contains(it, ignoreCase = true) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        // Check package name for Xamarin
-        if (FrameworkPatterns.xamarinPackagePatterns.any { packageName.contains(it, ignoreCase = true) }) {
-            signals.add(DetectionSignal(SignalType.PACKAGE_NAME, packageName))
-            return true
-        }
-
-        return false
-    }
-
-    /**
-     * Check if app uses Cordova/Ionic framework
-     */
-    private fun hasCordovaSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Check for WebView classes (Cordova is WebView-based)
-        if (className.contains("WebView")) {
-            // Check if package name suggests Cordova/Ionic
-            if (FrameworkPatterns.cordovaPackagePatterns.any { packageName.contains(it, ignoreCase = true) }) {
-                signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-                signals.add(DetectionSignal(SignalType.PACKAGE_NAME, packageName))
-                return true
-            }
-        }
-
-        if (FrameworkPatterns.cordovaClassPatterns.any { className.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        return false
-    }
-
-    /**
-     * Check if app uses Unity game engine
-     */
-    private fun hasUnitySignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Signature 1: UnityPlayer view
-        if (FrameworkPatterns.unityClassPatterns.any { className.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        // Signature 2: Package name patterns
-        if (FrameworkPatterns.unityPackagePatterns.any { packageName.contains(it, ignoreCase = true) }) {
-            signals.add(DetectionSignal(SignalType.PACKAGE_NAME, packageName))
-            return true
-        }
-
-        // Signature 3: Shallow view hierarchy (Unity renders to single surface)
-        if (node.childCount <= 1 && className.contains("Player", ignoreCase = true)) {
-            signals.add(DetectionSignal(SignalType.HIERARCHY_PATTERN, "shallow hierarchy with Player"))
-            return true
-        }
-
-        // Signature 4: OpenGL/Vulkan rendering surface with Unity parent
-        if (FrameworkPatterns.surfacePatterns.any { className.contains(it) }) {
-            var parent = node.parent
-            var depth = 0
-            while (parent != null && depth < 5) {
-                val parentClass = parent.className ?: ""
-                if (parentClass.contains("Unity", ignoreCase = true)) {
-                    signals.add(DetectionSignal(SignalType.SURFACE_TYPE, className))
-                    signals.add(DetectionSignal(SignalType.PARENT_CLASS, parentClass))
-                    return true
-                }
-                parent = parent.parent
-                depth++
-            }
-        }
-
-        // Signature 5: Check children recursively for Unity signatures
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (FrameworkPatterns.unityClassPatterns.any { childClass.contains(it) } ||
-                childClass.contains("Unity", ignoreCase = true)) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * Check if app uses Unreal Engine
-     */
-    private fun hasUnrealSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Signature 1: UE4/UE5/Unreal class names
-        if (FrameworkPatterns.unrealClassPatterns.any { className.contains(it, ignoreCase = true) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        // Signature 2: Package name patterns
-        if (FrameworkPatterns.unrealPackagePatterns.any { packageName.contains(it, ignoreCase = true) }) {
-            signals.add(DetectionSignal(SignalType.PACKAGE_NAME, packageName))
-            return true
-        }
-
-        // Signature 3: Characteristic Unreal view hierarchy (very few children + SurfaceView)
-        if (hasUnrealHierarchyPattern(node)) {
-            signals.add(DetectionSignal(SignalType.HIERARCHY_PATTERN, "Unreal shallow hierarchy"))
-            return true
-        }
-
-        // Signature 4: SurfaceView with Unreal parent chain
-        if (className.contains("SurfaceView")) {
-            var parent = node.parent
-            var depth = 0
-            while (parent != null && depth < 5) {
-                val parentClass = parent.className ?: ""
-                if (parentClass.contains("UE", ignoreCase = false) ||
-                    parentClass.contains("Game", ignoreCase = true) ||
-                    parentClass.contains("Unreal", ignoreCase = true)) {
-                    signals.add(DetectionSignal(SignalType.SURFACE_TYPE, className))
-                    signals.add(DetectionSignal(SignalType.PARENT_CLASS, parentClass))
-                    return true
-                }
-                parent = parent.parent
-                depth++
-            }
-        }
-
-        // Signature 5: Check children recursively for Unreal signatures
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (FrameworkPatterns.unrealClassPatterns.any { childClass.contains(it, ignoreCase = true) }) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * Check for characteristic Unreal view hierarchy pattern
-     */
-    private fun hasUnrealHierarchyPattern(node: NodeInfo): Boolean {
-        // Root should have very few children (Unreal uses minimal platform UI)
-        if (node.childCount > 3) return false
-
-        // Should contain SurfaceView (rendering surface)
-        var hasSurface = false
-        try {
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i) ?: continue
-                if (child.className?.contains("SurfaceView") == true) {
-                    hasSurface = true
-                    break
-                }
-            }
-        } catch (e: Exception) {
-            // Ignore errors during hierarchy check
-        }
-
-        // Unreal pattern: very few children + SurfaceView present
-        return hasSurface && node.childCount <= 3
-    }
-
-    /**
-     * Check if app uses Godot Engine
-     */
-    private fun hasGodotSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Signature 1: GodotView or GodotApp classes
-        if (FrameworkPatterns.godotClassPatterns.any { className.contains(it) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        // Signature 2: Package name patterns
-        if (FrameworkPatterns.godotPackagePatterns.any { packageName.contains(it, ignoreCase = true) }) {
-            signals.add(DetectionSignal(SignalType.PACKAGE_NAME, packageName))
-            return true
-        }
-
-        // Signature 3: Check children recursively for Godot signatures
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (childClass.contains("Godot", ignoreCase = true)) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * Check if app uses Cocos2d-x Engine
-     */
-    private fun hasCocos2dSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Signature 1: Cocos2d-x view classes
-        if (FrameworkPatterns.cocos2dClassPatterns.any { className.contains(it, ignoreCase = false) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        // Signature 2: Package name contains cocos
-        if (FrameworkPatterns.cocos2dPackagePatterns.any { packageName.contains(it, ignoreCase = true) }) {
-            signals.add(DetectionSignal(SignalType.PACKAGE_NAME, packageName))
-            return true
-        }
-
-        // Signature 3: Check children recursively for Cocos signatures
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (childClass.contains("Cocos", ignoreCase = true)) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * Check if app uses Defold Engine
-     */
-    private fun hasDefoldSignatures(
-        node: NodeInfo,
-        packageName: String,
-        signals: MutableList<DetectionSignal>
-    ): Boolean {
-        val className = node.className ?: ""
-
-        // Signature 1: DefoldActivity class
-        if (className.contains("DefoldActivity")) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            return true
-        }
-
-        // Signature 2: NativeActivity + defold in package name
-        if (className.contains("NativeActivity") &&
-            FrameworkPatterns.defoldPackagePatterns.any { packageName.contains(it, ignoreCase = true) }) {
-            signals.add(DetectionSignal(SignalType.CLASS_NAME, className, "root"))
-            signals.add(DetectionSignal(SignalType.PACKAGE_NAME, packageName))
-            return true
-        }
-
-        // Signature 3: Check children recursively for Defold signatures
-        return checkChildrenForSignature(node, 0, MAX_RECURSION_DEPTH) { childNode ->
-            val childClass = childNode.className ?: ""
-            if (childClass.contains("Defold", ignoreCase = true)) {
-                signals.add(DetectionSignal(SignalType.CHILD_CLASS, childClass))
-                true
-            } else {
-                false
-            }
-        }
+        return minOf(1.0f, score.toFloat())
     }
 
     // ========================================================================
@@ -703,7 +359,10 @@ object FrameworkDetector {
 
         // First check if this is even a Flutter app
         val signals = mutableListOf<DetectionSignal>()
-        if (!hasFlutterSignatures(rootNode, packageName, signals)) {
+        val flutterConfig = detectionConfigs.find { it.framework == AppFramework.FLUTTER }
+            ?: return FlutterVersion.NOT_FLUTTER
+
+        if (!hasFrameworkSignatures(rootNode, packageName, flutterConfig, signals)) {
             return FlutterVersion.NOT_FLUTTER
         }
 

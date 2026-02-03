@@ -21,7 +21,7 @@ package com.augmentalis.commandmanager.integration
 import android.content.Context
 import com.augmentalis.commandmanager.CommandManager
 import com.augmentalis.voiceoscore.*
-import com.augmentalis.voiceos.speech.confidence.ConfidenceLevel
+import com.augmentalis.speechrecognition.ConfidenceLevel
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.*

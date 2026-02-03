@@ -1,7 +1,5 @@
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.voiceoscore.getCurrentTimeMillis
-
 /**
  * Quantized Navigation - Screen transition for AVU format.
  *
@@ -19,7 +17,7 @@ data class QuantizedNavigation(
     val toScreenHash: String,
     val triggerLabel: String,
     val triggerVuid: String,
-    val timestamp: Long = getCurrentTimeMillis()
+    val timestamp: Long = currentTimeMillis()
 ) {
     /**
      * Generate AVU NAV line format.

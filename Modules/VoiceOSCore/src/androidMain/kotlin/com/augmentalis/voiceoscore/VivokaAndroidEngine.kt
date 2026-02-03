@@ -17,9 +17,9 @@ package com.augmentalis.voiceoscore
 import android.content.Context
 import com.augmentalis.speechrecognition.SpeechConfig as SRSpeechConfig
 import com.augmentalis.speechrecognition.SpeechMode as SRSpeechMode
-import com.augmentalis.voiceos.speech.api.RecognitionResult
-import com.augmentalis.voiceos.speech.engines.vivoka.VivokaEngine
-import com.augmentalis.voiceos.speech.engines.vivoka.VivokaPathResolver
+import com.augmentalis.speechrecognition.RecognitionResult
+import com.augmentalis.speechrecognition.vivoka.VivokaEngine
+import com.augmentalis.speechrecognition.vivoka.VivokaPathResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -195,13 +195,13 @@ class VivokaAndroidEngine(
                     }
                 }
 
-                // Set up error listener
-                vivokaEngine?.setErrorListener { message, code ->
+                // Set up error listener (KMP API uses SpeechError object)
+                vivokaEngine?.setErrorListener { error ->
                     scope.launch {
                         _errors.emit(SpeechError(
                             code = SpeechError.ErrorCode.RECOGNITION_FAILED,
-                            message = message,
-                            recoverable = code < 500
+                            message = error.message,
+                            recoverable = error.isRecoverable
                         ))
                     }
                 }
