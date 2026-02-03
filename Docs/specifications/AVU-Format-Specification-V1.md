@@ -156,6 +156,58 @@ All data entries use 3-character uppercase prefixes followed by colon.
 | `TSK:` | Task | `TSK:id:description:status` |
 | `BUG:` | Known bug | `BUG:id:description:workaround` |
 
+### 3.8 WebSocket/Sync Prefixes (AVU:SYNC)
+
+| Prefix | Purpose | Format | Example |
+|--------|---------|--------|---------|
+| `PNG:` | Ping keep-alive | `PNG:sessionId:timestamp` | `PNG:sess_001:1705312800000` |
+| `PON:` | Pong response | `PON:sessionId:timestamp` | `PON:sess_001:1705312800001` |
+| `HND:` | Handshake | `HND:sessionId:deviceId:appVersion:platform:userId` | `HND:sess_001:dev_001:1.0.0:Android:user_001` |
+| `CAP:` | Capability | `CAP:sessionId:cap1,cap2,cap3` | `CAP:sess_001:tabs,favorites,settings` |
+| `SCR:` | Sync Create | `SCR:msgId:entityType:entityId:version:data` | `SCR:msg_001:TAB:tab_001:1:escaped_json` |
+| `SUP:` | Sync Update | `SUP:msgId:entityType:entityId:version:data` | `SUP:msg_002:FAV:fav_001:2:escaped_json` |
+| `SDL:` | Sync Delete | `SDL:msgId:entityType:entityId` | `SDL:msg_003:HST:hist_001` |
+| `SFL:` | Sync Full Request | `SFL:msgId:entityTypes:lastSyncTimestamp` | `SFL:msg_004:TAB,FAV,SET:1705312800000` |
+| `SBT:` | Sync Batch | `SBT:msgId:count:op1\|op2\|op3` | `SBT:msg_005:2:TAB,t1,CREATE,1,data\|FAV,f1,UPDATE,2,data` |
+| `SRS:` | Sync Response | `SRS:msgId:entityType:entityId:version:data` | `SRS:msg_006:TAB:tab_001:1:escaped_json` |
+| `SCF:` | Sync Conflict | `SCF:msgId:entityType:entityId:localVer:remoteVer:resolution` | `SCF:msg_007:TAB:tab_001:1:2:REMOTE` |
+| `SST:` | Sync Status | `SST:sessionId:state:pendingCount:lastSync` | `SST:sess_001:SYNCING:5:1705312800000` |
+| `CON:` | Connected | `CON:sessionId:serverVersion:timestamp` | `CON:sess_001:2.0.0:1705312800000` |
+| `DIS:` | Disconnected | `DIS:sessionId:reason:timestamp` | `DIS:sess_001:Server closed:1705312800000` |
+| `RCN:` | Reconnecting | `RCN:sessionId:attempt:maxAttempts:delayMs` | `RCN:sess_001:3:5:4000` |
+
+#### Entity Type Identifiers
+
+| ID | Entity Type | Description |
+|----|-------------|-------------|
+| `TAB` | Tab | Browser tabs |
+| `FAV` | Favorite | Bookmarks/favorites |
+| `HST` | History | Browsing history |
+| `DWN` | Download | Downloads |
+| `SET` | Settings | User settings |
+| `SES` | Session | Browser sessions |
+
+#### Sync State Values
+
+| State | Description |
+|-------|-------------|
+| `IDLE` | No sync activity |
+| `SYNCING` | Sync in progress |
+| `CONNECTING` | Establishing connection |
+| `CONNECTED` | Connection established |
+| `DISCONNECTED` | Connection lost |
+| `ERROR` | Sync error occurred |
+| `OFFLINE` | Device offline |
+
+#### Conflict Resolution Values
+
+| Resolution | Description |
+|------------|-------------|
+| `LOCAL` | Keep local version |
+| `REMOTE` | Accept remote version |
+| `MERGE` | Merge both versions |
+| `MANUAL` | Requires user decision |
+
 ---
 
 ## 4. Type Detection
@@ -171,6 +223,7 @@ Primary detection via header:
 # Type: DATA     → AVU:DATA
 # Type: IPC      → AVU:IPC
 # Type: HANDOVER → AVU:HANDOVER
+# Type: SYNC     → AVU:SYNC
 ```
 
 ### 4.2 Prefix-Based Fallback
@@ -181,9 +234,10 @@ fun detectType(firstPrefix: String): AvuType = when(firstPrefix) {
     "PRJ", "CFG", "PRF", "GAT" -> AvuType.CONFIG
     "CMD", "CAT", "LOC" -> AvuType.VOICE
     "THM", "PAL", "TYP" -> AvuType.THEME
-    "APP", "STA", "SCR", "ELM" -> AvuType.STATE
+    "APP", "STA", "ELM" -> AvuType.STATE
     "REQ", "RES", "EVT" -> AvuType.IPC
     "ARC", "WIP", "BLK", "DEC" -> AvuType.HANDOVER
+    "PNG", "PON", "HND", "SCR", "SUP", "SDL", "SFL", "SBT", "SRS", "SCF", "SST", "CON", "DIS", "RCN" -> AvuType.SYNC
     else -> AvuType.DATA
 }
 ```
@@ -716,6 +770,6 @@ object PrefixValidator {
 
 ---
 
-**Document Version:** 1.0.0
-**Last Updated:** 2026-01-15
-**Status:** Draft - Pending Review
+**Document Version:** 1.1.0
+**Last Updated:** 2026-02-03
+**Status:** Draft - Added WebSocket/Sync Prefixes (Section 3.8)

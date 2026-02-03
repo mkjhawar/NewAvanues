@@ -1,4 +1,4 @@
-package com.augmentalis.webavanue.sync
+package com.augmentalis.websocket
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,83 +10,88 @@ import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
 /**
- * Priority levels for sync operations
+ * Priority levels for queued operations
  */
 @Serializable
-enum class SyncPriority {
-    LOW,      // History, non-critical updates
+enum class QueuePriority {
+    LOW,      // Non-critical updates (history, analytics)
     NORMAL,   // Standard operations
     HIGH,     // User-initiated actions
     CRITICAL  // Settings, security-related
 }
 
 /**
- * Represents a queued sync operation
+ * Queued sync operation using AVU format
  */
 @Serializable
-data class QueuedSyncOperation(
+data class QueuedOperation(
     val id: String,
-    val event: RemoteUpdateEvent,
-    val priority: SyncPriority,
-    val createdAt: Instant,
+    val avuMessage: String, // AVU format message string
+    val entityType: String? = null,
+    val entityId: String? = null,
+    val priority: QueuePriority = QueuePriority.NORMAL,
+    val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val retryCount: Int = 0,
     val maxRetries: Int = 3,
-    val lastAttempt: Instant? = null,
+    val lastAttempt: Long? = null,
     val errorMessage: String? = null
 ) {
     val canRetry: Boolean get() = retryCount < maxRetries
 }
 
 /**
- * Queue statistics for monitoring
+ * Queue statistics
  */
 data class QueueStats(
     val totalCount: Int,
     val pendingCount: Int,
     val failedCount: Int,
-    val byPriority: Map<SyncPriority, Int>,
-    val oldestItemAge: Long? // milliseconds
+    val byPriority: Map<QueuePriority, Int>,
+    val oldestItemAgeMs: Long?
 )
 
 /**
- * Offline-capable sync queue for storing pending operations
+ * In-memory sync queue for offline operations
  *
- * This queue persists operations that couldn't be sent due to network issues
+ * Stores operations that couldn't be sent due to network issues
  * and replays them when connectivity is restored.
  */
 class SyncQueue {
 
     private val mutex = Mutex()
-    private val queue = mutableListOf<QueuedSyncOperation>()
-    private val failedOperations = mutableListOf<QueuedSyncOperation>()
+    private val queue = mutableListOf<QueuedOperation>()
+    private val failedOperations = mutableListOf<QueuedOperation>()
 
     private val _queueSize = MutableStateFlow(0)
     val queueSize: Flow<Int> = _queueSize.asStateFlow()
 
-    private val _syncStatus = MutableStateFlow(SyncStatus(
+    private val _status = MutableStateFlow(SyncStatus(
         lastSyncTimestamp = null,
         pendingEventCount = 0,
         syncState = SyncState.IDLE,
         errorMessage = null
     ))
-    val syncStatus: Flow<SyncStatus> = _syncStatus.asStateFlow()
+    val status: Flow<SyncStatus> = _status.asStateFlow()
 
     /**
-     * Enqueue a sync operation
+     * Enqueue an AVU format message
      */
     suspend fun enqueue(
-        event: RemoteUpdateEvent,
-        priority: SyncPriority = SyncPriority.NORMAL
+        avuMessage: String,
+        entityType: String? = null,
+        entityId: String? = null,
+        priority: QueuePriority = QueuePriority.NORMAL
     ): String {
         return mutex.withLock {
-            val operation = QueuedSyncOperation(
+            val operation = QueuedOperation(
                 id = generateOperationId(),
-                event = event,
-                priority = priority,
-                createdAt = Clock.System.now()
+                avuMessage = avuMessage,
+                entityType = entityType,
+                entityId = entityId,
+                priority = priority
             )
 
-            // Insert based on priority
+            // Insert based on priority (higher priority first)
             val insertIndex = queue.indexOfFirst { it.priority < priority }
             if (insertIndex >= 0) {
                 queue.add(insertIndex, operation)
@@ -94,53 +99,52 @@ class SyncQueue {
                 queue.add(operation)
             }
 
-            updateQueueSize()
+            updateState()
             operation.id
         }
     }
 
     /**
-     * Dequeue the next operation to process
+     * Dequeue next operation
      */
-    suspend fun dequeue(): QueuedSyncOperation? {
+    suspend fun dequeue(): QueuedOperation? {
         return mutex.withLock {
             val operation = queue.removeFirstOrNull()
-            updateQueueSize()
+            updateState()
             operation
         }
     }
 
     /**
-     * Peek at the next operation without removing it
+     * Peek at next operation without removing
      */
-    suspend fun peek(): QueuedSyncOperation? {
+    suspend fun peek(): QueuedOperation? {
         return mutex.withLock {
             queue.firstOrNull()
         }
     }
 
     /**
-     * Get all pending operations (for batch processing)
+     * Get pending operations (for batch processing)
      */
-    suspend fun getPending(limit: Int = 50): List<QueuedSyncOperation> {
+    suspend fun getPending(limit: Int = 50): List<QueuedOperation> {
         return mutex.withLock {
             queue.take(limit)
         }
     }
 
     /**
-     * Mark an operation as completed and remove it
+     * Mark operation as completed
      */
     suspend fun complete(operationId: String) {
         mutex.withLock {
             queue.removeAll { it.id == operationId }
-            updateQueueSize()
-            updateSyncStatus(SyncState.IDLE)
+            updateState()
         }
     }
 
     /**
-     * Mark an operation as failed
+     * Mark operation as failed
      */
     suspend fun fail(operationId: String, errorMessage: String) {
         mutex.withLock {
@@ -149,12 +153,12 @@ class SyncQueue {
                 val operation = queue[index]
                 val updated = operation.copy(
                     retryCount = operation.retryCount + 1,
-                    lastAttempt = Clock.System.now(),
+                    lastAttempt = Clock.System.now().toEpochMilliseconds(),
                     errorMessage = errorMessage
                 )
 
                 if (updated.canRetry) {
-                    // Move to end of same-priority section for retry
+                    // Re-queue at end of same priority
                     queue.removeAt(index)
                     val insertIndex = queue.indexOfFirst { it.priority < updated.priority }
                     if (insertIndex >= 0) {
@@ -168,7 +172,7 @@ class SyncQueue {
                     failedOperations.add(updated)
                 }
 
-                updateQueueSize()
+                updateState()
             }
         }
     }
@@ -178,7 +182,7 @@ class SyncQueue {
      */
     suspend fun retryFailed() {
         mutex.withLock {
-            val toRetry = failedOperations.map { it.copy(retryCount = 0) }
+            val toRetry = failedOperations.map { it.copy(retryCount = 0, errorMessage = null) }
             failedOperations.clear()
 
             toRetry.forEach { operation ->
@@ -190,17 +194,17 @@ class SyncQueue {
                 }
             }
 
-            updateQueueSize()
+            updateState()
         }
     }
 
     /**
-     * Clear the queue
+     * Clear all pending operations
      */
     suspend fun clear() {
         mutex.withLock {
             queue.clear()
-            updateQueueSize()
+            updateState()
         }
     }
 
@@ -218,51 +222,35 @@ class SyncQueue {
      */
     suspend fun getStats(): QueueStats {
         return mutex.withLock {
-            val now = Clock.System.now()
-            val oldestAge = queue.minOfOrNull {
-                (now - it.createdAt).inWholeMilliseconds
-            }
+            val now = Clock.System.now().toEpochMilliseconds()
+            val oldestAge = queue.minOfOrNull { now - it.createdAt }
 
             QueueStats(
                 totalCount = queue.size + failedOperations.size,
                 pendingCount = queue.size,
                 failedCount = failedOperations.size,
                 byPriority = queue.groupingBy { it.priority }.eachCount(),
-                oldestItemAge = oldestAge
+                oldestItemAgeMs = oldestAge
             )
         }
     }
 
     /**
-     * Check if queue is empty
+     * Check if empty
      */
-    suspend fun isEmpty(): Boolean {
-        return mutex.withLock {
-            queue.isEmpty()
-        }
-    }
+    suspend fun isEmpty(): Boolean = mutex.withLock { queue.isEmpty() }
 
     /**
      * Get operations by entity type
      */
-    suspend fun getByEntityType(entityType: SyncEntityType): List<QueuedSyncOperation> {
+    suspend fun getByEntityType(entityType: String): List<QueuedOperation> {
         return mutex.withLock {
-            queue.filter { operation ->
-                when (operation.event) {
-                    is RemoteTabUpdate -> entityType == SyncEntityType.TAB
-                    is RemoteFavoriteUpdate -> entityType == SyncEntityType.FAVORITE
-                    is RemoteHistoryUpdate -> entityType == SyncEntityType.HISTORY
-                    is RemoteDownloadUpdate -> entityType == SyncEntityType.DOWNLOAD
-                    is RemoteSettingsUpdate -> entityType == SyncEntityType.SETTINGS
-                    is RemoteSessionUpdate -> entityType == SyncEntityType.SESSION
-                }
-            }
+            queue.filter { it.entityType == entityType }
         }
     }
 
     /**
-     * Remove duplicate operations for the same entity
-     * Keeps only the most recent operation
+     * Remove duplicate operations for same entity (keep newest)
      */
     suspend fun deduplicate() {
         mutex.withLock {
@@ -270,63 +258,39 @@ class SyncQueue {
             val toRemove = mutableListOf<Int>()
 
             queue.forEachIndexed { index, operation ->
-                val entityKey = getEntityKey(operation.event)
-                if (entityKey != null) {
-                    val previousIndex = seen[entityKey]
+                val key = "${operation.entityType}:${operation.entityId}"
+                if (key != "null:null") {
+                    val previousIndex = seen[key]
                     if (previousIndex != null) {
-                        // Keep the newer one (current), mark older for removal
                         toRemove.add(previousIndex)
                     }
-                    seen[entityKey] = index
+                    seen[key] = index
                 }
             }
 
-            // Remove in reverse order to maintain indices
             toRemove.sortedDescending().forEach { index ->
                 queue.removeAt(index)
             }
 
-            updateQueueSize()
+            updateState()
         }
     }
 
-    // ==================== Private Helpers ====================
-
-    private fun updateQueueSize() {
+    private fun updateState() {
         _queueSize.value = queue.size
-    }
-
-    private fun updateSyncStatus(state: SyncState, error: String? = null) {
-        _syncStatus.value = SyncStatus(
-            lastSyncTimestamp = if (state == SyncState.IDLE) Clock.System.now() else _syncStatus.value.lastSyncTimestamp,
-            pendingEventCount = queue.size,
-            syncState = state,
-            errorMessage = error
-        )
+        _status.value = _status.value.copy(pendingEventCount = queue.size)
     }
 
     private fun generateOperationId(): String {
         return "op_${Clock.System.now().toEpochMilliseconds()}_${(1000..9999).random()}"
     }
-
-    private fun getEntityKey(event: RemoteUpdateEvent): String? {
-        return when (event) {
-            is RemoteTabUpdate -> event.tabId ?: event.tab?.id
-            is RemoteFavoriteUpdate -> event.favoriteId ?: event.favorite?.id
-            is RemoteHistoryUpdate -> event.entryId ?: event.historyEntry?.id
-            is RemoteDownloadUpdate -> event.downloadId ?: event.download?.id
-            is RemoteSettingsUpdate -> "settings" // Singleton
-            is RemoteSessionUpdate -> event.sessionId ?: event.session?.id
-        }
-    }
 }
 
 /**
- * Persistent sync queue that survives app restarts
- * Uses platform-specific storage (SharedPreferences on Android, UserDefaults on iOS)
+ * Persistent sync queue interface (platform-specific storage)
  */
 expect class PersistentSyncQueue() {
-    suspend fun save(queue: List<QueuedSyncOperation>)
-    suspend fun load(): List<QueuedSyncOperation>
+    suspend fun save(operations: List<QueuedOperation>)
+    suspend fun load(): List<QueuedOperation>
     suspend fun clear()
 }

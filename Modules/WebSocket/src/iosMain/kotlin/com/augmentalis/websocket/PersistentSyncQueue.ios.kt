@@ -1,18 +1,15 @@
-package com.augmentalis.webavanue.sync
+package com.augmentalis.websocket
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import platform.Foundation.*
+import platform.Foundation.NSUserDefaults
 
-private const val KEY_QUEUE = "webavanue_pending_sync_operations"
+private const val KEY_QUEUE = "websocket_pending_sync_operations"
 
 /**
  * iOS implementation of persistent sync queue using NSUserDefaults
- *
- * For production use, consider using Core Data or file-based storage
- * for better performance with large queues.
  */
 actual class PersistentSyncQueue actual constructor() {
 
@@ -23,15 +20,15 @@ actual class PersistentSyncQueue actual constructor() {
 
     private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults
 
-    actual suspend fun save(queue: List<QueuedSyncOperation>) {
+    actual suspend fun save(operations: List<QueuedOperation>) {
         withContext(Dispatchers.Main) {
-            val jsonString = json.encodeToString(queue)
+            val jsonString = json.encodeToString(operations)
             defaults.setObject(jsonString, forKey = KEY_QUEUE)
             defaults.synchronize()
         }
     }
 
-    actual suspend fun load(): List<QueuedSyncOperation> {
+    actual suspend fun load(): List<QueuedOperation> {
         return withContext(Dispatchers.Main) {
             val jsonString = defaults.stringForKey(KEY_QUEUE)
             if (jsonString != null) {
@@ -52,13 +49,9 @@ actual class PersistentSyncQueue actual constructor() {
             defaults.synchronize()
         }
     }
-}
 
-/**
- * Singleton accessor for iOS PersistentSyncQueue
- */
-object SyncQueueProvider {
-    private val instance = PersistentSyncQueue()
-
-    fun getInstance(): PersistentSyncQueue = instance
+    companion object {
+        private val instance by lazy { PersistentSyncQueue() }
+        fun getInstance(): PersistentSyncQueue = instance
+    }
 }
