@@ -19,6 +19,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.0] - 2026-02-03
+
+### 🏗️ Infrastructure: Logging Module & Code Cleanup
+
+Major technical debt reduction and infrastructure improvements.
+
+### Added
+
+- **Modules/Logging** - New consolidated KMP logging module
+  - Package: `com.avanues.logging`
+  - Cross-platform: Android, iOS, Desktop
+  - PII-safe logging with automatic redaction
+  - Lazy evaluation for performance
+  - See: Developer-Manual-Chapter77
+
+### Changed
+
+- **RPC Module Rename** (IPC → RPC)
+  - `UniversalRPC` → `Rpc`
+  - `com.augmentalis.universalrpc` → `com.augmentalis.rpc`
+  - All `*.IPC.COMMAND` → `*.RPC.COMMAND`
+  - 225 files updated
+
+### Archived
+
+- `archive/Common-Deprecated-260202/` - Unused Common/ modules
+- `archive/AVAMagic-Core-260202/` - Unused AVAMagic/Core modules
+- `archive/voiceos-logging-260202/` - Deprecated logging (replaced by Modules/Logging)
+- `archive/Avanues_deprecated_260202.tar.gz` - Old /Avanues directory
+
+### Documentation
+
+- Developer-Manual-Chapter75-StateFlow-Utilities.md
+- Developer-Manual-Chapter76-RPC-Module-Architecture.md
+- Developer-Manual-Chapter77-Logging-Module-Architecture.md
+- Technical-Debt-Status-260202.md
+
+---
+
 ## [2.4.0] - 2025-11-21
 
 ### 🚀 Comprehensive Component Library Research & Accelerated Expansion Plan
