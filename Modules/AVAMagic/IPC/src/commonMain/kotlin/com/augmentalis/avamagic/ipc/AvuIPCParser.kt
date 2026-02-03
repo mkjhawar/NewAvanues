@@ -1,7 +1,9 @@
 package com.augmentalis.avamagic.ipc
 
+import com.augmentalis.avucodec.core.AvuEscape
+
 /**
- * AVU IPC Format Parser
+ * AVU RPC Format Parser
  *
  * Parses AVU (Avanues Universal) format strings into IPC model objects.
  * Supports all IPC-specific prefixes for connection management, resilience,
@@ -767,14 +769,10 @@ object AvuIPCParser {
 
     /**
      * Unescape URL-encoded text from AVU format.
+     *
+     * Delegates to [AvuEscape.unescape] - the canonical implementation.
      */
-    private fun unescape(text: String): String {
-        return text
-            .replace("%0D", "\r")
-            .replace("%0A", "\n")
-            .replace("%3A", ":")
-            .replace("%25", "%")
-    }
+    private fun unescape(text: String): String = AvuEscape.unescape(text)
 }
 
 // ════════════════════════════════════════════════════════════════════════════

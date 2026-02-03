@@ -1,11 +1,12 @@
 package com.augmentalis.avamagic.ipc.universal
 
 import com.augmentalis.avamagic.ipc.*
+import com.augmentalis.avucodec.core.AvuEscape
 
 /**
- * Avanues Universal DSL - Unified IPC Protocol
+ * Avanues Universal DSL - Unified RPC Protocol
  *
- * Single protocol for all inter-process communication across Avanues ecosystem.
+ * Single protocol for all remote procedure communication across Avanues ecosystem.
  *
  * Features:
  * - 77 protocol message codes (3-letter mnemonic)
@@ -36,7 +37,7 @@ import com.augmentalis.avamagic.ipc.*
  */
 object UniversalDSL {
 
-    const val VERSION = "2.0.0"
+    const val VERSION = "2.2.0"
     const val DELIMITER = ":"
     const val ESCAPE_CHAR = "%"
 
@@ -329,26 +330,22 @@ object UniversalDSL {
     }
 
     /**
-     * Escape special characters
+     * Escape special characters.
+     *
+     * Delegates to [AvuEscape.escape] - the canonical implementation.
+     *
+     * @see AvuEscape.escape
      */
-    fun escape(text: String): String {
-        return text
-            .replace("%", "%25")
-            .replace(":", "%3A")
-            .replace("\n", "%0A")
-            .replace("\r", "%0D")
-    }
+    fun escape(text: String): String = AvuEscape.escape(text)
 
     /**
-     * Unescape URL-encoded text
+     * Unescape URL-encoded text.
+     *
+     * Delegates to [AvuEscape.unescape] - the canonical implementation.
+     *
+     * @see AvuEscape.unescape
      */
-    fun unescape(text: String): String {
-        return text
-            .replace("%0D", "\r")
-            .replace("%0A", "\n")
-            .replace("%3A", ":")
-            .replace("%25", "%")
-    }
+    fun unescape(text: String): String = AvuEscape.unescape(text)
 }
 
 /**

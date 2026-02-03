@@ -5,11 +5,12 @@
  * Author: Manoj Jhawar
  * Created: 2025-12-28
  * Renamed: 2026-02-02 (UniversalIPCEncoder → RpcEncoder)
+ * Updated: 2026-02-03 (Use shared AvuEscape from AVUCodec)
  *
  * Encodes voice commands and messages into RPC Protocol format
  * for cross-app and cross-device communication.
  *
- * Protocol Specification: Avanues RPC Protocol v2.0.0
+ * Protocol Specification: Avanues RPC Protocol v2.2.0
  * Format: CODE:id:param1:param2:...
  *
  * Voice Command Format: VCM:commandId:action:param1:param2
@@ -18,6 +19,8 @@
  *          VCM:cmd789:NAVIGATE:https%3A%2F%2Fgoogle.com
  */
 package com.augmentalis.rpc
+
+import com.augmentalis.avucodec.core.AvuEscape
 
 /**
  * Cross-platform encoder for RPC Protocol
@@ -181,26 +184,22 @@ class RpcEncoder {
     }
 
     /**
-     * Escape special characters per RPC Protocol specification
+     * Escape special characters per RPC Protocol specification.
+     *
+     * Delegates to [AvuEscape.escape] - the canonical implementation.
+     *
+     * @see AvuEscape.escape
      */
-    private fun escape(text: String): String {
-        return text
-            .replace("%", "%25")   // Escape character
-            .replace(":", "%3A")   // Parameter delimiter
-            .replace("\n", "%0A")  // Newline
-            .replace("\r", "%0D")  // Carriage return
-    }
+    private fun escape(text: String): String = AvuEscape.escape(text)
 
     /**
-     * Unescape special characters
+     * Unescape special characters.
+     *
+     * Delegates to [AvuEscape.unescape] - the canonical implementation.
+     *
+     * @see AvuEscape.unescape
      */
-    fun unescape(text: String): String {
-        return text
-            .replace("%0D", "\r")
-            .replace("%0A", "\n")
-            .replace("%3A", ":")
-            .replace("%25", "%")
-    }
+    fun unescape(text: String): String = AvuEscape.unescape(text)
 
     /**
      * Validate RPC message format
