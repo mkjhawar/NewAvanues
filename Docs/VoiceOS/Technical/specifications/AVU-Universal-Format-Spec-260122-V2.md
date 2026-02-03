@@ -132,6 +132,10 @@ val original = AvuEscape.unescape(escaped)
 
 | Code | Purpose | Format | Example |
 |------|---------|--------|---------|
+| `PNG` | Ping (keep-alive) | `PNG:sessionId:timestamp` | `PNG:sess_001:1705312800000` |
+| `PON` | Pong (response) | `PON:sessionId:timestamp` | `PON:sess_001:1705312800001` |
+| `HND` | Handshake | `HND:sessionId:deviceId:appVersion:platform:userId?` | `HND:sess_001:dev_001:1.0.0:Android:user_001` |
+| `CAP` | Capability | `CAP:sessionId:cap1,cap2,cap3` | `CAP:sess_001:tabs,favorites,settings` |
 | `SCR` | Sync Create | `SCR:msgId:entityType:entityId:version:data` | `SCR:msg_001:TAB:tab_001:1:escaped_data` |
 | `SUP` | Sync Update | `SUP:msgId:entityType:entityId:version:data` | `SUP:msg_002:FAV:fav_001:2:escaped_data` |
 | `SDL` | Sync Delete | `SDL:msgId:entityType:entityId` | `SDL:msg_003:HST:hist_001` |
@@ -140,6 +144,8 @@ val original = AvuEscape.unescape(escaped)
 | `SRS` | Sync Response | `SRS:msgId:entityType:entityId:version:data` | `SRS:msg_006:TAB:tab_001:1:escaped_data` |
 | `SCF` | Sync Conflict | `SCF:msgId:entityType:entityId:localVer:remoteVer:resolution` | `SCF:msg_007:TAB:tab_001:1:2:REMOTE` |
 | `SST` | Sync Status | `SST:sessionId:state:pendingCount:lastSync` | `SST:sess_001:SYNCING:5:1705312800000` |
+| `CON` | Connected | `CON:sessionId:serverVersion:timestamp` | `CON:sess_001:2.0.0:1705312800000` |
+| `DIS` | Disconnected | `DIS:sessionId:reason:timestamp` | `DIS:sess_001:Server closed:1705312800000` |
 | `RCN` | Reconnecting | `RCN:sessionId:attempt:maxAttempts:delayMs` | `RCN:sess_001:3:5:4000` |
 
 #### Sync Entity Types
@@ -173,6 +179,20 @@ val original = AvuEscape.unescape(escaped)
 | `REMOTE` | Accept remote version |
 | `MERGE` | Merge both versions |
 | `MANUAL` | Requires user decision |
+
+#### Batch Operation Format
+
+Each operation in `SBT` batch uses comma-separated fields:
+```
+entityType,entityId,action,version,data
+```
+
+Actions: `CREATE`, `UPDATE`, `DELETE`
+
+Example batch:
+```
+SBT:msg_005:3:TAB,tab1,CREATE,1,{...}|FAV,fav1,UPDATE,2,{...}|HST,hist1,DELETE,1,
+```
 
 ---
 
@@ -441,7 +461,7 @@ println(parsed?.capabilities) // [accessibility.voice, ai.nlu]
 ## Version History
 
 - **2.2.0** (2026-02-03): Self-documenting headers with codes legend, unified AvuEscape, AvuCodeRegistry, IPC renamed to RPC
-- **2.1.0** (2026-02-03): Added WebSocket/Sync codes, entity types, sync states, conflict resolutions
+- **2.1.0** (2026-02-03): Added WebSocket/Sync codes (PNG, PON, HND, CAP, SCR, SUP, SDL, SFL, SBT, SRS, SCF, SST, CON, DIS, RCN), entity types, sync states, conflict resolutions
 - **2.0.0** (2026-01-22): Added Plugin Manifest format, new codes (PLG, DSC, AUT, PCP, MOD, DEP, PRM, PLT, AST, CFG, KEY, HKS)
 - **1.0.0** (2025-12-03): Initial AVU format specification
 
