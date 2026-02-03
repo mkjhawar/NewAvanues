@@ -4,12 +4,11 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VOS4 Development Team
  * Created: 2026-01-06
+ * Updated: 2026-02-03 - Refactored to use HandlerUtilities
  *
  * KMP handler for navigation actions (scroll, swipe, page navigation).
  */
 package com.augmentalis.voiceoscore
-
-import com.augmentalis.voiceoscore.QuantizedCommand
 
 /**
  * Handler for navigation actions.
@@ -37,94 +36,44 @@ class NavigationHandler(
     override suspend fun execute(
         command: QuantizedCommand,
         params: Map<String, Any>
-    ): HandlerResult {
-        val normalizedAction = command.phrase.lowercase().trim()
-
-        return when (normalizedAction) {
-            "scroll up", "page up" -> {
-                if (executor.scrollUp()) {
-                    HandlerResult.success("Scrolled up")
-                } else {
-                    HandlerResult.failure("Could not scroll up - no scrollable content")
-                }
-            }
-
-            "scroll down", "page down" -> {
-                if (executor.scrollDown()) {
-                    HandlerResult.success("Scrolled down")
-                } else {
-                    HandlerResult.failure("Could not scroll down - no scrollable content")
-                }
-            }
-
-            "scroll left" -> {
-                if (executor.scrollLeft()) {
-                    HandlerResult.success("Scrolled left")
-                } else {
-                    HandlerResult.failure("Could not scroll left - no scrollable content")
-                }
-            }
-
-            "scroll right" -> {
-                if (executor.scrollRight()) {
-                    HandlerResult.success("Scrolled right")
-                } else {
-                    HandlerResult.failure("Could not scroll right - no scrollable content")
-                }
-            }
-
-            "swipe up" -> {
-                // Swipe up = scroll down (content moves up)
-                if (executor.scrollDown()) {
-                    HandlerResult.success("Swiped up")
-                } else {
-                    HandlerResult.failure("Could not swipe up")
-                }
-            }
-
-            "swipe down" -> {
-                // Swipe down = scroll up (content moves down)
-                if (executor.scrollUp()) {
-                    HandlerResult.success("Swiped down")
-                } else {
-                    HandlerResult.failure("Could not swipe down")
-                }
-            }
-
-            "swipe left" -> {
-                if (executor.scrollRight()) {
-                    HandlerResult.success("Swiped left")
-                } else {
-                    HandlerResult.failure("Could not swipe left")
-                }
-            }
-
-            "swipe right" -> {
-                if (executor.scrollLeft()) {
-                    HandlerResult.success("Swiped right")
-                } else {
-                    HandlerResult.failure("Could not swipe right")
-                }
-            }
-
-            "next" -> {
-                if (executor.next()) {
-                    HandlerResult.success("Moved to next")
-                } else {
-                    HandlerResult.failure("Could not move to next")
-                }
-            }
-
-            "previous" -> {
-                if (executor.previous()) {
-                    HandlerResult.success("Moved to previous")
-                } else {
-                    HandlerResult.failure("Could not move to previous")
-                }
-            }
-
-            else -> HandlerResult.notHandled()
+    ): HandlerResult = commandRouter(command.phrase) {
+        // Scroll/Page actions
+        on("scroll up", "page up") {
+            executor.scrollUp().toHandlerResult("Scrolled up", "Could not scroll up - no scrollable content")
         }
+        on("scroll down", "page down") {
+            executor.scrollDown().toHandlerResult("Scrolled down", "Could not scroll down - no scrollable content")
+        }
+        on("scroll left") {
+            executor.scrollLeft().toHandlerResult("Scrolled left", "Could not scroll left - no scrollable content")
+        }
+        on("scroll right") {
+            executor.scrollRight().toHandlerResult("Scrolled right", "Could not scroll right - no scrollable content")
+        }
+
+        // Swipe actions (reversed scroll direction)
+        on("swipe up") {
+            executor.scrollDown().toHandlerResult("Swiped up", "Could not swipe up")
+        }
+        on("swipe down") {
+            executor.scrollUp().toHandlerResult("Swiped down", "Could not swipe down")
+        }
+        on("swipe left") {
+            executor.scrollRight().toHandlerResult("Swiped left", "Could not swipe left")
+        }
+        on("swipe right") {
+            executor.scrollLeft().toHandlerResult("Swiped right", "Could not swipe right")
+        }
+
+        // Navigation
+        on("next") {
+            executor.next().toHandlerResult("Moved to next", "Could not move to next")
+        }
+        on("previous") {
+            executor.previous().toHandlerResult("Moved to previous", "Could not move to previous")
+        }
+
+        otherwise { HandlerResult.notHandled() }
     }
 }
 
