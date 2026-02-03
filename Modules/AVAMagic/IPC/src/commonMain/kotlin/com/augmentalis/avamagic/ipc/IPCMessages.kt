@@ -1,9 +1,11 @@
 package com.augmentalis.avamagic.ipc
 
+import com.augmentalis.avucodec.core.AvuEscape
+
 /**
- * IPC Messages - Unified Message Types for Inter-Process Communication
+ * RPC Messages - Unified Message Types for Remote Procedure Communication
  *
- * All message types for Avanues Universal DSL Protocol v2.0
+ * All message types for Avanues Universal DSL Protocol v2.2
  *
  * Categories:
  * - Base: UniversalMessage sealed class
@@ -28,19 +30,23 @@ package com.augmentalis.avamagic.ipc
 
 /**
  * Utility object for message serialization helpers.
+ *
+ * Uses [AvuEscape] for consistent percent-encoding across all modules.
  */
 internal object MessageUtils {
     /**
      * Escapes special characters in a string for safe transmission.
      *
+     * Uses percent-encoding per AVU RPC Protocol specification:
+     * - '%' -> %25 (must be first)
+     * - ':' -> %3A
+     * - '\n' -> %0A
+     * - '\r' -> %0D
+     *
      * @param value The string to escape
      * @return The escaped string with special characters encoded
      */
-    fun escape(value: String): String = value
-        .replace("\\", "\\\\")
-        .replace(":", "\\:")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
+    fun escape(value: String): String = AvuEscape.escape(value)
 }
 
 // ============================================================================

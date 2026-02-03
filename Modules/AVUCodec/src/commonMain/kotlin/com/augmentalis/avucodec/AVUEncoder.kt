@@ -1,11 +1,13 @@
 package com.augmentalis.avucodec
 
+import com.augmentalis.avucodec.core.AvuEscape
+
 /**
- * Universal IPC Encoder - Encodes voice commands and messages into AVU IPC Protocol format.
+ * Universal RPC Encoder - Encodes voice commands and messages into AVU RPC Protocol format.
  *
- * This is a platform-agnostic encoder for the Avanues Universal IPC Protocol.
+ * This is a platform-agnostic encoder for the Avanues Universal RPC Protocol.
  *
- * Protocol Specification: Avanues Universal IPC Protocol v2.0.0
+ * Protocol Specification: Avanues Universal RPC Protocol v2.2.0
  * Format: CODE:id:param1:param2:...
  *
  * Voice Command Format: VCM:commandId:action:param1:param2
@@ -676,32 +678,22 @@ object AVUEncoder {
     // ════════════════════════════════════════════════════════════════════════
 
     /**
-     * Escape special characters per AVU IPC Protocol specification.
+     * Escape special characters per AVU RPC Protocol specification.
      *
-     * Reserved characters:
-     * - ':' (delimiter) -> %3A
-     * - '%' (escape) -> %25
-     * - '\n' (newline) -> %0A
-     * - '\r' (carriage return) -> %0D
+     * Delegates to [AvuEscape.escape] - the canonical implementation.
+     *
+     * @see AvuEscape.escape
      */
-    fun escape(text: String): String {
-        return text
-            .replace("%", "%25")
-            .replace(":", "%3A")
-            .replace("\n", "%0A")
-            .replace("\r", "%0D")
-    }
+    fun escape(text: String): String = AvuEscape.escape(text)
 
     /**
      * Unescape special characters.
+     *
+     * Delegates to [AvuEscape.unescape] - the canonical implementation.
+     *
+     * @see AvuEscape.unescape
      */
-    fun unescape(text: String): String {
-        return text
-            .replace("%0D", "\r")
-            .replace("%0A", "\n")
-            .replace("%3A", ":")
-            .replace("%25", "%")
-    }
+    fun unescape(text: String): String = AvuEscape.unescape(text)
 
     /**
      * Validate IPC message format.
