@@ -9,6 +9,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactored - WebAvanue Repository Architecture (2026-02-03)
+
+**BrowserRepositoryImpl split into 7 domain-specific repositories**
+
+Refactored monolithic 1,264-line class into focused repositories following Single Responsibility Principle.
+
+#### New Repository Structure
+| Repository | Lines | Responsibility |
+|------------|-------|----------------|
+| TabRepository | ~230 | Tab CRUD, state, reordering |
+| FavoriteRepository | ~220 | Bookmarks, folders, search |
+| HistoryRepository | ~175 | History, date ranges, most visited |
+| DownloadRepository | ~195 | Downloads, progress tracking |
+| SettingsRepository | ~145 | Settings, presets |
+| SessionRepository | ~135 | Session save/restore, crash recovery |
+| SitePermissionRepository | ~80 | Site permissions |
+
+#### Benefits
+- Single Responsibility (each repo handles one domain)
+- Improved testability (isolated testing)
+- Reduced cognitive load (~150-200 lines each vs 1,264)
+- Backward compatible (external API unchanged)
+
+#### Documentation
+- [Developer Manual Chapter 79](/Docs/AVA/ideacode/guides/Developer-Manual-Chapter79-WebAvanue-Repository-Architecture.md)
+
+---
+
+### Added - Handler Utilities DSL (2026-02-03)
+
+**~35% boilerplate reduction in VoiceOS handlers**
+
+Created `HandlerUtilities.kt` with common extensions and command routing DSL for VoiceOS handlers.
+
+#### New Utilities
+- `normalizeCommand()` - String extension for command normalization
+- `toHandlerResult()` - Boolean to HandlerResult conversion
+- `runHandlerCatching()` - Safe execution wrapper
+- `commandRouter` DSL - Declarative command matching
+
+#### Example
+```kotlin
+// Before: 127 lines with nested when blocks
+// After: 82 lines with DSL
+override suspend fun execute(command: QuantizedCommand, params: Map<String, Any>) =
+    commandRouter(command.phrase) {
+        on("scroll up", "page up") { executor.scrollUp().toHandlerResult("Scrolled up", "Failed") }
+        onPrefix("scroll to") { target -> handleScrollTo(target) }
+        otherwise { HandlerResult.notHandled() }
+    }
+```
+
+#### Documentation
+- [Developer Manual Chapter 78](/Docs/AVA/ideacode/guides/Developer-Manual-Chapter78-Handler-Utilities.md)
+
+---
+
+### Migrated - MagicVoiceHandlers to KMP (2026-02-03)
+
+**36 handler files migrated to Kotlin Multiplatform**
+
+Converted MagicVoiceHandlers module from Android-only to cross-platform KMP with Android, iOS, and Desktop targets.
+
+#### Changes
+- Converted `build.gradle.kts` to KMP multiplatform
+- Moved sources from `src/main/java` to `src/commonMain/kotlin`
+- Replaced `android.util.Log` with `Modules/Logging` KMP Logger
+- Updated 34 handler files to use lazy-evaluated logging lambdas
+
+#### Handler Categories Migrated
+- **Display**: Avatar, Badge, Canvas3D, Carousel, Chip, Progress, Table, TreeView
+- **Input**: Autocomplete, ColorPicker, DatePicker, FileUpload, IconPicker, MultiSelect, RangeSlider, Rating, SearchBar, Slider, Stepper, TagInput, TimePicker, Toggle
+- **Feedback**: Alert, Confirm, Dialog, Drawer, Modal, Snackbar, Toast
+- **Navigation**: AppBar, BottomNav, Breadcrumb, Pagination, Tabs
+
+---
+
 ### Refactored - RPC Module Architecture (2026-02-02)
 
 **Standardized IPC → RPC naming across codebase**
