@@ -63,6 +63,7 @@ include(":Modules:Voice:WakeWord")         // Wake word detection
 include(":Modules:Actions")                 // Intent handlers, action execution
 
 // Shared Modules (cross-platform KMP libraries)
+include(":Modules:Logging")         // Consolidated KMP logging infrastructure
 include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, FileSystem, etc.)
 include(":Modules:LicenseSDK")      // License validation client
 
