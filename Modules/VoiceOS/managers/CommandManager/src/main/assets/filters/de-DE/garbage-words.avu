@@ -1,0 +1,23 @@
+# Avanues Universal Format v2.0
+# Type: FILTER
+# Extension: .avu
+---
+schema: avu-2.0
+version: 1.0.0
+locale: de-DE
+project: voiceos
+metadata:
+  file: garbage-words.avu
+  category: garbage_filter
+  count: 10
+---
+GWD:komma:Repetitive word
+GWD:punkt:Repetitive word
+GWD:strich:Repetitive word
+GWD:leerzeichen:Repetitive word
+GWD:tab:Repetitive word
+GWD:eingabe:Repetitive word
+GWD:null:Repetitive word
+GWD:undefiniert:Repetitive word
+GWD:wahr:Repetitive word
+GWD:falsch:Repetitive word

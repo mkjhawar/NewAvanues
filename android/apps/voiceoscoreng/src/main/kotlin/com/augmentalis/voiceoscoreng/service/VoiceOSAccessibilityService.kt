@@ -28,6 +28,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.flowOn
+import java.util.concurrent.Executors
 import com.augmentalis.voiceoscore.ScreenHashRepository
 import com.augmentalis.voiceoscore.ScreenHashRepositoryImpl
 import com.augmentalis.voiceoscore.ScreenInfo
@@ -61,6 +64,33 @@ private const val SCREEN_CHANGE_DEBOUNCE_MS = 300L
 class VoiceOSAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /**
+     * FIX: Dedicated dispatcher for speech result collection.
+     *
+     * This isolates speech processing from accessibility event processing to prevent
+     * dispatcher starvation. When apps like Device Info, YouTube, or Media Player
+     * generate rapid accessibility events, Dispatchers.Default becomes saturated.
+     * Using a dedicated single-threaded dispatcher ensures speech results are always
+     * processed promptly regardless of accessibility event load.
+     */
+    private val speechDispatcher = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "VoiceOS-SpeechCollector").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
+
+    /** Job for speech collection - allows cancellation and restart */
+    private var speechCollectionJob: Job? = null
+
+    /**
+     * FIX: Speech engine update throttling to prevent continuous grammar compilation.
+     *
+     * When apps generate rapid accessibility events, the speech engine gets updated
+     * on every event, causing grammar compilation that blocks voice recognition.
+     * These guards ensure we don't update the speech engine too frequently.
+     */
+    private val lastSpeechEngineUpdateTime = AtomicLong(0L)
+    private val isSpeechEngineUpdating = AtomicBoolean(false)
+    private val isProcessingAccessibilityEvent = AtomicBoolean(false)
 
     /**
      * Broadcast receiver for controlling numbers overlay via adb commands.
@@ -430,28 +460,122 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     Log.e(TAG, "Failed to auto-start voice listening", e)
                 }
 
-                // Observe speech results
-                voiceOSCore?.speechResults?.collect { speechResult ->
-                    Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
-                    // Update transcription for UI display
-                    _lastTranscription.value = speechResult.text
-                    if (speechResult.isFinal) {
-                        if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
-                            voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
-                        }
-                        // Clear transcription after processing
-                        kotlinx.coroutines.delay(2000)
-                        _lastTranscription.value = null
-                    }
-                }
+                // FIX: Start speech collection on dedicated dispatcher
+                // This prevents dispatcher starvation when accessibility events flood Dispatchers.Default
+                startSpeechCollection()
+
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize VoiceOSCore facade", e)
             }
         }
     }
 
+    /**
+     * Start speech result collection on a dedicated dispatcher.
+     *
+     * FIX for voice command freeze issue (NAV-600):
+     * - Uses dedicated single-threaded dispatcher isolated from accessibility event processing
+     * - Adds buffer(64) to prevent backpressure from blocking the emitter
+     * - Processes commands in a child coroutine to avoid blocking the collector
+     * - Includes retry logic with exponential backoff for resilience
+     *
+     * This ensures speech results are always processed promptly even when apps like
+     * Device Info, YouTube, or Media Player generate continuous accessibility events
+     * that would otherwise saturate Dispatchers.Default and starve the collector.
+     */
+    private fun startSpeechCollection() {
+        // Cancel any existing collection job
+        speechCollectionJob?.cancel()
+
+        speechCollectionJob = serviceScope.launch(speechDispatcher) {
+            var consecutiveFailures = 0
+            val maxConsecutiveFailures = 5
+            val baseRestartDelayMs = 1000L
+
+            while (isActive && consecutiveFailures < maxConsecutiveFailures) {
+                try {
+                    Log.d(TAG, "Starting speech result collection on dedicated dispatcher (attempt ${consecutiveFailures + 1})")
+
+                    // FIX: Add buffer to prevent backpressure from blocking emitter
+                    // Buffer size of 64 allows the flow to continue emitting even if
+                    // processing is temporarily slow
+                    voiceOSCore?.speechResults
+                        ?.buffer(64)
+                        ?.collect { speechResult ->
+                            Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
+
+                            // Update transcription for UI display immediately
+                            _lastTranscription.value = speechResult.text
+
+                            if (speechResult.isFinal) {
+                                // FIX: Process command in a separate child coroutine
+                                // to avoid blocking the collector
+                                launch {
+                                    try {
+                                        if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
+                                            voiceOSCore?.processCommand(
+                                                speechResult.text,
+                                                speechResult.confidence
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Error processing command: ${speechResult.text}", e)
+                                    }
+
+                                    // Clear transcription after processing
+                                    delay(2000)
+                                    _lastTranscription.value = null
+                                }
+                            }
+
+                            // Reset failure counter on successful collection
+                            consecutiveFailures = 0
+                        }
+
+                    // SharedFlow collect should not normally complete
+                    Log.w(TAG, "Speech collection completed unexpectedly")
+                    break
+
+                } catch (e: CancellationException) {
+                    // Expected during lifecycle changes
+                    Log.d(TAG, "Speech collection cancelled")
+                    throw e
+                } catch (e: Exception) {
+                    consecutiveFailures++
+                    Log.e(
+                        TAG,
+                        "Speech collection failed (failure $consecutiveFailures/$maxConsecutiveFailures)",
+                        e
+                    )
+
+                    if (consecutiveFailures < maxConsecutiveFailures) {
+                        val delayMs = baseRestartDelayMs * consecutiveFailures
+                        Log.d(TAG, "Restarting speech collection in ${delayMs}ms...")
+                        delay(delayMs)
+                    }
+                }
+            }
+
+            if (consecutiveFailures >= maxConsecutiveFailures) {
+                Log.e(
+                    TAG,
+                    "Speech collection stopped after $maxConsecutiveFailures consecutive failures"
+                )
+                _isVoiceListening.value = false
+            }
+        }
+
+        Log.d(TAG, "Speech collection job started: ${speechCollectionJob?.isActive}")
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
+
+        // OPTIMIZATION: Event Prioritization - Skip irrelevant events early
+        // This reduces CPU/battery by not processing system UI or non-visible updates
+        if (!shouldProcessEvent(event)) {
+            return
+        }
 
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
@@ -487,6 +611,49 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
+     * OPTIMIZATION: Event Prioritization
+     *
+     * Determines if an accessibility event should be processed.
+     * Skips system UI events and non-visible updates to reduce CPU/battery usage.
+     *
+     * This has NO UX downside - users don't lose any functionality because:
+     * - System UI (status bar, nav bar) doesn't need voice commands
+     * - Non-visible elements can't be actioned anyway
+     *
+     * @return true if event should be processed, false to skip
+     */
+    private fun shouldProcessEvent(event: AccessibilityEvent): Boolean {
+        val packageName = event.packageName?.toString()
+
+        // Skip system UI updates (status bar, navigation bar, quick settings)
+        // These don't need voice commands and generate frequent events
+        if (packageName == "com.android.systemui") {
+            Log.v(TAG, "Skipping system UI event")
+            return false
+        }
+
+        // Skip our own overlay events to prevent feedback loops
+        if (packageName == "com.augmentalis.voiceoscoreng") {
+            return false
+        }
+
+        // For content change events, check if source is visible
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            val source = event.source
+            if (source != null) {
+                val isVisible = source.isVisibleToUser
+                source.recycle()
+                if (!isVisible) {
+                    Log.v(TAG, "Skipping non-visible content change")
+                    return false
+                }
+            }
+        }
+
+        return true
+    }
+
+    /**
      * Determine if content change should trigger an incremental re-scrape.
      * Focus on scroll events in dynamic containers (RecyclerView, ListView, etc.)
      */
@@ -509,8 +676,55 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
+     * FIX: Throttled speech engine update to prevent continuous grammar compilation.
+     *
+     * Grammar compilation in Vivoka blocks voice recognition. When apps generate
+     * rapid accessibility events, continuous updates starve the speech collector.
+     * This wrapper ensures we don't update the speech engine more frequently than
+     * the configured minimum interval.
+     *
+     * @param phrases List of command phrases to register
+     * @param forceUpdate If true, bypass throttling (use for screen changes)
+     */
+    private fun throttledSpeechEngineUpdate(phrases: List<String>, forceUpdate: Boolean = false) {
+        val config = DeviceCapabilityManager.getTimingConfig(TimingOperation.SPEECH_ENGINE_UPDATE)
+        val now = System.currentTimeMillis()
+        val lastUpdate = lastSpeechEngineUpdateTime.get()
+
+        // Check if we should skip this update
+        if (!forceUpdate && config.canSkip && (now - lastUpdate < config.minIntervalMs)) {
+            Log.v(TAG, "Speech engine update throttled (${now - lastUpdate}ms < ${config.minIntervalMs}ms)")
+            return
+        }
+
+        // Try to acquire the updating lock
+        if (!isSpeechEngineUpdating.compareAndSet(false, true)) {
+            Log.v(TAG, "Speech engine update skipped - already updating")
+            return
+        }
+
+        serviceScope.launch {
+            try {
+                voiceOSCore?.updateCommands(phrases)
+                lastSpeechEngineUpdateTime.set(System.currentTimeMillis())
+                Log.d(TAG, "Speech engine updated with ${phrases.size} phrases")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update speech engine", e)
+            } finally {
+                isSpeechEngineUpdating.set(false)
+            }
+        }
+    }
+
+    /**
      * Handle incremental content updates from scroll/list changes.
      * Uses dynamic debounce based on device capability.
+     *
+     * FIX: Added processing guard and throttled speech engine updates to prevent
+     * continuous processing that starves voice recognition.
+     *
+     * OPTIMIZATION: Screen Hash Skip Enhancement - computes quick hash BEFORE
+     * expensive element extraction to skip duplicate processing.
      */
     private fun handleContentUpdate(event: AccessibilityEvent) {
         // Get dynamic debounce based on device capability
@@ -523,12 +737,29 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         }
         lastContentUpdateTime = now
 
+        // FIX: Skip if already processing to prevent queue buildup
+        if (!isProcessingAccessibilityEvent.compareAndSet(false, true)) {
+            Log.v(TAG, "Content update skipped - already processing")
+            return
+        }
+
         serviceScope.launch {
             try {
                 val rootNode = rootInActiveWindow ?: return@launch
                 val packageName = event.packageName?.toString() ?: rootNode.packageName?.toString() ?: "unknown"
 
-                // Extract current visible elements
+                // OPTIMIZATION: Screen Hash Skip Enhancement
+                // Compute quick hash BEFORE expensive element extraction
+                // This eliminates duplicate processing when screen hasn't actually changed
+                val quickHash = screenCacheManager.generateScreenHash(rootNode)
+                if (quickHash == lastContentUpdateHash) {
+                    Log.v(TAG, "Content update skipped - screen hash unchanged (${quickHash.take(8)})")
+                    rootNode.recycle()
+                    return@launch
+                }
+                lastContentUpdateHash = quickHash
+
+                // Extract current visible elements (expensive operation - only if hash changed)
                 val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
                 val hierarchy = mutableListOf<HierarchyNode>()
                 val seenHashes = mutableSetOf<String>()
@@ -546,6 +777,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 val elementLabels = ElementExtractor.deriveElementLabels(elements, hierarchy)
 
                 // Generate/merge commands using incremental generator
+                // FIX: Use throttled speech engine update to prevent continuous grammar compilation
                 val commandResult = dynamicCommandGenerator.generateCommandsIncremental(
                     elements = elements,
                     hierarchy = hierarchy,
@@ -553,13 +785,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     packageName = packageName,
                     existingCommands = commandRegistry.all(),
                     updateSpeechEngine = { phrases ->
-                        serviceScope.launch {
-                            try {
-                                voiceOSCore?.updateCommands(phrases)
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Failed to update speech engine during incremental update", e)
-                            }
-                        }
+                        throttledSpeechEngineUpdate(phrases, forceUpdate = false)
                     }
                 )
 
@@ -567,6 +793,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error in content update", e)
+            } finally {
+                isProcessingAccessibilityEvent.set(false)
             }
         }
     }
@@ -575,6 +803,13 @@ class VoiceOSAccessibilityService : AccessibilityService() {
      * Last content update timestamp for debouncing scroll events.
      */
     private var lastContentUpdateTime = 0L
+
+    /**
+     * Last content update screen hash for Screen Hash Skip Enhancement.
+     * Used to skip expensive element extraction when screen hasn't changed.
+     */
+    @Volatile
+    private var lastContentUpdateHash: String? = null
 
     /**
      * Last scroll event timestamp for debouncing direct scroll events.
@@ -747,6 +982,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             commandRegistry.clear()
             OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
             currentScreenHash = null  // Clear hash when monitoring disabled
+                lastContentUpdateHash = null  // Clear content hash for fresh processing
             Log.d(TAG, "Screen changed to $packageName - manual mode, awaiting user scan")
             return
         }
@@ -761,6 +997,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                         commandRegistry.clear()
                         OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
                         currentScreenHash = null
+                        lastContentUpdateHash = null
                         return@launch
                     }
 
@@ -812,6 +1049,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     commandRegistry.clear()
                     OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges before new scan
                     currentScreenHash = screenHash
+                    lastContentUpdateHash = null  // Reset for fresh content updates on new screen
 
                     performExplorationWithCache(screenHash, packageName, appVersion)
 
@@ -820,12 +1058,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     commandRegistry.clear()
                     OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges on error
                     currentScreenHash = null
+                    lastContentUpdateHash = null
                 }
             }
         } else {
             commandRegistry.clear()
             OverlayStateManager.clearOverlayItems()  // Clear DynamicLists badges
             currentScreenHash = null
+            lastContentUpdateHash = null
         }
     }
 
@@ -944,6 +1184,10 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             Log.w(TAG, "Error unregistering receiver", e)
         }
 
+        // Cancel speech collection job first
+        speechCollectionJob?.cancel()
+        speechCollectionJob = null
+
         serviceScope.launch {
             try {
                 voiceOSCore?.dispose()
@@ -958,6 +1202,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         _isConnected.value = false
         voiceOSCore = null
         serviceScope.cancel()
+
+        // Shutdown dedicated speech dispatcher
+        try {
+            (speechDispatcher as? java.io.Closeable)?.close()
+            Log.d(TAG, "Speech dispatcher shutdown")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error shutting down speech dispatcher", e)
+        }
     }
 
     /**

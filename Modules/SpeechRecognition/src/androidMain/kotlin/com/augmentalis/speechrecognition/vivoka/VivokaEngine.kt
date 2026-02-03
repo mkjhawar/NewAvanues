@@ -40,6 +40,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * SOLID refactored Vivoka VSDK speech recognition engine
@@ -59,6 +60,13 @@ class VivokaEngine(
     // Coroutines
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var timeoutJob: Job? = null
+
+    /**
+     * FIX: Guard to prevent setDynamicCommands queue buildup.
+     * When continuous accessibility events trigger rapid updates, this ensures
+     * only one update is processed at a time, others are skipped.
+     */
+    private val isSettingDynamicCommands = AtomicBoolean(false)
 
     // Shared preferences for state persistence
     private val prefs: SharedPreferences? = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -671,31 +679,46 @@ class VivokaEngine(
     }
 
     /**
-     * Set dynamic commands at runtime
+     * Set dynamic commands at runtime.
+     *
+     * FIX: Added atomic guard to prevent queue buildup when continuous
+     * accessibility events trigger rapid updates. Only one update is
+     * processed at a time; subsequent calls are skipped until complete.
+     * This prevents coroutine accumulation that starves speech collection.
      */
     fun setDynamicCommands(commands: List<String>) {
+        // FIX: Skip if already setting commands to prevent queue buildup
+        if (!isSettingDynamicCommands.compareAndSet(false, true)) {
+            Log.v(TAG, "setDynamicCommands skipped - already in progress")
+            return
+        }
+
         coroutineScope.launch {
-            Log.d(TAG, "SPEECH_TEST: setDynamicCommands commands = $commands")
-            registeredCommands.clear()
-            registeredCommands.addAll(commands)
+            try {
+                Log.d(TAG, "SPEECH_TEST: setDynamicCommands commands = $commands")
+                registeredCommands.clear()
+                registeredCommands.addAll(commands)
 
-            // Register with model component
-            model.registerCommands(commands)
+                // Register with model component
+                model.registerCommands(commands)
 
-            // Register with learning system
-            learning.registerCommands(commands)
+                // Register with learning system
+                learning.registerCommands(commands)
 
-            // Compile models if not sleeping and initialized
-            Log.i(
-                TAG,
-                "SPEECH_TEST: setDynamicCommands isVoiceSleeping = ${voiceStateManager.isVoiceSleeping()}, isInitialized = ${voiceStateManager.isInitialized()}"
-            )
-            if (!voiceStateManager.isVoiceSleeping() && voiceStateManager.isInitialized()) {
-                val isCompiled = model.compileModelWithCommands(registeredCommands)
-                Log.d(TAG, "SPEECH_TEST: setDynamicCommands isCompiled = $isCompiled")
+                // Compile models if not sleeping and initialized
+                Log.i(
+                    TAG,
+                    "SPEECH_TEST: setDynamicCommands isVoiceSleeping = ${voiceStateManager.isVoiceSleeping()}, isInitialized = ${voiceStateManager.isInitialized()}"
+                )
+                if (!voiceStateManager.isVoiceSleeping() && voiceStateManager.isInitialized()) {
+                    val isCompiled = model.compileModelWithCommands(registeredCommands)
+                    Log.d(TAG, "SPEECH_TEST: setDynamicCommands isCompiled = $isCompiled")
+                }
+
+                Log.d(TAG, "Set ${commands.size} dynamic commands")
+            } finally {
+                isSettingDynamicCommands.set(false)
             }
-
-            Log.d(TAG, "Set ${commands.size} dynamic commands")
         }
     }
 

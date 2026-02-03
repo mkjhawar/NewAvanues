@@ -22,32 +22,43 @@ actual object DeviceCapabilityManager {
     private var userOverrideDebounce: Long? = null
     private var contextRef: Context? = null
 
-    // Default timing configurations per device speed
+    /**
+     * FIX: Increased debounce values to prevent continuous processing that starves voice recognition.
+     *
+     * The previous values (100/200/300ms) were too low for apps like Device Info, YouTube,
+     * and My Files that generate rapid continuous accessibility events. This caused:
+     * 1. Continuous command generation flooding Dispatchers.Default
+     * 2. Continuous speech engine grammar updates blocking voice recognition
+     * 3. Collector coroutine starvation despite dedicated dispatcher
+     *
+     * SPEECH_ENGINE_UPDATE is particularly critical - grammar compilation is expensive
+     * and blocks the recognizer. We now use longer debounces and allow skipping.
+     */
     private val fastTimings = mapOf(
-        TimingOperation.CONTENT_CHANGE to TimingConfig(debounceMs = 100, minIntervalMs = 50, canSkip = false),
-        TimingOperation.SCROLL to TimingConfig(debounceMs = 50, minIntervalMs = 30, canSkip = true),
-        TimingOperation.FULL_SCRAPE to TimingConfig(debounceMs = 200, minIntervalMs = 100, canSkip = false),
-        TimingOperation.INCREMENTAL_UPDATE to TimingConfig(debounceMs = 75, minIntervalMs = 50, canSkip = true),
-        TimingOperation.OVERLAY_REFRESH to TimingConfig(debounceMs = 50, minIntervalMs = 16, canSkip = true),
-        TimingOperation.SPEECH_ENGINE_UPDATE to TimingConfig(debounceMs = 150, minIntervalMs = 100, canSkip = false)
+        TimingOperation.CONTENT_CHANGE to TimingConfig(debounceMs = 250, minIntervalMs = 150, canSkip = true),
+        TimingOperation.SCROLL to TimingConfig(debounceMs = 150, minIntervalMs = 100, canSkip = true),
+        TimingOperation.FULL_SCRAPE to TimingConfig(debounceMs = 400, minIntervalMs = 250, canSkip = false),
+        TimingOperation.INCREMENTAL_UPDATE to TimingConfig(debounceMs = 200, minIntervalMs = 125, canSkip = true),
+        TimingOperation.OVERLAY_REFRESH to TimingConfig(debounceMs = 100, minIntervalMs = 50, canSkip = true),
+        TimingOperation.SPEECH_ENGINE_UPDATE to TimingConfig(debounceMs = 500, minIntervalMs = 400, canSkip = true)
     )
 
     private val mediumTimings = mapOf(
-        TimingOperation.CONTENT_CHANGE to TimingConfig(debounceMs = 200, minIntervalMs = 100, canSkip = false),
-        TimingOperation.SCROLL to TimingConfig(debounceMs = 100, minIntervalMs = 50, canSkip = true),
-        TimingOperation.FULL_SCRAPE to TimingConfig(debounceMs = 300, minIntervalMs = 200, canSkip = false),
-        TimingOperation.INCREMENTAL_UPDATE to TimingConfig(debounceMs = 150, minIntervalMs = 100, canSkip = true),
-        TimingOperation.OVERLAY_REFRESH to TimingConfig(debounceMs = 100, minIntervalMs = 33, canSkip = true),
-        TimingOperation.SPEECH_ENGINE_UPDATE to TimingConfig(debounceMs = 250, minIntervalMs = 150, canSkip = false)
+        TimingOperation.CONTENT_CHANGE to TimingConfig(debounceMs = 500, minIntervalMs = 300, canSkip = true),
+        TimingOperation.SCROLL to TimingConfig(debounceMs = 300, minIntervalMs = 200, canSkip = true),
+        TimingOperation.FULL_SCRAPE to TimingConfig(debounceMs = 600, minIntervalMs = 400, canSkip = false),
+        TimingOperation.INCREMENTAL_UPDATE to TimingConfig(debounceMs = 400, minIntervalMs = 250, canSkip = true),
+        TimingOperation.OVERLAY_REFRESH to TimingConfig(debounceMs = 150, minIntervalMs = 75, canSkip = true),
+        TimingOperation.SPEECH_ENGINE_UPDATE to TimingConfig(debounceMs = 1000, minIntervalMs = 800, canSkip = true)
     )
 
     private val slowTimings = mapOf(
-        TimingOperation.CONTENT_CHANGE to TimingConfig(debounceMs = 300, minIntervalMs = 150, canSkip = false),
-        TimingOperation.SCROLL to TimingConfig(debounceMs = 150, minIntervalMs = 75, canSkip = true),
-        TimingOperation.FULL_SCRAPE to TimingConfig(debounceMs = 500, minIntervalMs = 300, canSkip = false),
-        TimingOperation.INCREMENTAL_UPDATE to TimingConfig(debounceMs = 250, minIntervalMs = 150, canSkip = true),
-        TimingOperation.OVERLAY_REFRESH to TimingConfig(debounceMs = 150, minIntervalMs = 50, canSkip = true),
-        TimingOperation.SPEECH_ENGINE_UPDATE to TimingConfig(debounceMs = 400, minIntervalMs = 250, canSkip = false)
+        TimingOperation.CONTENT_CHANGE to TimingConfig(debounceMs = 800, minIntervalMs = 500, canSkip = true),
+        TimingOperation.SCROLL to TimingConfig(debounceMs = 500, minIntervalMs = 300, canSkip = true),
+        TimingOperation.FULL_SCRAPE to TimingConfig(debounceMs = 1000, minIntervalMs = 600, canSkip = false),
+        TimingOperation.INCREMENTAL_UPDATE to TimingConfig(debounceMs = 600, minIntervalMs = 400, canSkip = true),
+        TimingOperation.OVERLAY_REFRESH to TimingConfig(debounceMs = 200, minIntervalMs = 100, canSkip = true),
+        TimingOperation.SPEECH_ENGINE_UPDATE to TimingConfig(debounceMs = 2000, minIntervalMs = 1500, canSkip = true)
     )
 
     /**

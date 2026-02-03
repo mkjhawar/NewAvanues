@@ -6,6 +6,7 @@ import com.augmentalis.database.repositories.IWebAppWhitelistRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +50,28 @@ class BrowserVoiceOSCallback(
     private val _isWhitelistedDomain = MutableStateFlow(false)
     val isWhitelistedDomain: StateFlow<Boolean> = _isWhitelistedDomain.asStateFlow()
 
+    // ===== UI State for feedback components =====
+
+    // Scanning state for DOMScrapingIndicator
+    private val _scrapingState = MutableStateFlow<DOMScrapingState>(DOMScrapingState.Idle)
+    val scrapingState: StateFlow<DOMScrapingState> = _scrapingState.asStateFlow()
+
+    // Voice command status for VoiceCommandStatusBar
+    private val _voiceStatus = MutableStateFlow<VoiceCommandStatus>(VoiceCommandStatus.Idle)
+    val voiceStatus: StateFlow<VoiceCommandStatus> = _voiceStatus.asStateFlow()
+
+    // Command count for quick display
+    private val _commandCount = MutableStateFlow(0)
+    val commandCount: StateFlow<Int> = _commandCount.asStateFlow()
+
+    // Recent executed commands for history
+    private val _recentCommands = MutableStateFlow<List<String>>(emptyList())
+    val recentCommands: StateFlow<List<String>> = _recentCommands.asStateFlow()
+
+    // Last execution result for feedback UI
+    private val _lastExecutionResult = MutableStateFlow<CommandExecutionResult?>(null)
+    val lastExecutionResult: StateFlow<CommandExecutionResult?> = _lastExecutionResult.asStateFlow()
+
     // Voice command generator for matching spoken phrases to elements
     private val commandGenerator = VoiceCommandGenerator()
 
@@ -59,13 +82,36 @@ class BrowserVoiceOSCallback(
         commandGenerator.clear()
         commandGenerator.addElements(result.elements)
 
-        val commandCount = commandGenerator.getCommandCount()
-        println("VoiceOS: DOM scraped - ${result.elementCount} elements, $commandCount voice commands generated")
+        val count = commandGenerator.getCommandCount()
+        _commandCount.value = count
+
+        // Update scraping state to complete
+        _scrapingState.value = DOMScrapingState.Complete(
+            elementCount = result.elementCount,
+            commandCount = count,
+            isWhitelisted = _isWhitelistedDomain.value
+        )
+
+        // Update voice status to ready
+        _voiceStatus.value = VoiceCommandStatus.Ready(
+            commandCount = count,
+            isWhitelisted = _isWhitelistedDomain.value
+        )
+
+        println("VoiceOS: DOM scraped - ${result.elementCount} elements, $count voice commands generated")
 
         // Persist commands if domain is whitelisted
         if (_isWhitelistedDomain.value && webCommandRepository != null) {
             scope.launch {
                 persistCommands(result)
+            }
+        }
+
+        // Auto-clear scraping complete state after delay
+        scope.launch {
+            delay(3000)
+            if (_scrapingState.value is DOMScrapingState.Complete) {
+                _scrapingState.value = DOMScrapingState.Idle
             }
         }
     }
@@ -81,6 +127,11 @@ class BrowserVoiceOSCallback(
         // Clear previous scrape result when new page starts loading
         _currentScrapeResult.value = null
         commandGenerator.clear()
+        _commandCount.value = 0
+
+        // Update UI states for scanning
+        _scrapingState.value = DOMScrapingState.Scanning()
+        _voiceStatus.value = VoiceCommandStatus.Scanning
 
         // Check if domain is whitelisted
         scope.launch {
@@ -114,6 +165,9 @@ class BrowserVoiceOSCallback(
     override suspend fun executeCommand(command: VoiceCommandGenerator.WebVoiceCommand): Boolean {
         println("VoiceOS: Executing command - ${command.action} on ${command.fullText}")
 
+        // Update voice status to processing
+        _voiceStatus.value = VoiceCommandStatus.Processing(command.fullText)
+
         // Increment usage count if persisted
         if (_isWhitelistedDomain.value && webCommandRepository != null) {
             val domain = _currentDomain.value
@@ -125,7 +179,38 @@ class BrowserVoiceOSCallback(
         }
 
         // TODO: Execute the command via JavaScript injection
-        return true
+        val success = true
+
+        // Update execution result for UI feedback
+        _lastExecutionResult.value = if (success) {
+            CommandExecutionResult.Success(
+                command = command.fullText,
+                action = command.action.name.lowercase(),
+                target = command.metadata["tag"]
+            )
+        } else {
+            CommandExecutionResult.Failure(
+                command = command.fullText,
+                reason = "Element not found or not interactable"
+            )
+        }
+
+        // Update voice status
+        _voiceStatus.value = VoiceCommandStatus.Executed(command.fullText, success)
+
+        // Add to recent commands
+        val recent = _recentCommands.value.toMutableList()
+        recent.add(0, command.fullText)
+        _recentCommands.value = recent.take(10)
+
+        // Reset voice status after delay
+        scope.launch {
+            delay(2000)
+            val count = _commandCount.value
+            _voiceStatus.value = VoiceCommandStatus.Ready(count, _isWhitelistedDomain.value)
+        }
+
+        return success
     }
 
     /**
@@ -286,6 +371,120 @@ class BrowserVoiceOSCallback(
         matches: List<VoiceCommandGenerator.MatchResult>
     ): List<VoiceCommandGenerator.DisambiguationOption> {
         return commandGenerator.generateDisambiguationOptions(matches)
+    }
+
+    // ===== UI Control Methods =====
+
+    /**
+     * Start listening for voice input.
+     * Updates voice status to Listening state.
+     */
+    fun startListening() {
+        _voiceStatus.value = VoiceCommandStatus.Listening()
+    }
+
+    /**
+     * Update partial speech recognition result.
+     */
+    fun updatePartialResult(partialText: String) {
+        if (_voiceStatus.value is VoiceCommandStatus.Listening) {
+            _voiceStatus.value = VoiceCommandStatus.Listening(partialText)
+        }
+    }
+
+    /**
+     * Stop listening and process the spoken phrase.
+     */
+    suspend fun processSpokenPhrase(phrase: String) {
+        _voiceStatus.value = VoiceCommandStatus.Processing(phrase)
+
+        val matches = findMatches(phrase)
+
+        when {
+            matches.isEmpty() -> {
+                // No matches found
+                _lastExecutionResult.value = CommandExecutionResult.NotFound(
+                    command = phrase,
+                    suggestions = getSimilarCommands(phrase)
+                )
+                _voiceStatus.value = VoiceCommandStatus.Ready(_commandCount.value, _isWhitelistedDomain.value)
+            }
+            matches.size == 1 -> {
+                // Single match - execute directly
+                executeCommand(matches[0].command)
+            }
+            else -> {
+                // Multiple matches - need disambiguation
+                val options = matches.take(5).mapIndexed { index, match ->
+                    DisambiguationOption(
+                        index = index + 1,
+                        text = match.command.fullText,
+                        elementType = match.command.elementType,
+                        preview = match.command.words.take(3).joinToString(" ")
+                    )
+                }
+                _lastExecutionResult.value = CommandExecutionResult.Disambiguate(
+                    command = phrase,
+                    options = options
+                )
+                _voiceStatus.value = VoiceCommandStatus.Ready(_commandCount.value, _isWhitelistedDomain.value)
+            }
+        }
+    }
+
+    /**
+     * Cancel listening without processing.
+     */
+    fun cancelListening() {
+        _voiceStatus.value = VoiceCommandStatus.Ready(_commandCount.value, _isWhitelistedDomain.value)
+    }
+
+    /**
+     * Select a disambiguation option and execute it.
+     */
+    suspend fun selectDisambiguationOption(index: Int) {
+        val matches = getAllCommands()
+        if (index in 1..matches.size) {
+            val command = matches[index - 1]
+            executeCommand(command)
+        }
+    }
+
+    /**
+     * Clear the last execution result (dismiss feedback).
+     */
+    fun clearExecutionResult() {
+        _lastExecutionResult.value = null
+    }
+
+    /**
+     * Get commands similar to the spoken phrase for suggestions.
+     */
+    private fun getSimilarCommands(phrase: String): List<String> {
+        val allCommands = getAllCommands()
+        return allCommands
+            .filter { cmd ->
+                cmd.words.any { word ->
+                    phrase.lowercase().contains(word.take(3))
+                }
+            }
+            .take(3)
+            .map { it.fullText }
+    }
+
+    /**
+     * Get commands as display objects for UI.
+     */
+    fun getCommandsForDisplay(): List<WebVoiceCommandDisplay> {
+        return getAllCommands().map { cmd ->
+            WebVoiceCommandDisplay(
+                phrase = cmd.fullText,
+                description = "${cmd.action.name.lowercase()} ${cmd.elementType}",
+                elementType = cmd.elementType,
+                action = cmd.action.name.lowercase(),
+                isSaved = _isWhitelistedDomain.value
+            )
+        }
     }
 
     companion object {
