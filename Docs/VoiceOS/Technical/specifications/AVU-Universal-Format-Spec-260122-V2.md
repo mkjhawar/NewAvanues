@@ -2,8 +2,8 @@
 
 **Format**: AVU (Avanues Universal Format)
 **Schema**: `avu-2.0`
-**Version**: 2.0.0
-**Date**: 2026-01-22
+**Version**: 2.1.0
+**Date**: 2026-02-03
 
 ---
 
@@ -105,6 +105,72 @@ Reserved characters must be escaped:
 | `CFG` | Config Block | `CFG:start` or `CFG:end` | `CFG:start` |
 | `KEY` | Config Key | `KEY:name:type:default:description` | `KEY:sensitivity:float:0.8:Detection threshold` |
 | `HKS` | Hook | `HKS:event:handler` | `HKS:on_voice_command:handleVoice` |
+
+### 4. WebSocket/Sync Codes (NEW in v2.1)
+
+| Code | Purpose | Format | Example |
+|------|---------|--------|---------|
+| `PNG` | Ping (keep-alive) | `PNG:sessionId:timestamp` | `PNG:sess_001:1705312800000` |
+| `PON` | Pong (response) | `PON:sessionId:timestamp` | `PON:sess_001:1705312800001` |
+| `HND` | Handshake | `HND:sessionId:deviceId:appVersion:platform:userId?` | `HND:sess_001:dev_001:1.0.0:Android:user_001` |
+| `CAP` | Capability | `CAP:sessionId:cap1,cap2,cap3` | `CAP:sess_001:tabs,favorites,settings` |
+| `SCR` | Sync Create | `SCR:msgId:entityType:entityId:version:data` | `SCR:msg_001:TAB:tab_001:1:escaped_data` |
+| `SUP` | Sync Update | `SUP:msgId:entityType:entityId:version:data` | `SUP:msg_002:FAV:fav_001:2:escaped_data` |
+| `SDL` | Sync Delete | `SDL:msgId:entityType:entityId` | `SDL:msg_003:HST:hist_001` |
+| `SFL` | Sync Full Request | `SFL:msgId:entityTypes:lastSyncTimestamp` | `SFL:msg_004:TAB,FAV,SET:1705312800000` |
+| `SBT` | Sync Batch | `SBT:msgId:count:op1\|op2\|op3` | `SBT:msg_005:2:TAB,t1,CREATE,1,data` |
+| `SRS` | Sync Response | `SRS:msgId:entityType:entityId:version:data` | `SRS:msg_006:TAB:tab_001:1:escaped_data` |
+| `SCF` | Sync Conflict | `SCF:msgId:entityType:entityId:localVer:remoteVer:resolution` | `SCF:msg_007:TAB:tab_001:1:2:REMOTE` |
+| `SST` | Sync Status | `SST:sessionId:state:pendingCount:lastSync` | `SST:sess_001:SYNCING:5:1705312800000` |
+| `CON` | Connected | `CON:sessionId:serverVersion:timestamp` | `CON:sess_001:2.0.0:1705312800000` |
+| `DIS` | Disconnected | `DIS:sessionId:reason:timestamp` | `DIS:sess_001:Server closed:1705312800000` |
+| `RCN` | Reconnecting | `RCN:sessionId:attempt:maxAttempts:delayMs` | `RCN:sess_001:3:5:4000` |
+
+#### Sync Entity Types
+
+| ID | Entity | Description |
+|----|--------|-------------|
+| `TAB` | Tab | Browser tabs |
+| `FAV` | Favorite | Bookmarks/favorites |
+| `HST` | History | Browsing history |
+| `DWN` | Download | Downloads |
+| `SET` | Settings | User settings |
+| `SES` | Session | Browser sessions |
+
+#### Sync States
+
+| State | Description |
+|-------|-------------|
+| `IDLE` | No sync activity |
+| `SYNCING` | Sync in progress |
+| `CONNECTING` | Establishing connection |
+| `CONNECTED` | Connection established |
+| `DISCONNECTED` | Connection lost |
+| `ERROR` | Sync error occurred |
+| `OFFLINE` | Device offline |
+
+#### Conflict Resolutions
+
+| Resolution | Description |
+|------------|-------------|
+| `LOCAL` | Keep local version |
+| `REMOTE` | Accept remote version |
+| `MERGE` | Merge both versions |
+| `MANUAL` | Requires user decision |
+
+#### Batch Operation Format
+
+Each operation in `SBT` batch uses comma-separated fields:
+```
+entityType,entityId,action,version,data
+```
+
+Actions: `CREATE`, `UPDATE`, `DELETE`
+
+Example batch:
+```
+SBT:msg_005:3:TAB,tab1,CREATE,1,{...}|FAV,fav1,UPDATE,2,{...}|HST,hist1,DELETE,1,
+```
 
 ---
 
@@ -289,11 +355,13 @@ println(parsed?.capabilities) // [accessibility.voice, ai.nlu]
 - [Universal Plugin Architecture Plan](../../../AI/Plans/UniversalPlugin-Architecture-Plan-260122.md)
 - [AVUCodec Module](../../../../Modules/AVUCodec/src/commonMain/kotlin/com/augmentalis/avucodec/)
 - [VoiceOSCore AVUSerializer](../../../../Modules/VoiceOSCore/src/commonMain/kotlin/com/augmentalis/voiceoscore/AVUSerializer.kt)
+- [WebSocket Module - AvuSyncMessage](../../../../Modules/WebSocket/src/commonMain/kotlin/com/augmentalis/websocket/AvuSyncMessage.kt)
 
 ---
 
 ## Version History
 
+- **2.1.0** (2026-02-03): Added WebSocket/Sync codes (PNG, PON, HND, CAP, SCR, SUP, SDL, SFL, SBT, SRS, SCF, SST, CON, DIS, RCN), entity types, sync states, conflict resolutions
 - **2.0.0** (2026-01-22): Added Plugin Manifest format, new codes (PLG, DSC, AUT, PCP, MOD, DEP, PRM, PLT, AST, CFG, KEY, HKS)
 - **1.0.0** (2025-12-03): Initial AVU format specification
 
