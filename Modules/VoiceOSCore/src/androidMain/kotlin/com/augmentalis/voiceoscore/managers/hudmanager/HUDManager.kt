@@ -70,9 +70,9 @@ class HUDManager constructor(
     private var voiceUIRenderer: HUDRenderer? = null
     private var voiceUISystem: HUDSystem? = null
     
-    val gazeTracker = com.augmentalis.hudmanager.spatial.GazeTracker(context)
-    val contextManager = com.augmentalis.hudmanager.core.ContextManager(context)
-    val enhancer = com.augmentalis.hudmanager.accessibility.Enhancer(context)
+    val gazeTracker = com.augmentalis.voiceoscore.managers.hudmanager.spatial.GazeTracker(context)
+    val contextManager = com.augmentalis.voiceoscore.managers.hudmanager.core.ContextManager(context)
+    val enhancer = com.augmentalis.voiceoscore.managers.hudmanager.accessibility.Enhancer(context)
     
     // VOS4 system integrations (direct access - zero overhead)
     private val imuManager = IMUManager.getInstance(context)
@@ -291,7 +291,7 @@ class HUDManager constructor(
     fun showLocalizedNotification(
         translationKey: String,
         position: SpatialPosition = SpatialPosition(0f, 0f, -2f),
-        priority: com.augmentalis.hudmanager.spatial.NotificationPriority = com.augmentalis.hudmanager.spatial.NotificationPriority.NORMAL,
+        priority: com.augmentalis.voiceoscore.managers.hudmanager.spatial.NotificationPriority = com.augmentalis.voiceoscore.managers.hudmanager.spatial.NotificationPriority.NORMAL,
         vararg args: Any
     ) {
         hudScope.launch {
@@ -322,7 +322,7 @@ class HUDManager constructor(
     /**
      * Get current gaze target for voice commands
      */
-    suspend fun getCurrentGazeTarget(): com.augmentalis.hudmanager.models.GazeTarget? {
+    suspend fun getCurrentGazeTarget(): com.augmentalis.voiceoscore.managers.hudmanager.models.GazeTarget? {
         return gazeTracker.getCurrentTarget()
     }
     
@@ -647,8 +647,8 @@ class HUDManager constructor(
     }
     
     private fun elementsOverlap(element1: HUDElement, element2: HUDElement): Boolean {
-        val bounds1 = element1.bounds ?: com.augmentalis.hudmanager.models.ElementBounds(0.1f, 0.1f)
-        val bounds2 = element2.bounds ?: com.augmentalis.hudmanager.models.ElementBounds(0.1f, 0.1f)
+        val bounds1 = element1.bounds ?: com.augmentalis.voiceoscore.managers.hudmanager.models.ElementBounds(0.1f, 0.1f)
+        val bounds2 = element2.bounds ?: com.augmentalis.voiceoscore.managers.hudmanager.models.ElementBounds(0.1f, 0.1f)
         
         val distance = kotlin.math.sqrt(
             (element1.position.x - element2.position.x) * (element1.position.x - element2.position.x) +

@@ -105,23 +105,23 @@ object voiceui {
     object hud {
         // Enum references for the package-qualified usage
         object HUDMode {
-            val STANDARD = com.augmentalis.hudmanager.stubs.HUDMode.STANDARD
-            val MEETING = com.augmentalis.hudmanager.stubs.HUDMode.MEETING
-            val DRIVING = com.augmentalis.hudmanager.stubs.HUDMode.DRIVING
-            val WORKSHOP = com.augmentalis.hudmanager.stubs.HUDMode.WORKSHOP
-            val ACCESSIBILITY = com.augmentalis.hudmanager.stubs.HUDMode.ACCESSIBILITY
-            val GAMING = com.augmentalis.hudmanager.stubs.HUDMode.GAMING
-            val ENTERTAINMENT = com.augmentalis.hudmanager.stubs.HUDMode.ENTERTAINMENT
+            val STANDARD = com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.STANDARD
+            val MEETING = com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.MEETING
+            val DRIVING = com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.DRIVING
+            val WORKSHOP = com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.WORKSHOP
+            val ACCESSIBILITY = com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.ACCESSIBILITY
+            val GAMING = com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.GAMING
+            val ENTERTAINMENT = com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.ENTERTAINMENT
         }
-        
+
         object RenderMode {
-            val SPATIAL_AR = com.augmentalis.hudmanager.stubs.RenderMode.SPATIAL_AR
-            val OVERLAY_2D = com.augmentalis.hudmanager.stubs.RenderMode.OVERLAY_2D
-            val MIXED_REALITY = com.augmentalis.hudmanager.stubs.RenderMode.MIXED_REALITY
+            val SPATIAL_AR = com.augmentalis.voiceoscore.managers.hudmanager.stubs.RenderMode.SPATIAL_AR
+            val OVERLAY_2D = com.augmentalis.voiceoscore.managers.hudmanager.stubs.RenderMode.OVERLAY_2D
+            val MIXED_REALITY = com.augmentalis.voiceoscore.managers.hudmanager.stubs.RenderMode.MIXED_REALITY
         }
-        
-        fun OrientationData(pitch: Float, yaw: Float, roll: Float) = 
-            com.augmentalis.hudmanager.stubs.OrientationData(pitch, yaw, roll)
+
+        fun OrientationData(pitch: Float, yaw: Float, roll: Float) =
+            com.augmentalis.voiceoscore.managers.hudmanager.stubs.OrientationData(pitch, yaw, roll)
     }
     
     object design {

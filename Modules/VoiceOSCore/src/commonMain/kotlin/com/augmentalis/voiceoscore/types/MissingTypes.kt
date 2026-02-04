@@ -1,72 +1,45 @@
 /**
- * MissingTypes.kt - Stub definitions for missing types during migration
+ * MissingTypes.kt - Type aliases for backwards compatibility
+ *
+ * Note: Core command types are now in CommandModels.kt at the package root.
+ * This file contains only supplementary type aliases not in CommandModels.kt.
  */
 package com.augmentalis.voiceoscore
 
+// Type aliases for backwards compatibility with androidMain code
+// that may use different package imports
+
 /**
- * Error codes for command execution.
+ * Alias for unified context (backwards compatibility).
  */
-enum class ErrorCode {
-    NONE,
-    ELEMENT_NOT_FOUND,
-    PERMISSION_DENIED,
-    TIMEOUT,
-    INVALID_STATE,
-    NOT_SUPPORTED,
-    UNKNOWN,
-    EXECUTION_FAILED,
-    MODULE_NOT_AVAILABLE,
-    INVALID_PARAMETERS,
-    CANCELLED,
-    UNKNOWN_COMMAND,
-    COMMAND_NOT_FOUND
+typealias UnifiedCommandContext = CommandContext
+typealias ModelsCommandContext = CommandContext
+
+/**
+ * Additional error codes not in CommandModels.kt
+ * These can be used alongside the ErrorCode enum from CommandModels.kt
+ */
+object AdditionalErrorCodes {
+    const val NONE = 0
+    const val ELEMENT_NOT_FOUND = 1
+    const val INVALID_STATE = 2
+    const val NOT_SUPPORTED = 3
 }
 
 /**
- * Source of a command.
+ * Additional command category values
+ * Complements the categories in StaticCommandRegistry.kt
  */
-enum class CommandSource {
+enum class CommandCategory {
+    NAVIGATION,
+    TEXT,
+    MEDIA,
+    SYSTEM,
+    APP,
+    ACCESSIBILITY,
     VOICE,
     GESTURE,
-    KEYBOARD,
-    PROGRAMMATIC,
-    UNKNOWN
-}
-
-/**
- * Command error details.
- */
-data class CommandError(
-    val code: ErrorCode,
-    val message: String,
-    val details: String? = null
-)
-
-/**
- * Basic command representation.
- */
-data class Command(
-    val id: String? = null,
-    val text: String? = null,
-    val action: String? = null,
-    val target: String? = null,
-    val parameters: Map<String, Any> = emptyMap(),
-    val source: CommandSource = CommandSource.UNKNOWN,
-    val timestamp: Long = 0L,
-    val confidence: Float = 1.0f
-)
-
-/**
- * Result of a command execution.
- */
-data class CommandResult(
-    val success: Boolean,
-    val command: Command? = null,
-    val response: String? = null,
-    val error: CommandError? = null,
-    val executionTime: Long = 0L,
-    val data: Any? = null
-) {
-    val isSuccess: Boolean get() = success
-    val message: String get() = response ?: error?.message ?: ""
+    CUSTOM,
+    INPUT,
+    APP_CONTROL
 }

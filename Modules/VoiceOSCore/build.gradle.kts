@@ -82,6 +82,15 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
+                // Device Manager - for IMU, sensors, device capabilities
+                implementation(project(":Modules:DeviceManager"))
+
+                // Localization - for multi-language support
+                implementation(project(":Modules:Localization"))
+
+                // Voice Data Manager - for data management types
+                implementation(project(":Modules:VoiceDataManager"))
+
                 // Android Core
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.lifecycle.livedata.ktx)

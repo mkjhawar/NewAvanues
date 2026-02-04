@@ -139,17 +139,17 @@ class HUDRenderer(
     /**
      * Update mode-specific rendering
      */
-    fun updateModeRendering(mode: com.augmentalis.hudmanager.HUDMode) {
+    fun updateModeRendering(mode: com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode) {
         when (mode) {
-            com.augmentalis.hudmanager.HUDMode.MEETING -> {
+            com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.MEETING -> {
                 // Minimal, non-intrusive rendering
                 paint.alpha = 128
             }
-            com.augmentalis.hudmanager.HUDMode.DRIVING -> {
+            com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.DRIVING -> {
                 // High contrast, voice-only indicators
                 paint.alpha = 255
             }
-            com.augmentalis.hudmanager.HUDMode.WORKSHOP -> {
+            com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.WORKSHOP -> {
                 // Bold, safety-focused rendering
                 paint.alpha = 220
             }

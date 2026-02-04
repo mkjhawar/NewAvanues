@@ -117,21 +117,21 @@ class ContextManager(
     /**
      * Apply mode-specific settings
      */
-    suspend fun applyModeSettings(mode: com.augmentalis.hudmanager.HUDMode) {
+    suspend fun applyModeSettings(mode: com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode) {
         when (mode) {
-            com.augmentalis.hudmanager.HUDMode.MEETING -> {
+            com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.MEETING -> {
                 // Minimize visual distractions
                 adjustUIOpacity(0.3f)
                 enableSilentMode()
                 prioritizeTextTranscription()
             }
-            com.augmentalis.hudmanager.HUDMode.DRIVING -> {
+            com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.DRIVING -> {
                 // Voice-only, high contrast
                 adjustUIOpacity(1.0f)
                 enableVoiceOnlyMode()
                 prioritizeNavigation()
             }
-            com.augmentalis.hudmanager.HUDMode.WORKSHOP -> {
+            com.augmentalis.voiceoscore.managers.hudmanager.stubs.HUDMode.WORKSHOP -> {
                 // Hands-free, safety focused
                 adjustUIOpacity(0.8f)
                 enableHandsFreeMode()

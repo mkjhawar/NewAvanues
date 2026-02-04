@@ -481,7 +481,7 @@ class SpatialRenderer(
     /**
      * Apply display elements configuration
      */
-    fun applyDisplayElements(elements: com.augmentalis.hudmanager.settings.DisplayElements) {
+    fun applyDisplayElements(elements: com.augmentalis.voiceoscore.managers.hudmanager.settings.DisplayElements) {
         showElement("battery", elements.batteryStatus)
         showElement("time", elements.time)
         showElement("date", elements.date)
