@@ -573,11 +573,11 @@ object AVUEncoder {
      */
     fun encodeAppCategoryDatabase(database: AppCategoryDatabaseData): String = buildString {
         // Header comment
-        appendLine("# Avanues Universal Format v2.0")
+        appendLine("# Avanues Universal Format v2.2")
         appendLine("# Type: AppCategoryDatabase")
         appendLine("# Extension: .acd")
         appendLine("---")
-        appendLine("schema: avu-2.0")
+        appendLine("schema: avu-2.2")
         appendLine("version: ${database.version}")
         appendLine("project: voiceos")
         appendLine("metadata:")

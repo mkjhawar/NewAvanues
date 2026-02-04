@@ -12,11 +12,11 @@
  *
  * ## AVU Format Structure:
  * ```
- * # Avanues Universal Format v1.0
+ * # Avanues Universal Format v2.2
  * # Type: VOS
  * ---
- * schema: avu-1.0
- * version: 1.0.0
+ * schema: avu-2.2
+ * version: 2.2.0
  * locale: en-US
  * project: voiceos
  * metadata:
@@ -389,9 +389,9 @@ class AvuExporter(
 
         // Use AVUSerializer.parse for robust parsing
         val fullAvu = buildString {
-            appendLine("# Avanues Universal Format v1.0")
+            appendLine("# Avanues Universal Format v2.2")
             appendLine("---")
-            appendLine("schema: avu-1.0")
+            appendLine("schema: avu-2.2")
             appendLine("---")
             appendLine(data.appLine)
             appendLine(data.statsLine)

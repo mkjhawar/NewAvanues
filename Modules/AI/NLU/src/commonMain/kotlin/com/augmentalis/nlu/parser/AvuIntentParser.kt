@@ -19,10 +19,10 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  *
  * File format:
  * ```
- * # Avanues Universal Format v1.0
+ * # Avanues Universal Format v2.2
  * ---
- * schema: avu-1.0
- * version: 1.0.0
+ * schema: avu-2.2
+ * version: 2.2.0
  * locale: en-US
  * project: shared
  * metadata:
@@ -201,14 +201,14 @@ class AvuIntentParser {
         val sb = StringBuilder()
 
         // Header comments
-        sb.appendLine("# Avanues Universal Format v1.0")
+        sb.appendLine("# Avanues Universal Format v2.2")
         sb.appendLine("# Type: AVA")
         sb.appendLine("# Extension: .aai")
         sb.appendLine("---")
 
         // Schema section
-        sb.appendLine("schema: avu-1.0")
-        sb.appendLine("version: 1.0.0")
+        sb.appendLine("schema: avu-2.2")
+        sb.appendLine("version: 2.2.0")
         sb.appendLine("locale: $locale")
         sb.appendLine("project: $project")
         sb.appendLine("metadata:")
