@@ -100,10 +100,11 @@ include(":android:apps:VoiceCursor")
 include(":android:apps:VoiceOSIPCTest")
 include(":android:apps:VoiceUI")
 
-// VoiceOS Managers (remaining in VoiceOS - VoiceOS-specific)
-include(":Modules:VoiceOS:managers:HUDManager")
-include(":Modules:VoiceOS:managers:CommandManager")
-include(":Modules:VoiceOS:managers:VoiceDataManager")
+// VoiceOS Managers - ARCHIVED (2026-02-04)
+// Consolidated into VoiceOSCore - see archive/VoiceOS-Module-260204/
+// include(":Modules:VoiceOS:managers:HUDManager")
+// include(":Modules:VoiceOS:managers:CommandManager")
+// include(":Modules:VoiceOS:managers:VoiceDataManager")
 // include(":Modules:VoiceOS:managers:LocalizationManager")  // DEPRECATED - use :Modules:Localization
 include(":Modules:Localization")                             // KMP Localization module
 
@@ -166,4 +167,4 @@ include(":Modules:AvaMagic:MagicVoiceHandlers")          // Voice command handle
 
 // Android Apps
 include(":android:apps:webavanue")
-include(":android:apps:VoiceOS")  // VoiceOS main app (formerly voiceoscoreng)
+// include(":android:apps:VoiceOS")  // ARCHIVED (2026-02-04) - see archive/VoiceOS-Legacy-260204/
