@@ -9,8 +9,6 @@
  */
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.voiceoscore.Bounds
-
 /**
  * Direction for scrolling operations.
  */
@@ -30,9 +28,3 @@ enum class VolumeDirection {
     MUTE,
     UNMUTE
 }
-
-/**
- * Type alias for element bounds.
- * Use [com.augmentalis.voiceoscore.Bounds] directly for new code.
- */
-typealias ElementBounds = Bounds
