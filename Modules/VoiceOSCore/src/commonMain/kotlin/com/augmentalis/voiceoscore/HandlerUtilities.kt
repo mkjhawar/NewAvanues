@@ -191,7 +191,7 @@ class CommandRouter(private val command: String) {
     /**
      * Match exact commands.
      */
-    fun on(vararg patterns: String, handler: () -> HandlerResult) {
+    suspend fun on(vararg patterns: String, handler: suspend () -> HandlerResult) {
         if (result != null) return
         if (normalized.matchesAny(*patterns)) {
             result = handler()
@@ -218,7 +218,7 @@ class CommandRouter(private val command: String) {
         }
     }
 
-    internal fun getResult(): HandlerResult = result ?: HandlerResult.notHandled()
+    fun getResult(): HandlerResult = result ?: HandlerResult.notHandled()
 }
 
 /**

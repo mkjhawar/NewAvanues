@@ -10,11 +10,11 @@ package com.augmentalis.devicemanager.dashboardui
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.avanues.ui.GlassMorphismConfig
+/*import com.avanues.ui.GlassMorphismConfig
 
 // Re-export core classes for backward compatibility
 typealias GlassMorphismConfig = com.avanues.ui.GlassMorphismConfig
-typealias DepthLevel = com.avanues.ui.DepthLevel
+typealias DepthLevel = com.avanues.ui.DepthLevel*/
 
 /**
  * Device manager color palette
@@ -69,7 +69,7 @@ object DeviceColors {
 /**
  * Pre-defined glass morphism configs for device types
  */
-object DeviceGlassConfigs {
+/*object DeviceGlassConfigs {
     val Primary = GlassMorphismConfig(
         tintColor = DeviceColors.TypePhone,
         cornerRadius = 16.dp
@@ -122,4 +122,4 @@ object DeviceGlassConfigs {
         cornerRadius = 12.dp,
         backgroundOpacity = 0.15f
     )
-}
+}*/

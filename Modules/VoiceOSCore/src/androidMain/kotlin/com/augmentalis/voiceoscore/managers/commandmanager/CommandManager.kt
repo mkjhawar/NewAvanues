@@ -17,6 +17,7 @@ import com.augmentalis.voiceoscore.managers.commandmanager.routing.IntentDispatc
 import com.augmentalis.voiceoscore.managers.commandmanager.routing.AppRpcRegistry
 import com.augmentalis.speechrecognition.ConfidenceScorer
 import com.augmentalis.speechrecognition.ConfidenceLevel
+import com.augmentalis.voiceoscore.managers.commandmanager.monitor.ServiceCallback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -50,7 +51,7 @@ class CommandManager(private val context: Context) {
     private var alternativesCallback: ((Command, List<String>) -> String?)? = null
 
     // Service callback for lifecycle events (Phase 1: Service Monitor)
-    private var serviceCallback: com.augmentalis.commandmanager.monitor.ServiceCallback? = null
+    private var serviceCallback: ServiceCallback? = null
 
     // Health status
     private var isHealthy: Boolean = true
@@ -527,7 +528,7 @@ class CommandManager(private val context: Context) {
     /**
      * Set service callback for lifecycle events (Phase 1: Service Monitor)
      */
-    fun setServiceCallback(callback: com.augmentalis.commandmanager.monitor.ServiceCallback) {
+    fun setServiceCallback(callback: ServiceCallback) {
         this.serviceCallback = callback
         Log.d(TAG, "Service callback registered")
     }

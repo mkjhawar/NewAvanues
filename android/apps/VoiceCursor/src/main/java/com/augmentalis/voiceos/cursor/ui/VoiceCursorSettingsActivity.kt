@@ -78,9 +78,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.augmentalis.devicemanager.DeviceManager
-import com.augmentalis.licensemanager.ui.DepthLevel
+/*import com.augmentalis.licensemanager.ui.DepthLevel
 import com.augmentalis.licensemanager.ui.GlassMorphismConfig
-import com.augmentalis.licensemanager.ui.glassMorphism
+import com.augmentalis.licensemanager.ui.glassMorphism*/
 import com.augmentalis.voiceos.cursor.R
 import com.augmentalis.voiceos.cursor.VoiceCursor
 import com.augmentalis.voiceos.cursor.core.CursorConfig
@@ -577,7 +577,7 @@ fun SettingsPanel(
             .fillMaxWidth()
             .glassMorphism(
                 config = glassMorphismConfig,
-                depth = DepthLevel(1.0f)
+                /*depth = DepthLevel(1.0f)*/
             )
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)

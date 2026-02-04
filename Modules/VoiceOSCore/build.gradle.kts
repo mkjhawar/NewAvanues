@@ -84,6 +84,10 @@ kotlin {
             dependencies {
                 // Android Core
                 implementation(libs.androidx.core.ktx)
+                implementation(libs.lifecycle.livedata.ktx)
+                implementation(libs.lifecycle.viewmodel.ktx)
+                implementation(libs.androidx.lifecycle.runtime.ktx)
+                implementation(libs.lifecycle.viewmodel.savedstate)
 
                 // Compose (use .get() to resolve provider for platform())
                 implementation(platform(libs.compose.bom.get()))
@@ -109,6 +113,10 @@ kotlin {
                 // AVA Core Utils
                 implementation(project(":Modules:AVA:core:Utils"))
 
+                // AVA Core Utils
+                implementation(project(":Modules:Rpc"))
+
+                implementation(project(":android:apps:VoiceCursor"))
                 // Unified Database - for command persistence and scraping repositories
                 // (Consolidated from VoiceOS:core:database into Modules:Database)
                 implementation(project(":Modules:Database"))

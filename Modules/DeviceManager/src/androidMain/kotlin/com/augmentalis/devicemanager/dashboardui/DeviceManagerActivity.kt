@@ -486,7 +486,7 @@ fun DeviceStatusCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Primary)
+            /*.glassMorphism(DeviceGlassConfigs.Primary)*/
             .testTag("device_status_card"),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
@@ -602,8 +602,8 @@ fun DiagnosticsCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Status)
-            .testTag("diagnostics_card"),
+            /*.glassMorphism(DeviceGlassConfigs.Status)*/
+        .testTag("diagnostics_card"),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -664,7 +664,7 @@ fun SystemCapabilitiesCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Primary),
+            /*.glassMorphism(DeviceGlassConfigs.Primary),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -705,7 +705,7 @@ fun HardwareDetailsCard(hardwareInfo: HardwareInfo?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Hardware),
+            /*.glassMorphism(DeviceGlassConfigs.Hardware),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -744,7 +744,7 @@ fun BatteryCard(batteryInfo: BatteryInfo?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Battery),
+            /*.glassMorphism(DeviceGlassConfigs.Battery),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -819,7 +819,7 @@ fun IMUDataCard(imuData: Triple<Float, Float, Float>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Sensors),
+            /*.glassMorphism(DeviceGlassConfigs.Sensors),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -853,7 +853,7 @@ fun NetworkStatusCard(networkInfo: NetworkConnectionInfo?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Network),
+            /*.glassMorphism(DeviceGlassConfigs.Network),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -1172,7 +1172,7 @@ fun FoldableStatusCard(state: String) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Primary),
+            /*.glassMorphism(DeviceGlassConfigs.Primary),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(
@@ -1210,8 +1210,8 @@ fun TestSensorsCard(onTest: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Sensors)
-            .clickable { onTest() },
+            /*.glassMorphism(DeviceGlassConfigs.Sensors)*/
+          .clickable { onTest() },
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(
@@ -1241,13 +1241,13 @@ fun SensorItemCard(sensor: SensorInfo) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(
+            /*.glassMorphism(
                 GlassMorphismConfig(
                     tintColor = getSensorColor(sensor.type),
                     cornerRadius = 12.dp,
                     backgroundOpacity = 0.08f
                 )
-            ),
+            ),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -1302,7 +1302,7 @@ fun WiFiSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Network),
+            /*.glassMorphism(DeviceGlassConfigs.Network),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -1355,7 +1355,7 @@ fun BluetoothSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Network),
+            /*.glassMorphism(DeviceGlassConfigs.Network),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -1405,7 +1405,7 @@ fun UWBStatusCard() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Network),
+            /*.glassMorphism(DeviceGlassConfigs.Network),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(
@@ -1443,7 +1443,7 @@ fun AudioDeviceCard(device: AudioDeviceInfo) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Audio),
+            /*.glassMorphism(DeviceGlassConfigs.Audio),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(
@@ -1481,7 +1481,7 @@ fun DisplaySpecsCard(displayInfo: DisplayInfo?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.Primary),
+            /*.glassMorphism(DeviceGlassConfigs.Primary),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -1517,7 +1517,7 @@ fun XRCapabilitiesCard() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(DeviceGlassConfigs.XR),
+            /*.glassMorphism(DeviceGlassConfigs.XR),*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(

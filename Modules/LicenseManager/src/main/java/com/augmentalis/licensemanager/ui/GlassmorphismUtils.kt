@@ -10,11 +10,11 @@ package com.augmentalis.licensemanager.ui
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.avanues.ui.GlassMorphismConfig
+/*import com.avanues.ui.GlassMorphismConfig
 
 // Re-export core classes for backward compatibility
 typealias GlassMorphismConfig = com.avanues.ui.GlassMorphismConfig
-typealias DepthLevel = com.avanues.ui.DepthLevel
+typealias DepthLevel = com.avanues.ui.DepthLevel*/
 
 /**
  * License manager color palette
@@ -43,6 +43,7 @@ object LicenseColors {
 /**
  * Pre-defined glass morphism configs
  */
+/*
 object LicenseGlassConfigs {
     val Primary = GlassMorphismConfig(
         tintColor = LicenseColors.GlassPrimary,
@@ -69,3 +70,4 @@ object LicenseGlassConfigs {
         cornerRadius = 16.dp
     )
 }
+*/

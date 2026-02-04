@@ -197,10 +197,10 @@ internal fun HeaderSection() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(
+            /*.glassMorphism(
                 config = LicenseGlassConfigs.Primary,
                 depth = DepthLevel(0.8f)
-            ),
+            )*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -244,10 +244,10 @@ private fun ErrorCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(
+            /*.glassMorphism(
                 config = LicenseGlassConfigs.Error,
                 depth = DepthLevel(0.7f)
-            ),
+            )*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(
@@ -307,10 +307,10 @@ internal fun LicenseStatusCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(
+            /*.glassMorphism(
                 config = LicenseGlassConfigs.Success.copy(tintColor = statusColor),
                 depth = DepthLevel(0.6f)
-            ),
+            )*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -441,10 +441,10 @@ internal fun TrialStatusCard(subscriptionState: SubscriptionState) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(
+            /*.glassMorphism(
                 config = LicenseGlassConfigs.Warning,
                 depth = DepthLevel(0.6f)
-            ),
+            )*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -524,10 +524,10 @@ internal fun ActionButtonsCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(
+            /*.glassMorphism(
                 config = LicenseGlassConfigs.Info,
                 depth = DepthLevel(0.6f)
-            ),
+            )*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -687,10 +687,10 @@ internal fun ValidationInfoCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassMorphism(
+            /*.glassMorphism(
                 config = LicenseGlassConfigs.Primary.copy(backgroundOpacity = 0.05f),
                 depth = DepthLevel(0.4f)
-            ),
+            )*/,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(

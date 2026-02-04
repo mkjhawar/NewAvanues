@@ -51,9 +51,9 @@ import com.augmentalis.voiceos.cursor.core.CursorOffset
 // import com.augmentalis.voiceuielements.themes.arvision.DepthLevel
 
 // Import theme utils for validation
-import com.augmentalis.licensemanager.ui.glassMorphism
+/*import com.augmentalis.licensemanager.ui.glassMorphism
 import com.augmentalis.licensemanager.ui.GlassMorphismConfig
-import com.augmentalis.licensemanager.ui.DepthLevel
+import com.augmentalis.licensemanager.ui.DepthLevel*/
 
 /**
  * Cursor action menu with ARVision glass morphism styling
@@ -71,7 +71,7 @@ fun MenuView(
     @Suppress("DEPRECATION")
     val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator }
     
-    // Glass morphism configuration for ARVision theme
+    /*// Glass morphism configuration for ARVision theme
     val glassMorphismConfig = remember {
         GlassMorphismConfig(
             cornerRadius = 20.dp,
@@ -81,7 +81,7 @@ fun MenuView(
             tintColor = Color(0xFF007AFF), // ARVision systemBlue
             tintOpacity = 0.1f
         )
-    }
+    }*/
     
     // Animation for menu appearance
     val animationSpec = remember {
@@ -109,10 +109,10 @@ fun MenuView(
                     y = position.y.dp - 150.dp  // Position above cursor
                 )
                 .width(200.dp)
-                .glassMorphism(
+                /*.glassMorphism(
                     config = glassMorphismConfig,
                     depth = DepthLevel(1.2f)
-                )
+                )*/
                 .clickable { onDismiss() }
         ) {
             Column(

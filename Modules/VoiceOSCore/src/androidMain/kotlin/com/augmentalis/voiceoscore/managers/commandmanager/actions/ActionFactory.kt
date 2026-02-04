@@ -119,32 +119,46 @@ object ActionFactory {
         return when {
             commandId.contains("back") || commandId.contains("home") || commandId.contains("recent") ->
                 createNavigationAction(commandId)
+
             commandId.contains("volume") || commandId.contains("mute") ->
                 createVolumeAction(commandId)
+
             commandId.contains("wifi") || commandId.contains("bluetooth") || commandId.contains("settings") ->
                 createSystemAction(commandId)
+
             commandId.contains("scroll") ->
                 createScrollAction(commandId)
+
             commandId.contains("cursor") ->
                 createCursorAction(commandId)
+
             commandId.contains("copy") || commandId.contains("paste") || commandId.contains("cut") ->
                 createEditingAction(commandId)
+
             commandId.contains("browser") || commandId.contains("refresh") ->
                 createBrowserAction(commandId)
+
             commandId.contains("play") || commandId.contains("pause") || commandId.contains("media") ->
                 createMediaAction(commandId)
+
             commandId.contains("hide") || commandId.contains("show") || commandId.contains("open") || commandId.contains("close") ->
                 createUIAction(commandId)
+
             commandId.contains("tap") || commandId.contains("click") || commandId.contains("press") ->
                 createInteractionAction(commandId)
+
             commandId.contains("help") || commandId.contains("command") ->
                 createOverlayAction(commandId)
+
             commandId.contains("keyboard") ->
                 createKeyboardAction(commandId)
+
             commandId.contains("launch") || commandId.contains("start") ->
                 createAppAction(commandId)
+
             commandId.contains("center") || commandId.contains("align") ->
                 createPositionAction(commandId)
+
             else -> {
                 Log.w(TAG, "Could not infer action type for: $commandId")
                 null
@@ -161,50 +175,62 @@ object ActionFactory {
                 AccessibilityService.GLOBAL_ACTION_BACK,
                 "Navigated back"
             )
+
             commandId.contains("home") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_HOME,
                 "Navigated to home"
             )
+
             commandId.contains("recent") || commandId.contains("recents") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_RECENTS,
                 "Opened recent apps"
             )
+
             commandId.contains("notification") && !commandId.contains("dismiss") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS,
                 "Opened notifications"
             )
+
             commandId.contains("quick_settings") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS,
                 "Opened quick settings"
             )
+
             commandId.contains("power_dialog") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_POWER_DIALOG,
                 "Opened power dialog"
             )
+
             commandId.contains("split_screen") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN,
                 "Toggled split screen"
             )
+
             commandId.contains("lock") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN,
                 "Locked screen"
             )
+
             commandId.contains("screenshot") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,
                 "Screenshot taken"
             )
+
             commandId.contains("accessibility_settings") -> DynamicIntentAction(
                 Settings.ACTION_ACCESSIBILITY_SETTINGS,
                 "Opened accessibility settings"
             )
+
             commandId.contains("dismiss") && commandId.contains("notification") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE,
                 "Dismissed notifications"
             )
+
             commandId.contains("all_apps") -> DynamicNavigationAction(
                 AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS,
                 "Opened all apps"
             )
+
             else -> {
                 Log.w(TAG, "Unknown navigation command: $commandId")
                 null
@@ -219,12 +245,16 @@ object ActionFactory {
         return when {
             commandId.contains("up") || commandId.contains("increase") || commandId.contains("louder") ->
                 DynamicVolumeAction(VolumeAction.VOLUME_UP, "Volume increased")
+
             commandId.contains("down") || commandId.contains("decrease") || commandId.contains("quieter") || commandId.contains("lower") ->
                 DynamicVolumeAction(VolumeAction.VOLUME_DOWN, "Volume decreased")
+
             commandId.contains("mute") || commandId.contains("silence") ->
                 DynamicVolumeAction(VolumeAction.MUTE, "Volume muted")
+
             commandId.contains("max") || commandId.contains("maximum") ->
                 DynamicVolumeAction(VolumeAction.MAX, "Volume set to maximum")
+
             else -> {
                 Log.w(TAG, "Unknown volume command: $commandId")
                 null
@@ -240,16 +270,20 @@ object ActionFactory {
             // Bluetooth
             commandId.contains("bluetooth") && (commandId.contains("on") || commandId.contains("enable") || commandId.contains("turn_on")) ->
                 DynamicBluetoothAction(true, "Bluetooth enabled")
+
             commandId.contains("bluetooth") && (commandId.contains("off") || commandId.contains("disable") || commandId.contains("turn_off")) ->
                 DynamicBluetoothAction(false, "Bluetooth disabled")
+
             commandId.contains("bluetooth") && commandId.contains("toggle") ->
                 DynamicBluetoothAction(null, "Bluetooth toggled")
 
             // WiFi
             commandId.contains("wifi") && (commandId.contains("on") || commandId.contains("enable") || commandId.contains("turn_on")) ->
                 DynamicWiFiAction(true, "WiFi enabled")
+
             commandId.contains("wifi") && (commandId.contains("off") || commandId.contains("disable") || commandId.contains("turn_off")) ->
                 DynamicWiFiAction(false, "WiFi disabled")
+
             commandId.contains("wifi") && commandId.contains("toggle") ->
                 DynamicWiFiAction(null, "WiFi toggled")
 
@@ -360,6 +394,7 @@ object ActionFactory {
             commandId.contains("settings") -> DynamicIntentAction(Settings.ACTION_SETTINGS, "Opened settings")
             commandId.contains("connection") && commandId.contains("open") ->
                 DynamicIntentAction(Settings.ACTION_WIRELESS_SETTINGS, "Opened connection settings")
+
             else -> {
                 // UI state changes (hide/show overlays, close keyboards, etc.)
                 Log.d(TAG, "UI action not fully implemented yet: $commandId")
@@ -375,12 +410,16 @@ object ActionFactory {
         return when {
             commandId.contains("long") && commandId.contains("press") ->
                 DynamicInteractionAction("long_press", "Long press")
+
             commandId.contains("tap") || commandId.contains("click") ->
                 DynamicInteractionAction("tap", "Tap")
+
             commandId.contains("swipe") ->
                 DynamicInteractionAction("swipe", "Swipe")
+
             commandId.contains("drag") ->
                 DynamicInteractionAction("drag", "Drag")
+
             else -> {
                 Log.w(TAG, "Unknown interaction command: $commandId")
                 null
@@ -395,12 +434,16 @@ object ActionFactory {
         return when {
             commandId.contains("help") && commandId.contains("hide") ->
                 DynamicOverlayAction("hide_help", "Help hidden")
+
             commandId.contains("help") && commandId.contains("show") ->
                 DynamicOverlayAction("show_help", "Help shown")
+
             commandId.contains("command") && commandId.contains("hide") ->
                 DynamicOverlayAction("hide_command", "Command list hidden")
+
             commandId.contains("command") && commandId.contains("show") ->
                 DynamicOverlayAction("show_command", "Command list shown")
+
             else -> {
                 Log.d(TAG, "Overlay action: $commandId")
                 DynamicOverlayAction(commandId, "Overlay action")
@@ -415,8 +458,10 @@ object ActionFactory {
         return when {
             commandId.contains("close") || commandId.contains("hide") ->
                 DynamicKeyboardAction("close", "Keyboard closed")
+
             commandId.contains("open") || commandId.contains("show") ->
                 DynamicKeyboardAction("open", "Keyboard opened")
+
             else -> {
                 Log.w(TAG, "Unknown keyboard command: $commandId")
                 null
@@ -439,10 +484,13 @@ object ActionFactory {
         return when {
             commandId.contains("center") && commandId.contains("cursor") ->
                 DynamicPositionAction("center_cursor", "Cursor centered")
+
             commandId.contains("center") ->
                 DynamicPositionAction("center", "Centered")
+
             commandId.contains("align") ->
                 DynamicPositionAction("align", "Aligned")
+
             else -> {
                 Log.w(TAG, "Unknown position command: $commandId")
                 null
@@ -617,26 +665,32 @@ class DynamicScrollAction(
                     path.moveTo(screenWidth / 2f, screenHeight * 0.7f)
                     path.lineTo(screenWidth / 2f, screenHeight * 0.3f)
                 }
+
                 "down" -> {
                     path.moveTo(screenWidth / 2f, screenHeight * 0.3f)
                     path.lineTo(screenWidth / 2f, screenHeight * 0.7f)
                 }
+
                 "left" -> {
                     path.moveTo(screenWidth * 0.7f, screenHeight / 2f)
                     path.lineTo(screenWidth * 0.3f, screenHeight / 2f)
                 }
+
                 "right" -> {
                     path.moveTo(screenWidth * 0.3f, screenHeight / 2f)
                     path.lineTo(screenWidth * 0.7f, screenHeight / 2f)
                 }
+
                 "top" -> {
                     path.moveTo(screenWidth / 2f, screenHeight * 0.8f)
                     path.lineTo(screenWidth / 2f, screenHeight * 0.1f)
                 }
+
                 "bottom" -> {
                     path.moveTo(screenWidth / 2f, screenHeight * 0.1f)
                     path.lineTo(screenWidth / 2f, screenHeight * 0.8f)
                 }
+
                 else -> return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Unknown direction: $direction")
             }
 
@@ -705,26 +759,31 @@ class DynamicCursorAction(
                 newStart = maxOf(0, selectionStart - 1)
                 newEnd = newStart
             }
+
             "right" -> {
                 newEnd = minOf(text.length, selectionEnd + 1)
                 newStart = newEnd
             }
+
             "up" -> {
                 // Move to previous line (find previous newline)
                 val prevNewline = text.lastIndexOf('\n', maxOf(0, selectionStart - 1))
                 newStart = if (prevNewline >= 0) prevNewline else 0
                 newEnd = newStart
             }
+
             "down" -> {
                 // Move to next line (find next newline)
                 val nextNewline = text.indexOf('\n', selectionEnd)
                 newEnd = if (nextNewline >= 0) nextNewline + 1 else text.length
                 newStart = newEnd
             }
+
             "start", "home" -> {
                 newStart = 0
                 newEnd = 0
             }
+
             "end" -> {
                 newStart = text.length
                 newEnd = text.length
@@ -793,6 +852,7 @@ class DynamicEditingAction(
                     createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Delete failed")
                 }
             }
+
             "undo" -> {
                 // Undo via key event simulation
                 val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -802,11 +862,13 @@ class DynamicEditingAction(
                 rootNode?.recycle()
                 return createSuccessResult(command, successMessage)
             }
+
             "redo" -> {
                 focusedNode.recycle()
                 rootNode?.recycle()
                 return createSuccessResult(command, successMessage)
             }
+
             else -> {
                 focusedNode.recycle()
                 rootNode?.recycle()
@@ -929,6 +991,7 @@ class DynamicInteractionAction(
                     .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
                     .build()
             }
+
             "long_press" -> {
                 // Long press (500ms duration)
                 val path = Path()
@@ -937,6 +1000,7 @@ class DynamicInteractionAction(
                     .addStroke(GestureDescription.StrokeDescription(path, 0, 500))
                     .build()
             }
+
             "swipe" -> {
                 // Default swipe up
                 val path = Path()
@@ -946,6 +1010,7 @@ class DynamicInteractionAction(
                     .addStroke(GestureDescription.StrokeDescription(path, 0, 300))
                     .build()
             }
+
             "double_tap" -> {
                 // Double tap using two quick taps
                 val path1 = Path()
@@ -957,6 +1022,7 @@ class DynamicInteractionAction(
                     .addStroke(GestureDescription.StrokeDescription(path2, 100, 50))
                     .build()
             }
+
             else -> return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Unknown interaction: $action")
         }
 
@@ -1015,18 +1081,22 @@ class DynamicKeyboardAction(
                 }
                 createSuccessResult(command, successMessage)
             }
+
             "open", "show" -> {
                 inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
                 createSuccessResult(command, successMessage)
             }
+
             "toggle" -> {
                 inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_IMPLICIT, 0)
                 createSuccessResult(command, successMessage)
             }
+
             "switch" -> {
                 inputMethodManager.showInputMethodPicker()
                 createSuccessResult(command, "Input method picker shown")
             }
+
             else -> createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Unknown keyboard action: $action")
         }
     }
@@ -1045,7 +1115,7 @@ class DynamicAppAction(
         context: Context
     ): CommandResult {
         // Extract app name from command or action
-        val appName = extractAppName(command.text, action)
+        val appName = extractAppName(command.text ?: "", action)
 
         if (appName.isBlank()) {
             return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "No app specified")
@@ -1059,7 +1129,7 @@ class DynamicAppAction(
         val matchingApp = installedApps.find { appInfo ->
             val label = packageManager.getApplicationLabel(appInfo).toString()
             label.equals(appName, ignoreCase = true) ||
-            label.contains(appName, ignoreCase = true)
+                    label.contains(appName, ignoreCase = true)
         }
 
         if (matchingApp != null) {
