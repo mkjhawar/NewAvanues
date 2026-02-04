@@ -65,6 +65,7 @@ include(":Modules:VoiceIsolation")         // Audio preprocessing (noise suppres
 include(":Modules:Actions")                 // Intent handlers, action execution
 
 // Shared Modules (cross-platform KMP libraries)
+include(":Modules:Shared:Foundation")  // Common utilities: StateFlow, ViewModel, NumberToWords
 include(":Modules:Logging")         // Consolidated KMP logging infrastructure
 include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, FileSystem, etc.)
 include(":Modules:LicenseSDK")      // License validation client

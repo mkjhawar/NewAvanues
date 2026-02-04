@@ -46,6 +46,8 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                // Shared Foundation - StateFlow utilities, ViewModels, NumberToWords
+                api(project(":Modules:Shared:Foundation"))
 
                 // AVID - Avanues Voice ID
                 implementation(project(":Modules:AVID"))
