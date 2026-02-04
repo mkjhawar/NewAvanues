@@ -69,7 +69,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.shared.foundation"
+    namespace = "com.augmentalis.foundation"
     compileSdk = 35
 
     defaultConfig {
@@ -82,5 +82,5 @@ android {
     }
 }
 
-group = "com.augmentalis.shared"
+group = "com.augmentalis.foundation"
 version = "1.0.0"

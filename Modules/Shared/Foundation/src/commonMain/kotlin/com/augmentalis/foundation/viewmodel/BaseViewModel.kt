@@ -1,6 +1,6 @@
-package com.augmentalis.shared.viewmodel
+package com.augmentalis.foundation.viewmodel
 
-import com.augmentalis.shared.state.UiState
+import com.augmentalis.foundation.state.UiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

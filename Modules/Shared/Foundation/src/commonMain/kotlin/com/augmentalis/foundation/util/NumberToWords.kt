@@ -17,7 +17,7 @@
  *   100000 -> "one lakh" (Indian) or "one hundred thousand" (Western)
  *   10000000 -> "one crore" (Indian) or "ten million" (Western)
  */
-package com.augmentalis.shared.util
+package com.augmentalis.foundation.util
 
 /**
  * Number system convention for regional formatting

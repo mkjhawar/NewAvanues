@@ -1,4 +1,4 @@
-package com.augmentalis.shared.state
+package com.augmentalis.foundation.state
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
