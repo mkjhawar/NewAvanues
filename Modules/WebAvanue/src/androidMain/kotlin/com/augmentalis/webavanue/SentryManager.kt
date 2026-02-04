@@ -168,7 +168,7 @@ object SentryManager {
      */
     private fun isDebugBuild(): Boolean {
         return try {
-            Class.forName("com.augmentalis.Avanues.web.BuildConfig")
+            Class.forName("com.augmentalis.webavanue.BuildConfig")
                 .getField("DEBUG")
                 .getBoolean(null)
         } catch (e: Exception) {
@@ -181,7 +181,7 @@ object SentryManager {
      */
     private fun getVersionName(): String {
         return try {
-            Class.forName("com.augmentalis.Avanues.web.BuildConfig")
+            Class.forName("com.augmentalis.webavanue.BuildConfig")
                 .getField("VERSION_NAME")
                 .get(null) as? String ?: "unknown"
         } catch (e: Exception) {
@@ -194,7 +194,7 @@ object SentryManager {
      */
     private fun getVersionCode(): Int {
         return try {
-            Class.forName("com.augmentalis.Avanues.web.BuildConfig")
+            Class.forName("com.augmentalis.webavanue.BuildConfig")
                 .getField("VERSION_CODE")
                 .getInt(null)
         } catch (e: Exception) {

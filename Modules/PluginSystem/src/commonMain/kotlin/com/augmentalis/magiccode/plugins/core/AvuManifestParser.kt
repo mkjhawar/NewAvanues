@@ -1,5 +1,7 @@
 package com.augmentalis.magiccode.plugins.core
 
+import com.augmentalis.avucodec.core.AvuEscape
+
 /**
  * AVU Manifest Parser - Parses Avanues Universal Format plugin manifests.
  *
@@ -347,25 +349,17 @@ object AvuManifestParser {
 
     /**
      * Escape special characters per AVU protocol specification.
+     *
+     * Delegates to [AvuEscape.escape] - the canonical implementation.
      */
-    private fun escape(text: String): String {
-        return text
-            .replace("%", "%25")
-            .replace(":", "%3A")
-            .replace("\n", "%0A")
-            .replace("\r", "%0D")
-    }
+    private fun escape(text: String): String = AvuEscape.escape(text)
 
     /**
      * Unescape special characters.
+     *
+     * Delegates to [AvuEscape.unescape] - the canonical implementation.
      */
-    private fun unescape(text: String): String {
-        return text
-            .replace("%0D", "\r")
-            .replace("%0A", "\n")
-            .replace("%3A", ":")
-            .replace("%25", "%")
-    }
+    private fun unescape(text: String): String = AvuEscape.unescape(text)
 
     // ════════════════════════════════════════════════════════════════════════
     // CONFIG KEY DATA CLASS

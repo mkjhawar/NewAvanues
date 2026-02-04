@@ -228,13 +228,8 @@ object LoggingUtils {
 
     /**
      * Get current time in milliseconds (cross-platform).
+     * Delegates to the global currentTimeMillis() expect function.
      */
     @Suppress("NOTHING_TO_INLINE")
-    inline fun currentTimeMillis(): Long = getCurrentTimeMillis()
+    inline fun currentTimeMillis(): Long = com.augmentalis.voiceoscore.currentTimeMillis()
 }
-
-/**
- * Expect function for getting current time.
- * Implemented in platform-specific source sets.
- */
-expect fun getCurrentTimeMillis(): Long

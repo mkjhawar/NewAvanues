@@ -45,7 +45,7 @@ import com.augmentalis.magiccode.plugins.universal.JsonPluginStateSerializer
 import com.augmentalis.magiccode.plugins.universal.UniversalPlugin
 import com.augmentalis.magiccode.plugins.universal.UniversalPluginRegistry
 import com.augmentalis.magiccode.plugins.universal.currentTimeMillis
-import com.augmentalis.universalrpc.ServiceEndpoint
+import com.augmentalis.rpc.ServiceEndpoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

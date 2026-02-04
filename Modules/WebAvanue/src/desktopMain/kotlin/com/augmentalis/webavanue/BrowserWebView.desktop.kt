@@ -3,7 +3,7 @@ package com.augmentalis.webavanue
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.SwingPanel
-import com.augmentalis.Avanues.web.data.domain.model.Tab
+// Tab model is in the same package (com.augmentalis.webavanue.Tab)
 import javafx.application.Platform
 import javafx.concurrent.Worker
 import javafx.embed.swing.JFXPanel

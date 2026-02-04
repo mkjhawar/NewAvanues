@@ -16,7 +16,7 @@
 package com.augmentalis.magiccode.plugins.integration
 
 import com.augmentalis.magiccode.plugins.universal.*
-import com.augmentalis.universalrpc.ServiceRegistry
+import com.augmentalis.rpc.ServiceRegistry
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

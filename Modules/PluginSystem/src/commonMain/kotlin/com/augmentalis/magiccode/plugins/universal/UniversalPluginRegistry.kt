@@ -12,8 +12,8 @@
  */
 package com.augmentalis.magiccode.plugins.universal
 
-import com.augmentalis.universalrpc.ServiceEndpoint
-import com.augmentalis.universalrpc.ServiceRegistry
+import com.augmentalis.rpc.ServiceEndpoint
+import com.augmentalis.rpc.ServiceRegistry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

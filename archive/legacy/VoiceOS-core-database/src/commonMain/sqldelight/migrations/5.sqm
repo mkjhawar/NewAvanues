@@ -1,5 +1,0 @@
--- Migration 5: Add contextualText column to screen_context
--- This column stores non-actionable text from the screen for NLU context enhancement
--- The text is stored as JSON serialized ScreenContextualText data
-
-ALTER TABLE screen_context ADD COLUMN contextualText TEXT;

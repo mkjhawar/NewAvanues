@@ -73,18 +73,12 @@ data class ExplorationSession(
 ) {
     companion object {
         /**
-         * Returns the current system time in milliseconds since epoch.
-         * Delegates to the features package function.
-         */
-        fun currentTimeMillis(): Long = com.augmentalis.voiceoscore.currentTimeMillis()
-
-        /**
          * Generates a unique session ID using timestamp and random component.
          *
          * Format: "session_{timestamp}_{random}"
          */
         fun generateSessionId(): String {
-            return "session_${currentTimeMillis()}_${(0..9999).random()}"
+            return "session_${com.augmentalis.voiceoscore.currentTimeMillis()}_${(0..9999).random()}"
         }
     }
 
@@ -115,7 +109,7 @@ data class ExplorationSession(
         if (allowed) {
             state = newState
             if (newState == ExplorationState.COMPLETED || newState == ExplorationState.ERROR) {
-                endTime = currentTimeMillis()
+                endTime = com.augmentalis.voiceoscore.currentTimeMillis()
             }
         }
         return allowed

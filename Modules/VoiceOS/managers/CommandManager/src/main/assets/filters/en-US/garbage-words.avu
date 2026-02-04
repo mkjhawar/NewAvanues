@@ -1,0 +1,35 @@
+# Avanues Universal Format v2.0
+# Type: FILTER
+# Extension: .avu
+---
+schema: avu-2.0
+version: 1.0.0
+locale: en-US
+project: voiceos
+metadata:
+  file: garbage-words.avu
+  category: garbage_filter
+  count: 21
+---
+GWD:comma:Repetitive word
+GWD:dot:Repetitive word
+GWD:dash:Repetitive word
+GWD:space:Repetitive word
+GWD:tab:Repetitive word
+GWD:enter:Repetitive word
+GWD:null:Repetitive word
+GWD:undefined:Repetitive word
+GWD:nan:Repetitive word
+GWD:true:Repetitive word
+GWD:false:Repetitive word
+---
+GEX:undefined:Exact garbage
+GEX:null:Exact garbage
+GEX:nan:Exact garbage
+GEX:NaN:Exact garbage
+GEX:NULL:Exact garbage
+GEX:[object object]:Exact garbage
+GEX:[Object object]:Exact garbage
+GEX:function:Exact garbage
+GEX:error:Exact garbage
+GEX:exception:Exact garbage

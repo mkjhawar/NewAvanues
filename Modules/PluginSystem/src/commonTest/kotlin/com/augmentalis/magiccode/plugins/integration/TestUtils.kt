@@ -13,8 +13,8 @@ import com.augmentalis.magiccode.plugins.sdk.BasePlugin
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
 import com.augmentalis.magiccode.plugins.universal.data.*
-import com.augmentalis.universalrpc.ServiceEndpoint
-import com.augmentalis.universalrpc.ServiceRegistry
+import com.augmentalis.rpc.ServiceEndpoint
+import com.augmentalis.rpc.ServiceRegistry
 import com.augmentalis.voiceoscore.ActionResult
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.element.ElementType

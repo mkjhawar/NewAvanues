@@ -16,12 +16,6 @@ package com.augmentalis.voiceoscore
 actual fun currentTimeMillis(): Long = System.currentTimeMillis()
 
 /**
- * Android implementation of getCurrentTimeMillis.
- * Uses System.currentTimeMillis().
- */
-actual fun getCurrentTimeMillis(): Long = System.currentTimeMillis()
-
-/**
  * Android implementation of sha256.
  * Uses java.security.MessageDigest.
  */

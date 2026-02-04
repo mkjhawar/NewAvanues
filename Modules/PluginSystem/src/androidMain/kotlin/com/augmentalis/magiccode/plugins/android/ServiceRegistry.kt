@@ -420,7 +420,7 @@ class ServiceRegistry {
 
         /**
          * UniversalRPC ServiceRegistry for gRPC services.
-         * Type: com.augmentalis.universalrpc.ServiceRegistry
+         * Type: com.augmentalis.rpc.ServiceRegistry
          */
         const val RPC_SERVICE_REGISTRY = "rpc_service_registry"
 

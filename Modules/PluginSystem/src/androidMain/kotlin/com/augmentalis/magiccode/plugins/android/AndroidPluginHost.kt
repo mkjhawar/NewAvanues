@@ -19,8 +19,8 @@ import com.augmentalis.magiccode.plugins.core.PluginLog
 import com.augmentalis.magiccode.plugins.core.PluginLogger
 import com.augmentalis.magiccode.plugins.core.ConsolePluginLogger
 import com.augmentalis.magiccode.plugins.universal.*
-import com.augmentalis.universalrpc.ServiceEndpoint
-import com.augmentalis.universalrpc.ServiceRegistry as RpcServiceRegistry
+import com.augmentalis.rpc.ServiceEndpoint
+import com.augmentalis.rpc.ServiceRegistry as RpcServiceRegistry
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex

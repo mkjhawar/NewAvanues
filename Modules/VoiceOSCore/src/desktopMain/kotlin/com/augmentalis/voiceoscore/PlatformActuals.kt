@@ -18,12 +18,6 @@ import com.augmentalis.voiceoscore.element.ElementInfo
 actual fun currentTimeMillis(): Long = System.currentTimeMillis()
 
 /**
- * Desktop (JVM) implementation of getCurrentTimeMillis.
- * Uses System.currentTimeMillis().
- */
-actual fun getCurrentTimeMillis(): Long = System.currentTimeMillis()
-
-/**
  * Desktop (JVM) implementation of sha256.
  * Uses java.security.MessageDigest.
  */

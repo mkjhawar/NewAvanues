@@ -13,8 +13,8 @@
 
 package com.augmentalis.magiccode.plugins.universal
 
-import com.augmentalis.universalrpc.ServiceEndpoint
-import com.augmentalis.universalrpc.ServiceRegistry
+import com.augmentalis.rpc.ServiceEndpoint
+import com.augmentalis.rpc.ServiceRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

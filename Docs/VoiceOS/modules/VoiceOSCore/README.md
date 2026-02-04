@@ -166,6 +166,25 @@ Major enhancements to accessibility scraping with advanced AI context capabiliti
 - Screen contexts cached by hash
 - Database size: ~1-2KB per unique screen
 
+### Garbage Text Filtering & Icon Commands (February 2026)
+**Completed:** 2026-02-02
+
+New voice command quality improvements:
+
+**Garbage Text Filtering:**
+- Filters repetitive patterns like "comma comma com"
+- Removes CSS class names, Base64 strings, UUIDs
+- Filters programming artifacts ([object Object], null, undefined)
+- Multi-language support (en, de, es, fr, zh, ja)
+
+**Icon Command Support:**
+- Single-word commands for navigation icons
+- Recognizes icons by size, class name, and contentDescription
+- Localized navigation icon labels (Menu, More, Search, etc.)
+- Generates numbered commands for unlabeled icons
+
+**Documentation:** [Garbage Filtering & Icon Commands](./developer-manual/VoiceOS-Garbage-Filtering-Icon-Commands-50202-V1.md)
+
 ## What's Next
 
 **Phase 3: User Interaction Tracking (Planned)**

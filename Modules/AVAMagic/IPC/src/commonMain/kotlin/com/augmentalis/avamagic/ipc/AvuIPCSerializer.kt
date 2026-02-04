@@ -1,7 +1,9 @@
 package com.augmentalis.avamagic.ipc
 
+import com.augmentalis.avucodec.core.AvuEscape
+
 /**
- * AVU IPC Format Serializer
+ * AVU RPC Format Serializer
  *
  * Converts IPC model objects to AVU (Avanues Universal) format strings.
  * Inverse operation of AvuIPCParser.
@@ -634,28 +636,20 @@ object AvuIPCSerializer {
      * Escape special characters for AVU format.
      * Escapes: % : \n \r
      *
+     * Delegates to [AvuEscape.escape] - the canonical implementation.
+     *
      * @param text The text to escape
      * @return Escaped text safe for AVU format
      */
-    fun escape(text: String): String {
-        return text
-            .replace("%", "%25")
-            .replace(":", "%3A")
-            .replace("\n", "%0A")
-            .replace("\r", "%0D")
-    }
+    fun escape(text: String): String = AvuEscape.escape(text)
 
     /**
      * Unescape AVU format text.
      *
+     * Delegates to [AvuEscape.unescape] - the canonical implementation.
+     *
      * @param text The escaped text
      * @return Original text with escape sequences decoded
      */
-    fun unescape(text: String): String {
-        return text
-            .replace("%0D", "\r")
-            .replace("%0A", "\n")
-            .replace("%3A", ":")
-            .replace("%25", "%")
-    }
+    fun unescape(text: String): String = AvuEscape.unescape(text)
 }

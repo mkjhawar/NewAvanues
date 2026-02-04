@@ -1,0 +1,79 @@
+{
+  "version": "1.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "updated": "2025-11-14",
+  "author": "VOS4 Team",
+  "metadata": {
+    "category": "menu",
+    "display_name": "Menu Navigation",
+    "description": "Voice commands for menu navigation",
+    "source_file": "menu-commands.vos",
+    "schema": "4-element: [id, primary, synonyms, description]"
+  },
+  "commands": [
+    [
+      "menu",
+      "menu",
+      [
+        "open menu",
+        "main menu",
+        "menu options",
+        "show menu",
+        "menu list",
+        "navigation menu",
+        "options menu",
+        "menu bar",
+        "menu screen",
+        "menu page",
+        "display menu",
+        "bring up menu",
+        "access menu",
+        "menu please"
+      ],
+      "Menu (Menus)"
+    ],
+    [
+      "back",
+      "back",
+      [
+        "go back",
+        "return",
+        "previous",
+        "back button",
+        "navigate back",
+        "go previous",
+        "back page",
+        "previous page",
+        "last page",
+        "return previous",
+        "step back",
+        "move back",
+        "go backwards",
+        "navigate backwards"
+      ],
+      "Back (Menus)"
+    ],
+    [
+      "return_to_dashboard",
+      "return to dashboard",
+      [
+        "return to setup",
+        "go to dashboard",
+        "dashboard",
+        "main dashboard",
+        "control panel",
+        "home dashboard",
+        "setup screen",
+        "main screen",
+        "control screen",
+        "setup dashboard",
+        "go to setup",
+        "return to main",
+        "main control",
+        "primary dashboard"
+      ],
+      "Return To Dashboard (Menus)"
+    ]
+  ]
+}

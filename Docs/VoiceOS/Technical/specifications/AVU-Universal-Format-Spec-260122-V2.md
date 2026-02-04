@@ -1,32 +1,33 @@
 # AVU Universal Format Specification
 
 **Format**: AVU (Avanues Universal Format)
-**Schema**: `avu-2.0`
-**Version**: 2.0.0
-**Date**: 2026-01-22
+**Schema**: `avu-2.2`
+**Version**: 2.2.0
+**Date**: 2026-02-03
 
 ---
 
 ## Overview
 
-The AVU (Avanues Universal Format) is a compact, line-based format used across all Avanues projects. This specification defines the universal format structure and all registered IPC codes.
+The AVU (Avanues Universal Format) is a compact, line-based format used across all Avanues projects. This specification defines the universal format structure and all registered RPC (Remote Procedure Call) codes.
 
 ## Design Principles
 
 1. **Compact**: 60-80% smaller than JSON
 2. **Human-Readable**: Easy to inspect and debug
-3. **Cross-Compatible**: Readable by all Avanues projects
-4. **Extensible**: Easy to add new codes without breaking parsers
-5. **Type-Safe**: 3-letter codes ensure unique identification
+3. **Self-Documenting**: Optional codes legend in header (NEW in v2.2)
+4. **Cross-Compatible**: Readable by all Avanues projects
+5. **Extensible**: Easy to add new codes without breaking parsers
+6. **Type-Safe**: 3-letter codes ensure unique identification
 
 ## Format Structure
 
 ```
-# Avanues Universal Format v2.0
+# Avanues Universal Format v2.2
 # Type: <TYPE>
 # Extension: .<ext>
 ---
-schema: avu-2.0
+schema: avu-2.2
 version: <version>
 locale: <locale>
 project: <project>
@@ -34,6 +35,9 @@ metadata:
   file: <filename>
   category: <category>
   count: <total_items>
+codes:                              # NEW in v2.2 - Self-documenting legend
+  SCR: Sync Create (msgId:entityType:entityId:version:data)
+  SUP: Sync Update (msgId:entityType:entityId:version:data)
 ---
 <CODE>:<field1>:<field2>:...
 <CODE>:<field1>:<field2>:...
@@ -42,18 +46,36 @@ metadata:
 
 ## Escape Characters
 
-Reserved characters must be escaped:
+Reserved characters must be escaped using percent-encoding:
 
-| Character | Escaped | Description |
+| Character | Encoded | Description |
 |-----------|---------|-------------|
-| `:` | `%3A` | Delimiter |
-| `%` | `%25` | Escape character |
-| `\n` | `%0A` | Newline |
+| `%` | `%25` | Escape character (MUST escape first) |
+| `:` | `%3A` | Field delimiter |
+| `\n` | `%0A` | Line feed |
 | `\r` | `%0D` | Carriage return |
 
-## IPC Code Categories
+**IMPORTANT**: Order matters for encoding/decoding:
+- When escaping: `%` MUST be escaped FIRST (otherwise `%3A` becomes `%253A`)
+- When unescaping: `%` MUST be unescaped LAST (to correctly decode `%25`)
 
-### 1. Core IPC Codes (Communication)
+### Canonical Implementation
+
+Use `AvuEscape` from `avucodec.core` for all escape operations:
+
+```kotlin
+import com.augmentalis.avucodec.core.AvuEscape
+
+val escaped = AvuEscape.escape("https://example.com:8080")
+// Result: "https%3A//example.com%3A8080"
+
+val original = AvuEscape.unescape(escaped)
+// Result: "https://example.com:8080"
+```
+
+## RPC Code Categories
+
+### 1. Core RPC Codes (Communication)
 
 | Code | Purpose | Format | Example |
 |------|---------|--------|---------|
@@ -89,7 +111,7 @@ Reserved characters must be escaped:
 | `ELM` | Element | `ELM:avid:label:type:actions:bounds:category` | `ELM:btn1:Settings:BUTTON:click:0,0,100,50:action` |
 | `CMD` | Command | `CMD:avid:phrase:actionType:targetAvid:confidence` | `CMD:cmd1:settings:CLICK:btn1:0.95` |
 
-### 3. Plugin Manifest Codes (NEW in v2.0)
+### 3. Plugin Manifest Codes (v2.0)
 
 | Code | Purpose | Format | Example |
 |------|---------|--------|---------|
@@ -105,6 +127,119 @@ Reserved characters must be escaped:
 | `CFG` | Config Block | `CFG:start` or `CFG:end` | `CFG:start` |
 | `KEY` | Config Key | `KEY:name:type:default:description` | `KEY:sensitivity:float:0.8:Detection threshold` |
 | `HKS` | Hook | `HKS:event:handler` | `HKS:on_voice_command:handleVoice` |
+
+### 4. WebSocket/Sync Codes (v2.1)
+
+| Code | Purpose | Format | Example |
+|------|---------|--------|---------|
+| `PNG` | Ping (keep-alive) | `PNG:sessionId:timestamp` | `PNG:sess_001:1705312800000` |
+| `PON` | Pong (response) | `PON:sessionId:timestamp` | `PON:sess_001:1705312800001` |
+| `HND` | Handshake | `HND:sessionId:deviceId:appVersion:platform:userId?` | `HND:sess_001:dev_001:1.0.0:Android:user_001` |
+| `CAP` | Capability | `CAP:sessionId:cap1,cap2,cap3` | `CAP:sess_001:tabs,favorites,settings` |
+| `SCR` | Sync Create | `SCR:msgId:entityType:entityId:version:data` | `SCR:msg_001:TAB:tab_001:1:escaped_data` |
+| `SUP` | Sync Update | `SUP:msgId:entityType:entityId:version:data` | `SUP:msg_002:FAV:fav_001:2:escaped_data` |
+| `SDL` | Sync Delete | `SDL:msgId:entityType:entityId` | `SDL:msg_003:HST:hist_001` |
+| `SFL` | Sync Full Request | `SFL:msgId:entityTypes:lastSyncTimestamp` | `SFL:msg_004:TAB,FAV,SET:1705312800000` |
+| `SBT` | Sync Batch | `SBT:msgId:count:op1\|op2\|op3` | `SBT:msg_005:2:TAB,t1,CREATE,1,data` |
+| `SRS` | Sync Response | `SRS:msgId:entityType:entityId:version:data` | `SRS:msg_006:TAB:tab_001:1:escaped_data` |
+| `SCF` | Sync Conflict | `SCF:msgId:entityType:entityId:localVer:remoteVer:resolution` | `SCF:msg_007:TAB:tab_001:1:2:REMOTE` |
+| `SST` | Sync Status | `SST:sessionId:state:pendingCount:lastSync` | `SST:sess_001:SYNCING:5:1705312800000` |
+| `CON` | Connected | `CON:sessionId:serverVersion:timestamp` | `CON:sess_001:2.0.0:1705312800000` |
+| `DIS` | Disconnected | `DIS:sessionId:reason:timestamp` | `DIS:sess_001:Server closed:1705312800000` |
+| `RCN` | Reconnecting | `RCN:sessionId:attempt:maxAttempts:delayMs` | `RCN:sess_001:3:5:4000` |
+
+#### Sync Entity Types
+
+| ID | Entity | Description |
+|----|--------|-------------|
+| `TAB` | Tab | Browser tabs |
+| `FAV` | Favorite | Bookmarks/favorites |
+| `HST` | History | Browsing history |
+| `DWN` | Download | Downloads |
+| `SET` | Settings | User settings |
+| `SES` | Session | Browser sessions |
+
+#### Sync States
+
+| State | Description |
+|-------|-------------|
+| `IDLE` | No sync activity |
+| `SYNCING` | Sync in progress |
+| `CONNECTING` | Establishing connection |
+| `CONNECTED` | Connection established |
+| `DISCONNECTED` | Connection lost |
+| `ERROR` | Sync error occurred |
+| `OFFLINE` | Device offline |
+
+#### Conflict Resolutions
+
+| Resolution | Description |
+|------------|-------------|
+| `LOCAL` | Keep local version |
+| `REMOTE` | Accept remote version |
+| `MERGE` | Merge both versions |
+| `MANUAL` | Requires user decision |
+
+#### Batch Operation Format
+
+Each operation in `SBT` batch uses comma-separated fields:
+```
+entityType,entityId,action,version,data
+```
+
+Actions: `CREATE`, `UPDATE`, `DELETE`
+
+Example batch:
+```
+SBT:msg_005:3:TAB,tab1,CREATE,1,{...}|FAV,fav1,UPDATE,2,{...}|HST,hist1,DELETE,1,
+```
+
+---
+
+## Self-Documenting Headers (NEW in v2.2)
+
+AVU files can include a `codes:` section in the header that documents the codes used in the file. This makes files self-documenting for both humans and AI.
+
+### Using AvuCodeRegistry
+
+```kotlin
+import com.augmentalis.avucodec.core.AvuCodeRegistry
+import com.augmentalis.avucodec.core.AvuCodeInfo
+import com.augmentalis.avucodec.core.AvuCodeCategory
+
+// Register codes at module initialization
+AvuCodeRegistry.register(AvuCodeInfo(
+    code = "SCR",
+    name = "Sync Create",
+    category = AvuCodeCategory.SYNC,
+    format = "msgId:entityType:entityId:version:data",
+    description = "Create a new entity on remote"
+))
+
+// Generate legend for file header
+val legend = AvuCodeRegistry.generateLegend(
+    filter = setOf("SCR", "SUP", "SDL"),
+    includeDescriptions = true
+)
+```
+
+### Using AvuHeader
+
+```kotlin
+import com.augmentalis.avucodec.core.AvuHeader
+
+// Generate a complete header
+val header = AvuHeader.generate(
+    type = "WebSocket Sync",
+    version = "1.0.0",
+    project = "webavanue",
+    codes = setOf("SCR", "SUP", "SDL", "PNG", "PON")
+)
+
+// Parse a header
+val (headerData, bodyStart) = AvuHeader.parse(fileContent)
+println(headerData.codes)  // Map of code -> description
+```
 
 ---
 
@@ -208,11 +343,11 @@ Semver-compatible constraints:
 Learned app files use the `.vos` extension:
 
 ```
-# Avanues Universal Format v2.0
+# Avanues Universal Format v2.2
 # Type: VOS
 # Extension: .vos
 ---
-schema: avu-2.0
+schema: avu-2.2
 version: 1.0.0
 locale: en-US
 project: voiceos
@@ -220,6 +355,10 @@ metadata:
   file: com.instagram.android.vos
   category: learned_app
   count: 32
+codes:
+  APP: App Metadata (package:name:timestamp)
+  ELM: Element (avid:label:type:actions:bounds:category)
+  CMD: Command (avid:phrase:actionType:targetAvid:confidence)
 ---
 APP:com.instagram.android:Instagram:1706000000000
 STA:5:23:8:4.6:3:75.5
@@ -241,7 +380,17 @@ synonyms:
 ### Kotlin (AVUCodec Module)
 
 ```kotlin
-// Encoding
+import com.augmentalis.avucodec.AVUEncoder
+import com.augmentalis.avucodec.AVUDecoder
+import com.augmentalis.avucodec.core.AvuEscape
+import com.augmentalis.avucodec.core.AvuHeader
+import com.augmentalis.avucodec.core.AvuCodeRegistry
+
+// Escape utilities (use for all field values)
+val escaped = AvuEscape.escape("value:with:colons")
+val original = AvuEscape.unescape(escaped)
+
+// Encoding plugin manifest
 val manifest = AVUEncoder.PluginManifestData(
     id = "com.example.plugin",
     version = "1.0.0",
@@ -268,18 +417,33 @@ println(parsed?.capabilities) // [accessibility.voice, ai.nlu]
 
 ---
 
-## Migration from v1.0
+## Migration Guide
+
+### Changes in v2.2
+
+1. **Terminology**: IPC renamed to RPC (Remote Procedure Call)
+2. **Self-Documenting Headers**: Optional `codes:` section in header
+3. **Unified Escape**: All modules use `AvuEscape` from `avucodec.core`
+4. **Code Registry**: `AvuCodeRegistry` for runtime code registration
+5. **Header Utilities**: `AvuHeader` for generating/parsing headers
+
+### Changes in v2.1
+
+1. **WebSocket/Sync Codes**: SCR, SUP, SDL, SFL, SBT, SRS, SCF, SST, RCN
+2. **Entity Types**: TAB, FAV, HST, DWN, SET, SES
+3. **Sync States**: IDLE, SYNCING, CONNECTING, etc.
 
 ### Changes in v2.0
 
-1. **New Plugin Manifest Codes**: PLG, DSC, AUT, PCP, MOD, DEP, PRM, PLT, AST, CFG, KEY, HKS
+1. **Plugin Manifest Codes**: PLG, DSC, AUT, PCP, MOD, DEP, PRM, PLT, AST, CFG, KEY, HKS
 2. **Pipe Separator for Lists**: Capabilities and modules use `|` instead of `,`
 3. **Schema Version**: Updated to `avu-2.0`
 
 ### Backward Compatibility
 
-- v1.0 files remain parseable
+- v1.0 and v2.0 files remain parseable
 - Unknown codes are ignored (forward compatible)
+- `codes:` section is optional (backward compatible)
 - Parsers should check schema version
 
 ---
@@ -288,12 +452,16 @@ println(parsed?.capabilities) // [accessibility.voice, ai.nlu]
 
 - [Universal Plugin Architecture Plan](../../../AI/Plans/UniversalPlugin-Architecture-Plan-260122.md)
 - [AVUCodec Module](../../../../Modules/AVUCodec/src/commonMain/kotlin/com/augmentalis/avucodec/)
+- [AVUCodec Core Utilities](../../../../Modules/AVUCodec/src/commonMain/kotlin/com/augmentalis/avucodec/core/)
 - [VoiceOSCore AVUSerializer](../../../../Modules/VoiceOSCore/src/commonMain/kotlin/com/augmentalis/voiceoscore/AVUSerializer.kt)
+- [WebSocket Module - AvuSyncMessage](../../../../Modules/WebSocket/src/commonMain/kotlin/com/augmentalis/websocket/AvuSyncMessage.kt)
 
 ---
 
 ## Version History
 
+- **2.2.0** (2026-02-03): Self-documenting headers with codes legend, unified AvuEscape, AvuCodeRegistry, IPC renamed to RPC
+- **2.1.0** (2026-02-03): Added WebSocket/Sync codes (PNG, PON, HND, CAP, SCR, SUP, SDL, SFL, SBT, SRS, SCF, SST, CON, DIS, RCN), entity types, sync states, conflict resolutions
 - **2.0.0** (2026-01-22): Added Plugin Manifest format, new codes (PLG, DSC, AUT, PCP, MOD, DEP, PRM, PLT, AST, CFG, KEY, HKS)
 - **1.0.0** (2025-12-03): Initial AVU format specification
 

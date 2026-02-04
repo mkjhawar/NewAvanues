@@ -26,7 +26,167 @@ class VoiceCommandGenerator {
 
     companion object {
         const val MIN_WORDS_FOR_MATCH = 2
+        const val MIN_WORDS_FOR_ICON = 1  // Icons can have single-word commands
         const val MAX_COMMAND_WORDS = 10
+
+        // ===== GARBAGE TEXT FILTERS =====
+        // Multi-language support for garbage detection
+
+        /**
+         * Words that when repeated indicate garbage text.
+         * Localized for multiple languages.
+         */
+        private val LOCALIZED_REPETITIVE_WORDS = mapOf(
+            "en" to setOf("comma", "dot", "dash", "space", "tab", "enter", "null", "undefined", "nan", "true", "false"),
+            "de" to setOf("komma", "punkt", "strich", "leerzeichen", "tab", "eingabe", "null", "undefiniert", "wahr", "falsch"),
+            "es" to setOf("coma", "punto", "guion", "espacio", "tab", "enter", "nulo", "indefinido", "verdadero", "falso"),
+            "fr" to setOf("virgule", "point", "tiret", "espace", "tab", "entrer", "nul", "indéfini", "vrai", "faux"),
+            "zh" to setOf("逗号", "句号", "空格", "制表符", "回车", "空", "未定义", "真", "假"),
+            "ja" to setOf("コンマ", "ピリオド", "スペース", "タブ", "エンター", "ヌル", "未定義", "真", "偽")
+        )
+
+        /**
+         * Language-agnostic garbage patterns
+         */
+        private val GARBAGE_PATTERNS = listOf(
+            // CSS class-like patterns
+            Regex("^[a-z]+(-[a-z]+){2,}$", RegexOption.IGNORE_CASE),
+            // Base64/hash-like strings
+            Regex("^[A-Za-z0-9+/=]{20,}$"),
+            // Hex strings
+            Regex("^(0x)?[a-f0-9]{8,}$", RegexOption.IGNORE_CASE),
+            // Just punctuation
+            Regex("^[\\s\\p{Punct}]+$"),
+            // UUID patterns
+            Regex("^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", RegexOption.IGNORE_CASE),
+            // Object patterns
+            Regex("^\\[?object\\s*\\w*\\]?$|^\\w+@[a-f0-9]+$", RegexOption.IGNORE_CASE)
+        )
+
+        /**
+         * Known garbage exact matches (language-agnostic programming terms)
+         */
+        private val GARBAGE_EXACT = setOf(
+            "undefined", "null", "nan", "NaN", "NULL",
+            "[object object]", "function", "error", "exception",
+            "...", "---", "___", "true", "false", ""
+        )
+
+        /**
+         * Known navigation/action icon labels (localized)
+         */
+        private val LOCALIZED_NAVIGATION_ICONS = mapOf(
+            "en" to setOf(
+                "menu", "more", "options", "settings", "back", "forward", "home", "close",
+                "refresh", "reload", "search", "filter", "sort",
+                "add", "new", "create", "edit", "delete", "remove", "save", "cancel",
+                "share", "send", "download", "upload", "attach", "copy", "paste",
+                "call", "meet", "video", "camera", "mic", "mute", "unmute",
+                "compose", "reply", "archive", "trash", "spam",
+                "play", "pause", "stop", "skip", "previous", "next", "volume",
+                "star", "favorite", "bookmark", "pin", "flag", "label",
+                "help", "info", "about", "feedback", "login", "logout", "profile"
+            ),
+            "de" to setOf(
+                "menü", "mehr", "optionen", "einstellungen", "zurück", "vorwärts", "startseite", "schließen",
+                "aktualisieren", "suchen", "filtern", "sortieren",
+                "hinzufügen", "neu", "erstellen", "bearbeiten", "löschen", "entfernen", "speichern", "abbrechen",
+                "teilen", "senden", "herunterladen", "hochladen", "anhängen", "kopieren", "einfügen",
+                "anrufen", "video", "kamera", "mikrofon", "stummschalten",
+                "abspielen", "pause", "stopp", "stern", "favorit", "lesezeichen",
+                "hilfe", "info", "anmelden", "abmelden", "profil"
+            ),
+            "es" to setOf(
+                "menú", "más", "opciones", "ajustes", "atrás", "adelante", "inicio", "cerrar",
+                "actualizar", "buscar", "filtrar", "ordenar",
+                "añadir", "nuevo", "crear", "editar", "eliminar", "quitar", "guardar", "cancelar",
+                "compartir", "enviar", "descargar", "subir", "adjuntar", "copiar", "pegar",
+                "llamar", "vídeo", "cámara", "micrófono", "silenciar",
+                "reproducir", "pausar", "detener", "estrella", "favorito", "marcador",
+                "ayuda", "información", "iniciar sesión", "cerrar sesión", "perfil"
+            ),
+            "fr" to setOf(
+                "menu", "plus", "options", "paramètres", "retour", "avancer", "accueil", "fermer",
+                "actualiser", "rechercher", "filtrer", "trier",
+                "ajouter", "nouveau", "créer", "modifier", "supprimer", "retirer", "enregistrer", "annuler",
+                "partager", "envoyer", "télécharger", "téléverser", "joindre", "copier", "coller",
+                "appeler", "vidéo", "caméra", "micro", "muet",
+                "lecture", "pause", "arrêter", "étoile", "favori", "signet",
+                "aide", "info", "connexion", "déconnexion", "profil"
+            )
+        )
+
+        private fun getRepetitiveWords(locale: String = "en"): Set<String> {
+            val langCode = locale.take(2).lowercase()
+            return LOCALIZED_REPETITIVE_WORDS[langCode] ?: LOCALIZED_REPETITIVE_WORDS["en"]!!
+        }
+
+        private fun getNavigationIcons(locale: String = "en"): Set<String> {
+            val langCode = locale.take(2).lowercase()
+            val localized = LOCALIZED_NAVIGATION_ICONS[langCode] ?: emptySet()
+            val english = LOCALIZED_NAVIGATION_ICONS["en"]!!
+            return localized + english
+        }
+
+        /**
+         * Icon element types in HTML
+         */
+        private val ICON_ELEMENT_TYPES = setOf(
+            "button", "menuitem", "tab", "link"
+        )
+
+        /**
+         * Check if text is garbage that should not be a voice command.
+         *
+         * @param text The text to check
+         * @param locale The locale for language-specific garbage detection (default: "en")
+         */
+        fun isGarbageText(text: String, locale: String = "en"): Boolean {
+            val trimmed = text.trim()
+            if (trimmed.length <= 1) return true
+            if (GARBAGE_EXACT.any { it.equals(trimmed, ignoreCase = true) }) return true
+            if (GARBAGE_PATTERNS.any { it.matches(trimmed) }) return true
+
+            // Detect repetitive words (localized)
+            val repetitiveWords = getRepetitiveWords(locale)
+            val words = trimmed.lowercase().split(Regex("[\\s,]+")).filter { it.isNotBlank() }
+            if (words.size >= 2) {
+                val firstWord = words[0]
+                val samePrefix = words.count { it.startsWith(firstWord.take(3)) }
+                if (samePrefix >= 2 && repetitiveWords.any { firstWord.startsWith(it.take(3)) }) {
+                    return true
+                }
+            }
+            return false
+        }
+
+        /**
+         * Clean label text for voice commands.
+         *
+         * @param text Raw label text
+         * @param locale The locale for garbage detection (default: "en")
+         */
+        fun cleanLabel(text: String, locale: String = "en"): String? {
+            val trimmed = text.trim()
+            if (isGarbageText(trimmed, locale)) return null
+            val maxLength = 50
+            return if (trimmed.length > maxLength) {
+                trimmed.take(maxLength).substringBeforeLast(" ") + "..."
+            } else {
+                trimmed
+            }
+        }
+
+        /**
+         * Check if text is a known navigation icon label.
+         *
+         * @param text The text to check
+         * @param locale The locale for navigation icon matching (default: "en")
+         */
+        fun isNavigationIcon(text: String, locale: String = "en"): Boolean {
+            val navIcons = getNavigationIcons(locale)
+            return navIcons.contains(text.lowercase().trim())
+        }
     }
 
     private val commands = mutableListOf<WebVoiceCommand>()
@@ -82,11 +242,38 @@ class VoiceCommandGenerator {
     fun addElements(elements: List<DOMElement>) {
         elements.forEach { element ->
             val command = createCommand(element)
-            if (command != null && command.words.size >= MIN_WORDS_FOR_MATCH) {
-                commands.add(command)
-                indexCommand(command)
+            if (command != null) {
+                // Allow single-word commands for icons, require 2+ words for regular elements
+                val minWords = if (isIconElement(element)) MIN_WORDS_FOR_ICON else MIN_WORDS_FOR_MATCH
+                if (command.words.size >= minWords) {
+                    commands.add(command)
+                    indexCommand(command)
+                }
             }
         }
+    }
+
+    /**
+     * Check if element is an icon (button/link with aria-label but minimal visible text).
+     */
+    private fun isIconElement(element: DOMElement): Boolean {
+        // Must be a clickable element type
+        if (!ICON_ELEMENT_TYPES.contains(element.type)) return false
+
+        // Must have ariaLabel
+        if (element.ariaLabel.isBlank()) return false
+
+        // If it has visible text different from aria-label, it's not just an icon
+        if (element.name.isNotBlank() && element.name != element.ariaLabel) return false
+
+        // Check if it's a known navigation icon
+        if (isNavigationIcon(element.ariaLabel)) return true
+
+        // Small bounds indicate icon (< 64x64 is likely an icon)
+        val bounds = element.bounds
+        if (bounds.width < 80 && bounds.height < 80) return true
+
+        return false
     }
 
     /**
@@ -96,15 +283,19 @@ class VoiceCommandGenerator {
         val text = extractCommandText(element)
         if (text.isBlank()) return null
 
-        val words = normalizeAndTokenize(text)
-        if (words.size < MIN_WORDS_FOR_MATCH) return null
+        // Filter garbage text
+        val cleanedText = cleanLabel(text) ?: return null
+
+        val words = normalizeAndTokenize(cleanedText)
+        if (words.isEmpty()) return null
 
         val action = determineAction(element)
+        val isIcon = isIconElement(element)
 
         return WebVoiceCommand(
             vosId = element.id,
             elementType = element.type,
-            fullText = text,
+            fullText = cleanedText,
             words = words.take(MAX_COMMAND_WORDS),
             selector = element.selector,
             xpath = element.xpath,
@@ -114,7 +305,8 @@ class VoiceCommandGenerator {
                 "tag" to element.tag,
                 "role" to element.role,
                 "href" to element.href,
-                "inputType" to element.inputType
+                "inputType" to element.inputType,
+                "isIcon" to isIcon.toString()
             )
         )
     }
@@ -122,14 +314,20 @@ class VoiceCommandGenerator {
     /**
      * Extract the best text for voice command from element.
      * Priority: ariaLabel > name > placeholder
+     * Filters out garbage text.
      */
     private fun extractCommandText(element: DOMElement): String {
-        return when {
+        val raw = when {
             element.ariaLabel.isNotBlank() -> element.ariaLabel
             element.name.isNotBlank() -> element.name
             element.placeholder.isNotBlank() -> element.placeholder
             else -> ""
         }.trim()
+
+        // Early garbage check
+        if (isGarbageText(raw)) return ""
+
+        return raw
     }
 
     /**

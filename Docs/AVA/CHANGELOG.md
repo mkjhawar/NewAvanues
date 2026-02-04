@@ -9,6 +9,171 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactored - WebAvanue Repository Architecture (2026-02-03)
+
+**BrowserRepositoryImpl split into 7 domain-specific repositories**
+
+Refactored monolithic 1,264-line class into focused repositories following Single Responsibility Principle.
+
+#### New Repository Structure
+| Repository | Lines | Responsibility |
+|------------|-------|----------------|
+| TabRepository | ~230 | Tab CRUD, state, reordering |
+| FavoriteRepository | ~220 | Bookmarks, folders, search |
+| HistoryRepository | ~175 | History, date ranges, most visited |
+| DownloadRepository | ~195 | Downloads, progress tracking |
+| SettingsRepository | ~145 | Settings, presets |
+| SessionRepository | ~135 | Session save/restore, crash recovery |
+| SitePermissionRepository | ~80 | Site permissions |
+
+#### Benefits
+- Single Responsibility (each repo handles one domain)
+- Improved testability (isolated testing)
+- Reduced cognitive load (~150-200 lines each vs 1,264)
+- Backward compatible (external API unchanged)
+
+#### Documentation
+- [Developer Manual Chapter 79](/Docs/AVA/ideacode/guides/Developer-Manual-Chapter79-WebAvanue-Repository-Architecture.md)
+
+---
+
+### Added - Handler Utilities DSL (2026-02-03)
+
+**~35% boilerplate reduction in VoiceOS handlers**
+
+Created `HandlerUtilities.kt` with common extensions and command routing DSL for VoiceOS handlers.
+
+#### New Utilities
+- `normalizeCommand()` - String extension for command normalization
+- `toHandlerResult()` - Boolean to HandlerResult conversion
+- `runHandlerCatching()` - Safe execution wrapper
+- `commandRouter` DSL - Declarative command matching
+
+#### Example
+```kotlin
+// Before: 127 lines with nested when blocks
+// After: 82 lines with DSL
+override suspend fun execute(command: QuantizedCommand, params: Map<String, Any>) =
+    commandRouter(command.phrase) {
+        on("scroll up", "page up") { executor.scrollUp().toHandlerResult("Scrolled up", "Failed") }
+        onPrefix("scroll to") { target -> handleScrollTo(target) }
+        otherwise { HandlerResult.notHandled() }
+    }
+```
+
+#### Documentation
+- [Developer Manual Chapter 78](/Docs/AVA/ideacode/guides/Developer-Manual-Chapter78-Handler-Utilities.md)
+
+---
+
+### Migrated - MagicVoiceHandlers to KMP (2026-02-03)
+
+**36 handler files migrated to Kotlin Multiplatform**
+
+Converted MagicVoiceHandlers module from Android-only to cross-platform KMP with Android, iOS, and Desktop targets.
+
+#### Changes
+- Converted `build.gradle.kts` to KMP multiplatform
+- Moved sources from `src/main/java` to `src/commonMain/kotlin`
+- Replaced `android.util.Log` with `Modules/Logging` KMP Logger
+- Updated 34 handler files to use lazy-evaluated logging lambdas
+
+#### Handler Categories Migrated
+- **Display**: Avatar, Badge, Canvas3D, Carousel, Chip, Progress, Table, TreeView
+- **Input**: Autocomplete, ColorPicker, DatePicker, FileUpload, IconPicker, MultiSelect, RangeSlider, Rating, SearchBar, Slider, Stepper, TagInput, TimePicker, Toggle
+- **Feedback**: Alert, Confirm, Dialog, Drawer, Modal, Snackbar, Toast
+- **Navigation**: AppBar, BottomNav, Breadcrumb, Pagination, Tabs
+
+---
+
+### Refactored - RPC Module Architecture (2026-02-02)
+
+**Standardized IPC → RPC naming across codebase**
+
+Renamed UniversalRPC module to Rpc and standardized all IPC references to RPC for consistency with cross-platform RPC patterns.
+
+#### Module Changes
+| Before | After |
+|--------|-------|
+| `Modules/UniversalRPC` | `Modules/Rpc` |
+| `com.augmentalis.universalrpc` | `com.augmentalis.rpc` |
+| `AppIPCRegistry` | `AppRpcRegistry` |
+| `UniversalIPCEncoder` | `RpcEncoder` |
+| `*.IPC.COMMAND` | `*.RPC.COMMAND` |
+
+#### Files Changed
+- 225 files updated across Rpc, VoiceOSCore, PluginSystem modules
+- All package imports updated
+- Action strings standardized
+
+#### Documentation
+- [Developer Manual Chapter 76](/Docs/AVA/ideacode/guides/Developer-Manual-Chapter76-RPC-Module-Architecture.md)
+
+---
+
+### Archived - Deprecated /Avanues Directory (2026-02-02)
+
+**Archived 956 files (51MB → 18MB compressed)**
+
+Removed deprecated `/Avanues/Web` directory after migrating all functionality to `/Modules/WebAvanue`.
+
+#### Changes
+- Archived to `Archive/Avanues_deprecated_260202.tar.gz`
+- Fixed broken imports in `BrowserWebView.desktop.kt` and `BrowserWebView.ios.kt`
+- Updated BuildConfig reflection paths in `SentryManager.kt`
+- WebAvanue module is now fully independent
+
+---
+
+### Refactored - GlassmorphismUtils Consolidation (2026-02-02)
+
+**~500 lines of duplication eliminated**
+
+Consolidated 7 duplicate GlassmorphismUtils files to use shared core classes from Common/UI.
+
+#### Files Updated
+- VoiceOSCore/CommandManager
+- VoiceOSCore/LocalizationManager
+- VoiceOSCore/VoiceDataManager
+- AvidCreator
+- DeviceManager
+- LicenseManager
+
+All now use `typealias` re-exports for backward compatibility while importing from `com.avanues.ui`.
+
+---
+
+### Refactored - WebAvanue StateFlow Utilities (2026-02-02)
+
+**~1,800 lines of ViewModel boilerplate reduced**
+
+Created reusable StateFlow utility classes to eliminate repetitive patterns across WebAvanue ViewModels.
+
+#### New Utility Classes (`com.augmentalis.webavanue.util`)
+- `ViewModelState<T>` - Eliminates `_state`/`state.asStateFlow()` pattern
+- `NullableState<T>` - Dialog/error states with `clear()`, `ifPresent()` helpers
+- `ListState<T>` - List operations: `add()`, `updateItem()`, `removeItem()`
+- `UiState` - Loading/error/success state management
+- `BaseViewModel` - Common viewModelScope and onCleared()
+- `BaseStatefulViewModel` - BaseViewModel + built-in UiState
+
+#### ViewModels Refactored
+| ViewModel | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| HistoryViewModel | 257 | 155 | 40% |
+| DownloadViewModel | 398 | 255 | 36% |
+| FavoriteViewModel | 474 | 308 | 35% |
+| SecurityViewModel | 556 | 328 | 41% |
+| SettingsViewModel | 555 | 191 | 66% |
+| TabViewModel | 1355 | 652 | 52% |
+
+#### Documentation
+- [Developer Manual Chapter 75](/Docs/AVA/ideacode/guides/Developer-Manual-Chapter75-StateFlow-Utilities.md)
+- [Quick Reference](/Docs/WebAvanue/Development/StateFlow-Utilities-QuickRef.md)
+- [Technical Debt Closure](/Docs/TechnicalDebt/WebAvanue-StateFlow-Refactoring-260202.md)
+
+---
+
 ### Fixed - TVM v0.22.0 Native Library Crash (2025-12-03)
 
 **Critical Fix: On-device LLM inference now works!**

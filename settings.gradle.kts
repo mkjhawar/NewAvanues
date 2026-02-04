@@ -65,6 +65,7 @@ include(":Modules:VoiceIsolation")         // Audio preprocessing (noise suppres
 include(":Modules:Actions")                 // Intent handlers, action execution
 
 // Shared Modules (cross-platform KMP libraries)
+include(":Modules:Logging")         // Consolidated KMP logging infrastructure
 include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, FileSystem, etc.)
 include(":Modules:LicenseSDK")      // License validation client
 
@@ -99,14 +100,12 @@ include(":android:apps:VoiceCursor")
 include(":android:apps:VoiceOSIPCTest")
 include(":android:apps:VoiceUI")
 
-// VoiceOS Managers - ARCHIVED (2026-01-29)
-// include(":Modules:VoiceOS:managers:HUDManager")  // ARCHIVED - see archive/VoiceOS-Module-290129/
-// include(":Modules:VoiceOS:managers:CommandManager")       // ARCHIVED (2026-01-28) - see archive/VoiceOS-CommandManager-280128
-// include(":Modules:VoiceOS:managers:VoiceDataManager")     // ARCHIVED (2026-01-28) - see archive/VoiceOS-VoiceDataManager-280128
-include(":Modules:VoiceDataManager")                         // KMP VoiceDataManager module (replacement)
-// include(":Modules:VoiceOS:managers:LocalizationManager")  // ARCHIVED (2026-01-28) - see archive/VoiceOS-LocalizationManager-280128
-include(":Modules:LocalizationManager")                      // KMP LocalizationManager module (replacement)
-include(":Modules:Localization")                             // KMP Localization module (used by VoiceKeyboard)
+// VoiceOS Managers (remaining in VoiceOS - VoiceOS-specific)
+include(":Modules:VoiceOS:managers:HUDManager")
+include(":Modules:VoiceOS:managers:CommandManager")
+include(":Modules:VoiceOS:managers:VoiceDataManager")
+// include(":Modules:VoiceOS:managers:LocalizationManager")  // DEPRECATED - use :Modules:Localization
+include(":Modules:Localization")                             // KMP Localization module
 
 // Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
 include(":Modules:DeviceManager")                       // Device info, sensors, audio, network
@@ -125,8 +124,8 @@ include(":Modules:AVUCodec")                             // KMP AVU Protocol enc
 // WebAvanue Module - Unified KMP Browser Library
 include(":Modules:WebAvanue")            // Merged flat structure: data + UI in single module
 
-// UniversalRPC - Cross-platform gRPC module
-include(":Modules:UniversalRPC")         // Root module with KMP + Wire
+// Rpc - Cross-platform RPC module
+include(":Modules:Rpc")                  // Root module with KMP + Wire
 
 // AvaMagic Modules
 include(":Modules:AvaMagic:MagicTools:LanguageServer")  // AVA Language Server (LSP)
