@@ -64,7 +64,7 @@ class MacroActions(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        val macroName = command.text.lowercase()
+        val macroName = command.text?.lowercase()
 
         // Find matching macro
         val macro = PREDEFINED_MACROS[macroName]

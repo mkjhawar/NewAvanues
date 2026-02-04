@@ -88,11 +88,16 @@ kotlin {
                 implementation(libs.lifecycle.viewmodel.ktx)
                 implementation(libs.androidx.lifecycle.runtime.ktx)
                 implementation(libs.lifecycle.viewmodel.savedstate)
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.androidx.lifecycle.viewmodel.compose)
 
                 // Compose (use .get() to resolve provider for platform())
                 implementation(platform(libs.compose.bom.get()))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
+                implementation(libs.compose.runtime.livedata)
+                implementation(libs.compose.material.icons.extended)
+                implementation(libs.androidx.lifecycle.runtime.compose)
                 // material-icons-extended removed to reduce APK size (~15MB)
                 // Icons are now provided as vector drawables in VoiceOS app
                 implementation(libs.compose.ui.tooling.preview)

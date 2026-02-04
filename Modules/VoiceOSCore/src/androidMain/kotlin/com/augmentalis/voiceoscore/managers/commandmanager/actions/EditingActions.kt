@@ -50,7 +50,7 @@ class EditingActions(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        return when (command.text.lowercase()) {
+        return when (command.text?.lowercase()) {
             CMD_COPY -> performCopy(command)
             CMD_PASTE -> performPaste(command)
             CMD_CUT -> performCut(command)
