@@ -448,7 +448,43 @@ data class CommandStats(
     val topCommands: List<String>
 )
 
-// CommandCategory is defined in StaticCommandRegistry.kt with more comprehensive values
+/**
+ * Categories for organizing commands.
+ */
+enum class CommandCategory {
+    /** Navigation commands (go, back, forward) */
+    NAVIGATION,
+
+    /** Text input commands (type, delete) */
+    TEXT,
+
+    /** Media control commands (play, pause) */
+    MEDIA,
+
+    /** System commands (volume, brightness) */
+    SYSTEM,
+
+    /** Application commands */
+    APP,
+
+    /** Accessibility-specific commands */
+    ACCESSIBILITY,
+
+    /** Voice-specific commands */
+    VOICE,
+
+    /** Gesture-based commands */
+    GESTURE,
+
+    /** Custom user commands */
+    CUSTOM,
+
+    /** Input method commands */
+    INPUT,
+
+    /** App control commands */
+    APP_CONTROL
+}
 
 /**
  * Accessibility action constants.
