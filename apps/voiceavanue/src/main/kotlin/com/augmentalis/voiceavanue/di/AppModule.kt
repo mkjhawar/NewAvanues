@@ -1,7 +1,7 @@
 /**
  * AppModule.kt - Hilt dependency injection module
  *
- * Provides dependencies for AVA Unified app.
+ * Provides app-level dependencies. Core functionality is in VoiceOSCore module.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -9,6 +9,8 @@
 package com.augmentalis.voiceavanue.di
 
 import android.content.Context
+import com.augmentalis.database.DatabaseDriverFactory
+import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.voiceoscore.rpc.VoiceOSServerConfig
 import com.augmentalis.webavanue.rpc.WebAvanueServerConfig
 import dagger.Module
@@ -41,6 +43,20 @@ object AppModule {
     @MainDispatcher
     fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
 
+    // Database - shared singleton
+    @Provides
+    @Singleton
+    fun provideDatabaseDriverFactory(
+        @ApplicationContext context: Context
+    ): DatabaseDriverFactory = DatabaseDriverFactory(context)
+
+    @Provides
+    @Singleton
+    fun provideVoiceOSDatabaseManager(
+        driverFactory: DatabaseDriverFactory
+    ): VoiceOSDatabaseManager = VoiceOSDatabaseManager.getInstance(driverFactory)
+
+    // RPC Server configs (for inter-module communication)
     @Provides
     @Singleton
     fun provideVoiceOSServerConfig(): VoiceOSServerConfig =
