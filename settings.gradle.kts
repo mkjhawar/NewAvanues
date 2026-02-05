@@ -174,7 +174,7 @@ include(":Modules:VoiceCursor")                    // KMP cursor control, dwell 
 include(":Modules:Gaze")                           // KMP gaze/eye tracking with calibration
 
 // Top-level Apps
-include(":apps:ava-unified")                       // UNIFIED testing app (VoiceOS + WebAvanue + Cursor + Gaze)
+include(":apps:voiceavanue")                       // UNIFIED app (VoiceAvanue + Foundation + Gaze + Cursor)
 
 // Android Apps - Current
 include(":android:apps:webavanue")                 // NEW: Browser with RPC integration
