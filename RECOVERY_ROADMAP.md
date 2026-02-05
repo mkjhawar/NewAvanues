@@ -72,6 +72,83 @@ This document tracks the recovery and implementation of lost work during module 
 - VoiceAvanue <-> VoiceCursor cursor control
 - Event routing through EventBus
 
+## Phase 5: VoiceAvanue App Integration ✅ COMPLETED
+
+### 5.1 Simplified App Architecture
+**Status**: ✅ COMPLETED (2026-02-05)
+**Principle**: No duplication - all core logic in VoiceOSCore module
+
+**Changes Made**:
+1. **VoiceAvanueAccessibilityService** (117 lines, was 379)
+   - Now extends `VoiceOSAccessibilityService` from VoiceOSCore
+   - Only implements required abstract method `getActionCoordinator()`
+   - All screen extraction, command generation, gesture dispatch handled by parent
+
+2. **VoiceRecognitionService** (104 lines, was 234)
+   - Thin foreground service for process lifecycle
+   - Delegates speech recognition to VoiceOSCore
+
+3. **AppModule.kt** (69 lines, was 122)
+   - Only provides Database and RPC configs
+   - Removed redundant ServiceConfiguration and SpeechRecognitionService providers
+
+### 5.2 Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    VoiceOSCore Module (KMP)                        │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  VoiceOSAccessibilityService (abstract)                      │  │
+│  │  ├── AndroidScreenExtractor                                  │  │
+│  │  ├── CommandGenerator                                        │  │
+│  │  ├── AndroidGestureDispatcher                                │  │
+│  │  ├── ActionCoordinator → CommandRegistry                     │  │
+│  │  └── ISpeechEngine                                           │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Database Module                                             │  │
+│  │  ├── VoiceOSDatabaseManager                                  │  │
+│  │  ├── IVoiceCommandRepository                                 │  │
+│  │  └── GeneratedCommandQueries                                 │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  NLU Module                                                  │  │
+│  │  └── IntentClassifier, HybridClassifier                      │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  │ extends
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    voiceavanue App (thin wrappers)                 │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  VoiceAvanueAccessibilityService                             │  │
+│  │  └── getActionCoordinator() + onServiceReady()               │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  VoiceRecognitionService (foreground notification only)      │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  AppModule (Hilt DI)                                         │  │
+│  │  └── Database + RPC configs only                             │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 5.3 Key Design Decisions
+1. **Why extend VoiceOSAccessibilityService?**
+   - Abstract class in module, concrete in app (Android manifest requires app-level class)
+   - All core logic stays in module, app just provides the "wiring"
+
+2. **Why thin VoiceRecognitionService?**
+   - Android foreground service keeps process alive
+   - Speech recognition handled by VoiceOSCore's ISpeechEngine
+   - No duplication of speech logic
+
+3. **Why minimal AppModule?**
+   - ServiceConfiguration created locally in AccessibilityService
+   - Avoids Hilt complexity for module-level components
+
 ---
 
 ## New Module Structure
@@ -111,3 +188,6 @@ Each step committed and pushed separately.
 3. `97c6a07c` - feat: Add VoiceOSCore RPC services (cherry-picked from 1c7c8d7d)
 4. `0498ba4c` - feat: Add ava-unified app (cherry-picked from 1c7c8d7d)
 5. `6e518cc5` - feat: Create new webavanue app with RPC integration
+6. `8ca1733c` - refactor: Rename unified app from ava-unified to voiceavanue
+7. `20a5fe70` - chore: Remove old ava-unified directory
+8. `fa1a6ba1` - refactor: Simplify voiceavanue app to use VoiceOSCore directly
