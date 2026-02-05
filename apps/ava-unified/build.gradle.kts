@@ -114,6 +114,15 @@ dependencies {
     // KMP Modules - Core Functionality
     // =========================================================================
 
+    // VoiceAvanue - UNIFIED module (combines VoiceOSCore + WebAvanue + shared resources)
+    implementation(project(":Modules:VoiceAvanue"))
+
+    // Foundation - Shared utilities (StateFlow, ViewModel, etc.)
+    implementation(project(":Modules:Foundation"))
+
+    // Gaze - Eye tracking module
+    implementation(project(":Modules:Gaze"))
+
     // VoiceOSCore - Voice commands, accessibility, screen scraping
     implementation(project(":Modules:VoiceOSCore"))
 

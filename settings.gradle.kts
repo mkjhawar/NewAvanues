@@ -174,9 +174,15 @@ include(":Modules:VoiceCursor")                    // KMP cursor control, dwell 
 include(":Modules:Gaze")                           // KMP gaze/eye tracking with calibration
 
 // Top-level Apps
-include(":apps:ava-unified")                       // Unified VoiceOS + WebAvanue app
+include(":apps:ava-unified")                       // UNIFIED testing app (VoiceOS + WebAvanue + Cursor + Gaze)
 
-// Android Apps
-include(":android:apps:webavanue")
-include(":android:apps:webavanue-ipc-legacy")      // Legacy browser (broadcast IPC) - for testing
-// include(":android:apps:VoiceOS")  // ARCHIVED (2026-02-04) - see archive/VoiceOS-Legacy-260204/
+// Android Apps - Current
+include(":android:apps:webavanue")                 // NEW: Browser with RPC integration
+include(":android:apps:VoiceRecognition")          // Speech recognition testing
+include(":android:apps:VoiceOSIPCTest")            // IPC testing
+
+// Android Apps - Legacy (for comparison)
+include(":android:apps:webavanue-ipc-legacy")      // Legacy browser (broadcast IPC)
+// include(":android:apps:ava-legacy")             // Old AVA app - archived
+// include(":android:apps:browseravanue-legacy")   // Old browser - archived
+// include(":android:apps:VoiceOS")                // ARCHIVED (2026-02-04)
