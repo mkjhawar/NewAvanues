@@ -61,8 +61,8 @@ kotlin {
         // Common Main - 95% shared code
         val commonMain by getting {
             dependencies {
-                // Shared Foundation - StateFlow utilities, ViewModels, NumberToWords
-                api(project(":Modules:Shared:Foundation"))
+                // Foundation - StateFlow utilities, ViewModels, NumberToWords
+                api(project(":Modules:Foundation"))
 
                 // Unified Database - Web command persistence (IScrapedWebCommandRepository, etc.)
                 implementation(project(":Modules:Database"))

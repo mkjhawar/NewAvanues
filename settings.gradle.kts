@@ -64,8 +64,11 @@ include(":Modules:VoiceIsolation")         // Audio preprocessing (noise suppres
 // Actions Module (cross-platform KMP)
 include(":Modules:Actions")                 // Intent handlers, action execution
 
-// Shared Modules (cross-platform KMP libraries)
-include(":Modules:Shared:Foundation")  // Common utilities: StateFlow, ViewModel, NumberToWords
+// Foundation Module (cross-platform KMP utilities)
+include(":Modules:Foundation")  // Common utilities: StateFlow, ViewModel, NumberToWords
+
+// VoiceAvanue - Unified Voice Control + Browser Module
+include(":Modules:VoiceAvanue")  // Combined VoiceOSCore + WebAvanue with shared resources
 include(":Modules:Logging")         // Consolidated KMP logging infrastructure
 include(":Modules:Utilities")       // Platform utilities (DeviceInfo, Logger, FileSystem, etc.)
 include(":Modules:LicenseSDK")      // License validation client
@@ -168,7 +171,7 @@ include(":Modules:AvaMagic:MagicVoiceHandlers")          // Voice command handle
 
 // Cursor and Eye Tracking Modules (KMP)
 include(":Modules:VoiceCursor")                    // KMP cursor control, dwell click, filtering
-// include(":Modules:EyeTracking")                 // KMP eye tracking (Phase 2)
+include(":Modules:Gaze")                           // KMP gaze/eye tracking with calibration
 
 // Android Apps
 include(":android:apps:webavanue")

@@ -1,22 +1,24 @@
 /**
- * VoiceOSCore - Unified KMP Voice Control Module
+ * VoiceAvanue - Unified Voice Control + Browser Module
+ *
+ * Combines VoiceOSCore and WebAvanue functionality into a single KMP module.
+ * Shared resources, common interfaces, unified command system.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Created: 2026-01-17
+ * Created: 2026-02-05
  */
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.compose)
     alias(libs.plugins.sqldelight)
+    alias(libs.plugins.dokka)
 }
 
-// Note: Versions now sourced from gradle/libs.versions.toml
-// kotlinx-coroutines = 1.8.1, kotlinx-serialization = 1.6.0, kotlinx-datetime = 0.5.0
-// sqldelight = 2.0.1, androidx-core = 1.12.0, junit = 4.13.2
-
 kotlin {
+    // Android Target
     androidTarget {
         compilations.all {
             kotlinOptions {
@@ -44,34 +46,67 @@ kotlin {
     }
 
     sourceSets {
+        // ============================================================
+        // Common Main - 95% shared code across all platforms
+        // ============================================================
         val commonMain by getting {
             dependencies {
-                // Foundation - StateFlow utilities, ViewModels, NumberToWords
+                // Shared Foundation - StateFlow utilities, ViewModels, NumberToWords
                 api(project(":Modules:Foundation"))
 
-                // AVID - Avanues Voice ID
+                // AVID - Avanues Voice ID unified identifier system
                 implementation(project(":Modules:AVID"))
 
                 // AVUCodec - Avanues Universal Codec (for ACD parsing)
                 implementation(project(":Modules:AVUCodec"))
 
+                // Database - Unified KMP database
+                implementation(project(":Modules:Database"))
+
+                // Logging - KMP logging infrastructure
+                implementation(project(":Modules:Logging"))
+
+                // VoiceCursor - KMP cursor control
+                implementation(project(":Modules:VoiceCursor"))
+
                 // SpeechRecognition - KMP unified speech module
                 implementation(project(":Modules:SpeechRecognition"))
 
-                // Coroutines
+                // RPC - Cross-platform communication
+                implementation(project(":Modules:Rpc"))
+
+                // Kotlin
                 implementation(libs.kotlinx.coroutines.core)
-
-                // Atomicfu
                 implementation(libs.kotlinx.atomicfu)
-
-                // Serialization
                 implementation(libs.kotlinx.serialization.json)
-
-                // DateTime
                 implementation(libs.kotlinx.datetime)
 
+                // UUID
+                implementation(libs.uuid)
+
+                // Napier logging
+                implementation(libs.napier)
+
                 // SQLDelight
+                implementation(libs.sqldelight.runtime)
                 implementation(libs.sqldelight.coroutines.extensions)
+
+                // Compose Multiplatform
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.ui)
+                implementation(compose.materialIconsExtended)
+
+                // Voyager - KMP Navigation
+                implementation(libs.voyager.navigator)
+                implementation(libs.voyager.screenmodel)
+                implementation(libs.voyager.tab.navigator)
+                implementation(libs.voyager.transitions)
+
+                // Koin for Dependency Injection
+                implementation(libs.koin.core)
+                implementation(libs.koin.compose)
             }
         }
 
@@ -82,6 +117,9 @@ kotlin {
             }
         }
 
+        // ============================================================
+        // Android Main
+        // ============================================================
         val androidMain by getting {
             dependencies {
                 // Device Manager - for IMU, sensors, device capabilities
@@ -90,69 +128,77 @@ kotlin {
                 // Localization - for multi-language support
                 implementation(project(":Modules:Localization"))
 
-                // Voice Data Manager - for data management types
-                implementation(project(":Modules:VoiceDataManager"))
-
-                // Android Core
-                implementation(libs.androidx.core.ktx)
-                implementation(libs.lifecycle.livedata.ktx)
-                implementation(libs.lifecycle.viewmodel.ktx)
-                implementation(libs.androidx.lifecycle.runtime.ktx)
-                implementation(libs.lifecycle.viewmodel.savedstate)
-                implementation(libs.androidx.activity.compose)
-                implementation(libs.androidx.lifecycle.viewmodel.compose)
-
-                // Compose (use .get() to resolve provider for platform())
-                implementation(platform(libs.compose.bom.get()))
-                implementation(libs.compose.ui.ui)
-                implementation(libs.compose.material3)
-                implementation(libs.compose.runtime.livedata)
-                implementation(libs.compose.material.icons.extended)
-                implementation(libs.androidx.lifecycle.runtime.compose)
-                // material-icons-extended removed to reduce APK size (~15MB)
-                // Icons are now provided as vector drawables in VoiceOS app
-                implementation(libs.compose.ui.tooling.preview)
-
-                // SQLDelight Android Driver
-                implementation(libs.sqldelight.android.driver)
-
-                // Speech Recognition
-                implementation(project(":Modules:SpeechRecognition"))
-
-                // Vivoka SDK
-                implementation(project(":vivoka:Android"))
-
-                // NLU and LLM
+                // AI Modules
                 implementation(project(":Modules:AI:NLU"))
                 implementation(project(":Modules:AI:LLM"))
 
                 // AVA Core Utils
                 implementation(project(":Modules:AVA:core:Utils"))
 
-                // AVA Core Utils
-                implementation(project(":Modules:Rpc"))
+                // Android Core
+                implementation(libs.androidx.core.ktx)
+                implementation(libs.androidx.lifecycle.runtime.ktx)
+                implementation(libs.androidx.lifecycle.viewmodel.compose)
+                implementation(libs.androidx.lifecycle.runtime.compose)
+                implementation(libs.lifecycle.viewmodel.ktx)
+                implementation(libs.lifecycle.livedata.ktx)
+                implementation(libs.lifecycle.viewmodel.savedstate)
+                implementation(libs.androidx.activity.compose)
 
-                implementation(project(":android:apps:VoiceCursor"))
-                // Unified Database - for command persistence and scraping repositories
-                // (Consolidated from VoiceOS:core:database into Modules:Database)
-                implementation(project(":Modules:Database"))
+                // Compose
+                implementation(platform(libs.compose.bom.get()))
+                implementation(libs.compose.ui.ui)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.runtime.livedata)
+                implementation(libs.compose.material.icons.extended)
+                implementation(libs.compose.ui.tooling.preview)
+
+                // WebView
+                implementation(libs.androidx.webkit)
+
+                // SQLDelight Android Driver
+                implementation(libs.sqldelight.android.driver)
+
+                // SQLCipher for encryption
+                implementation(libs.sqlcipher.android)
+                implementation(libs.androidx.sqlite.ktx)
+                implementation(libs.androidx.sqlite.framework)
+
+                // Vivoka SDK
+                implementation(project(":vivoka:Android"))
+
+                // DocumentFile for custom download paths
+                implementation("androidx.documentfile:documentfile:1.0.1")
+
+                // Security - EncryptedSharedPreferences
+                implementation("androidx.security:security-crypto:1.1.0-alpha06")
             }
         }
 
         val androidUnitTest by getting {
             dependencies {
                 implementation(libs.junit)
+                implementation(libs.robolectric)
+                implementation(libs.sqldelight.sqlite.driver)
             }
         }
 
         val androidInstrumentedTest by getting {
             dependencies {
+                implementation(kotlin("test"))
+                implementation(libs.kotlin.test.junit)
+                implementation(libs.compose.ui.test.junit4)
+                implementation(libs.compose.ui.test.manifest)
+                implementation(libs.sqldelight.android.driver)
+                implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.androidx.test.junit)
                 implementation(libs.androidx.test.espresso.core)
             }
         }
 
+        // ============================================================
         // iOS source sets
+        // ============================================================
         if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
             gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
         ) {
@@ -166,7 +212,6 @@ kotlin {
                 iosSimulatorArm64Main.dependsOn(this)
                 dependencies {
                     implementation(libs.sqldelight.native.driver)
-                    // NLU (CoreML-based)
                     implementation(project(":Modules:AI:NLU"))
                 }
             }
@@ -182,13 +227,15 @@ kotlin {
             }
         }
 
+        // ============================================================
         // Desktop source sets
+        // ============================================================
         val desktopMain by getting {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.sqldelight.sqlite.driver)
-                // LLM (OllamaProvider)
                 implementation(project(":Modules:AI:LLM"))
+                implementation(compose.desktop.currentOs)
             }
         }
 
@@ -199,11 +246,12 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.voiceoscore"
-    compileSdk = 34
+    namespace = "com.augmentalis.voiceavanue"
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = 29
+        minSdk = 26
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -218,12 +266,28 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
     }
+
+    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
+    sourceSets["main"].res.srcDirs("src/androidMain/res")
+    sourceSets["main"].resources.srcDirs("src/commonMain/resources")
 }
 
 sqldelight {
     databases {
-        create("VoiceOSDatabase") {
-            packageName.set("com.augmentalis.database")
+        create("VoiceAvanueDatabase") {
+            packageName.set("com.augmentalis.voiceavanue.data.db")
+            dialect(libs.sqldelight.sqlite.dialect)
+            deriveSchemaFromMigrations.set(false)
+            verifyMigrations.set(false)
         }
     }
 }
+
+// Dokka Configuration
+tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+    moduleName.set("VoiceAvanue")
+    moduleVersion.set("1.0.0-alpha")
+}
+
+group = "com.augmentalis.voiceavanue"
+version = "1.0.0-alpha"
