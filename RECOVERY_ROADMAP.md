@@ -34,7 +34,7 @@ This document tracks the recovery and implementation of lost work during module 
 ## Phase 2: Cherry-Pick Historical Code
 
 ### 2.1 VoiceOSCore RPC Services (from commit 1c7c8d7d)
-**Status**: Pending
+**Status**: ✅ COMPLETED (2026-02-05)
 **Files to recover**:
 - `Modules/VoiceOSCore/src/androidMain/kotlin/com/augmentalis/voiceoscore/rpc/VoiceOSAvuRpcServer.kt`
 - `Modules/VoiceOSCore/src/androidMain/kotlin/com/augmentalis/voiceoscore/rpc/VoiceOSJsonRpcServer.kt`
@@ -45,7 +45,7 @@ This document tracks the recovery and implementation of lost work during module 
 - `Modules/VoiceOSCore/src/desktopMain/kotlin/com/augmentalis/voiceoscore/rpc/VoiceOSRpcServer.kt`
 
 ### 2.2 AVA Unified App (from commit 1c7c8d7d)
-**Status**: Pending
+**Status**: ✅ COMPLETED (2026-02-05)
 **Location**: `apps/ava-unified/`
 **Files to recover**:
 - Build configuration and manifests
@@ -57,7 +57,7 @@ This document tracks the recovery and implementation of lost work during module 
 ## Phase 3: App Integration
 
 ### 3.1 Create New WebAvanue App
-**Status**: Pending
+**Status**: ✅ COMPLETED (2026-02-05)
 **Actions**:
 - Current `android/apps/webavanue` was renamed to `webavanue-ipc-legacy`
 - Create new `android/apps/webavanue` with RPC-based IPC (not broadcast)
@@ -96,10 +96,18 @@ Modules/
 1. ✅ Create VoiceAvanue unified module
 2. ✅ Rename Foundation module
 3. ✅ Create Gaze module scaffold
-4. **[NEXT]** Cherry-pick VoiceOSCore RPC services
-5. Cherry-pick ava-unified app
-6. Create new webavanue app with RPC
-7. Wire RPC connections
+4. ✅ Cherry-pick VoiceOSCore RPC services
+5. ✅ Cherry-pick ava-unified app
+6. ✅ Create new webavanue app with RPC
+7. **[NEXT]** Wire RPC connections between modules
 8. Deprecate legacy modules
 
-Each step will be committed and pushed separately.
+Each step committed and pushed separately.
+
+## Summary of Commits (2026-02-05)
+
+1. `c6cc646b` - feat: Add VoiceCursor KMP module and WebAvanue RPC services
+2. `7bd59833` - feat: Add VoiceAvanue unified module, Gaze scaffold, and rename Foundation
+3. `97c6a07c` - feat: Add VoiceOSCore RPC services (cherry-picked from 1c7c8d7d)
+4. `0498ba4c` - feat: Add ava-unified app (cherry-picked from 1c7c8d7d)
+5. `6e518cc5` - feat: Create new webavanue app with RPC integration
