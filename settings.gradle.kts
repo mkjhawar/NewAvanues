@@ -173,6 +173,9 @@ include(":Modules:AvaMagic:MagicVoiceHandlers")          // Voice command handle
 include(":Modules:VoiceCursor")                    // KMP cursor control, dwell click, filtering
 include(":Modules:Gaze")                           // KMP gaze/eye tracking with calibration
 
+// Top-level Apps
+include(":apps:ava-unified")                       // Unified VoiceOS + WebAvanue app
+
 // Android Apps
 include(":android:apps:webavanue")
 include(":android:apps:webavanue-ipc-legacy")      // Legacy browser (broadcast IPC) - for testing
