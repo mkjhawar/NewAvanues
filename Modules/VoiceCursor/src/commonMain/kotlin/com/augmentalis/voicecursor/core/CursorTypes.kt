@@ -1,0 +1,225 @@
+/**
+ * CursorTypes.kt - Core cursor data types (KMP)
+ *
+ * Platform-agnostic cursor types with zero-overhead design.
+ * Android-specific serialization (Parcelable) is in androidMain.
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ */
+
+package com.augmentalis.voicecursor.core
+
+import kotlinx.serialization.Serializable
+
+/**
+ * Cursor type enumeration
+ */
+@Serializable
+enum class CursorType {
+    Hand,
+    Normal,
+    Custom;
+
+    fun toggle(): CursorType = when (this) {
+        Hand -> Normal
+        Normal -> Hand
+        Custom -> Normal
+    }
+}
+
+/**
+ * 2D position with float coordinates
+ */
+@Serializable
+data class CursorPosition(
+    val x: Float = 0f,
+    val y: Float = 0f
+) {
+    companion object {
+        val Zero = CursorPosition(0f, 0f)
+    }
+
+    operator fun plus(other: CursorPosition): CursorPosition =
+        CursorPosition(x + other.x, y + other.y)
+
+    operator fun minus(other: CursorPosition): CursorPosition =
+        CursorPosition(x - other.x, y - other.y)
+
+    operator fun times(scalar: Float): CursorPosition =
+        CursorPosition(x * scalar, y * scalar)
+
+    fun distanceTo(other: CursorPosition): Float {
+        val dx = x - other.x
+        val dy = y - other.y
+        return kotlin.math.sqrt(dx * dx + dy * dy)
+    }
+}
+
+/**
+ * High-performance cursor offset using packed long (zero allocation)
+ */
+@JvmInline
+value class CursorOffset(private val packed: Long) {
+    constructor(x: Float, y: Float) : this(
+        (x.toBits().toLong() shl 32) or (y.toBits().toLong() and 0xFFFFFFFFL)
+    )
+
+    val x: Float get() = Float.fromBits((packed shr 32).toInt())
+    val y: Float get() = Float.fromBits(packed.toInt())
+
+    fun copy(x: Float = this.x, y: Float = this.y): CursorOffset {
+        return CursorOffset(x, y)
+    }
+
+    fun toPosition(): CursorPosition = CursorPosition(x, y)
+
+    companion object {
+        val Zero = CursorOffset(0f, 0f)
+    }
+}
+
+/**
+ * Filter strength levels for cursor smoothing
+ */
+@Serializable
+enum class FilterStrength {
+    Low,    // 30% filtering strength
+    Medium, // 60% filtering strength
+    High;   // 90% filtering strength
+
+    val numericValue: Int
+        get() = when (this) {
+            Low -> 30
+            Medium -> 60
+            High -> 90
+        }
+
+    val smoothingFactor: Float
+        get() = when (this) {
+            Low -> 0.3f
+            Medium -> 0.6f
+            High -> 0.9f
+        }
+}
+
+/**
+ * Cursor configuration
+ */
+@Serializable
+data class CursorConfig(
+    val type: CursorType = CursorType.Normal,
+    val color: Long = 0xFF007AFF, // ARVision systemBlue
+    val size: Int = 48, // ARVision standard touch target
+    val handCursorSize: Int = 48,
+    val speed: Int = 8,
+    val strokeWidth: Float = 2.0f,
+    val cornerRadius: Float = 20.0f,
+    val glassOpacity: Float = 0.8f,
+    val showCoordinates: Boolean = false,
+
+    // Dwell click settings
+    val dwellClickEnabled: Boolean = true,
+    val dwellClickDelayMs: Long = 1500L,
+
+    // Filter settings
+    val jitterFilterEnabled: Boolean = true,
+    val filterStrength: FilterStrength = FilterStrength.Medium,
+    val motionSensitivity: Float = 0.7f // 0.1-1.0
+)
+
+/**
+ * Gaze/dwell click configuration
+ */
+@Serializable
+data class GazeConfig(
+    val autoClickTimeMs: Long = 1500L,
+    val cancelDistance: Float = 50f,
+    val lockCancelDistance: Float = 420f,
+    val centerDistanceTolerance: Float = 6f,
+    val timeTolerance: Long = 200L // milliseconds
+)
+
+/**
+ * Cursor state container
+ */
+@Serializable
+data class CursorState(
+    val position: CursorPosition = CursorPosition.Zero,
+    val isLocked: Boolean = false,
+    val lockedPosition: CursorPosition = CursorPosition.Zero,
+    val isVisible: Boolean = true,
+    val isGazeActive: Boolean = false,
+    val isDwellInProgress: Boolean = false,
+    val dwellProgress: Float = 0f // 0.0 to 1.0
+)
+
+/**
+ * Cursor movement input from various sources
+ */
+@Serializable
+sealed class CursorInput {
+    /**
+     * IMU-based head movement
+     */
+    @Serializable
+    data class HeadMovement(
+        val pitch: Float, // Up/down
+        val yaw: Float,   // Left/right
+        val roll: Float   // Tilt
+    ) : CursorInput()
+
+    /**
+     * Eye gaze position
+     */
+    @Serializable
+    data class EyeGaze(
+        val x: Float,
+        val y: Float,
+        val confidence: Float = 1f
+    ) : CursorInput()
+
+    /**
+     * Direct position input (mouse, touch)
+     */
+    @Serializable
+    data class DirectPosition(
+        val x: Float,
+        val y: Float
+    ) : CursorInput()
+
+    /**
+     * Relative movement delta
+     */
+    @Serializable
+    data class Delta(
+        val dx: Float,
+        val dy: Float
+    ) : CursorInput()
+}
+
+/**
+ * Cursor action result
+ */
+@Serializable
+sealed class CursorAction {
+    @Serializable
+    data object Click : CursorAction()
+
+    @Serializable
+    data object DoubleClick : CursorAction()
+
+    @Serializable
+    data object LongPress : CursorAction()
+
+    @Serializable
+    data class Drag(
+        val startPosition: CursorPosition,
+        val endPosition: CursorPosition
+    ) : CursorAction()
+
+    @Serializable
+    data object DwellClick : CursorAction()
+
+    @Serializable
+    data object Cancel : CursorAction()
+}

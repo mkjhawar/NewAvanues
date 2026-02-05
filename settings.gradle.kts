@@ -166,6 +166,11 @@ include(":Modules:AvaMagic:AvaUI:AssetManager")         // Asset management
 include(":Modules:AvaMagic:AvaUI:Renderers:Android")    // Android Compose renderer
 include(":Modules:AvaMagic:MagicVoiceHandlers")          // Voice command handlers for AVAMagic UI
 
+// Cursor and Eye Tracking Modules (KMP)
+include(":Modules:VoiceCursor")                    // KMP cursor control, dwell click, filtering
+// include(":Modules:EyeTracking")                 // KMP eye tracking (Phase 2)
+
 // Android Apps
 include(":android:apps:webavanue")
+include(":android:apps:webavanue-ipc-legacy")      // Legacy browser (broadcast IPC) - for testing
 // include(":android:apps:VoiceOS")  // ARCHIVED (2026-02-04) - see archive/VoiceOS-Legacy-260204/
