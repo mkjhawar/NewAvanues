@@ -34,6 +34,9 @@ androidx-test-junit = "1.1.5"
 androidx-test-espresso = "3.5.1"
 androidx-test-uiautomator = "2.3.0"
 androidx-documentfile = "1.0.1"
+datastore = "1.1.1"
+splashscreen = "1.0.1"
+hiltNavigationCompose = "1.2.0"
 
 # SQLDelight
 sqldelight = "2.0.1"
@@ -100,6 +103,9 @@ kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotl
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 # SQLDelight
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
 sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }

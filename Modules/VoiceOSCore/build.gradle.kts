@@ -91,7 +91,7 @@ kotlin {
                 implementation(project(":Modules:Localization"))
 
                 // Voice Data Manager - for data management types
-                implementation(project(":Modules:VoiceDataManager"))
+                //implementation(project(":Modules:VoiceDataManager"))
 
                 // Android Core
                 implementation(libs.androidx.core.ktx)
@@ -132,7 +132,7 @@ kotlin {
                 // AVA Core Utils
                 implementation(project(":Modules:Rpc"))
 
-                implementation(project(":android:apps:VoiceCursor"))
+                implementation(project(":Modules:VoiceCursor"))
                 // Unified Database - for command persistence and scraping repositories
                 // (Consolidated from VoiceOS:core:database into Modules:Database)
                 implementation(project(":Modules:Database"))

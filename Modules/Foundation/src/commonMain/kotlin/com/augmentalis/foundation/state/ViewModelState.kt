@@ -45,7 +45,7 @@ class ViewModelState<T>(initialValue: T) {
     /**
      * Atomic update using transform function
      */
-    inline fun update(transform: (T) -> T) {
+    fun update(transform: (T) -> T) {
         _state.value = transform(_state.value)
     }
 
@@ -86,7 +86,7 @@ class NullableState<T : Any>(initialValue: T? = null) {
     /**
      * Execute block only if value is not null
      */
-    inline fun ifPresent(block: (T) -> Unit) {
+    fun ifPresent(block: (T) -> Unit) {
         _state.value?.let(block)
     }
 

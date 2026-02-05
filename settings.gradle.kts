@@ -66,7 +66,7 @@ include(":Modules:Actions")                 // Intent handlers, action execution
 
 // Foundation Module (cross-platform KMP utilities)
 include(":Modules:Foundation")  // Common utilities: StateFlow, ViewModel, NumberToWords
-
+project(":Modules:Foundation").projectDir = file("Modules/Foundation")
 // VoiceAvanue - Unified Voice Control + Browser Module
 include(":Modules:VoiceAvanue")  // Combined VoiceOSCore + WebAvanue with shared resources
 include(":Modules:Logging")         // Consolidated KMP logging infrastructure
@@ -111,6 +111,7 @@ include(":android:apps:VoiceUI")
 // include(":Modules:VoiceOS:managers:VoiceDataManager")
 // include(":Modules:VoiceOS:managers:LocalizationManager")  // DEPRECATED - use :Modules:Localization
 include(":Modules:Localization")                             // KMP Localization module
+include(":Modules:VoiceDataManager")                             // KMP Localization module
 
 // Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
 include(":Modules:DeviceManager")                       // Device info, sensors, audio, network

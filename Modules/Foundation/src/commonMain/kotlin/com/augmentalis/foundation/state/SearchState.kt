@@ -148,7 +148,7 @@ class SettingsUpdater<T : Any>(
             val error = validate(updated)
             if (error != null) {
                 onError(error)
-                return
+                return@ifPresent
             }
             state.value = updated
             scope.launch {
