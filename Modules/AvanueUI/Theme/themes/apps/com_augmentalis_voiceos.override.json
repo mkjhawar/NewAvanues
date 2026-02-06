@@ -1,0 +1,12 @@
+{
+  "appId": "com.augmentalis.voiceos",
+  "overrideType": "FULL",
+  "theme": {
+    "name": "VoiceOS Custom Theme",
+    "platform": "iOS26_LiquidGlass"
+  },
+  "inheritedProperties": [],
+  "description": "VoiceOS uses a full iOS-style Liquid Glass theme with custom branding colors",
+  "createdAt": 1730236800000,
+  "modifiedAt": 1730236800000
+}

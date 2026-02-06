@@ -1,5 +1,8 @@
 // AvanueUI - Shared Compose UI system for all Avanues apps
-// Contains: AvanueTheme, DesignTokens, GlassmorphicComponents, OceanTheme
+// Root module: AvanueTheme, DesignTokens, GlassmorphicComponents, OceanTheme
+// Sub-modules: Core, Foundation, DesignSystem, Theme, Input, Display, etc.
+// Consumers can depend on this root module for the theme/token API,
+// or on specific sub-modules for component libraries.
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
