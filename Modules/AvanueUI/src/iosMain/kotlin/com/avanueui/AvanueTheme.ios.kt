@@ -1,9 +1,9 @@
-// filename: Universal/AVA/Core/Theme/src/desktopMain/kotlin/com/augmentalis/ava/core/theme/AvaTheme.desktop.kt
+// filename: Universal/AVA/Core/Theme/src/iosMain/kotlin/com/augmentalis/ava/core/theme/AvaTheme.ios.kt
 // created: 2025-11-04
 // author: AVA AI Team
 // © Augmentalis Inc, Intelligent Devices LLC
 
-package com.avanues.themes
+package com.avanueui
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
@@ -11,15 +11,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 /**
- * Desktop implementation of dynamic color support
- * Dynamic colors not supported on Desktop
+ * iOS implementation of dynamic color support
+ * Dynamic colors not yet supported on iOS
  */
 internal actual fun supportsDynamicColor(): Boolean {
     return false
 }
 
 /**
- * Get light color scheme on Desktop
+ * Get light color scheme on iOS
  * Returns static AVA color scheme
  */
 @Composable
@@ -53,7 +53,7 @@ internal actual fun dynamicLightColorScheme(): ColorScheme {
 }
 
 /**
- * Get dark color scheme on Desktop
+ * Get dark color scheme on iOS
  * Returns static AVA dark color scheme
  */
 @Composable

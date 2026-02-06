@@ -3,7 +3,7 @@
 // author: AVA AI Team
 // © Augmentalis Inc, Intelligent Devices LLC
 
-package com.avanues.themes
+package com.avanueui
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle

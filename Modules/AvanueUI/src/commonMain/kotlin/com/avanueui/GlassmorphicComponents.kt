@@ -3,7 +3,7 @@
 // author: AVA AI Team
 // (c) Augmentalis Inc, Intelligent Devices LLC
 
-package com.avanues.themes
+package com.avanueui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

@@ -1,6 +1,6 @@
 package com.augmentalis.webavanue
 
-import com.avanues.themes.OceanTheme
+import com.avanueui.OceanTheme
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

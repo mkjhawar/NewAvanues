@@ -25,7 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.avanues.themes.OceanTheme
+import com.avanueui.OceanTheme
 import com.augmentalis.webavanue.Favorite
 import kotlin.math.abs
 

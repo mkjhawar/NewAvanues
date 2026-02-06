@@ -150,7 +150,7 @@ dependencies {
     // =========================================================================
 
     implementation(project(":Modules:AVA:core:Utils"))
-    implementation(project(":Modules:AvanueUI:Themes"))
+    implementation(project(":Modules:AvanueUI"))
 
     // =========================================================================
     // AI Modules (Optional - for advanced features)

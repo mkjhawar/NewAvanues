@@ -7,7 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.avanues.themes.OceanTheme
+import com.avanueui.OceanTheme
 
 /**
  * Dialog shown on app startup if crash recovery session is detected

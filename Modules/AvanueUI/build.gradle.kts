@@ -1,5 +1,5 @@
-// AvanueUI Themes - Shared Compose theme system for all Avanues apps
-// Contains: AvanueTheme, OceanTheme, GlassmorphicComponents, DesignTokens
+// AvanueUI - Shared Compose UI system for all Avanues apps
+// Contains: AvanueTheme, DesignTokens, GlassmorphicComponents, OceanTheme
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -26,7 +26,7 @@ kotlin {
             iosSimulatorArm64()
         ).forEach { iosTarget ->
             iosTarget.binaries.framework {
-                baseName = "AvanueThemes"
+                baseName = "AvanueUI"
                 isStatic = true
             }
         }
@@ -56,7 +56,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.avanues.themes"
+    namespace = "com.avanueui"
     compileSdk = 34
 
     defaultConfig {

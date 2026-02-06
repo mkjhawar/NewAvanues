@@ -15,7 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.avanues.themes.OceanTheme
+import com.avanueui.OceanTheme
 
 /**
  * TabCounterBadge - Chrome-like tab counter badge with Ocean theme

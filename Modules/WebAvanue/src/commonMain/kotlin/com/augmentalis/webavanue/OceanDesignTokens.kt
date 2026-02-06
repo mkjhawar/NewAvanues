@@ -3,7 +3,7 @@ package com.augmentalis.webavanue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.avanues.themes.OceanTheme
+import com.avanueui.OceanTheme
 
 /**
  * Ocean Design Tokens

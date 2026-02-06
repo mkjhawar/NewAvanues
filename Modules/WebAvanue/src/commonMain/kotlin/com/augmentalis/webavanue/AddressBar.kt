@@ -33,7 +33,7 @@ import com.augmentalis.webavanue.OceanComponents
 import com.augmentalis.webavanue.OceanDesignTokens
 import com.augmentalis.webavanue.IconVariant
 import com.augmentalis.webavanue.SurfaceVariant
-import com.avanues.themes.OceanTheme
+import com.avanueui.OceanTheme
 import com.augmentalis.webavanue.CompactTabCounterBadge
 import com.augmentalis.webavanue.TabUiState
 import com.augmentalis.webavanue.Favorite

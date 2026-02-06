@@ -1,4 +1,4 @@
-package com.avanues.themes
+package com.avanueui
 
 import androidx.compose.ui.graphics.Color
 

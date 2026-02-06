@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.glassBar
-import com.avanues.themes.OceanTheme
+import com.avanueui.OceanTheme
 
 /**
  * HorizontalCommandBarLayout - Public composable for portrait mode command bar

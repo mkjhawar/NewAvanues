@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.glassBar
-import com.avanues.themes.OceanTheme
+import com.avanueui.OceanTheme
 
 /**
  * VerticalCommandBarLayout - Public composable for landscape mode command bar
