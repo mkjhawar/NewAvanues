@@ -83,9 +83,9 @@ object ContentAnalyzer {
     /** Counter patterns: "5 new", "12 messages", "3 unread" */
     private val COUNTER_PATTERN = Regex("""\d+\s+(new|messages?|unread|items?|notifications?)""", RegexOption.IGNORE_CASE)
 
-    /** Status indicators */
+    /** Status indicators (trailing boundary uses \b|$ to handle "typing..." at end of string) */
     private val STATUS_PATTERN = Regex(
-        """\b(typing\.\.\.|online|offline|last seen|active|away|busy)\b""",
+        """\b(typing\.{2,3}|online|offline|last seen|active|away|busy)(?:\b|$)""",
         RegexOption.IGNORE_CASE
     )
 

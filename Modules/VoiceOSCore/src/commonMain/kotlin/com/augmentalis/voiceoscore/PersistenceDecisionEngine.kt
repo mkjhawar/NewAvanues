@@ -324,6 +324,17 @@ object PersistenceDecisionEngine {
         // Rule 5: Email/Messaging/Social with ScrollView - context dependent
         // ============================================================
         if (appCategory in listOf(AppCategory.EMAIL, AppCategory.MESSAGING, AppCategory.SOCIAL)) {
+            // Dynamic patterns (timestamps, status indicators) are a strong signal
+            // of temporal content — reject before navigation/stability checks
+            if (contentSignal.hasDynamicPatterns) {
+                return PersistenceDecision(
+                    shouldPersist = false,
+                    reason = "Dynamic app (${appCategory.name}) - element contains dynamic patterns (timestamps, status indicators)",
+                    ruleApplied = 5,
+                    confidence = 0.85f
+                )
+            }
+
             // Check for stable navigation elements
             val isNavigationElement = screenType == ScreenType.NAVIGATION_SCREEN ||
                     (contentSignal.textLength == TextLength.SHORT && contentSignal.hasResourceId)

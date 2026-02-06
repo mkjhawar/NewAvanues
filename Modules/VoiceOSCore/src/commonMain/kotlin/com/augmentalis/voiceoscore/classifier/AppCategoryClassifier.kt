@@ -151,6 +151,7 @@ object AppCategoryClassifier {
      */
     private val emailPatterns = listOf(
         "gmail",
+        "android.gm",
         "outlook",
         "yahoo.mail",
         "mail",
@@ -171,6 +172,7 @@ object AppCategoryClassifier {
         "whatsapp",
         "telegram",
         "messenger",
+        "messaging",
         "messages",
         "slack",
         "teams",
@@ -195,6 +197,7 @@ object AppCategoryClassifier {
         "twitter",
         "facebook",
         "tiktok",
+        "musically",
         "linkedin",
         "snapchat",
         "pinterest",
@@ -267,6 +270,7 @@ object AppCategoryClassifier {
         "firefox",
         "browser",
         "edge",
+        "emmx",
         "opera",
         "safari",
         "brave",

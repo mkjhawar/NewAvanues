@@ -9,7 +9,6 @@
  */
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.voiceoscore.utils.SymbolNormalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

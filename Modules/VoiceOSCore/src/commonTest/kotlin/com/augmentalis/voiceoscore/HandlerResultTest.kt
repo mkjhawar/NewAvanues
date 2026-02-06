@@ -6,8 +6,6 @@
  */
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.voiceoscore.handler.HandlerResult
-import com.augmentalis.voiceoscore.handler.InputType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

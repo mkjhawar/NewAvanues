@@ -9,12 +9,6 @@
  */
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.voiceoscore.CommandActionType
-import com.augmentalis.voiceoscore.element.Bounds
-import com.augmentalis.voiceoscore.element.ElementFingerprint
-import com.augmentalis.voiceoscore.element.ElementInfo
-import com.augmentalis.voiceoscore.QuantizedCommand
-import com.augmentalis.voiceoscore.screen.ScreenFingerprinter
 import org.junit.Test
 import org.junit.Assert.*
 
