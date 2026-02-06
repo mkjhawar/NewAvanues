@@ -6,36 +6,40 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceos.VoiceOSApplication
 import com.augmentalis.voiceoscore.VoiceOSCore
 import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.CommandRegistry
 import com.augmentalis.voiceoscore.ElementFingerprint
 import com.augmentalis.voiceoscore.ServiceConfiguration
+import com.augmentalis.voiceoscore.ServiceState
 import com.augmentalis.voiceoscore.ICommandPersistence
 import com.augmentalis.voiceoscore.AppVersionInfo
 import com.augmentalis.database.repositories.IScrapedAppRepository
 import com.augmentalis.database.repositories.IScrapedElementRepository
+import com.augmentalis.voiceos.VoiceOSApplication
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.flowOn
+import java.util.concurrent.Executors
 import com.augmentalis.voiceoscore.ScreenHashRepository
 import com.augmentalis.voiceoscore.ScreenHashRepositoryImpl
 import com.augmentalis.voiceoscore.ScreenInfo
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import com.augmentalis.voiceoscore.DeviceCapabilityManager
+import com.augmentalis.voiceoscore.TimingOperation
 import com.augmentalis.voiceoscore.StaticCommandRegistry
 import com.augmentalis.voiceoscore.IAppCategoryProvider
-import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.ServiceState
 
 private const val TAG = "VoiceOSA11yService"
 
@@ -62,18 +66,24 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     /**
-     * Dedicated scope for speech collection - runs on IO dispatcher to avoid
-     * starvation when accessibility events flood Dispatchers.Default.
+     * FIX: Dedicated dispatcher for speech result collection.
      *
-     * DEVICE INFO FIX: When apps like Device Info send rapid accessibility events,
-     * they overwhelm Dispatchers.Default. By running speech collection on IO,
-     * we ensure the collector always has CPU time to process speech results.
+     * This isolates speech processing from accessibility event processing to prevent
+     * dispatcher starvation. When apps like Device Info, YouTube, or Media Player
+     * generate rapid accessibility events, Dispatchers.Default becomes saturated.
+     * Using a dedicated single-threaded dispatcher ensures speech results are always
+     * processed promptly regardless of accessibility event load.
      */
-    private val speechScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val speechDispatcher = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "VoiceOS-SpeechCollector").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
+
+    /** Job for speech collection - allows cancellation and restart */
+    private var speechCollectionJob: Job? = null
 
     /**
      * Broadcast receiver for controlling numbers overlay via adb commands.
-     * Usage: adb shell am broadcast -a com.augmentalis.voiceos.SET_NUMBERS_MODE --es mode "ON"
+     * Usage: adb shell am broadcast -a com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE --es mode "ON"
      */
     private val modeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -171,17 +181,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     /** VoiceOSCore facade for voice command processing */
     private var voiceOSCore: VoiceOSCore? = null
 
-    /**
-     * Speech collection job - tracked separately for restart capability.
-     * This job collects from speechResults Flow and can be restarted if it fails.
-     */
-    private var speechCollectionJob: Job? = null
-
     companion object {
         private var instance: VoiceOSAccessibilityService? = null
 
         // Broadcast action for controlling numbers overlay via adb
-        const val ACTION_SET_NUMBERS_MODE = "com.augmentalis.voiceos.SET_NUMBERS_MODE"
+        const val ACTION_SET_NUMBERS_MODE = "com.augmentalis.voiceoscoreng.SET_NUMBERS_MODE"
         const val EXTRA_MODE = "mode"  // "ON", "OFF", or "AUTO"
 
         /** Debounce delay for windows change events (dialogs, IME) - longer than scroll */
@@ -249,23 +253,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
          */
         fun isListening(): Boolean {
             return instance?.voiceOSCore?.state?.value?.let { state ->
-                state is ServiceState.Listening
+                state is com.augmentalis.voiceoscore.ServiceState.Listening
             } ?: false
-        }
-
-        /**
-         * Restart speech collection.
-         * Use this to recover if speech recognition stops working.
-         */
-        fun restartSpeechCollection() {
-            instance?.restartSpeechCollection()
-        }
-
-        /**
-         * Check if speech collection is active.
-         */
-        fun isSpeechCollectionActive(): Boolean {
-            return instance?.speechCollectionJob?.isActive ?: false
         }
 
         // ===== Continuous Monitoring Controls =====
@@ -460,8 +449,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     Log.e(TAG, "Failed to auto-start voice listening", e)
                 }
 
-                // Start speech collection in a separate supervised job
-                // This allows the collection to be restarted if it fails
+                // FIX: Start speech collection on dedicated dispatcher
+                // This prevents dispatcher starvation when accessibility events flood Dispatchers.Default
                 startSpeechCollection()
 
             } catch (e: Exception) {
@@ -471,75 +460,84 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Start speech result collection in a separate coroutine.
+     * Start speech result collection on a dedicated dispatcher.
      *
-     * This method handles the Flow collection from speechResults with proper
-     * error handling and automatic restart capability. The collection runs
-     * in its own Job so that:
-     * 1. Exceptions in collection don't kill the entire service scope
-     * 2. Command processing happens in child coroutines to not block collection
-     * 3. The collection can be restarted if it fails unexpectedly
+     * FIX for voice command freeze issue (NAV-600):
+     * - Uses dedicated single-threaded dispatcher isolated from accessibility event processing
+     * - Adds buffer(64) to prevent backpressure from blocking the emitter
+     * - Processes commands in a child coroutine to avoid blocking the collector
+     * - Includes retry logic with exponential backoff for resilience
      *
-     * FIX: Addresses the issue where commands stop executing after 15-20 minutes
-     * because the Flow collector would silently stop on exceptions or scope issues.
-     *
-     * DEVICE INFO FIX: Uses dedicated speechScope (Dispatchers.IO) instead of
-     * serviceScope (Dispatchers.Default) to avoid starvation when rapid
-     * accessibility events flood the default dispatcher.
+     * This ensures speech results are always processed promptly even when apps like
+     * Device Info, YouTube, or Media Player generate continuous accessibility events
+     * that would otherwise saturate Dispatchers.Default and starve the collector.
      */
     private fun startSpeechCollection() {
         // Cancel any existing collection job
         speechCollectionJob?.cancel()
 
-        // Use speechScope (IO) instead of serviceScope (Default) to avoid starvation
-        speechCollectionJob = speechScope.launch {
+        speechCollectionJob = serviceScope.launch(speechDispatcher) {
             var consecutiveFailures = 0
             val maxConsecutiveFailures = 5
             val baseRestartDelayMs = 1000L
 
             while (isActive && consecutiveFailures < maxConsecutiveFailures) {
                 try {
-                    Log.d(TAG, "Starting speech result collection (attempt ${consecutiveFailures + 1})")
+                    Log.d(TAG, "Starting speech result collection on dedicated dispatcher (attempt ${consecutiveFailures + 1})")
 
-                    voiceOSCore?.speechResults?.collect { speechResult ->
-                        Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
+                    // FIX: Add buffer to prevent backpressure from blocking emitter
+                    // Buffer size of 64 allows the flow to continue emitting even if
+                    // processing is temporarily slow
+                    voiceOSCore?.speechResults
+                        ?.buffer(64)
+                        ?.collect { speechResult ->
+                            Log.d(TAG, "Speech result: ${speechResult.text} (confidence: ${speechResult.confidence})")
 
-                        // Update transcription for UI display immediately
-                        _lastTranscription.value = speechResult.text
+                            // Update transcription for UI display immediately
+                            _lastTranscription.value = speechResult.text
 
-                        if (speechResult.isFinal) {
-                            // Process command in a SEPARATE child coroutine
-                            // This prevents the delay from blocking the collector
-                            launch {
-                                try {
-                                    if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
-                                        voiceOSCore?.processCommand(speechResult.text, speechResult.confidence)
+                            if (speechResult.isFinal) {
+                                // FIX: Process command in a separate child coroutine
+                                // to avoid blocking the collector
+                                launch {
+                                    try {
+                                        if (!handleVoiceOSControlCommand(speechResult.text.lowercase().trim())) {
+                                            voiceOSCore?.processCommand(
+                                                speechResult.text,
+                                                speechResult.confidence
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Error processing command: ${speechResult.text}", e)
                                     }
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Error processing command: ${speechResult.text}", e)
+
+                                    // Clear transcription after processing
+                                    delay(2000)
+                                    _lastTranscription.value = null
                                 }
-
-                                // Clear transcription after processing (in this child coroutine)
-                                delay(2000)
-                                _lastTranscription.value = null
                             }
-                        }
-                    }
 
-                    // If collect completes normally (shouldn't happen with SharedFlow), break
+                            // Reset failure counter on successful collection
+                            consecutiveFailures = 0
+                        }
+
+                    // SharedFlow collect should not normally complete
                     Log.w(TAG, "Speech collection completed unexpectedly")
                     break
 
                 } catch (e: CancellationException) {
-                    // Normal cancellation - don't restart
+                    // Expected during lifecycle changes
                     Log.d(TAG, "Speech collection cancelled")
                     throw e
                 } catch (e: Exception) {
                     consecutiveFailures++
-                    Log.e(TAG, "Speech collection failed (failure $consecutiveFailures/$maxConsecutiveFailures)", e)
+                    Log.e(
+                        TAG,
+                        "Speech collection failed (failure $consecutiveFailures/$maxConsecutiveFailures)",
+                        e
+                    )
 
                     if (consecutiveFailures < maxConsecutiveFailures) {
-                        // Exponential backoff before restart
                         val delayMs = baseRestartDelayMs * consecutiveFailures
                         Log.d(TAG, "Restarting speech collection in ${delayMs}ms...")
                         delay(delayMs)
@@ -548,21 +546,15 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             }
 
             if (consecutiveFailures >= maxConsecutiveFailures) {
-                Log.e(TAG, "Speech collection stopped after $maxConsecutiveFailures consecutive failures")
+                Log.e(
+                    TAG,
+                    "Speech collection stopped after $maxConsecutiveFailures consecutive failures"
+                )
                 _isVoiceListening.value = false
             }
         }
 
         Log.d(TAG, "Speech collection job started: ${speechCollectionJob?.isActive}")
-    }
-
-    /**
-     * Restart speech collection manually.
-     * Can be called from developer tools or after recovering from an error state.
-     */
-    fun restartSpeechCollection() {
-        Log.d(TAG, "Manual restart of speech collection requested")
-        startSpeechCollection()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -615,7 +607,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             // Check if source is a scrollable container
             event.source?.let { node ->
                 val isScrollable = node.isScrollable ||
-                    ElementExtractor.isDynamicContainer(node.className?.toString() ?: "")
+                        ElementExtractor.isDynamicContainer(node.className?.toString() ?: "")
                 node.recycle()
                 return isScrollable
             }
@@ -626,10 +618,6 @@ class VoiceOSAccessibilityService : AccessibilityService() {
     /**
      * Handle incremental content updates from scroll/list changes.
      * Uses dynamic debounce based on device capability.
-     *
-     * GMAIL FIX: Detects significant screen changes (like inbox → email detail)
-     * by comparing element structure. If the screen changed significantly,
-     * clears overlays before updating to prevent stale badges.
      */
     private fun handleContentUpdate(event: AccessibilityEvent) {
         // Get dynamic debounce based on device capability
@@ -647,20 +635,8 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                 val rootNode = rootInActiveWindow ?: return@launch
                 val packageName = event.packageName?.toString() ?: rootNode.packageName?.toString() ?: "unknown"
 
-                // GMAIL FIX: Check if screen structure changed significantly
-                // This detects in-app navigation (inbox → detail) that doesn't fire WINDOW_STATE_CHANGED
-                val newScreenHash = screenCacheManager.generateScreenHash(rootNode)
-                val isSignificantChange = currentScreenHash != null && newScreenHash != currentScreenHash
-
-                if (isSignificantChange) {
-                    Log.d(TAG, "Significant screen change detected in content update: ${currentScreenHash?.take(8)} -> ${newScreenHash.take(8)}")
-                    // Clear stale overlay items from previous screen
-                    OverlayStateManager.clearOverlayItems()
-                    currentScreenHash = newScreenHash
-                }
-
                 // Extract current visible elements
-                val elements = mutableListOf<ElementInfo>()
+                val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
                 val hierarchy = mutableListOf<HierarchyNode>()
                 val seenHashes = mutableSetOf<String>()
                 val duplicates = mutableListOf<DuplicateInfo>()
@@ -670,23 +646,11 @@ class VoiceOSAccessibilityService : AccessibilityService() {
 
                 if (elements.isEmpty()) {
                     Log.v(TAG, "No elements extracted during content update")
-                    // If no elements, clear overlays to prevent stale badges
-                    if (OverlayStateManager.numberedOverlayItems.value.isNotEmpty()) {
-                        OverlayStateManager.clearOverlayItems()
-                    }
                     return@launch
                 }
 
                 // Derive labels for elements
                 val elementLabels = ElementExtractor.deriveElementLabels(elements, hierarchy)
-
-                // GMAIL FIX: If significant change, use fresh generation instead of incremental
-                // This prevents number preservation from a completely different screen
-                if (isSignificantChange) {
-                    Log.d(TAG, "Using fresh command generation due to significant screen change")
-                    // Clear command registry and regenerate fresh
-                    commandRegistry.clear()
-                }
 
                 // Generate/merge commands using incremental generator
                 val commandResult = dynamicCommandGenerator.generateCommandsIncremental(
@@ -694,7 +658,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     hierarchy = hierarchy,
                     elementLabels = elementLabels,
                     packageName = packageName,
-                    existingCommands = if (isSignificantChange) emptyList() else commandRegistry.all(),
+                    existingCommands = commandRegistry.all(),
                     updateSpeechEngine = { phrases ->
                         serviceScope.launch {
                             try {
@@ -706,7 +670,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
                     }
                 )
 
-                Log.d(TAG, "Incremental update: ${commandResult.totalCommands} commands (${elements.size} elements)${if (isSignificantChange) " [fresh]" else ""}")
+                Log.d(TAG, "Incremental update: ${commandResult.totalCommands} commands (${elements.size} elements)")
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error in content update", e)
@@ -1087,11 +1051,9 @@ class VoiceOSAccessibilityService : AccessibilityService() {
             Log.w(TAG, "Error unregistering receiver", e)
         }
 
-        // Cancel speech collection job and scope first to stop Flow collection cleanly
+        // Cancel speech collection job first
         speechCollectionJob?.cancel()
         speechCollectionJob = null
-        speechScope.cancel()
-        Log.d(TAG, "Speech collection job and scope cancelled")
 
         serviceScope.launch {
             try {
@@ -1107,6 +1069,14 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         _isConnected.value = false
         voiceOSCore = null
         serviceScope.cancel()
+
+        // Shutdown dedicated speech dispatcher
+        try {
+            (speechDispatcher as? java.io.Closeable)?.close()
+            Log.d(TAG, "Speech dispatcher shutdown")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error shutting down speech dispatcher", e)
+        }
     }
 
     /**
@@ -1176,7 +1146,7 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         val startTime = System.currentTimeMillis()
 
         // Extract elements using ElementExtractor
-        val elements = mutableListOf<ElementInfo>()
+        val elements = mutableListOf<com.augmentalis.voiceoscore.ElementInfo>()
         val hierarchy = mutableListOf<HierarchyNode>()
         val seenHashes = mutableSetOf<String>()
         val duplicates = mutableListOf<DuplicateInfo>()
@@ -1316,5 +1286,3 @@ class VoiceOSAccessibilityService : AccessibilityService() {
         )
     }
 }
-
-// Data classes moved to ExplorationModels.kt for SOLID compliance

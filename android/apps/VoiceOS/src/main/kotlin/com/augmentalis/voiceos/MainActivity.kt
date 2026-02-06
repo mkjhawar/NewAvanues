@@ -1,9 +1,12 @@
 package com.augmentalis.voiceos
 
+import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.AlertDialog
 import com.augmentalis.voiceos.app.BuildConfig
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -12,6 +15,7 @@ import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +32,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.augmentalis.voiceoscore.LearnAppConfig
@@ -59,6 +64,82 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private val micPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                /* no-op */
+            } else {
+                handleMicDenied()
+            }
+        }
+
+    override fun onStart() {
+        super.onStart()
+        ensureMicPermission()
+    }
+
+    private fun ensureMicPermission() {
+        val permission = Manifest.permission.RECORD_AUDIO
+
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+            /* no-op */
+            return
+        }
+
+        // Request permission (first time OR after a denial)
+        micPermissionLauncher.launch(permission)
+    }
+
+    private fun handleMicDenied() {
+        val permission = Manifest.permission.RECORD_AUDIO
+
+        // If true => user denied before (but can still be asked again)
+        // If false => either "Don't ask again" OR policy blocks OR first-time (but this is after denial callback)
+        val canAskAgain = shouldShowRequestPermissionRationale(permission)
+
+        if (canAskAgain) {
+            showDeniedDialogRetry()
+        } else {
+            // Likely "Don't ask again"
+            showGoToSettingsDialog()
+        }
+    }
+
+    private fun showDeniedDialogRetry() {
+        AlertDialog.Builder(this)
+            .setTitle("Microphone permission required")
+            .setMessage("Voice commands need microphone access. Please allow it to continue.")
+            .setPositiveButton("Try again") { _, _ ->
+                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showGoToSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Enable microphone in Settings")
+            .setMessage(
+                "Microphone permission is disabled. Please enable it from Settings:\n" +
+                        "Settings → Apps → VoiceOS → Permissions → Microphone"
+            )
+            .setPositiveButton("Open Settings") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+    }
+
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

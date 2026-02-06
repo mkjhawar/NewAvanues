@@ -7,6 +7,7 @@ import com.augmentalis.voiceoscore.Bounds
 import com.augmentalis.voiceoscore.CommandGenerator
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.HashUtils
+import kotlin.Boolean
 
 private const val TAG = "ElementExtractor"
 
@@ -68,7 +69,8 @@ object ElementExtractor {
         parentIndex: Int? = null,
         inDynamicContainer: Boolean = false,
         containerType: String = "",
-        listIndex: Int = -1
+        listIndex: Int = -1,
+        isParentClickable: Boolean = false
     ) {
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
@@ -90,11 +92,16 @@ object ElementExtractor {
             isLongClickable = node.isLongClickable,
             isScrollable = node.isScrollable,
             isEnabled = node.isEnabled,
+            isEditable = node.isEditable,
+            isCheckable = node.isCheckable,
+            isContextClickable = node.isContextClickable,
+            isParentClickable = false,
             packageName = node.packageName?.toString() ?: "",
             // Dynamic content tracking
             isInDynamicContainer = isInDynamic && !isContainer, // Container itself is not dynamic, its children are
             containerType = if (isInDynamic && !isContainer) currentContainerType else "",
             listIndex = if (isInDynamic && !isContainer) listIndex else -1
+
         )
 
         // Generate hash for deduplication - use className|resourceId|text (NOT bounds, as bounds make every element unique)
@@ -137,10 +144,12 @@ object ElementExtractor {
             node.getChild(i)?.let { child ->
                 // Children of a dynamic container get the list index from their position
                 val childListIndex = if (isContainer) i else listIndex
+                val canChildrenInheritClickability = isParentClickable || node.isPerformClickable()
                 extractElements(
                     child, elements, hierarchy, seenHashes, duplicates,
                     depth + 1, currentIndex,
-                    isInDynamic, currentContainerType, childListIndex
+                    isInDynamic, currentContainerType, childListIndex,
+                    isParentClickable = canChildrenInheritClickability
                 )
                 child.recycle()
             }
@@ -174,7 +183,7 @@ object ElementExtractor {
         val emailRows = listItems.filter { element ->
             // Must have valid bounds
             val hasValidBounds = !(element.bounds.left == 0 && element.bounds.top == 0 &&
-                element.bounds.right == 0 && element.bounds.bottom == 0)
+                    element.bounds.right == 0 && element.bounds.bottom == 0)
             if (!hasValidBounds) return@filter false
 
             // Must be actionable
@@ -184,9 +193,9 @@ object ElementExtractor {
             // Check for email-like content (Gmail specific pattern)
             val content = element.contentDescription.ifBlank { element.text }
             val looksLikeEmailRow = content.startsWith("Unread,") ||
-                content.startsWith("Starred,") ||
-                content.startsWith("Read,") ||
-                (content.contains(",") && content.length > 30) // Long comma-separated content
+                    content.startsWith("Starred,") ||
+                    content.startsWith("Read,") ||
+                    (content.contains(",") && content.length > 30) // Long comma-separated content
 
             // Also check bounds height - email rows are typically 80-200px tall
             val height = element.bounds.bottom - element.bounds.top
@@ -256,4 +265,8 @@ object ElementExtractor {
 
         return labels
     }
+}
+
+fun AccessibilityNodeInfo.isPerformClickable(): Boolean {
+    return isClickable || isEditable || isSelected || isCheckable || isLongClickable || isContextClickable
 }

@@ -70,10 +70,30 @@ class VivokaAndroidEngine(
 
     // State flows for KMP interface
     private val _state = MutableStateFlow<EngineState>(EngineState.Uninitialized)
-    private val _results = MutableSharedFlow<SpeechResult>(replay = 1)
-    private val _errors = MutableSharedFlow<SpeechError>(replay = 1)
+    /**
+     * FIX: Increased SharedFlow buffer capacity to prevent emitter blocking.
+     *
+     * - replay = 1: Latest result available to new collectors
+     * - extraBufferCapacity = 64: Allows up to 64 emissions to buffer before
+     *   suspending the emitter. This prevents the emit() call from blocking
+     *   even if the collector is temporarily slow (e.g., during heavy
+     *   accessibility event processing).
+     *
+     * The collector side also adds buffer(64) for additional protection.
+     */
+    private val _results = MutableSharedFlow<SpeechResult>(
+        replay = 1,
+        extraBufferCapacity = 64
+    )
+    private val _errors = MutableSharedFlow<SpeechError>(
+        replay = 1,
+        extraBufferCapacity = 16
+    )
     private val _isWakeWordEnabled = MutableStateFlow(false)
-    private val _wakeWordDetected = MutableSharedFlow<WakeWordEvent>(replay = 1)
+    private val _wakeWordDetected = MutableSharedFlow<WakeWordEvent>(
+        replay = 1,
+        extraBufferCapacity = 8
+    )
     private val _availableModels = MutableStateFlow<List<VivokaModel>>(emptyList())
     private val _currentModel = MutableStateFlow<VivokaModel?>(null)
     private val _modelStatus = MutableStateFlow<VivokaModelStatus>(VivokaModelStatus.Missing("", emptyList()))
