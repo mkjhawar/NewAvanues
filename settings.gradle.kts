@@ -35,7 +35,8 @@ dependencyResolutionManagement {
 include(":Modules:AVA:core:Domain")
 include(":Modules:AVA:core:Utils")
 include(":Modules:AVA:core:Data")
-include(":Modules:AVA:core:Theme")
+// include(":Modules:AVA:core:Theme")  // MOVED to :Modules:AvanueUI:Themes (2026-02-06)
+include(":Modules:AvanueUI:Themes")      // Canonical shared theme system
 
 // AVA Feature Modules (Android UI wrappers)
 include(":Modules:AVA:Overlay")

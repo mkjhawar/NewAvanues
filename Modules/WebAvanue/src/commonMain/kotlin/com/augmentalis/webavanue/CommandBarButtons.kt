@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.augmentalis.ava.core.theme.OceanTheme
+import com.avanues.themes.OceanTheme
 import com.augmentalis.webavanue.AppIcon
 import com.augmentalis.webavanue.IconVariant
 import com.augmentalis.webavanue.OceanDesignTokens

@@ -65,7 +65,7 @@ kotlin {
                 api(project(":Modules:Foundation"))
 
                 // AvaTheme - Canonical theme system (OceanTheme, GlassmorphicComponents)
-                api(project(":Modules:AVA:core:Theme"))
+                api(project(":Modules:AvanueUI:Themes"))
 
                 // Logging - Canonical KMP logging infrastructure
                 implementation(project(":Modules:Logging"))

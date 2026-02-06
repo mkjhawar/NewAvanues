@@ -65,7 +65,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(project(":Modules:AVA:core:Data"))
-                implementation(project(":Modules:AVA:core:Theme"))
+                implementation(project(":Modules:AvanueUI:Themes"))
                 implementation(libs.kotlinx.coroutines.android)
 
                 // Hilt Dependency Injection

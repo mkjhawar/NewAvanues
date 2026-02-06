@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.augmentalis.ava.core.theme.OceanTheme
+import com.avanues.themes.OceanTheme
 
 /**
  * CollapsibleSectionHeader - Expandable/collapsible section header for settings

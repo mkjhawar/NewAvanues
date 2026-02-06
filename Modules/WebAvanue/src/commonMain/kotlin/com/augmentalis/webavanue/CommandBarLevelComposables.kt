@@ -5,7 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
-import com.augmentalis.ava.core.theme.OceanTheme
+import com.avanues.themes.OceanTheme
 
 /**
  * MainCommandBarFlat - MAIN level (6 buttons max, no scrolling)

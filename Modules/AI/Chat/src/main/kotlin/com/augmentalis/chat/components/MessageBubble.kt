@@ -30,10 +30,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.augmentalis.ava.core.theme.ColorTokens
-import com.augmentalis.ava.core.theme.GlassIntensity
-import com.augmentalis.ava.core.theme.ShapeTokens
-import com.augmentalis.ava.core.theme.SizeTokens
+import com.avanues.themes.ColorTokens
+import com.avanues.themes.GlassIntensity
+import com.avanues.themes.ShapeTokens
+import com.avanues.themes.SizeTokens
 import com.augmentalis.chat.domain.SourceCitation
 import java.text.SimpleDateFormat
 import java.util.*

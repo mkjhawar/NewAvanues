@@ -18,7 +18,7 @@ import com.augmentalis.webavanue.*
 import com.augmentalis.webavanue.ArcLayout
 import com.augmentalis.webavanue.ArcOrientation
 import com.augmentalis.webavanue.isLandscape
-import com.augmentalis.ava.core.theme.OceanTheme
+import com.avanues.themes.OceanTheme
 
 /**
  * ARLayoutPreview - Interactive demo screen for testing spatial arc layout

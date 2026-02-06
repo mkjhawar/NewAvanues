@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
-import com.augmentalis.ava.core.theme.OceanTheme
+import com.avanues.themes.OceanTheme
 import com.augmentalis.webavanue.OceanComponents
 import com.augmentalis.webavanue.IconVariant
 import androidx.compose.runtime.*
