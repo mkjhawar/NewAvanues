@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.augmentalis.webavanue.OceanTheme
+import com.augmentalis.ava.core.theme.OceanTheme
 
 /**
  * TextCommandInput - Text command input field

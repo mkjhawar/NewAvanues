@@ -10,6 +10,7 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.foundation.util.HashUtils
 import com.augmentalis.voiceoscore.currentTimeMillis
 
 /**
@@ -115,9 +116,7 @@ object FingerprintUtils {
      */
     fun calculateSHA256(input: String): String {
         if (input.isEmpty()) return EMPTY_HASH
-
-        // Platform-specific implementation via expect/actual
-        return sha256(input)
+        return HashUtils.sha256(input)
     }
 
     /**
@@ -160,11 +159,6 @@ object FingerprintUtils {
         return dynamicPatterns.any { it.containsMatchIn(text) }
     }
 }
-
-/**
- * Platform-specific SHA-256 implementation.
- */
-expect fun sha256(input: String): String
 
 /**
  * Default screen fingerprinter implementation.

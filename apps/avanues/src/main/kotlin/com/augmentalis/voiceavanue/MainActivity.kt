@@ -25,7 +25,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.augmentalis.ava.core.theme.AvaTheme
+import com.augmentalis.ava.core.theme.AvanueTheme
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
 import com.augmentalis.voiceavanue.ui.browser.BrowserScreen
@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
         val launchMode = determineLaunchMode(intent)
 
         setContent {
-            AvaTheme {
+            AvanueTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

@@ -17,26 +17,23 @@ kotlin {
         }
     }
 
-    // iOS Targets (Phase 2)
-    // listOf(
-    //     iosX64(),
-    //     iosArm64(),
-    //     iosSimulatorArm64()
-    // ).forEach { iosTarget ->
-    //     iosTarget.binaries.framework {
-    //         baseName = "SharedFoundation"
-    //         isStatic = true
-    //     }
-    // }
+    // iOS Targets - only compiled when explicitly requested
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        iosX64()
+        iosArm64()
+        iosSimulatorArm64()
+    }
 
-    // Desktop (JVM) Target (Phase 2)
-    // jvm("desktop") {
-    //     compilations.all {
-    //         kotlinOptions {
-    //             jvmTarget = "17"
-    //         }
-    //     }
-    // }
+    // Desktop (JVM) Target
+    jvm("desktop") {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
 
     sourceSets {
         val commonMain by getting {
@@ -64,6 +61,30 @@ kotlin {
             dependencies {
                 implementation(libs.junit)
             }
+        }
+
+        // iOS source sets
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+            }
+        }
+
+        // Desktop source sets
+        val desktopMain by getting {
+            dependsOn(commonMain)
+        }
+
+        val desktopTest by getting {
+            dependsOn(commonTest)
         }
     }
 }

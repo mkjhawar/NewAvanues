@@ -4,6 +4,7 @@ package com.augmentalis.voiceoscore
 
 import android.content.res.Resources
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.foundation.util.HashUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

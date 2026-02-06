@@ -8,7 +8,6 @@ package com.augmentalis.voiceoscore
 
 import android.annotation.SuppressLint
 import android.util.Log
-import java.security.MessageDigest
 
 // ═══════════════════════════════════════════════════════════════════
 // Time Functions
@@ -17,17 +16,6 @@ import java.security.MessageDigest
 actual fun currentTimeMillis(): Long = System.currentTimeMillis()
 
 actual fun getCurrentTimeMillis(): Long = System.currentTimeMillis()
-
-// ═══════════════════════════════════════════════════════════════════
-// SHA-256 Functions
-// ═══════════════════════════════════════════════════════════════════
-
-actual fun sha256(input: String): String {
-    val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
-    return bytes.joinToString("") { "%02x".format(it) }
-}
-
-internal actual fun sha256Impl(input: String): String = sha256(input)
 
 // ═══════════════════════════════════════════════════════════════════
 // Platform Extractor Functions

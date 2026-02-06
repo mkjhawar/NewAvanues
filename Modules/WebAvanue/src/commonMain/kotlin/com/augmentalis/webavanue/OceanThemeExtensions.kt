@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.augmentalis.webavanue.OceanTheme
+import com.augmentalis.ava.core.theme.OceanTheme
 
 /**
  * Ocean Theme Extensions

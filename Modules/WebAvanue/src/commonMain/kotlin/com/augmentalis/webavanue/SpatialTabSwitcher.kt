@@ -26,7 +26,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.augmentalis.webavanue.OceanTheme
+import com.augmentalis.ava.core.theme.OceanTheme
 import com.augmentalis.webavanue.TabUiState
 import kotlin.math.abs
 

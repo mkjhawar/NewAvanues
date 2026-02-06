@@ -2,34 +2,11 @@
  * Sha256Ios.kt - iOS implementation of SHA-256
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Created: 2025-11-16
- *
- * Note: Uses a pure Kotlin implementation for maximum compatibility.
- * For production use, consider using platform-specific crypto libraries.
+ * Pure Kotlin implementation for maximum compatibility (FIPS 180-4).
  */
-package com.augmentalis.voiceoscore
+package com.augmentalis.foundation.util
 
-/**
- * iOS implementation of SHA-256 hashing
- *
- * Currently uses the JVM-compatible implementation via expect/actual.
- * iOS native crypto integration can be added later if needed.
- */
 internal actual fun sha256Impl(input: String): String {
-    // Pure Kotlin SHA-256 implementation
-    // For now, we'll use a simple implementation
-    // In production, this would use iOS CommonCrypto or a KMP crypto library
-    return pureSha256(input)
-}
-
-/**
- * Pure Kotlin SHA-256 implementation
- *
- * This is a simplified implementation for cross-platform compatibility.
- * For production use, integrate with platform-specific crypto libraries.
- */
-private fun pureSha256(input: String): String {
     val bytes = input.encodeToByteArray()
     val hash = sha256Pure(bytes)
     return hash.joinToString("") { byte ->
@@ -38,13 +15,7 @@ private fun pureSha256(input: String): String {
     }
 }
 
-/**
- * Pure SHA-256 algorithm implementation
- *
- * Based on FIPS 180-4 specification.
- */
 private fun sha256Pure(message: ByteArray): ByteArray {
-    // SHA-256 constants
     val k = intArrayOf(
         0x428a2f98.toInt(), 0x71374491, 0xb5c0fbcf.toInt(), 0xe9b5dba5.toInt(),
         0x3956c25b, 0x59f111f1, 0x923f82a4.toInt(), 0xab1c5ed5.toInt(),
@@ -64,7 +35,6 @@ private fun sha256Pure(message: ByteArray): ByteArray {
         0x90befffa.toInt(), 0xa4506ceb.toInt(), 0xbef9a3f7.toInt(), 0xc67178f2.toInt()
     )
 
-    // Initial hash values
     var h0 = 0x6a09e667
     var h1 = 0xbb67ae85.toInt()
     var h2 = 0x3c6ef372
@@ -74,14 +44,11 @@ private fun sha256Pure(message: ByteArray): ByteArray {
     var h6 = 0x1f83d9ab
     var h7 = 0x5be0cd19
 
-    // Pre-processing: padding
     val paddedMessage = padMessage(message)
 
-    // Process message in 512-bit chunks
     for (chunkStart in paddedMessage.indices step 64) {
         val w = IntArray(64)
 
-        // Copy chunk into first 16 words of message schedule
         for (i in 0 until 16) {
             w[i] = ((paddedMessage[chunkStart + i * 4].toInt() and 0xFF) shl 24) or
                     ((paddedMessage[chunkStart + i * 4 + 1].toInt() and 0xFF) shl 16) or
@@ -89,24 +56,15 @@ private fun sha256Pure(message: ByteArray): ByteArray {
                     (paddedMessage[chunkStart + i * 4 + 3].toInt() and 0xFF)
         }
 
-        // Extend the first 16 words into remaining 48 words
         for (i in 16 until 64) {
             val s0 = (w[i - 15] rotateRight 7) xor (w[i - 15] rotateRight 18) xor (w[i - 15] ushr 3)
             val s1 = (w[i - 2] rotateRight 17) xor (w[i - 2] rotateRight 19) xor (w[i - 2] ushr 10)
             w[i] = w[i - 16] + s0 + w[i - 7] + s1
         }
 
-        // Initialize working variables
-        var a = h0
-        var b = h1
-        var c = h2
-        var d = h3
-        var e = h4
-        var f = h5
-        var g = h6
-        var h = h7
+        var a = h0; var b = h1; var c = h2; var d = h3
+        var e = h4; var f = h5; var g = h6; var h = h7
 
-        // Main loop
         for (i in 0 until 64) {
             val S1 = (e rotateRight 6) xor (e rotateRight 11) xor (e rotateRight 25)
             val ch = (e and f) xor (e.inv() and g)
@@ -115,28 +73,14 @@ private fun sha256Pure(message: ByteArray): ByteArray {
             val maj = (a and b) xor (a and c) xor (b and c)
             val temp2 = S0 + maj
 
-            h = g
-            g = f
-            f = e
-            e = d + temp1
-            d = c
-            c = b
-            b = a
-            a = temp1 + temp2
+            h = g; g = f; f = e; e = d + temp1
+            d = c; c = b; b = a; a = temp1 + temp2
         }
 
-        // Add compressed chunk to current hash value
-        h0 += a
-        h1 += b
-        h2 += c
-        h3 += d
-        h4 += e
-        h5 += f
-        h6 += g
-        h7 += h
+        h0 += a; h1 += b; h2 += c; h3 += d
+        h4 += e; h5 += f; h6 += g; h7 += h
     }
 
-    // Produce final hash value
     return intArrayOf(h0, h1, h2, h3, h4, h5, h6, h7)
         .flatMap { it.toByteArray().toList() }
         .toByteArray()
@@ -145,20 +89,13 @@ private fun sha256Pure(message: ByteArray): ByteArray {
 private fun padMessage(message: ByteArray): ByteArray {
     val messageLength = message.size
     val bitLength = messageLength.toLong() * 8
-
-    // Calculate padding length (message + 1 + zeros + 8 bytes for length)
     val paddingLength = (64 - ((messageLength + 9) % 64)) % 64
     val totalLength = messageLength + 1 + paddingLength + 8
 
     val padded = ByteArray(totalLength)
-
-    // Copy original message
     message.copyInto(padded, 0, 0, messageLength)
-
-    // Append bit '1' (0x80)
     padded[messageLength] = 0x80.toByte()
 
-    // Append length as 64-bit big-endian
     for (i in 0 until 8) {
         padded[totalLength - 8 + i] = ((bitLength ushr (56 - i * 8)) and 0xFF).toByte()
     }

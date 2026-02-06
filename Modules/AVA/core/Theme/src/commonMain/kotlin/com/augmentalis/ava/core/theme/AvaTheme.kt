@@ -19,26 +19,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
 
 /**
- * AvaTheme - Universal Compose Theme for AVA Ecosystem
+ * AvanueTheme - Universal Compose Theme for Avanues Ecosystem
  *
- * Provides Material 3 theming with AVA's glassmorphic design system.
+ * Provides Material 3 theming with Avanues glassmorphic design system.
  * Works across Android, iOS, and Desktop platforms.
- *
- * Features:
- * - Purple gradient background (#667eea → #764ba2)
- * - Teal accent color (#03DAC6)
- * - Semi-transparent glass panels
- * - Token-based design system
- * - Dark mode support
- * - Platform-specific dynamic color support
  *
  * Usage:
  * ```kotlin
- * AvaTheme(
- *     darkTheme = false,
- *     dynamicColor = true
- * ) {
- *     // Your app content
+ * AvanueTheme(darkTheme = false, dynamicColor = true) {
  *     MyScreen()
  * }
  * ```
@@ -47,26 +35,13 @@ import androidx.compose.ui.unit.Dp
  * ```kotlin
  * @Composable
  * fun MyComponent() {
- *     val spacing = AvaTheme.spacing.medium
- *     val elevation = AvaTheme.elevation.level2
- *
- *     Box(
- *         modifier = Modifier
- *             .padding(spacing)
- *             .shadow(elevation)
- *     )
+ *     val spacing = AvanueTheme.spacing.medium
+ *     val elevation = AvanueTheme.elevation.level2
  * }
  * ```
- *
- * @param darkTheme Whether to use dark theme. Defaults to system preference.
- * @param dynamicColor Whether to use dynamic color (Material You). Platform-specific.
- * @param content The composable content to wrap with theme.
- *
- * @author AVA AI Team
- * @version 1.0.0
  */
 @Composable
-fun AvaTheme(
+fun AvanueTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
@@ -79,8 +54,8 @@ fun AvaTheme(
         else -> LightColorScheme
     }
 
-    val typography = AvaTypography
-    val shapes = AvaShapes
+    val typography = AvanueTypography
+    val shapes = AvanueShapes
 
     // Provide custom spacing, elevation, and other tokens via composition local
     CompositionLocalProvider(
@@ -176,7 +151,7 @@ private val DarkColorScheme = darkColorScheme(
 /**
  * Typography scale using design tokens
  */
-private val AvaTypography = Typography(
+private val AvanueTypography = Typography(
     displayLarge = TypographyTokens.DisplayLarge,
     displayMedium = TypographyTokens.DisplayMedium,
     displaySmall = TypographyTokens.DisplaySmall,
@@ -203,7 +178,7 @@ private val AvaTypography = Typography(
 /**
  * Shape scale using design tokens
  */
-private val AvaShapes = Shapes(
+private val AvanueShapes = Shapes(
     extraSmall = RoundedCornerShape(ShapeTokens.ExtraSmall),
     small = RoundedCornerShape(ShapeTokens.Small),
     medium = RoundedCornerShape(ShapeTokens.Medium),
@@ -253,10 +228,10 @@ val LocalElevation = staticCompositionLocalOf { Elevation() }
 val LocalBreakpoints = staticCompositionLocalOf { Breakpoints() }
 
 /**
- * Object to access theme extensions
- * Use: AvaTheme.spacing.medium, AvaTheme.elevation.level2
+ * Object to access theme extensions.
+ * Use: AvanueTheme.spacing.medium, AvanueTheme.elevation.level2
  */
-object AvaTheme {
+object AvanueTheme {
     val spacing: Spacing
         @Composable
         get() = LocalSpacing.current

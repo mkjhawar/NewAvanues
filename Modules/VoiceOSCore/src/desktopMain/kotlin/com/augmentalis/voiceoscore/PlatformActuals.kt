@@ -20,16 +20,6 @@ actual fun currentTimeMillis(): Long = System.currentTimeMillis()
 actual fun getCurrentTimeMillis(): Long = System.currentTimeMillis()
 
 /**
- * Desktop (JVM) implementation of sha256.
- * Uses java.security.MessageDigest.
- */
-actual fun sha256(input: String): String {
-    val md = java.security.MessageDigest.getInstance("SHA-256")
-    val digest = md.digest(input.toByteArray(Charsets.UTF_8))
-    return digest.joinToString("") { "%02x".format(it) }
-}
-
-/**
  * Desktop implementation of extractAccessibilityElements.
  * Returns empty list - actual implementation done via desktop accessibility APIs.
  */

@@ -64,6 +64,9 @@ kotlin {
                 // Foundation - StateFlow utilities, ViewModels, NumberToWords
                 api(project(":Modules:Foundation"))
 
+                // AvaTheme - Canonical theme system (OceanTheme, GlassmorphicComponents)
+                api(project(":Modules:AVA:core:Theme"))
+
                 // Logging - Canonical KMP logging infrastructure
                 implementation(project(":Modules:Logging"))
 
