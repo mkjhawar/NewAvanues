@@ -3,6 +3,7 @@
 **Date**: 2026-02-06
 **Author**: Augmentalis Engineering
 **Status**: Active
+**Implementation**: Phase 5 Complete
 
 ---
 
@@ -320,15 +321,106 @@ triggers:
 
 ---
 
-## Future: MacroDslMigrator (Phase 5)
+## MacroDslMigrator (Implemented - Phase 5)
 
-An automated migration utility is planned that can:
-- Parse `MacroDSL.kt` source files using Kotlin PSI
-- Extract macro definitions, metadata, and logic
-- Generate equivalent `.vos`/`.avp` files
-- Emit warnings for unsupported constructs (complex lambdas, platform-specific API calls)
+**Package:** `com.augmentalis.voiceoscore.dsl.migration`
 
-**Current Status:** Not implemented. Manual migration required using this guide.
+An automated migration utility that converts macro definitions into AVU DSL `.vos` text. Rather than parsing Kotlin PSI (which would be platform-specific), the migrator works with a platform-agnostic `MigrationStep` intermediate representation. Android code maps `MacroStep` → `MigrationStep`, then `MacroDslMigrator` generates `.vos` text in `commonMain`.
+
+### MigrationStep (IR)
+
+Sealed class representing all migratable constructs:
+
+```kotlin
+sealed class MigrationStep {
+    data class Action(val code: String, val arguments: Map<String, String>)
+    data class Delay(val millis: Long)
+    data class Conditional(val condition: String, val thenSteps: List<MigrationStep>, val elseSteps: List<MigrationStep>)
+    data class Loop(val count: Int, val steps: List<MigrationStep>)
+    data class LoopWhile(val condition: String, val steps: List<MigrationStep>, val maxIterations: Int)
+    data class WaitFor(val condition: String, val timeoutMs: Long)
+    data class Variable(val name: String, val value: String)
+}
+
+data class MigrationMacro(
+    val name: String, val description: String, val trigger: String,
+    val author: String, val tags: List<String>, val steps: List<MigrationStep>
+)
+```
+
+### MacroDslMigrator
+
+```kotlin
+object MacroDslMigrator {
+    fun migrate(macro: MigrationMacro): MigrationResult
+    fun migrateMultiple(macros: List<MigrationMacro>): MigrationResult
+}
+
+sealed class MigrationResult {
+    data class Success(val content: String, val codesUsed: Set<String>, val warnings: List<String>)
+    data class Error(val message: String)
+    fun contentOrNull(): String?
+}
+```
+
+**Features:**
+- Generates complete `.vos` files with proper header (schema, version, codes, triggers, metadata)
+- Auto-detects codes used across all steps (including nested conditionals and loops)
+- Creates `@define` functions and `@on` trigger handlers for voice-activated macros
+- Batch migration of multiple macros into a single `.vos` file
+- Emits warnings for macros without triggers
+
+### Usage Example
+
+```kotlin
+val macro = MigrationMacro(
+    name = "Login Flow",
+    trigger = "login",
+    description = "Automated login",
+    steps = listOf(
+        MigrationStep.Action("VCM", mapOf("action" to "launch", "target" to "com.example")),
+        MigrationStep.Delay(1000),
+        MigrationStep.Action("AAC", mapOf("action" to "CLICK", "target" to "login_btn")),
+        MigrationStep.Conditional(
+            condition = "screen.contains(\"username\")",
+            thenSteps = listOf(
+                MigrationStep.Action("AAC", mapOf("action" to "SET_TEXT", "target" to "user", "text" to "john"))
+            )
+        )
+    )
+)
+
+val result = MacroDslMigrator.migrate(macro)
+if (result is MigrationResult.Success) {
+    File("login.vos").writeText(result.content)
+}
+```
+
+### AvuV1Compat (Wire Protocol Backward Compatibility)
+
+Parses raw v1 `CODE:field1:field2` wire protocol messages and converts them to structured dispatch arguments or AVU DSL text:
+
+```kotlin
+object AvuV1Compat {
+    fun parseV1Message(message: String): V1ParseResult
+    fun toDispatchArguments(message: V1Message): Map<String, Any?>
+    fun toAvuDslText(message: V1Message): String
+    fun isV1Format(text: String): Boolean
+}
+```
+
+**Known field mappings** for VCM, AAC, SCR, CHT, TTS — unknown codes use positional names (`field_0`, `field_1`, ...).
+
+### File Layout
+
+```
+dsl/migration/
+├── MigrationStep.kt     (57 lines)  - IR sealed class + MigrationMacro
+├── MacroDslMigrator.kt  (234 lines) - .vos text generation
+└── AvuV1Compat.kt       (150 lines) - V1 wire protocol backward compat
+```
+
+Total: ~441 lines across 3 files.
 
 ---
 
@@ -365,3 +457,4 @@ An automated migration utility is planned that can:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-02-06 | Initial chapter |
+| 2.0 | 2026-02-06 | Updated: MacroDslMigrator, MigrationStep, AvuV1Compat now implemented (Phase 5) |

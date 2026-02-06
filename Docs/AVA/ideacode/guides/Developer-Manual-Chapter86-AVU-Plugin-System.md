@@ -3,6 +3,7 @@
 **Date**: 2026-02-06
 **Author**: Augmentalis Engineering
 **Status**: Active
+**Implementation**: Phase 4 Complete
 
 ---
 
@@ -143,41 +144,193 @@ data class PluginManifest(
 
 ---
 
-## Future: PluginLoader (Phase 4)
+## PluginLoader (Implemented - Phase 4)
+
+**Package:** `com.augmentalis.voiceoscore.dsl.plugin`
+
+The `PluginLoader` validates and loads `.avp` files through a 6-step pipeline:
+
+1. **Parse** — Lex + parse via `AvuDslLexer` / `AvuDslParser`
+2. **Type check** — Verify `type: plugin`
+3. **Manifest extraction** — Header metadata → `PluginManifest`
+4. **Manifest validation** — Required fields, valid identifiers
+5. **Permission check** — Declared codes covered by declared permissions (via `CodePermissionMap`)
+6. **Sandbox assignment** — Trust level → `SandboxConfig`
 
 ```kotlin
-class PluginLoader(
-    private val registry: PluginRegistry,
-    private val interpreter: AvuInterpreter
-) {
-    fun loadPlugin(source: String): PluginLoadResult
-    fun activatePlugin(pluginId: String): Boolean
-    fun deactivatePlugin(pluginId: String): Boolean
-    fun uninstallPlugin(pluginId: String): Boolean
+object PluginLoader {
+    fun load(avpContent: String, trustLevel: PluginTrustLevel? = null): PluginLoadResult
 }
 
 sealed class PluginLoadResult {
-    data class Success(val manifest: PluginManifest) : PluginLoadResult()
+    data class Success(val plugin: LoadedPlugin) : PluginLoadResult()
+    data class ParseError(val errors: List<String>) : PluginLoadResult()
     data class ValidationError(val errors: List<String>) : PluginLoadResult()
-    data class PermissionDenied(val required: List<String>) : PluginLoadResult()
+    data class PermissionError(val errors: List<String>) : PluginLoadResult()
+
+    val isSuccess: Boolean
+    fun pluginOrNull(): LoadedPlugin?
+}
+```
+
+### PluginManifest
+
+Extracted from `.avp` file headers via `PluginManifest.fromHeader(header)`:
+
+```kotlin
+data class PluginManifest(
+    val pluginId: String,           // e.g., "com.augmentalis.smartlogin"
+    val name: String,               // Display name
+    val version: String,            // Semver from header
+    val minVosVersion: Int?,        // Minimum VoiceOS version code
+    val author: String?,
+    val description: String?,
+    val codes: Map<String, String>,
+    val permissions: Set<PluginPermission>,
+    val triggers: List<String>
+) {
+    fun validate(): ManifestValidation
+}
+```
+
+### PluginPermission
+
+Cross-platform permission enum (15 permissions):
+
+```kotlin
+enum class PluginPermission(val displayName: String, val description: String) {
+    GESTURES, APPS, NOTIFICATIONS, NETWORK, STORAGE, LOCATION,
+    SENSORS, CAMERA, MICROPHONE, CONTACTS, CALENDAR, SMS,
+    PHONE, ACCESSIBILITY, SYSTEM
+}
+```
+
+### PluginState
+
+Lifecycle state machine:
+
+```
+DISCOVERED → VALIDATED → REGISTERED → ACTIVE ⇄ INACTIVE
+                              ↓                   ↓
+                            ERROR               ERROR
+```
+
+### LoadedPlugin
+
+Immutable plugin container with state transitions:
+
+```kotlin
+data class LoadedPlugin(
+    val manifest: PluginManifest,
+    val ast: AvuDslFile,
+    val sandboxConfig: SandboxConfig,
+    val state: PluginState = PluginState.VALIDATED,
+    val errorMessage: String? = null,
+    val loadedAtMs: Long = 0
+) {
+    fun withState(newState: PluginState, error: String? = null): LoadedPlugin
+}
+```
+
+### PluginSandbox & Trust Levels
+
+Trust-based sandbox configuration:
+
+| Trust Level | Plugin ID Prefix | Sandbox Profile |
+|------------|-----------------|-----------------|
+| `SYSTEM` | `com.augmentalis.*`, `com.realwear.*` | `SandboxConfig.SYSTEM` (60s, 10K steps) |
+| `VERIFIED` | Verified author | `SandboxConfig.DEFAULT` (10s, 1K steps) |
+| `USER` | Default | Custom (8s, 800 steps) |
+| `UNTRUSTED` | Unknown | `SandboxConfig.STRICT` (5s, 500 steps) |
+
+```kotlin
+object PluginSandbox {
+    fun configForTrustLevel(level: PluginTrustLevel): SandboxConfig
+    fun determineTrustLevel(manifest: PluginManifest): PluginTrustLevel
+    fun addVerifiedAuthor(author: String)
 }
 ```
 
 ---
 
-## Future: PluginRegistry (Phase 4)
+## PluginRegistry (Implemented - Phase 4)
+
+**Package:** `com.augmentalis.voiceoscore.dsl.plugin`
+
+Central registry managing the full plugin lifecycle with exclusive trigger ownership:
 
 ```kotlin
-class PluginRegistry {
-    fun register(manifest: PluginManifest)
-    fun unregister(pluginId: String)
-    fun getPlugin(pluginId: String): PluginManifest?
-    fun getActivePlugins(): List<PluginManifest>
-    fun getPluginsByPermission(permission: String): List<PluginManifest>
-    fun isActive(pluginId: String): Boolean
-    fun setActive(pluginId: String, active: Boolean)
+class PluginRegistry(private val dispatcher: IAvuDispatcher) {
+    fun register(plugin: LoadedPlugin): PluginRegistrationResult
+    fun activate(pluginId: String): Boolean
+    fun deactivate(pluginId: String): Boolean
+    fun unregister(pluginId: String): Boolean
+    suspend fun handleTrigger(pattern: String, captures: Map<String, String>): PluginTriggerResult
+    fun findPluginForTrigger(pattern: String): LoadedPlugin?
+    fun getPlugin(pluginId: String): LoadedPlugin?
+    fun getAllPlugins(): List<LoadedPlugin>
+    fun getActivePlugins(): List<LoadedPlugin>
+    fun getRegisteredTriggers(): Map<String, String>
+    fun getStatistics(): Map<PluginState, Int>
+    fun clear()
 }
 ```
+
+### Trigger Routing
+
+When `handleTrigger()` is called:
+1. Look up trigger pattern → owning plugin ID
+2. Verify plugin is in `ACTIVE` state
+3. Create `AvuInterpreter` with plugin's `SandboxConfig`
+4. Execute via `interpreter.handleTrigger(ast, pattern, captures)`
+5. On failure, transition plugin to `ERROR` state
+
+### Result Types
+
+```kotlin
+sealed class PluginRegistrationResult {
+    data class Success(val plugin: LoadedPlugin)
+    data class Error(val message: String)
+    data class Conflict(val conflicts: List<String>)  // trigger ownership conflicts
+}
+
+sealed class PluginTriggerResult {
+    data class Success(val pluginId: String, val returnValue: Any?, val executionTimeMs: Long)
+    data class Error(val message: String)
+    data class NoHandler(val pattern: String)
+}
+```
+
+### Full Loading Pipeline
+
+```kotlin
+// Load, register, and activate a plugin
+val result = PluginLoader.load(avpFileContent)
+if (result is PluginLoadResult.Success) {
+    val regResult = registry.register(result.plugin)
+    if (regResult is PluginRegistrationResult.Success) {
+        registry.activate(regResult.plugin.pluginId)
+    }
+}
+
+// Handle a voice trigger
+val triggerResult = registry.handleTrigger("note {text}", mapOf("text" to "buy milk"))
+```
+
+### File Layout
+
+```
+dsl/plugin/
+├── PluginPermission.kt    (35 lines)  - 15-value permission enum
+├── PluginManifest.kt      (67 lines)  - Manifest extraction + validation
+├── PluginState.kt         (22 lines)  - 6-state lifecycle enum
+├── LoadedPlugin.kt        (25 lines)  - Immutable plugin container
+├── PluginSandbox.kt       (67 lines)  - Trust-based sandbox config
+├── PluginLoader.kt       (100 lines)  - 6-step load/validate pipeline
+└── PluginRegistry.kt     (184 lines)  - Lifecycle management + trigger routing
+```
+
+Total: ~500 lines across 7 files.
 
 ---
 
@@ -307,3 +460,4 @@ triggers:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-02-06 | Initial chapter |
+| 2.0 | 2026-02-06 | Updated: PluginLoader, PluginRegistry, PluginSandbox, LoadedPlugin, PluginState now implemented (Phase 4) |

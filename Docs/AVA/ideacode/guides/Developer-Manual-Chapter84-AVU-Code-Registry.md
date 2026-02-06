@@ -268,44 +268,68 @@ val docs = AvuCodeRegistry.generateDocumentation()
 
 ---
 
-## Future: Namespace Support
+## Namespace Support (Implemented)
 
-Plugin codes will be namespaced to prevent conflicts between plugins:
+**Package:** `com.augmentalis.voiceoscore.dsl.registry`
 
-### Namespaced Registration
+Plugin codes are namespaced to prevent conflicts between plugins. The `AvuCodeNamespace` class handles parsing and qualification:
+
+### AvuCodeNamespace
 
 ```kotlin
-// Plugin code with namespace prefix
-AvuCodeRegistry.register(AvuCodeInfo(
-    code = "com.augmentalis.smartlogin:VCM",
-    name = "SmartLogin Voice Command",
-    category = AvuCodeCategory.PLUGIN,
-    format = "sessionId:command:params"
-))
+object AvuCodeNamespace {
+    fun parse(qualified: String): NamespacedCode   // "com.example:VCM" -> NamespacedCode
+    fun qualify(namespace: String, code: String): String  // -> "com.example:VCM"
+    fun isNamespaced(code: String): Boolean         // "com.example:VCM" -> true, "VCM" -> false
+    fun extractCode(qualified: String): String      // "com.example:VCM" -> "VCM"
+}
+
+data class NamespacedCode(val namespace: String, val code: String) {
+    val qualified: String  // "com.example:VCM"
+    val isSystem: Boolean  // true if namespace == "system"
+}
 ```
 
-### Conflict Detection
+### Examples
 
 ```kotlin
+// System code (bare)
+val vcm = AvuCodeNamespace.parse("VCM")  // NamespacedCode("system", "VCM")
+
+// Plugin code (namespaced)
+val pluginVcm = AvuCodeNamespace.parse("com.example.plugin:VCM")
+// -> NamespacedCode("com.example.plugin", "VCM")
+
 // Same code, different namespace = no conflict
 "com.augmentalis.smartlogin:VCM"  // OK
 "com.example.other:VCM"           // OK - different namespace
 ```
 
-### CodePermissionMap
+### CodePermissionMap (Implemented)
 
-Future versions tie codes to permissions:
+Maps 30+ AVU codes to required `PluginPermission` sets:
 
 ```kotlin
 object CodePermissionMap {
-    fun requiredPermissions(code: String): List<String> = when (code) {
-        "AAC" -> listOf("GESTURES")
-        "SCR" -> listOf("SCREEN_READ")
-        "APP" -> listOf("APPS")
-        else -> emptyList()
-    }
+    fun permissionsForCode(code: String): Set<PluginPermission>
+    fun validateCodePermissions(
+        declaredCodes: Set<String>,
+        grantedPermissions: Set<PluginPermission>
+    ): CodePermissionValidation
+
+    fun registerCustomMapping(code: String, permissions: Set<PluginPermission>)
 }
 ```
+
+Built-in mappings include:
+- `AAC` -> `GESTURES`
+- `SCR` -> `ACCESSIBILITY`
+- `APP` -> `APPS`
+- `CAM` -> `CAMERA`
+- `MIC` -> `MICROPHONE`
+- `NET` -> `NETWORK`
+- `GPS` -> `LOCATION`
+- `VCM`, `CHT`, `TTS`, `QRY` -> no permission required (core codes)
 
 ---
 
@@ -355,3 +379,4 @@ declaredCodes.forEach { code ->
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-02-06 | Initial chapter |
+| 2.0 | 2026-02-06 | Updated: namespace + permission mapping now implemented (Phase 3) |

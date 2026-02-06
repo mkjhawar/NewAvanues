@@ -387,14 +387,80 @@ when (val result = interpreter.execute(parseResult.file)) {
 
 ---
 
-## Platform Dispatchers (Future Phase 3)
+## Platform Dispatchers (Implemented - Phase 6)
 
-| Platform | Dispatcher | Mechanism |
-|----------|-----------|-----------|
-| Android | `AndroidAvuDispatcher` | Accessibility Service, Intent dispatch |
-| iOS | `iOSAvuDispatcher` | UIAccessibility, URL scheme dispatch |
-| Desktop | `DesktopAvuDispatcher` | Robot API, window management |
-| Web | `WebAvuDispatcher` | DOM manipulation, browser extension APIs |
+**Package:** `com.augmentalis.voiceoscore.dsl.interpreter`
+
+| Platform | Class | Source Set | Features |
+|----------|-------|-----------|----------|
+| Android | `AndroidAvuDispatcher` | `androidMain` | Bridges to HandlerRegistry, IAvuEnvironment for QRY |
+| iOS | `IosAvuDispatcher` | `iosMain` | QRY/LOG/CHT/TTS support, stubs for gesture codes |
+| Desktop | `DesktopAvuDispatcher` | `desktopMain` | Clipboard (CLP), system props (SYS), QRY, LOG |
+| All | `LoggingDispatcher` | `commonMain` | Debug wrapper recording all dispatch calls |
+
+### IAvuEnvironment
+
+Platform abstraction for screen state queries used by all dispatchers:
+
+```kotlin
+interface IAvuEnvironment {
+    suspend fun screenContains(text: String): Boolean
+    suspend fun getScreenText(): List<String>
+    suspend fun isElementVisible(elementId: String): Boolean
+    suspend fun getForegroundApp(): String?
+    suspend fun getProperty(key: String): Any?
+}
+```
+
+### AndroidAvuDispatcher
+
+The primary production dispatcher. Routes AVU codes to HandlerRegistry:
+
+```kotlin
+class AndroidAvuDispatcher(
+    handlerRegistry: HandlerRegistry,
+    environment: IAvuEnvironment = StubEnvironment()
+) : IAvuDispatcher
+```
+
+- **QRY** codes → IAvuEnvironment (screen queries)
+- **VCM/AAC/CHT/etc.** → HandlerRegistry.findHandler() → IHandler.execute()
+- Maps 50+ AVU codes to handler actions
+
+### LoggingDispatcher
+
+Debug wrapper for recording and inspecting dispatch calls:
+
+```kotlin
+val logging = LoggingDispatcher(innerDispatcher)
+// ... execute DSL ...
+val log: List<DispatchLogEntry> = logging.getLog()
+```
+
+## Tooling (Implemented - Phase 7)
+
+**Package:** `com.augmentalis.voiceoscore.dsl.tooling`
+
+| Tool | Purpose |
+|------|---------|
+| `AvuDslHighlighter` | Syntax highlighting (16 categories: directive, code, string, etc.) |
+| `AvuDslFormatter` | AST-based code formatter / pretty-printer |
+| `AvuDslValidator` | Static analysis: E001-E003 errors, W001-W004 warnings, I001-I002 info |
+| `WorkflowRecorder` | Records dispatch calls and generates .vos files |
+
+### AvuDslValidator Diagnostics
+
+| Code | Severity | Description |
+|------|----------|-------------|
+| E001 | Error | Undeclared code used in body |
+| E002 | Error | Undefined function called |
+| E003 | Error | Empty workflow/function body |
+| W001 | Warning | Unused declared code |
+| W002 | Warning | Duplicate trigger pattern |
+| W003 | Warning | Variable set but never read |
+| W004 | Warning | Unreachable code after @return |
+| I001 | Info | No triggers defined |
+| I002 | Info | Function defined but never called |
 
 ---
 
@@ -425,3 +491,4 @@ when (val result = interpreter.execute(parseResult.file)) {
 |---------|------|---------|
 | 1.0 | 2026-02-06 | Initial chapter (design spec) |
 | 2.0 | 2026-02-06 | Updated with actual implementation (Phase 2 complete) |
+| 3.0 | 2026-02-06 | Updated: platform dispatchers (Phase 6) + tooling (Phase 7) implemented |
