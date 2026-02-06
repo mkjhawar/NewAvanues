@@ -175,14 +175,15 @@ class AvuDslLexer(private val source: String) {
     }
 
     private fun scanHeaderLine(firstChar: Char) {
-        // Consume rest of line as raw header content
+        // Consume rest of line as raw header content, preserving leading whitespace
+        // so that AvuHeader.parse() can detect indented section entries.
         val sb = StringBuilder()
         sb.append(firstChar)
         while (!isAtEnd() && peek() != '\n' && peek() != '\r') {
             sb.append(advance())
         }
-        val content = sb.toString().trim()
-        if (content.isNotEmpty()) {
+        val content = sb.toString().trimEnd()
+        if (content.isNotBlank()) {
             tokens.add(Token(TokenType.HEADER_LINE, content, line, start - lineStartOffset() + 1))
         }
     }

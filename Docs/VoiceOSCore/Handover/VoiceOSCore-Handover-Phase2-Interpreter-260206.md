@@ -57,20 +57,16 @@ Implemented the tree-walking interpreter (Layer 3) for the AVU DSL system. This 
 
 ## Known Issues
 
-### Pre-existing Test Breakage
-The existing test files in `commonTest/` have broken imports (unresolved references to `element`, `interfaces`, `handler`, `persistence`, `utils`, `serialization`, `synonym`, `classifier`). These predate this work — confirmed by checking `testDebugUnitTest` compiles fail with **no local changes stashed**.
-
-**Impact**: Our 55 new test files cannot compile alongside the broken ones. The production code compiles and verifies cleanly.
-
-**Fix needed**: Update the old test imports to match the current package structure (moved during `750b3ea7` commit). This is a separate task.
+~~Pre-existing test breakage~~ — **RESOLVED** in commit `a3f0faa6`. See `VoiceOSCore-Fix-TestFailures-260206.md` for details.
 
 ---
 
 ## Build Verification
 
 ```
-./gradlew :Modules:VoiceOSCore:compileDebugKotlinAndroid  -> BUILD SUCCESSFUL
-./gradlew :Modules:VoiceOSCore:compileCommonMainKotlinMetadata -> BUILD SUCCESSFUL (SKIPPED, cached)
+./gradlew :Modules:VoiceOSCore:compileDebugKotlinAndroid      -> BUILD SUCCESSFUL
+./gradlew :Modules:VoiceOSCore:compileCommonMainKotlinMetadata -> BUILD SUCCESSFUL
+./gradlew :Modules:VoiceOSCore:testDebugUnitTest               -> 348 tests, 0 failures
 ```
 
 No `java.*` imports in any interpreter file. All code is KMP commonMain compatible.
@@ -83,7 +79,6 @@ No `java.*` imports in any interpreter file. All code is KMP commonMain compatib
 2. **QRY code handler** - screen.contains, context.currentApp for built-in method calls
 3. **PluginLoader** - Load .avp files, validate, register, activate
 4. **PluginRegistry** - Track active plugins, permissions, codes
-5. **Fix pre-existing test imports** - Unblock test compilation
 
 ---
 
