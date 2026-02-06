@@ -2,9 +2,9 @@ package com.augmentalis.webavanue
 
 import com.augmentalis.webavanue.HistoryEntry
 import com.augmentalis.webavanue.BrowserRepository
-import com.augmentalis.webavanue.util.BaseStatefulViewModel
-import com.augmentalis.webavanue.util.ListState
-import com.augmentalis.webavanue.util.ViewModelState
+import com.augmentalis.foundation.viewmodel.BaseStatefulViewModel
+import com.augmentalis.foundation.state.ListState
+import com.augmentalis.foundation.state.ViewModelState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.datetime.Instant

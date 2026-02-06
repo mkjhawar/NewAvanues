@@ -1,9 +1,9 @@
 package com.augmentalis.webavanue
 
-import com.augmentalis.webavanue.util.BaseViewModel
-import com.augmentalis.webavanue.util.ListState
-import com.augmentalis.webavanue.util.NullableState
-import com.augmentalis.webavanue.util.ViewModelState
+import com.augmentalis.foundation.viewmodel.BaseViewModel
+import com.augmentalis.foundation.state.ListState
+import com.augmentalis.foundation.state.NullableState
+import com.augmentalis.foundation.state.ViewModelState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch

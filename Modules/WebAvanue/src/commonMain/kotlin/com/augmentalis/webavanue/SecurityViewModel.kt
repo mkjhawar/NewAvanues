@@ -3,8 +3,8 @@ package com.augmentalis.webavanue
 import com.augmentalis.webavanue.*
 import com.augmentalis.webavanue.Logger
 import com.augmentalis.webavanue.BrowserRepository
-import com.augmentalis.webavanue.util.BaseViewModel
-import com.augmentalis.webavanue.util.NullableState
+import com.augmentalis.foundation.viewmodel.BaseViewModel
+import com.augmentalis.foundation.state.NullableState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.Clock
 

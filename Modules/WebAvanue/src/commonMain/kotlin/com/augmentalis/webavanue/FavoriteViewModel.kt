@@ -5,10 +5,10 @@ import com.augmentalis.webavanue.FavoriteFolder
 import com.augmentalis.webavanue.BrowserRepository
 import com.augmentalis.webavanue.BookmarkImportExport
 import com.augmentalis.webavanue.parseHtmlWithData
-import com.augmentalis.webavanue.util.BaseStatefulViewModel
-import com.augmentalis.webavanue.util.ListState
-import com.augmentalis.webavanue.util.ViewModelState
-import com.augmentalis.webavanue.util.NullableState
+import com.augmentalis.foundation.viewmodel.BaseStatefulViewModel
+import com.augmentalis.foundation.state.ListState
+import com.augmentalis.foundation.state.ViewModelState
+import com.augmentalis.foundation.state.NullableState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 

@@ -4,8 +4,8 @@ import com.augmentalis.webavanue.Logger
 import com.augmentalis.webavanue.Download
 import com.augmentalis.webavanue.DownloadStatus
 import com.augmentalis.webavanue.BrowserRepository
-import com.augmentalis.webavanue.util.BaseStatefulViewModel
-import com.augmentalis.webavanue.util.ListState
+import com.augmentalis.foundation.viewmodel.BaseStatefulViewModel
+import com.augmentalis.foundation.state.ListState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

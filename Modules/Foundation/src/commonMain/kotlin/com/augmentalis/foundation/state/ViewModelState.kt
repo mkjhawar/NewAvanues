@@ -28,7 +28,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * @param initialValue Initial value for the state
  */
 class ViewModelState<T>(initialValue: T) {
-    private val _state = MutableStateFlow(initialValue)
+    @PublishedApi
+    internal val _state = MutableStateFlow(initialValue)
 
     /**
      * Read-only StateFlow for UI observation (equivalent to `asStateFlow()`)
@@ -45,7 +46,7 @@ class ViewModelState<T>(initialValue: T) {
     /**
      * Atomic update using transform function
      */
-    fun update(transform: (T) -> T) {
+    inline fun update(transform: (T) -> T) {
         _state.value = transform(_state.value)
     }
 
@@ -63,7 +64,8 @@ class ViewModelState<T>(initialValue: T) {
  * Adds convenience methods for working with nullable dialog/error states.
  */
 class NullableState<T : Any>(initialValue: T? = null) {
-    private val _state = MutableStateFlow<T?>(initialValue)
+    @PublishedApi
+    internal val _state = MutableStateFlow<T?>(initialValue)
 
     val flow: StateFlow<T?> = _state.asStateFlow()
 
@@ -86,7 +88,7 @@ class NullableState<T : Any>(initialValue: T? = null) {
     /**
      * Execute block only if value is not null
      */
-    fun ifPresent(block: (T) -> Unit) {
+    inline fun ifPresent(block: (T) -> Unit) {
         _state.value?.let(block)
     }
 
