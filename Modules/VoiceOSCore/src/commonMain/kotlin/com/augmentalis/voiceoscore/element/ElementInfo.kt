@@ -58,6 +58,10 @@ data class ElementInfo(
     val isLongClickable: Boolean = false,
     val isScrollable: Boolean = false,
     val isEnabled: Boolean = true,
+    val isEditable: Boolean = false,
+    val isCheckable: Boolean = false,
+    val isContextClickable: Boolean = false,
+    val isParentClickable: Boolean = false,
     val packageName: String = "",
     // AVID fingerprint for tracking across sessions (format: {TypeCode}:{hash8})
     val avid: String? = null,
@@ -138,7 +142,11 @@ data class ElementInfo(
      * Check if this element is actionable (clickable or scrollable)
      */
     val isActionable: Boolean
-        get() = isClickable || isScrollable
+        get() = isClickable || isScrollable || isLongClickable
+
+    fun canPerformAction(): Boolean {
+        return isClickable || isEditable || isSelected || isCheckable || isLongClickable || isContextClickable
+    }
 
     /**
      * Check if this element is dynamic content (list items, chat messages, etc.)

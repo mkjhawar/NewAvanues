@@ -16,10 +16,12 @@ import com.augmentalis.voiceos.speech.engines.vivoka.model.FileStatus
 import com.augmentalis.voiceos.speech.engines.vivoka.model.FirebaseRemoteConfigRepository
 import com.augmentalis.voiceos.speech.engines.vivoka.model.VivokaLanguageRepository
 import com.google.firebase.FirebaseApp
+import com.vivoka.vsdk.Constants
 import com.vivoka.vsdk.Exception
 import com.vivoka.vsdk.asr.csdk.recognizer.IRecognizerListener
 import com.vivoka.vsdk.asr.csdk.recognizer.Recognizer
 import com.vivoka.vsdk.asr.recognizer.RecognizerResultType
+import com.vivoka.vsdk.util.AssetsExtractor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -98,6 +100,12 @@ class VivokaEngine(
         Log.d(TAG, "VIVOKA_INIT Starting two-phase initialization")
 
         try {
+            val assetsPath = "${context.filesDir.absolutePath}${Constants.vsdkPath}"
+            val vsdkHandlerUtils = VsdkHandlerUtils(assetsPath)
+
+            if (!vsdkHandlerUtils.checkVivokaFilesExist()) {
+                AssetsExtractor.extract(context, "vsdk", assetsPath)
+            }
             // PHASE 1: Language Model Preparation
             // No retry logic, can take arbitrary time
             Log.d(TAG, "VIVOKA_INIT Phase 1: Preparing language models")

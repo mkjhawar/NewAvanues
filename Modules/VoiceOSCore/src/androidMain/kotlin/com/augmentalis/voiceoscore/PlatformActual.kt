@@ -117,17 +117,17 @@ actual object DeviceCapabilityManager {
 
     actual fun getContentDebounceMs(): Long {
         return userDebounceMs ?: when (getDeviceSpeed()) {
-            DeviceSpeed.FAST -> 100L
-            DeviceSpeed.MEDIUM -> 200L
-            DeviceSpeed.SLOW -> 300L
+            DeviceSpeed.FAST -> 400L
+            DeviceSpeed.MEDIUM -> 600L
+            DeviceSpeed.SLOW -> 800L
         }
     }
 
     actual fun getScrollDebounceMs(): Long {
         return when (getDeviceSpeed()) {
-            DeviceSpeed.FAST -> 50L
-            DeviceSpeed.MEDIUM -> 100L
-            DeviceSpeed.SLOW -> 150L
+            DeviceSpeed.FAST -> 400L
+            DeviceSpeed.MEDIUM -> 600L
+            DeviceSpeed.SLOW -> 800L
         }
     }
 
@@ -140,6 +140,7 @@ actual object DeviceCapabilityManager {
     actual fun getDeviceSpeed(): DeviceSpeed {
         cachedSpeed?.let { return it }
         val speed = detectDeviceSpeed()
+        Log.i("TAG", "getDeviceSpeed: speed = $speed")
         cachedSpeed = speed
         return speed
     }

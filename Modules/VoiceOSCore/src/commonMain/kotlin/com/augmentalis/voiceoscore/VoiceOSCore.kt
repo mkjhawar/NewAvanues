@@ -90,6 +90,11 @@ class VoiceOSCore private constructor(
     private val appHandlerPhrases = mutableListOf<String>()
 
     /**
+     * all registered Commands
+     */
+    private val allRegisteredCommands: MutableSet<String> = mutableSetOf()
+
+    /**
      * Initialize the core.
      */
     suspend fun initialize() {
@@ -309,7 +314,31 @@ class VoiceOSCore private constructor(
         val engine = speechEngine ?: return Result.failure(
             IllegalStateException("No speech engine configured")
         )
-        return engine.updateCommands(commands + appHandlerPhrases)
+        // Merge + de-dupe correctly (set of Strings)
+        val newCommands: Set<String> = buildSet {
+            addAll(commands)
+            addAll(appHandlerPhrases)
+        }
+
+        println("[VoiceOSCore] allRegisteredCommands = ${allRegisteredCommands.size} , newCommands = ${newCommands.size}")
+        // No change -> skip engine call
+        if (newCommands == allRegisteredCommands) {
+            return Result.success(Unit)
+        }else{
+            val removed = allRegisteredCommands - newCommands
+            val new = newCommands - allRegisteredCommands
+
+            println("[VoiceOSCore] old removed = $removed")
+            println("[VoiceOSCore] new add = $new")
+
+        }
+
+        // Update engine; only update cache if engine update succeeds
+        return engine.updateCommands(newCommands.toList())
+            .onSuccess {
+                allRegisteredCommands.clear()
+                allRegisteredCommands.addAll(newCommands)
+            }
     }
 
     /**

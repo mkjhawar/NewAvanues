@@ -399,7 +399,8 @@ object CommandGenerator {
             println("[generateListLabelCommands] label = $label")
 
             // Skip if no label extracted or label already seen (avoid duplicates)
-            if (label.isNullOrBlank()) return@mapNotNull null
+            if (label.isNullOrBlank() || !element.canPerformAction()) return@mapNotNull null
+            println("[generateListLabelCommands] label = $label")
 
             val normalizedLabel = label.lowercase().trim()
             if (normalizedLabel in seenLabels) return@mapNotNull null
