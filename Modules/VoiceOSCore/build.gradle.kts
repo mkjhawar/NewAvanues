@@ -50,6 +50,9 @@ kotlin {
                 // Foundation - StateFlow utilities, ViewModels, NumberToWords
                 api(project(":Modules:Foundation"))
 
+                // Logging - Canonical KMP logging infrastructure
+                api(project(":Modules:Logging"))
+
                 // AVID - Avanues Voice ID
                 implementation(project(":Modules:AVID"))
 

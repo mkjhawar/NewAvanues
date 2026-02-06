@@ -64,6 +64,9 @@ kotlin {
                 // Foundation - StateFlow utilities, ViewModels, NumberToWords
                 api(project(":Modules:Foundation"))
 
+                // Logging - Canonical KMP logging infrastructure
+                implementation(project(":Modules:Logging"))
+
                 // Unified Database - Web command persistence (IScrapedWebCommandRepository, etc.)
                 implementation(project(":Modules:Database"))
 

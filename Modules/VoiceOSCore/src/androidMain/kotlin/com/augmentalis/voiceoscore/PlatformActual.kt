@@ -44,55 +44,6 @@ actual fun isWebExtractionAvailable(): Boolean = false
 actual fun getPlatformName(): String = "Android"
 
 // ═══════════════════════════════════════════════════════════════════
-// LoggerFactory
-// ═══════════════════════════════════════════════════════════════════
-
-actual object LoggerFactory {
-    actual fun getLogger(tag: String): Logger = AndroidLogger(tag)
-}
-
-private class AndroidLogger(private val tag: String) : Logger {
-    override fun v(message: () -> String) {
-        if (isLoggable(LogLevel.VERBOSE)) Log.v(tag, message())
-    }
-
-    override fun d(message: () -> String) {
-        if (isLoggable(LogLevel.DEBUG)) Log.d(tag, message())
-    }
-
-    override fun i(message: () -> String) {
-        if (isLoggable(LogLevel.INFO)) Log.i(tag, message())
-    }
-
-    override fun w(message: () -> String) {
-        if (isLoggable(LogLevel.WARN)) Log.w(tag, message())
-    }
-
-    override fun e(message: () -> String) {
-        if (isLoggable(LogLevel.ERROR)) Log.e(tag, message())
-    }
-
-    override fun e(message: () -> String, throwable: Throwable) {
-        if (isLoggable(LogLevel.ERROR)) Log.e(tag, message(), throwable)
-    }
-
-    override fun wtf(message: () -> String) {
-        Log.wtf(tag, message())
-    }
-
-    override fun isLoggable(level: LogLevel): Boolean {
-        return Log.isLoggable(tag, when (level) {
-            LogLevel.VERBOSE -> Log.VERBOSE
-            LogLevel.DEBUG -> Log.DEBUG
-            LogLevel.INFO -> Log.INFO
-            LogLevel.WARN -> Log.WARN
-            LogLevel.ERROR -> Log.ERROR
-            LogLevel.ASSERT -> Log.ASSERT
-        })
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // DeviceCapabilityManager
 // ═══════════════════════════════════════════════════════════════════
 

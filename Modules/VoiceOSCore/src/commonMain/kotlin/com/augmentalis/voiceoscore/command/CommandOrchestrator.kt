@@ -21,6 +21,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.avanues.logging.LoggerFactory
+
 /**
  * Core command generation orchestrator.
  *
