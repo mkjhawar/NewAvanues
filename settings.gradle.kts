@@ -126,7 +126,6 @@ include(":Modules:PluginSystem")                         // Generic DSL plugin f
 include(":Modules:AvidCreator")                          // AVID Android extensions (moved from VoiceOS/libraries)
 include(":Modules:LicenseManager")                       // License validation (moved from VoiceOS/managers)
 include(":Modules:AVU")                                  // KMP AVU format: codec (wire protocol) + DSL (language runtime)
-// AVUCodec: DEPRECATED - migrated to :Modules:AVU (codec + DSL consolidated)
 // NOTE: JITLearning, LearnAppCore, VoiceOsLogging archived (deprecated/duplicate)
 
 // WebAvanue Module - Unified KMP Browser Library

@@ -1,6 +1,8 @@
 package com.avanues.avu.codec
 
 import com.avanues.avu.codec.core.AvuEscape
+import com.avanues.avu.codec.core.AvuHandoverCodes
+import com.avanues.avu.codec.core.AvuHeader
 
 /**
  * Universal RPC Encoder - Encodes voice commands and messages into AVU RPC Protocol format.
@@ -642,6 +644,87 @@ object AVUEncoder {
     data class AppPatternGroup(
         val category: String,
         val patterns: List<String>
+    )
+
+    // ════════════════════════════════════════════════════════════════════════
+    // HANDOVER FILE (.hov)
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Encode a complete handover file to AVU format string.
+     *
+     * @param handover Handover data
+     * @return AVU format string with 2-line comment header
+     */
+    fun encodeHandover(handover: HandoverData): String = buildString {
+        // 2-line comment header
+        appendLine("# Avanues Universal Format v2.2")
+        appendLine("# Type: HOV (Handover)")
+        appendLine(AvuHeader.HEADER_SEPARATOR)
+
+        // YAML metadata
+        appendLine("schema: ${AvuHeader.SCHEMA_VERSION}")
+        appendLine("version: ${handover.version}")
+        appendLine("project: ${handover.project}")
+        if (handover.module.isNotBlank()) {
+            appendLine("module: ${handover.module}")
+        }
+        appendLine("metadata:")
+        appendLine("  file: ${handover.filename}")
+        appendLine("  category: handover")
+        appendLine("  created: ${handover.created}")
+        if (handover.branch.isNotBlank()) {
+            appendLine("  branch: ${handover.branch}")
+        }
+        if (handover.chunk.isNotBlank()) {
+            appendLine("  chunk: ${handover.chunk}")
+        }
+
+        // Self-documenting codes section
+        val usedCodes = handover.collectUsedCodes()
+        if (usedCodes.isNotEmpty()) {
+            appendLine("codes:")
+            usedCodes.sorted().forEach { code ->
+                val info = AvuHandoverCodes.allCodes().find { it.code == code }
+                if (info != null) {
+                    appendLine("  ${info.toLegendEntry()}")
+                }
+            }
+        }
+
+        appendLine(AvuHeader.HEADER_SEPARATOR)
+
+        // Body entries
+        handover.entries.forEach { entry ->
+            appendLine("${entry.code}:${entry.key}:${escape(entry.value)}")
+        }
+
+        appendLine(AvuHeader.HEADER_SEPARATOR)
+    }
+
+    /**
+     * Handover file data class for encoding.
+     */
+    data class HandoverData(
+        val version: String = "1.0.0",
+        val project: String = "NewAvanues",
+        val module: String = "",
+        val filename: String = "handover.hov",
+        val created: String = "",
+        val branch: String = "",
+        val chunk: String = "",
+        val entries: List<HandoverEntry> = emptyList()
+    ) {
+        fun collectUsedCodes(): Set<String> = entries.map { it.code }.toSet()
+    }
+
+    /**
+     * Single handover entry.
+     */
+    data class HandoverEntry(
+        val code: String,
+        val key: String,
+        val value: String
     )
 
     // ════════════════════════════════════════════════════════════════════════

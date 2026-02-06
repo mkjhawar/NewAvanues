@@ -25,11 +25,9 @@ The AVU (Avanues Universal Format) is a compact, line-based format used across a
 ```
 # Avanues Universal Format v2.2
 # Type: <TYPE>
-# Extension: .<ext>
 ---
 schema: avu-2.2
 version: <version>
-locale: <locale>
 project: <project>
 metadata:
   file: <filename>
@@ -128,7 +126,30 @@ val original = AvuEscape.unescape(escaped)
 | `KEY` | Config Key | `KEY:name:type:default:description` | `KEY:sensitivity:float:0.8:Detection threshold` |
 | `HKS` | Hook | `HKS:event:handler` | `HKS:on_voice_command:handleVoice` |
 
-### 4. WebSocket/Sync Codes (v2.1)
+### 4. Handover Codes (v2.2)
+
+Handover files (`.hov`) transfer project state between sessions or agents. Some codes overlap with other categories — the file `type` in the header determines interpretation.
+
+| Code | Purpose | Format | Example |
+|------|---------|--------|---------|
+| `ARC` | Architecture | `ARC:key:value\|qualifiers` | `ARC:pattern:KMP monorepo\|shared code` |
+| `DEC` | Decision | `DEC:id:rationale\|qualifiers` | `DEC:d001:No typealiases\|user enforced` |
+| `STA` | State | `STA:key:value\|qualifiers` | `STA:phase:5\|theme consolidation` |
+| `WIP` | Work In Progress | `WIP:id:description:status` | `WIP:w001:Logger migration:70%` |
+| `BLK` | Blocker | `BLK:id:description:impact` | `BLK:b001:Desktop build fails:blocks testing` |
+| `TSK` | Task | `TSK:id:description:status` | `TSK:t001:Merge OceanTheme:pending` |
+| `FIL` | Files | `FIL:path1,path2,...` | `FIL:AvanueUI/AvanueTheme.kt,AvanueUI/OceanTheme.kt` |
+| `MOD` | Module | `MOD:name\|description` | `MOD:AvanueUI\|Unified theme+components` |
+| `DEP` | Dependency | `DEP:name:version` | `DEP:Foundation:1.0.0` |
+| `LEA` | Learning | `LEA:topic:insight` | `LEA:KMP iOS:Pure Kotlin SHA-256 needed` |
+| `BUG` | Known Bug | `BUG:id:description:workaround` | `BUG:b001:Desktop unresolved refs:Android-only verify` |
+| `REF` | Reference | `REF:uri:description` | `REF:Chapter88:Consolidated App guide` |
+| `CFG` | Config | `CFG:key:value` | `CFG:minSdk:29` |
+| `API` | API Change | `API:endpoint:old:new` | `API:import:com.ava.theme:com.avanueui` |
+| `CTX` | Context | `CTX:key:value` | `CTX:branch:060226-1-consolidation-framework` |
+| `PRI` | Priority | `PRI:level:description` | `PRI:1:Theme consolidation before app launch` |
+
+### 5. WebSocket/Sync Codes (v2.1)
 
 | Code | Purpose | Format | Example |
 |------|---------|--------|---------|
@@ -345,7 +366,6 @@ Learned app files use the `.vos` extension:
 ```
 # Avanues Universal Format v2.2
 # Type: VOS
-# Extension: .vos
 ---
 schema: avu-2.2
 version: 1.0.0
@@ -371,6 +391,37 @@ CMD:cmd1:open settings:CLICK:btn-settings:0.95
 synonyms:
   settings: [preferences, options, config]
   back: [return, previous, go back]
+```
+
+---
+
+## Handover Format
+
+Handover files use the `.hov` extension for transferring project state:
+
+```
+# Avanues Universal Format v2.2
+# Type: HOV (Handover)
+---
+schema: avu-2.2
+version: 1.0.0
+project: NewAvanues
+module: architecture
+metadata:
+  file: architecture.hov
+  category: handover
+  created: 2026-02-07
+  branch: 060226-1-consolidation-framework
+  chunk: 1/4
+codes:
+  ARC: Architecture (key:value|qualifiers)
+  DEC: Decision (id:rationale|qualifiers)
+---
+ARC:pattern:KMP monorepo|shared code Android+iOS+Desktop
+ARC:modules:Foundation,Logging,AVU,AvanueUI,VoiceOSCore,WebAvanue
+DEC:d001:No typealiases|user enforced|direct imports everywhere
+DEC:d002:Flat modules over nested|Modules/AvanueUI not AVA/core/Theme
+---
 ```
 
 ---
@@ -414,6 +465,7 @@ println(parsed?.capabilities) // [accessibility.voice, ai.nlu]
 | Learned App | `.vos` | `/data/data/com.augmentalis.voiceos/files/learned_apps/` |
 | Plugin Manifest | `.avu` | `plugins/<plugin-id>/plugin.avu` |
 | Config | `.avu` | `plugins/<plugin-id>/config/*.avu` |
+| Handover | `.hov` | `.claude/handover/` or `Docs/handover/` |
 
 ---
 
@@ -460,7 +512,7 @@ println(parsed?.capabilities) // [accessibility.voice, ai.nlu]
 
 ## Version History
 
-- **2.2.0** (2026-02-03): Self-documenting headers with codes legend, unified AvuEscape, AvuCodeRegistry, IPC renamed to RPC
+- **2.2.0** (2026-02-03): Self-documenting headers with codes legend, unified AvuEscape, AvuCodeRegistry, IPC renamed to RPC, Handover (.hov) file type with 16 codes (ARC, DEC, STA, WIP, BLK, TSK, FIL, MOD, DEP, LEA, BUG, REF, CFG, API, CTX, PRI)
 - **2.1.0** (2026-02-03): Added WebSocket/Sync codes (PNG, PON, HND, CAP, SCR, SUP, SDL, SFL, SBT, SRS, SCF, SST, CON, DIS, RCN), entity types, sync states, conflict resolutions
 - **2.0.0** (2026-01-22): Added Plugin Manifest format, new codes (PLG, DSC, AUT, PCP, MOD, DEP, PRM, PLT, AST, CFG, KEY, HKS)
 - **1.0.0** (2025-12-03): Initial AVU format specification

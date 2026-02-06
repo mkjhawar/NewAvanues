@@ -27,6 +27,7 @@ enum class AvuCodeCategory(val displayName: String) {
     BROWSER("Browser"),
     AI("AI"),
     SYSTEM("System"),
+    HANDOVER("Handover"),
     CUSTOM("Custom")
 }
 

@@ -8,6 +8,9 @@ package com.avanues.avu.codec
  * @author Augmentalis Engineering
  * @since 1.0.0
  */
+import com.avanues.avu.codec.core.AvuHandoverCodes
+import com.avanues.avu.codec.core.AvuHeader
+
 object AVUDecoder {
 
     private const val DELIMITER = ':'
@@ -531,6 +534,128 @@ object AVUDecoder {
     data class AppPatternGroup(
         val category: String,
         val patterns: List<String>
+    )
+
+    // ════════════════════════════════════════════════════════════════════════
+    // HANDOVER FILE PARSING (.hov)
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Parse a complete handover file from AVU format string.
+     *
+     * @param content AVU format .hov file content
+     * @return Parsed Handover or null if invalid
+     */
+    fun parseHandover(content: String): Handover? {
+        if (content.isBlank()) return null
+
+        // Parse header
+        val (headerData, bodyStart) = AvuHeader.parse(content)
+        val body = if (bodyStart > 0 && bodyStart < content.length) {
+            content.substring(bodyStart)
+        } else {
+            content
+        }
+
+        val entries = mutableListOf<HandoverEntry>()
+        val handoverCodeSet = AvuHandoverCodes.allCodeStrings()
+
+        // Parse body lines
+        val lines = body.lines()
+        for (line in lines) {
+            val trimmed = line.trim()
+
+            // Skip empty, comments, and separators
+            if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed == "---") continue
+
+            val firstColon = trimmed.indexOf(':')
+            if (firstColon < 0) continue
+
+            val code = trimmed.substring(0, firstColon).uppercase()
+            if (code.length != 3 || !code.all { it.isUpperCase() }) continue
+
+            // Only parse known handover codes
+            if (code !in handoverCodeSet) continue
+
+            val rest = trimmed.substring(firstColon + 1)
+            val secondColon = rest.indexOf(':')
+
+            val key: String
+            val value: String
+            if (secondColon >= 0) {
+                key = rest.substring(0, secondColon)
+                value = AVUEncoder.unescape(rest.substring(secondColon + 1))
+            } else {
+                key = rest
+                value = ""
+            }
+
+            entries.add(HandoverEntry(code = code, key = key, value = value))
+        }
+
+        if (entries.isEmpty()) return null
+
+        return Handover(
+            header = headerData,
+            module = headerData.metadata["module"]
+                ?: headerData.sections["module"]?.firstOrNull()
+                ?: "",
+            entries = entries
+        )
+    }
+
+    /**
+     * Check if content is a valid handover file.
+     */
+    fun isHandover(content: String): Boolean {
+        return content.lines().any { line ->
+            val trimmed = line.trim()
+            trimmed.contains("Type: HOV") ||
+                trimmed.contains("Type: Handover") ||
+                trimmed.startsWith("${AvuHandoverCodes.CODE_ARC}:")
+        }
+    }
+
+    /**
+     * Parsed handover file.
+     */
+    data class Handover(
+        val header: AvuHeader.HeaderData = AvuHeader.HeaderData(),
+        val module: String = "",
+        val entries: List<HandoverEntry> = emptyList()
+    ) {
+        fun getByCode(code: String): List<HandoverEntry> =
+            entries.filter { it.code == code }
+
+        fun architectureEntries(): List<HandoverEntry> =
+            getByCode(AvuHandoverCodes.CODE_ARC)
+
+        fun decisions(): List<HandoverEntry> =
+            getByCode(AvuHandoverCodes.CODE_DEC)
+
+        fun stateEntries(): List<HandoverEntry> =
+            getByCode(AvuHandoverCodes.CODE_STA)
+
+        fun tasks(): List<HandoverEntry> =
+            getByCode(AvuHandoverCodes.CODE_TSK)
+
+        fun wipEntries(): List<HandoverEntry> =
+            getByCode(AvuHandoverCodes.CODE_WIP)
+
+        fun blockers(): List<HandoverEntry> =
+            getByCode(AvuHandoverCodes.CODE_BLK)
+
+        fun learnings(): List<HandoverEntry> =
+            getByCode(AvuHandoverCodes.CODE_LEA)
+    }
+
+    /**
+     * Single handover entry.
+     */
+    data class HandoverEntry(
+        val code: String,
+        val key: String,
+        val value: String
     )
 
     // ════════════════════════════════════════════════════════════════════════
