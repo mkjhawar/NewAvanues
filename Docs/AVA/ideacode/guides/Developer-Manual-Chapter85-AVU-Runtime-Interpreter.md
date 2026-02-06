@@ -3,6 +3,7 @@
 **Date**: 2026-02-06
 **Author**: Augmentalis Engineering
 **Status**: Active
+**Implementation**: Phase 2 Complete
 
 ---
 
@@ -20,17 +21,35 @@ Layer 3 of the AVU three-layer architecture. The AVU Runtime is a tree-walking i
 Source (.vos/.avp)
     |
     v
-[AvuDslLexer]     -->  List<Token>     (Layer 2: lexer/)
+[AvuDslLexer]          -->  List<Token>     (Layer 2: lexer/)
     |
     v
-[AvuDslParser]    -->  AvuDslFile      (Layer 2: parser/)
+[AvuDslParser]         -->  AvuDslFile      (Layer 2: parser/)
     |
     v
-[AvuInterpreter]  -->  Execution       (Layer 3: interpreter/)
+[AvuInterpreter]       -->  Execution       (Layer 3: interpreter/)
+  |-- ExpressionEvaluator  (expressions + type coercion)
+  |-- ExecutionContext      (scope stack + sandbox enforcement)
     |
     v
-[IAvuDispatcher]  -->  System actions  (Platform-specific)
+[IAvuDispatcher]       -->  System actions  (Platform-specific)
 ```
+
+---
+
+## File Layout
+
+```
+dsl/interpreter/
+├── SandboxConfig.kt         (50 lines)  - Execution limit configuration
+├── RuntimeError.kt           (85 lines)  - Sealed error hierarchy
+├── IAvuDispatcher.kt         (75 lines)  - Dispatch interface + CompositeDispatcher
+├── ExecutionContext.kt       (170 lines) - Scope stack, functions, events, sandbox
+├── ExpressionEvaluator.kt   (230 lines) - Expression evaluation + type coercion
+└── AvuInterpreter.kt        (415 lines) - Statement execution + public API
+```
+
+Total: ~1,025 lines across 6 files.
 
 ---
 
@@ -78,7 +97,7 @@ All nodes carry `SourceLocation(line, column, length)` for error reporting.
 
 ---
 
-## IAvuDispatcher Interface (Future Phase 2)
+## IAvuDispatcher Interface
 
 The dispatcher abstracts platform-specific code execution:
 
@@ -90,8 +109,8 @@ interface IAvuDispatcher {
 
 sealed class DispatchResult {
     data class Success(val data: Any? = null) : DispatchResult()
-    data class Error(val message: String, val code: String? = null) : DispatchResult()
-    data class Timeout(val code: String) : DispatchResult()
+    data class Error(val message: String, val cause: Throwable? = null) : DispatchResult()
+    data class Timeout(val timeoutMs: Long) : DispatchResult()
 }
 ```
 
@@ -101,25 +120,152 @@ sealed class DispatchResult {
 - **Async support:** `suspend` functions for long-running operations
 - **Capability detection:** `canDispatch()` enables dispatcher chaining
 
+### CompositeDispatcher
+
+Chain-of-responsibility pattern for multi-platform or multi-module dispatch:
+
+```kotlin
+class CompositeDispatcher(private val dispatchers: List<IAvuDispatcher>) : IAvuDispatcher {
+    override suspend fun dispatch(code: String, arguments: Map<String, Any?>): DispatchResult {
+        for (dispatcher in dispatchers) {
+            if (dispatcher.canDispatch(code)) return dispatcher.dispatch(code, arguments)
+        }
+        return DispatchResult.Error("No dispatcher found for code: $code")
+    }
+    override fun canDispatch(code: String): Boolean = dispatchers.any { it.canDispatch(code) }
+}
+```
+
 ---
 
-## AvuInterpreter (Future Phase 2)
+## AvuInterpreter
+
+**Public API:**
 
 ```kotlin
 class AvuInterpreter(
     private val dispatcher: IAvuDispatcher,
-    private val sandbox: SandboxConfig = SandboxConfig()
+    private val sandbox: SandboxConfig = SandboxConfig.DEFAULT
 ) {
     suspend fun execute(file: AvuDslFile): ExecutionResult
-    suspend fun executeWorkflow(workflow: AvuAstNode.Declaration.Workflow): ExecutionResult
-    suspend fun handleTrigger(pattern: String, captures: Map<String, String>): ExecutionResult
+    suspend fun executeWorkflow(file: AvuDslFile, name: String): ExecutionResult
+    suspend fun handleTrigger(file: AvuDslFile, pattern: String, captures: Map<String, String>): ExecutionResult
 }
+```
 
+**Result type:**
+
+```kotlin
 sealed class ExecutionResult {
-    data class Success(val value: Any?) : ExecutionResult()
-    data class Error(val message: String, val location: SourceLocation?) : ExecutionResult()
-    object NoHandler : ExecutionResult()
+    data class Success(val returnValue: Any? = null, val executionTimeMs: Long = 0) : ExecutionResult()
+    data class Failure(val error: RuntimeError, val executionTimeMs: Long = 0) : ExecutionResult()
+    data object NoHandler : ExecutionResult()
 }
+```
+
+### SOLID Architecture
+
+The interpreter follows Single Responsibility Principle with two collaborating classes:
+
+| Class | Responsibility |
+|-------|---------------|
+| `AvuInterpreter` | Statement execution, control flow, public API |
+| `ExpressionEvaluator` | Expression evaluation, type coercion, built-in dispatch |
+
+Both share `ExecutionContext` (scope stack + sandbox enforcement).
+
+---
+
+## ExpressionEvaluator
+
+Evaluates all 11 expression types with JavaScript-like type coercion:
+
+```kotlin
+internal class ExpressionEvaluator(private val dispatcher: IAvuDispatcher) {
+    suspend fun evaluate(expr: Expression, context: ExecutionContext): Any?
+    fun toBooleanValue(value: Any?): Boolean
+    fun toNumber(value: Any?, location: SourceLocation): Number
+}
+```
+
+### Type Coercion Rules
+
+| Operation | Behavior |
+|-----------|----------|
+| `+` (String on either side) | String concatenation |
+| `+` (both numeric) | Addition (Int if both Int, else Double) |
+| `-`, `*` | Numeric only (Int if both Int, else Double) |
+| `/` | Numeric only, always Double |
+| `==`, `!=` | Structural equality |
+| `<`, `>`, `<=`, `>=` | Numeric only |
+| `and`, `or` | Boolean coercion, non-short-circuit |
+
+### Boolean Coercion
+
+| Value | Boolean |
+|-------|---------|
+| `null`, `false`, `0`, `0.0`, `""` | `false` |
+| Everything else | `true` |
+
+### Built-In Method Dispatch
+
+`screen.contains("text")` flows through:
+
+1. `Identifier("screen")` evaluates to String `"screen"`
+2. `MemberAccess` creates `BuiltInCallable("screen", "contains")`
+3. `CallExpression` dispatches `QRY` code:
+   ```kotlin
+   dispatcher.dispatch("QRY", mapOf(
+       "query" to "screen_contains",
+       "target" to "screen",
+       "method" to "contains",
+       "args" to listOf("text")
+   ))
+   ```
+
+---
+
+## ExecutionContext
+
+Manages runtime state for a single execution:
+
+```kotlin
+class ExecutionContext(private val sandbox: SandboxConfig) {
+    // Variable scope stack (innermost-to-outermost lookup)
+    fun pushScope() / fun popScope()
+    fun getVariable(name: String): Any?
+    fun setVariable(name: String, value: Any?, location: SourceLocation?)
+
+    // Function registry (@define)
+    fun registerFunction(funcDef: FunctionDef)
+    fun getFunction(name: String): FunctionDef?
+
+    // Event listeners (@emit)
+    fun addEventListener(event: String, listener: (Any?) -> Unit)
+    fun emitEvent(event: String, data: Any?)
+
+    // Sandbox enforcement
+    fun incrementStep(location: SourceLocation?)     // checks step + time limits
+    fun enterNesting(location: SourceLocation?)       // checks depth limit
+    fun exitNesting()
+    fun checkLoopLimit(iterations: Int, location: SourceLocation?)
+}
+```
+
+### Variable Scoping
+
+Variables use a scope stack with update-in-place semantics:
+- `setVariable` searches all scopes for existing variable; if found, updates in place
+- If not found, creates in current (innermost) scope
+- This enables functions to modify parent-scope variables
+
+```
+@workflow "example"
+  @set global = "outer"
+  @define inner_func()
+    @set local = "inner"
+    @log $local       # "inner"
+    @log $global      # "outer" (found in parent scope)
 ```
 
 ---
@@ -133,123 +279,115 @@ data class SandboxConfig(
     val maxLoopIterations: Int = 100,
     val maxNestingDepth: Int = 10,
     val maxVariables: Int = 100
-)
+) {
+    companion object {
+        val DEFAULT = SandboxConfig()
+        val STRICT = SandboxConfig(5_000, 500, 50, 5, 50)
+        val SYSTEM = SandboxConfig(60_000, 10_000, 1_000, 20, 500)
+        val TESTING = SandboxConfig(60_000, 10_000, 1_000, 50, 500)
+    }
+}
 ```
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `maxExecutionTimeMs` | 10,000 | Wall-clock timeout |
-| `maxSteps` | 1,000 | Max interpreter steps (statement executions) |
-| `maxLoopIterations` | 100 | Max iterations per `@repeat`/`@while` |
-| `maxNestingDepth` | 10 | Max call stack depth (`@define` nesting) |
-| `maxVariables` | 100 | Max variables in scope |
-
-### Profiles
-
-```kotlin
-// Strict: untrusted user plugins
-val strictSandbox = SandboxConfig(
-    maxExecutionTimeMs = 5_000, maxSteps = 500,
-    maxLoopIterations = 50, maxNestingDepth = 5, maxVariables = 50
-)
-
-// Relaxed: system workflows
-val relaxedSandbox = SandboxConfig(
-    maxExecutionTimeMs = 60_000, maxSteps = 10_000,
-    maxLoopIterations = 1_000, maxNestingDepth = 20, maxVariables = 500
-)
-```
+| Profile | Use Case | Time | Steps | Loops |
+|---------|----------|------|-------|-------|
+| `DEFAULT` | General use | 10s | 1,000 | 100 |
+| `STRICT` | Untrusted plugins | 5s | 500 | 50 |
+| `SYSTEM` | System workflows | 60s | 10,000 | 1,000 |
+| `TESTING` | Unit tests | 60s | 10,000 | 1,000 |
 
 ---
 
-## Execution Model
+## Runtime Errors
 
-### Tree-Walking Evaluation
-
-The interpreter walks the AST using a visitor pattern:
-
-1. **Declarations** define workflows, functions, and trigger handlers
-2. **Statements** execute side effects (code invocations, assignments, control flow)
-3. **Expressions** evaluate to values (literals, variables, operations)
-
-### Variable Scope
-
-Lexical scoping with scope stack:
-
-- **Global scope:** Top-level variables
-- **Workflow scope:** Created by `@workflow`
-- **Function scope:** Created by `@define`
-- Variable lookup searches innermost to outermost scope
-
-```
-@workflow "example"
-  @set global = "outer"
-  @define inner_func()
-    @set local = "inner"
-    @log $local       # "inner"
-    @log $global      # "outer" (found in parent scope)
-```
-
-### Code Invocation Execution
-
-1. Evaluate each `NamedArgument` expression to a value
-2. Build `Map<String, Any?>` from name-value pairs
-3. Call `dispatcher.dispatch(code, arguments)`
-4. Check `DispatchResult` and handle errors
-
-```
-VCM(id: "cmd1", action: "SCROLL_DOWN", target: "chrome")
-```
-
-Translates to:
+Sealed class hierarchy, all carrying `SourceLocation`:
 
 ```kotlin
-dispatcher.dispatch("VCM", mapOf(
-    "id" to "cmd1",
-    "action" to "SCROLL_DOWN",
-    "target" to "chrome"
-))
+sealed class RuntimeError(message: String, val location: SourceLocation?) : Exception(message) {
+    class SandboxViolation(violation: String, limit: Long, current: Long, loc: SourceLocation?)
+    class DispatchError(code: String, reason: String, loc: SourceLocation?)
+    class TypeError(expected: String, actual: String, operation: String, loc: SourceLocation?)
+    class UndefinedVariable(name: String, loc: SourceLocation?)
+    class UndefinedFunction(name: String, loc: SourceLocation?)
+    class TimeoutError(timeoutMs: Long, description: String, loc: SourceLocation?)
+    class General(reason: String, loc: SourceLocation?, cause: Throwable? = null)
+}
 ```
-
-### Control Flow
-
-| Construct | Behavior |
-|-----------|----------|
-| `@if`/`@else` | Evaluate condition to Boolean, execute branch |
-| `@repeat N` | Execute body N times (capped by `maxLoopIterations`) |
-| `@while cond` | Execute body while condition is true (capped) |
-| `@wait N` | Suspend for N milliseconds |
-| `@wait cond timeout N` | Poll condition every 100ms, throw on timeout |
-| `@return [expr]` | Early exit via exception-based control flow |
-| `@emit "event" [data]` | Fire event to registered listeners |
-| `@sequence` | Execute statements sequentially (explicit grouping) |
-
----
-
-## Error Handling
-
-All runtime errors carry `SourceLocation` for precise reporting.
-
-### Error Types
-
-| Error | Cause |
-|-------|-------|
-| `SandboxViolation` | Step limit, timeout, nesting depth, variable count exceeded |
-| `DispatchError` | Code invocation failed (unknown code, invalid args, platform error) |
-| `TypeError` | Wrong operand types (non-Boolean condition, non-integer loop count) |
-| `UndefinedVariable` | Reference to `$variable` that was never assigned |
-| `TimeoutError` | `@wait condition` exceeded its timeout |
 
 ### Error Format
 
 ```
 TypeError: Cannot apply '+' to String and Boolean
-  at line 23, column 15 in workflow "calculate"
+  at line 23, column 15
 ```
 
 ---
 
-## Platform Dispatchers (Future Phase 2)
+## Statement Execution
+
+| Statement | Behavior |
+|-----------|----------|
+| `CodeInvocation` | Evaluate args, `dispatcher.dispatch(code, argsMap)` |
+| `FunctionCall` | Lookup @define, push scope, bind params (named then positional), execute body |
+| `WaitDelay` | `kotlinx.coroutines.delay(ms)` |
+| `WaitCondition` | Poll condition every 100ms, throw `TimeoutError` on timeout |
+| `IfElse` | Evaluate condition to Boolean, execute `thenBody` or `elseBody` |
+| `Repeat` | Evaluate count, check loop limit, execute body N times |
+| `While` | Evaluate condition each iteration, check loop limit |
+| `Sequence` | Execute body statements sequentially |
+| `Assignment` | Evaluate expression, set variable in scope |
+| `Log` | Evaluate expression, `println("[AVU DSL] $msg")` |
+| `Return` | Throw `ReturnException(value)`, caught at function/workflow boundary |
+| `Emit` | Evaluate data, call `context.emitEvent()` |
+
+### Function Parameter Binding
+
+Named arguments bind first, then positional fill remaining slots:
+
+```
+@define login(app, username, password)
+  ...
+
+# Named arguments:
+login(app: "slack", username: "john", password: "secret")
+
+# Mixed (positional fills unbound):
+login("slack", password: "secret", username: "john")
+```
+
+---
+
+## Full Usage Example
+
+```kotlin
+import com.augmentalis.voiceoscore.dsl.lexer.AvuDslLexer
+import com.augmentalis.voiceoscore.dsl.parser.AvuDslParser
+import com.augmentalis.voiceoscore.dsl.interpreter.*
+
+// 1. Parse
+val source = File("workflow.vos").readText()
+val tokens = AvuDslLexer(source).tokenize()
+val parseResult = AvuDslParser(tokens).parse()
+if (parseResult.hasErrors) { /* report errors */ }
+
+// 2. Execute
+val dispatcher = CompositeDispatcher(listOf(
+    AccessibilityDispatcher(service),
+    VoiceCommandDispatcher(),
+    QueryDispatcher(screenReader)
+))
+val interpreter = AvuInterpreter(dispatcher, SandboxConfig.DEFAULT)
+
+when (val result = interpreter.execute(parseResult.file)) {
+    is ExecutionResult.Success -> println("Done in ${result.executionTimeMs}ms")
+    is ExecutionResult.Failure -> println("Error: ${result.error.message}")
+    is ExecutionResult.NoHandler -> println("No handler found")
+}
+```
+
+---
+
+## Platform Dispatchers (Future Phase 3)
 
 | Platform | Dispatcher | Mechanism |
 |----------|-----------|-----------|
@@ -257,26 +395,6 @@ TypeError: Cannot apply '+' to String and Boolean
 | iOS | `iOSAvuDispatcher` | UIAccessibility, URL scheme dispatch |
 | Desktop | `DesktopAvuDispatcher` | Robot API, window management |
 | Web | `WebAvuDispatcher` | DOM manipulation, browser extension APIs |
-
-### Android Example
-
-```kotlin
-class AndroidAvuDispatcher(
-    private val accessibilityService: AccessibilityService
-) : IAvuDispatcher {
-    override suspend fun dispatch(code: String, arguments: Map<String, Any?>): DispatchResult {
-        return when (code) {
-            "AAC" -> handleAccessibilityAction(arguments)
-            "VCM" -> handleVoiceCommand(arguments)
-            "SCR" -> handleScreenRead(arguments)
-            else -> DispatchResult.Error("Unsupported code: $code")
-        }
-    }
-
-    override fun canDispatch(code: String): Boolean =
-        code in setOf("AAC", "VCM", "SCR", "APP", "SYS")
-}
-```
 
 ---
 
@@ -305,4 +423,5 @@ class AndroidAvuDispatcher(
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | 2026-02-06 | Initial chapter |
+| 1.0 | 2026-02-06 | Initial chapter (design spec) |
+| 2.0 | 2026-02-06 | Updated with actual implementation (Phase 2 complete) |
