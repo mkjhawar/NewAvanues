@@ -495,14 +495,14 @@ private fun Modifier.verticalScrollableContainer(): Modifier {
 /**
  * Get icon for action type
  */
-private fun getActionTypeIcon(actionType: com.augmentalis.voiceoscore.registry.ActionType): androidx.compose.ui.graphics.vector.ImageVector {
+private fun getActionTypeIcon(actionType: com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType): androidx.compose.ui.graphics.vector.ImageVector {
     return when (actionType) {
-        com.augmentalis.voiceoscore.registry.ActionType.LAUNCH_APP -> Icons.Default.Apps
-        com.augmentalis.voiceoscore.registry.ActionType.NAVIGATE -> Icons.Default.Navigation
-        com.augmentalis.voiceoscore.registry.ActionType.SYSTEM_COMMAND -> Icons.Default.Settings
-        com.augmentalis.voiceoscore.registry.ActionType.CUSTOM_ACTION -> Icons.Default.Extension
-        com.augmentalis.voiceoscore.registry.ActionType.TEXT_EDITING -> Icons.Default.Edit
-        com.augmentalis.voiceoscore.registry.ActionType.MEDIA_CONTROL -> Icons.Default.MusicNote
-        com.augmentalis.voiceoscore.registry.ActionType.ACCESSIBILITY -> Icons.Default.Accessibility
+        com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType.LAUNCH_APP -> Icons.Default.Apps
+        com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType.NAVIGATE -> Icons.Default.Navigation
+        com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType.SYSTEM_COMMAND -> Icons.Default.Settings
+        com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType.CUSTOM_ACTION -> Icons.Default.Extension
+        com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType.TEXT_EDITING -> Icons.Default.Edit
+        com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType.MEDIA_CONTROL -> Icons.Default.MusicNote
+        com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType.ACCESSIBILITY -> Icons.Default.Accessibility
     }
 }

@@ -164,10 +164,12 @@ class VoiceOSAvuRpcServer(
         return VoiceOSAvuEncoder.encodeStatusResponse(
             ServiceStatus(
                 requestId = request.requestId,
-                isActive = status.isActive,
-                currentApp = status.currentApp,
-                isRecognizing = status.isRecognizing,
-                recognizedCommands = status.recognizedCommands
+                isReady = status.isReady,
+                isAccessibilityEnabled = status.isAccessibilityEnabled,
+                isVoiceRecognitionActive = status.isVoiceRecognitionActive,
+                currentLanguage = status.currentLanguage,
+                version = status.version,
+                capabilities = status.capabilities
             )
         )
     }
@@ -203,7 +205,7 @@ class VoiceOSAvuRpcServer(
             AccessibilityActionResponse(
                 requestId = request.requestId,
                 success = success,
-                result = result
+                resultText = result
             )
         )
     }
@@ -226,12 +228,11 @@ class VoiceOSAvuRpcServer(
             append(":").append(VoiceOSAvuEncoder.escape(response.packageName))
             append(":").append(VoiceOSAvuEncoder.escape(response.activityName))
             append(":").append(response.elements.size)
-            append(":").append(response.timestamp)
         })
 
         // Elements
         response.elements.forEach { element ->
-            lines.add(VoiceOSAvuEncoder.encodeScrapedElement(element))
+            lines.add(VoiceOSAvuEncoder.encodeScreenElement(element))
         }
 
         // End marker
@@ -331,12 +332,8 @@ class VoiceOSAvuRpcServer(
                 append("CMD")
                 append(":").append(VoiceOSAvuEncoder.escape(cmd.phrase))
                 append(":").append(VoiceOSAvuEncoder.escape(cmd.actionType))
-                append(":").append(VoiceOSAvuEncoder.escape(cmd.targetAvid ?: ""))
-                append(":").append(
-                    cmd.params.entries.joinToString(",") {
-                        "${VoiceOSAvuEncoder.escape(it.key)}=${VoiceOSAvuEncoder.escape(it.value)}"
-                    }
-                )
+                append(":").append(VoiceOSAvuEncoder.escape(cmd.targetAvid))
+                append(":").append(cmd.confidence)
             })
         }
 

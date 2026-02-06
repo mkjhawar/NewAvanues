@@ -3,17 +3,19 @@
  *
  * Created: 2025-10-10 18:01 PDT
  * Author: VOS4 Development Team
- * Version: 3.0.0
+ * Version: 4.0.0
  *
- * Purpose: Voice command handlers for VoiceCursor - delegates to VoiceCursorAPI
+ * Purpose: Voice command handlers for VoiceCursor - uses CursorController directly
  * Module: CommandManager
  *
- * This class provides voice command execution by delegating to VoiceCursorAPI.
- * All command logic is centralized here, keeping VoiceCursor focused on cursor mechanics.
+ * This class provides voice command execution by calling CursorController directly
+ * and dispatching gestures (click, long press, scroll) via AndroidGestureDispatcher.
+ * The intermediate VoiceCursorAPI bridge has been removed.
  *
  * Extracted from VoiceCursor/CursorCommandHandler as part of separation of concerns refactoring.
  *
  * Changelog:
+ * - v4.0.0 (2026-02-06): Remove VoiceCursorAPI bridge, use CursorController + AndroidGestureDispatcher directly
  * - v3.0.0 (2025-10-10): Complete refactor - direct VoiceCursorAPI delegation pattern
  * - v2.0.0 (2025-08-19): BaseAction pattern implementation (backed up as .backup-251010-1801)
  * - v1.0.0: Initial version
@@ -24,28 +26,59 @@ package com.augmentalis.voiceoscore.managers.commandmanager.actions
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.augmentalis.voiceos.cursor.VoiceCursorAPI
-import com.augmentalis.voiceos.cursor.core.CursorConfig
-import com.augmentalis.voiceos.cursor.core.CursorOffset
-import com.augmentalis.voiceos.cursor.core.CursorType
-import com.augmentalis.voiceos.cursor.view.CursorAction
+import com.augmentalis.voicecursor.core.CursorConfig
+import com.augmentalis.voicecursor.core.CursorController
+import com.augmentalis.voicecursor.core.CursorInput
+import com.augmentalis.voicecursor.core.CursorOffset
+import com.augmentalis.voicecursor.core.CursorType
+import com.augmentalis.voicecursor.core.CursorAction
+import com.augmentalis.voiceoscore.AndroidGestureDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
  * CursorActions - Voice command handlers for VoiceCursor
  *
- * This object provides voice command execution by delegating to VoiceCursorAPI.
- * All cursor operations go through the public API, maintaining clean separation.
+ * This object provides voice command execution by calling CursorController
+ * directly for cursor state/movement, and AndroidGestureDispatcher for
+ * gesture actions (click, long press, scroll).
  *
  * Design:
  * - All methods are suspend functions for consistency with command processing
- * - Pure delegation pattern - no business logic here
+ * - CursorController handles position, visibility, and configuration
+ * - AndroidGestureDispatcher handles gesture dispatch via AccessibilityService
  * - All methods return Boolean indicating success/failure
  * - Errors are logged and returned as false
+ *
+ * Initialization:
+ * - Call [initialize] with a CursorController and AndroidGestureDispatcher
+ *   before using any cursor commands.
  */
 object CursorActions {
     private const val TAG = "CursorActions"
+
+    private var controller: CursorController? = null
+    private var gestureDispatcher: AndroidGestureDispatcher? = null
+
+    /**
+     * Initialize CursorActions with required dependencies.
+     *
+     * @param cursorController The CursorController instance for position/state management
+     * @param dispatcher The AndroidGestureDispatcher for click/scroll gestures (nullable for
+     *                   environments without AccessibilityService; gesture actions will return false)
+     */
+    fun initialize(cursorController: CursorController, dispatcher: AndroidGestureDispatcher? = null) {
+        controller = cursorController
+        gestureDispatcher = dispatcher
+        Log.d(TAG, "Initialized with CursorController" +
+            if (dispatcher != null) " and AndroidGestureDispatcher" else " (no gesture dispatcher)")
+    }
+
+    /**
+     * Check if CursorActions has been initialized.
+     */
+    fun isInitialized(): Boolean = controller != null
 
     // ========== Movement Commands ==========
 
@@ -59,26 +92,36 @@ object CursorActions {
     suspend fun moveCursor(direction: CursorDirection, distance: Float = 50f): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val currentPosition = VoiceCursorAPI.getCurrentPosition() ?: run {
-                    Log.w(TAG, "Cannot move cursor - cursor not visible or not initialized")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot move cursor - CursorController not initialized")
                     return@withContext false
                 }
 
-                val newPosition = when (direction) {
-                    CursorDirection.UP -> currentPosition.copy(y = currentPosition.y - distance)
-                    CursorDirection.DOWN -> currentPosition.copy(y = currentPosition.y + distance)
-                    CursorDirection.LEFT -> currentPosition.copy(x = currentPosition.x - distance)
-                    CursorDirection.RIGHT -> currentPosition.copy(x = currentPosition.x + distance)
+                val state = ctrl.state.value
+                if (!state.isVisible) {
+                    Log.w(TAG, "Cannot move cursor - cursor not visible")
+                    return@withContext false
                 }
 
-                // Use VoiceCursorAPI.moveTo() to move cursor to new position
-                val success = VoiceCursorAPI.moveTo(newPosition, animate = true)
-                if (success) {
-                    Log.d(TAG, "Moved cursor $direction by $distance pixels to (${newPosition.x}, ${newPosition.y})")
-                } else {
-                    Log.w(TAG, "Failed to move cursor $direction")
+                val currentPosition = state.position
+                val newX = when (direction) {
+                    CursorDirection.LEFT -> currentPosition.x - distance
+                    CursorDirection.RIGHT -> currentPosition.x + distance
+                    else -> currentPosition.x
                 }
-                success
+                val newY = when (direction) {
+                    CursorDirection.UP -> currentPosition.y - distance
+                    CursorDirection.DOWN -> currentPosition.y + distance
+                    else -> currentPosition.y
+                }
+
+                ctrl.update(
+                    CursorInput.DirectPosition(newX, newY),
+                    System.currentTimeMillis()
+                )
+
+                Log.d(TAG, "Moved cursor $direction by $distance pixels to ($newX, $newY)")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to move cursor $direction", e)
                 false
@@ -89,18 +132,31 @@ object CursorActions {
     // ========== Click Actions ==========
 
     /**
-     * Perform single click at current cursor position
+     * Perform single click at current cursor position.
+     *
+     * Dispatches a tap gesture via AccessibilityService at the cursor's current coordinates.
      *
      * @return true if click was performed successfully, false otherwise
      */
     suspend fun click(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.click()
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot click - CursorController not initialized")
+                    return@withContext false
+                }
+                val dispatcher = gestureDispatcher ?: run {
+                    Log.w(TAG, "Cannot click - AndroidGestureDispatcher not available")
+                    return@withContext false
+                }
+
+                val position = ctrl.state.value.position
+                val success = dispatcher.tap(position.x, position.y)
+
                 if (success) {
-                    Log.d(TAG, "Single click performed")
+                    Log.d(TAG, "Single click performed at (${position.x}, ${position.y})")
                 } else {
-                    Log.w(TAG, "Single click failed")
+                    Log.w(TAG, "Single click failed at (${position.x}, ${position.y})")
                 }
                 success
             } catch (e: Exception) {
@@ -111,20 +167,43 @@ object CursorActions {
     }
 
     /**
-     * Perform double click at current cursor position
+     * Perform double click at current cursor position.
+     *
+     * Dispatches two rapid tap gestures via AccessibilityService at the cursor's
+     * current coordinates with a brief pause between them.
      *
      * @return true if double click was performed successfully, false otherwise
      */
     suspend fun doubleClick(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.doubleClick()
-                if (success) {
-                    Log.d(TAG, "Double click performed")
-                } else {
-                    Log.w(TAG, "Double click failed")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot double click - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+                val dispatcher = gestureDispatcher ?: run {
+                    Log.w(TAG, "Cannot double click - AndroidGestureDispatcher not available")
+                    return@withContext false
+                }
+
+                val position = ctrl.state.value.position
+                val firstTap = dispatcher.tap(position.x, position.y)
+                if (!firstTap) {
+                    Log.w(TAG, "Double click failed - first tap failed")
+                    return@withContext false
+                }
+
+                // Brief pause between taps (Android ViewConfiguration double-tap timeout is ~300ms;
+                // keeping interval short to register as double-tap)
+                delay(40L)
+
+                val secondTap = dispatcher.tap(position.x, position.y)
+                if (secondTap) {
+                    Log.d(TAG, "Double click performed at (${position.x}, ${position.y})")
+                } else {
+                    Log.w(TAG, "Double click partially failed - second tap failed")
+                }
+                secondTap
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to perform double click", e)
                 false
@@ -133,18 +212,32 @@ object CursorActions {
     }
 
     /**
-     * Perform long press at current cursor position
+     * Perform long press at current cursor position.
+     *
+     * Dispatches a long press gesture via AccessibilityService (500ms hold)
+     * at the cursor's current coordinates.
      *
      * @return true if long press was performed successfully, false otherwise
      */
     suspend fun longPress(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.longPress()
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot long press - CursorController not initialized")
+                    return@withContext false
+                }
+                val dispatcher = gestureDispatcher ?: run {
+                    Log.w(TAG, "Cannot long press - AndroidGestureDispatcher not available")
+                    return@withContext false
+                }
+
+                val position = ctrl.state.value.position
+                val success = dispatcher.longPress(position.x, position.y)
+
                 if (success) {
-                    Log.d(TAG, "Long press performed")
+                    Log.d(TAG, "Long press performed at (${position.x}, ${position.y})")
                 } else {
-                    Log.w(TAG, "Long press failed")
+                    Log.w(TAG, "Long press failed at (${position.x}, ${position.y})")
                 }
                 success
             } catch (e: Exception) {
@@ -165,13 +258,16 @@ object CursorActions {
     suspend fun showCursor(config: CursorConfig = CursorConfig()): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.showCursor(config)
-                if (success) {
-                    Log.d(TAG, "Cursor shown")
-                } else {
-                    Log.w(TAG, "Failed to show cursor")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot show cursor - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                ctrl.updateConfig(config)
+                ctrl.setVisible(true)
+
+                Log.d(TAG, "Cursor shown")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to show cursor", e)
                 false
@@ -187,13 +283,15 @@ object CursorActions {
     suspend fun hideCursor(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.hideCursor()
-                if (success) {
-                    Log.d(TAG, "Cursor hidden")
-                } else {
-                    Log.w(TAG, "Failed to hide cursor")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot hide cursor - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                ctrl.setVisible(false)
+
+                Log.d(TAG, "Cursor hidden")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to hide cursor", e)
                 false
@@ -209,13 +307,15 @@ object CursorActions {
     suspend fun centerCursor(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.centerCursor()
-                if (success) {
-                    Log.d(TAG, "Cursor centered")
-                } else {
-                    Log.w(TAG, "Failed to center cursor")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot center cursor - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                ctrl.resetToCenter()
+
+                Log.d(TAG, "Cursor centered")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to center cursor", e)
                 false
@@ -231,13 +331,16 @@ object CursorActions {
     suspend fun toggleCursor(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.toggleCursor()
-                if (success) {
-                    Log.d(TAG, "Cursor visibility toggled")
-                } else {
-                    Log.w(TAG, "Failed to toggle cursor")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot toggle cursor - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                val isCurrentlyVisible = ctrl.state.value.isVisible
+                ctrl.setVisible(!isCurrentlyVisible)
+
+                Log.d(TAG, "Cursor visibility toggled to: ${!isCurrentlyVisible}")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to toggle cursor", e)
                 false
@@ -255,16 +358,16 @@ object CursorActions {
     suspend fun showCoordinates(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                // Get current config, update showCoordinates, apply
-                val currentConfig = getCurrentConfig()
-                val newConfig = currentConfig.copy(showCoordinates = true)
-                val success = VoiceCursorAPI.updateConfiguration(newConfig)
-                if (success) {
-                    Log.d(TAG, "Cursor coordinates shown")
-                } else {
-                    Log.w(TAG, "Failed to show coordinates")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot show coordinates - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                val currentConfig = ctrl.getConfig()
+                ctrl.updateConfig(currentConfig.copy(showCoordinates = true))
+
+                Log.d(TAG, "Cursor coordinates shown")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to show coordinates", e)
                 false
@@ -280,15 +383,16 @@ object CursorActions {
     suspend fun hideCoordinates(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val currentConfig = getCurrentConfig()
-                val newConfig = currentConfig.copy(showCoordinates = false)
-                val success = VoiceCursorAPI.updateConfiguration(newConfig)
-                if (success) {
-                    Log.d(TAG, "Cursor coordinates hidden")
-                } else {
-                    Log.w(TAG, "Failed to hide coordinates")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot hide coordinates - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                val currentConfig = ctrl.getConfig()
+                ctrl.updateConfig(currentConfig.copy(showCoordinates = false))
+
+                Log.d(TAG, "Cursor coordinates hidden")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to hide coordinates", e)
                 false
@@ -304,15 +408,17 @@ object CursorActions {
     suspend fun toggleCoordinates(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val currentConfig = getCurrentConfig()
-                val newConfig = currentConfig.copy(showCoordinates = !currentConfig.showCoordinates)
-                val success = VoiceCursorAPI.updateConfiguration(newConfig)
-                if (success) {
-                    Log.d(TAG, "Cursor coordinates toggled to: ${newConfig.showCoordinates}")
-                } else {
-                    Log.w(TAG, "Failed to toggle coordinates")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot toggle coordinates - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                val currentConfig = ctrl.getConfig()
+                val newShowCoordinates = !currentConfig.showCoordinates
+                ctrl.updateConfig(currentConfig.copy(showCoordinates = newShowCoordinates))
+
+                Log.d(TAG, "Cursor coordinates toggled to: $newShowCoordinates")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to toggle coordinates", e)
                 false
@@ -329,15 +435,16 @@ object CursorActions {
     suspend fun setCursorType(type: CursorType): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val currentConfig = getCurrentConfig()
-                val newConfig = currentConfig.copy(type = type)
-                val success = VoiceCursorAPI.updateConfiguration(newConfig)
-                if (success) {
-                    Log.d(TAG, "Cursor type set to: $type")
-                } else {
-                    Log.w(TAG, "Failed to set cursor type")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot set cursor type - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                val currentConfig = ctrl.getConfig()
+                ctrl.updateConfig(currentConfig.copy(type = type))
+
+                Log.d(TAG, "Cursor type set to: $type")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to set cursor type", e)
                 false
@@ -355,14 +462,16 @@ object CursorActions {
     suspend fun showMenu(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                // Menu is integrated into cursor view, so just ensure cursor is visible
-                val success = VoiceCursorAPI.showCursor()
-                if (success) {
-                    Log.d(TAG, "Cursor menu shown (integrated in cursor view)")
-                } else {
-                    Log.w(TAG, "Failed to show cursor menu")
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot show menu - CursorController not initialized")
+                    return@withContext false
                 }
-                success
+
+                // Menu is integrated into cursor view, so just ensure cursor is visible
+                ctrl.setVisible(true)
+
+                Log.d(TAG, "Cursor menu shown (integrated in cursor view)")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to show cursor menu", e)
                 false
@@ -405,11 +514,15 @@ object CursorActions {
     suspend fun calibrate(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                // Calibration is internal to VoiceCursor - no public API method yet
-                // For now, log the request
-                Log.d(TAG, "Cursor calibration requested (requires VoiceCursor internal access)")
-                // TODO: Add calibration method to VoiceCursorAPI
-                false // Return false until API method is added
+                // Calibration resets the filter and gaze state via resetToCenter
+                val ctrl = controller ?: run {
+                    Log.w(TAG, "Cannot calibrate - CursorController not initialized")
+                    return@withContext false
+                }
+
+                ctrl.resetToCenter()
+                Log.d(TAG, "Cursor calibrated (reset to center)")
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to calibrate cursor", e)
                 false
@@ -420,14 +533,36 @@ object CursorActions {
     // ========== Scrolling Commands ==========
 
     /**
-     * Scroll up at current cursor position
+     * Scroll up at current cursor position.
+     *
+     * Dispatches a scroll-up gesture via AccessibilityService starting from
+     * the cursor's current coordinates.
      *
      * @return true if scroll was performed successfully, false otherwise
      */
     suspend fun scrollUp(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.scrollUp()
+                val dispatcher = gestureDispatcher ?: run {
+                    Log.w(TAG, "Cannot scroll - AndroidGestureDispatcher not available")
+                    return@withContext false
+                }
+
+                // If we have a cursor position, scroll from there; otherwise use screen center
+                val ctrl = controller
+                val bounds = if (ctrl != null) {
+                    val pos = ctrl.state.value.position
+                    com.augmentalis.voiceoscore.Bounds(
+                        left = pos.x.toInt() - 1,
+                        top = pos.y.toInt() - 1,
+                        right = pos.x.toInt() + 1,
+                        bottom = pos.y.toInt() + 1
+                    )
+                } else {
+                    null
+                }
+
+                val success = dispatcher.scroll("up", bounds)
                 if (success) {
                     Log.d(TAG, "Scroll up performed")
                 } else {
@@ -442,14 +577,35 @@ object CursorActions {
     }
 
     /**
-     * Scroll down at current cursor position
+     * Scroll down at current cursor position.
+     *
+     * Dispatches a scroll-down gesture via AccessibilityService starting from
+     * the cursor's current coordinates.
      *
      * @return true if scroll was performed successfully, false otherwise
      */
     suspend fun scrollDown(): Boolean {
         return withContext(Dispatchers.Main) {
             try {
-                val success = VoiceCursorAPI.scrollDown()
+                val dispatcher = gestureDispatcher ?: run {
+                    Log.w(TAG, "Cannot scroll - AndroidGestureDispatcher not available")
+                    return@withContext false
+                }
+
+                val ctrl = controller
+                val bounds = if (ctrl != null) {
+                    val pos = ctrl.state.value.position
+                    com.augmentalis.voiceoscore.Bounds(
+                        left = pos.x.toInt() - 1,
+                        top = pos.y.toInt() - 1,
+                        right = pos.x.toInt() + 1,
+                        bottom = pos.y.toInt() + 1
+                    )
+                } else {
+                    null
+                }
+
+                val success = dispatcher.scroll("down", bounds)
                 if (success) {
                     Log.d(TAG, "Scroll down performed")
                 } else {
@@ -461,19 +617,6 @@ object CursorActions {
                 false
             }
         }
-    }
-
-    // ========== Helper Methods ==========
-
-    /**
-     * Get current cursor configuration
-     * Returns default config if cursor is not initialized
-     */
-    private fun getCurrentConfig(): CursorConfig {
-        // VoiceCursorAPI doesn't expose getCurrentConfig()
-        // For now, return default config
-        // TODO: Add VoiceCursorAPI.getCurrentConfig() method
-        return CursorConfig()
     }
 }
 

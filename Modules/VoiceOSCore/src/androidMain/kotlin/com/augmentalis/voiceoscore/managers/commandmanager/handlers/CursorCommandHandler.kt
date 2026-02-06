@@ -24,7 +24,7 @@ import com.augmentalis.voiceoscore.managers.commandmanager.CommandHandler
 import com.augmentalis.voiceoscore.managers.commandmanager.CommandRegistry
 import com.augmentalis.voiceoscore.managers.commandmanager.actions.CursorActions
 import com.augmentalis.voiceoscore.managers.commandmanager.actions.CursorDirection
-import com.augmentalis.voiceos.cursor.core.CursorType
+import com.augmentalis.voicecursor.core.CursorType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,13 +33,13 @@ import kotlinx.coroutines.launch
 
 /**
  * Voice command handler for VoiceCursor
- * Routes commands to CursorActions which delegates to VoiceCursorAPI
+ * Routes commands to CursorActions which uses CursorController directly
  *
  * Design:
  * - Command parsing and routing only (no cursor logic)
  * - Delegates all execution to CursorActions
- * - CursorActions delegates to VoiceCursorAPI
- * - Clean separation: CommandManager -> VoiceCursorAPI
+ * - CursorActions uses CursorController + AndroidGestureDispatcher directly
+ * - Clean separation: CommandManager -> CursorActions -> CursorController
  * - Implements CommandHandler for CommandRegistry integration
  */
 class CursorCommandHandler private constructor(
@@ -470,9 +470,3 @@ data class IntegrationStatus(
     val commandsSupported: Int
 )
 
-/**
- * Cursor movement directions
- */
-enum class CursorDirection {
-    UP, DOWN, LEFT, RIGHT
-}

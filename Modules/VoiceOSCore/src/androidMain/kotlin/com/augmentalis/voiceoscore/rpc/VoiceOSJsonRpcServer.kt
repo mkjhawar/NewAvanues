@@ -233,7 +233,7 @@ class VoiceOSJsonRpcServer(
         val commands = delegate.getCommandsForApp(params.packageName)
         return JsonRpcResponse(
             id = request.id,
-            result = json.encodeToString(AppCommandsResponse(request.id, commands))
+            result = json.encodeToString(AppCommandsResponse(request.id, params.packageName, commands))
         )
     }
 
@@ -242,7 +242,7 @@ class VoiceOSJsonRpcServer(
         val success = delegate.registerDynamicCommand(
             params.phrase,
             params.actionType,
-            params.params,
+            params.actionParams,
             params.appPackage
         )
         return JsonRpcResponse(

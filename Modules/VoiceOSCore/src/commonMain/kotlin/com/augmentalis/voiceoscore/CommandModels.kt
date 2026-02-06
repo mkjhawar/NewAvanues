@@ -483,7 +483,13 @@ enum class CommandCategory {
     INPUT,
 
     /** App control commands */
-    APP_CONTROL
+    APP_CONTROL,
+
+    /** Voice control commands (start/stop recognition, etc.) */
+    VOICE_CONTROL,
+
+    /** App launch commands (open app, switch app, etc.) */
+    APP_LAUNCH
 }
 
 /**

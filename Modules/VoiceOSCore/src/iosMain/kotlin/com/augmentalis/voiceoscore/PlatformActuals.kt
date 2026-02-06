@@ -18,6 +18,8 @@ import platform.Foundation.timeIntervalSince1970
  */
 actual fun currentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()
 
+actual fun getCurrentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()
+
 /**
  * iOS implementation of sha256.
  * Uses CommonCrypto via Kotlin/Native interop.

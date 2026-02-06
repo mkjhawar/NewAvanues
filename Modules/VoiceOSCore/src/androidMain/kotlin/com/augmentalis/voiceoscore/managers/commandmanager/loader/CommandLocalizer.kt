@@ -43,7 +43,7 @@ import java.util.Locale
 class CommandLocalizer(
     private val context: Context,
     private val commandLoader: CommandLoader,
-    private val commandDao: com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandDaoAdapter
+    private val commandDao: com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
 ) {
     private val _currentLocale = MutableStateFlow(Locale.getDefault().toLanguageTag())
     val currentLocale: Flow<String> = _currentLocale.asStateFlow()

@@ -83,6 +83,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.augmentalis.voiceoscore.*
 import com.augmentalis.voiceoscore.managers.commandmanager.processor.CommandProcessor
+import com.augmentalis.datamanager.ui.glassMorphism
+import com.augmentalis.datamanager.ui.DepthLevel
+import com.augmentalis.datamanager.ui.GlassMorphismConfig
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -604,6 +607,7 @@ private fun CategoryButton(
         CommandCategory.APP_LAUNCH -> CommandColors.CategoryApp
         CommandCategory.VOICE_CONTROL -> CommandColors.CategoryVoice
         CommandCategory.CUSTOM -> CommandColors.CategoryCustom
+        else -> CommandColors.CategoryCustom
     }
     
     Card(

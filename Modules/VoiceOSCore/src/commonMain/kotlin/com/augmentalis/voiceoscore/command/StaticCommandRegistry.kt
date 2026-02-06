@@ -505,16 +505,3 @@ data class StaticCommand(
         )
     }
 }
-
-/**
- * Command categories for organization and filtering
- */
-enum class CommandCategory {
-    NAVIGATION,
-    MEDIA,
-    SYSTEM,
-    VOICE_CONTROL,
-    APP_LAUNCH,
-    ACCESSIBILITY,
-    CUSTOM
-}

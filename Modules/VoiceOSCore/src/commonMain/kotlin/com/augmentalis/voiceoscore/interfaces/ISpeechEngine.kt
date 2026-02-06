@@ -229,6 +229,7 @@ enum class EngineFeature {
 }
 
 /**
- * Platform-specific time function
+ * Platform-specific time functions
  */
 expect fun currentTimeMillis(): Long
+expect fun getCurrentTimeMillis(): Long

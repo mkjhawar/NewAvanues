@@ -405,7 +405,7 @@ private fun TestStep(
     @Suppress("UNUSED_PARAMETER") wizardState: WizardState
 ) {
     var testPhrase by remember { mutableStateOf("") }
-    var testResults by remember { mutableStateOf<List<com.augmentalis.voiceoscore.registry.VoiceCommand>>(emptyList()) }
+    var testResults by remember { mutableStateOf<List<com.augmentalis.voiceoscore.managers.commandmanager.registry.VoiceCommand>>(emptyList()) }
 
     Column(
         modifier = Modifier

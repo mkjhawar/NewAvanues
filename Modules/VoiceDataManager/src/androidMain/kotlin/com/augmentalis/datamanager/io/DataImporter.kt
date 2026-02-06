@@ -7,7 +7,7 @@
  * NOTE: This is a stub implementation. Full import functionality will be
  * implemented after VoiceDataManager module is enabled and tested.
  */
-package com.augmentalis.voiceoscore.managers.voicedatamanager.io
+package com.augmentalis.datamanager.io
 
 import android.content.Context
 import android.util.Log

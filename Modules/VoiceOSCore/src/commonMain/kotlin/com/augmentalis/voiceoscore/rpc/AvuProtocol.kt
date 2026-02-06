@@ -82,15 +82,17 @@ object VoiceOSAvuEncoder {
 
     /**
      * Encode service status response
-     * Format: SST:requestId:isActive:currentApp:isRecognizing:commandCount
+     * Format: SST:requestId:isReady:isA11y:isVoiceActive:language:version:capabilities
      */
     fun encodeStatusResponse(status: ServiceStatus): String = buildString {
         append(VoiceOSAvuCodes.SST)
         append(":").append(escape(status.requestId))
-        append(":").append(if (status.isActive) "1" else "0")
-        append(":").append(escape(status.currentApp ?: ""))
-        append(":").append(if (status.isRecognizing) "1" else "0")
-        append(":").append(status.recognizedCommands)
+        append(":").append(if (status.isReady) "1" else "0")
+        append(":").append(if (status.isAccessibilityEnabled) "1" else "0")
+        append(":").append(if (status.isVoiceRecognitionActive) "1" else "0")
+        append(":").append(escape(status.currentLanguage))
+        append(":").append(escape(status.version))
+        append(":").append(status.capabilities.joinToString(",") { escape(it) })
     }
 
     /**
@@ -137,7 +139,7 @@ object VoiceOSAvuEncoder {
         append(VoiceOSAvuCodes.AAR)
         append(":").append(escape(response.requestId))
         append(":").append(if (response.success) "1" else "0")
-        append(":").append(escape(response.result ?: ""))
+        append(":").append(escape(response.resultText ?: ""))
     }
 
     /**
@@ -155,7 +157,7 @@ object VoiceOSAvuEncoder {
      * Encode scraped element
      * Format: SEL:avid:className:text:contentDesc:bounds:flags
      */
-    fun encodeScrapedElement(element: ScrapedElement): String = buildString {
+    fun encodeScreenElement(element: ScreenElement): String = buildString {
         append(VoiceOSAvuCodes.SEL)
         append(":").append(escape(element.avid))
         append(":").append(escape(element.className))
@@ -187,32 +189,46 @@ object VoiceOSAvuEncoder {
      * Format: EVT:timestamp:eventType:data...
      */
     fun encodeEvent(event: VoiceOSEvent): String = when (event) {
-        is VoiceOSEvent.CommandRecognized -> buildString {
+        is VoiceOSEvent.RecognitionStarted -> buildString {
             append(VoiceOSAvuCodes.EVT)
             append(":").append(event.timestamp)
-            append(":CMD_RECOGNIZED")
-            append(":").append(escape(event.commandText))
+            append(":RECOGNITION_STARTED")
+            append(":").append(escape(event.language))
+        }
+        is VoiceOSEvent.RecognitionResult -> buildString {
+            append(VoiceOSAvuCodes.EVT)
+            append(":").append(event.timestamp)
+            append(":RECOGNITION_RESULT")
+            append(":").append(escape(event.transcript))
             append(":").append(event.confidence)
+            append(":").append(if (event.isFinal) "1" else "0")
         }
-        is VoiceOSEvent.ActionExecuted -> buildString {
+        is VoiceOSEvent.RecognitionStopped -> buildString {
             append(VoiceOSAvuCodes.EVT)
             append(":").append(event.timestamp)
-            append(":ACTION_EXECUTED")
-            append(":").append(escape(event.actionType))
+            append(":RECOGNITION_STOPPED")
+            append(":").append(escape(event.reason))
+        }
+        is VoiceOSEvent.CommandExecuted -> buildString {
+            append(VoiceOSAvuCodes.EVT)
+            append(":").append(event.timestamp)
+            append(":CMD_EXECUTED")
+            append(":").append(escape(event.command))
             append(":").append(if (event.success) "1" else "0")
+            append(":").append(escape(event.result ?: ""))
         }
-        is VoiceOSEvent.RecognitionStateChanged -> buildString {
+        is VoiceOSEvent.ScreenChanged -> buildString {
             append(VoiceOSAvuCodes.EVT)
             append(":").append(event.timestamp)
-            append(":RECOGNITION_STATE")
-            append(":").append(if (event.isRecognizing) "1" else "0")
+            append(":SCREEN_CHANGED")
+            append(":").append(escape(event.packageName))
+            append(":").append(escape(event.activityName))
         }
-        is VoiceOSEvent.Error -> buildString {
+        is VoiceOSEvent.AccessibilityStateChanged -> buildString {
             append(VoiceOSAvuCodes.EVT)
             append(":").append(event.timestamp)
-            append(":ERROR")
-            append(":").append(event.code)
-            append(":").append(escape(event.message))
+            append(":A11Y_STATE")
+            append(":").append(if (event.isEnabled) "1" else "0")
         }
     }
 
@@ -322,17 +338,17 @@ object VoiceOSAvuDecoder {
     /**
      * Decode scraped element
      */
-    fun decodeScrapedElement(message: AvuMessage): ScrapedElement? {
+    fun decodeScreenElement(message: AvuMessage): ScreenElement? {
         if (message.code != VoiceOSAvuCodes.SEL || message.fields.size < 4) return null
         val boundsStr = message.fields.getOrNull(4) ?: "0,0,0,0"
         val bounds = boundsStr.split(",").map { it.toIntOrNull() ?: 0 }
         val flags = message.fields.getOrNull(5) ?: ""
 
-        return ScrapedElement(
+        return ScreenElement(
             avid = message.fields[0],
             className = message.fields[1],
-            text = message.fields[2].takeIf { it.isNotEmpty() },
-            contentDescription = message.fields[3].takeIf { it.isNotEmpty() },
+            text = message.fields[2],
+            contentDescription = message.fields[3],
             bounds = ElementBounds(
                 left = bounds.getOrNull(0) ?: 0,
                 top = bounds.getOrNull(1) ?: 0,

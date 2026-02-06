@@ -91,7 +91,7 @@ class CommandStorage(
     private val preferencesName: String = "dynamic_commands"
 ) {
     private val database by lazy {
-        com.augmentalis.voiceoscore.database.CommandDatabase.getInstance(context)
+        com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase.getInstance(context)
     }
 
     private val dao by lazy {
@@ -105,7 +105,7 @@ class CommandStorage(
         return try {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 // Convert VoiceCommandData to VoiceCommandEntity
-                val entity = com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandEntity(
+                val entity = com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity(
                     id = command.id,
                     locale = java.util.Locale.getDefault().toLanguageTag(),
                     primaryText = command.phrases.firstOrNull() ?: "",
@@ -137,7 +137,7 @@ class CommandStorage(
 
                 val commands = entities.map { entity ->
                     val phrases = mutableListOf(entity.primaryText)
-                    phrases.addAll(com.augmentalis.voiceoscore.database.sqldelight.VoiceCommandEntity.parseSynonyms(entity.synonyms))
+                    phrases.addAll(com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity.parseSynonyms(entity.synonyms))
 
                     VoiceCommandData(
                         id = entity.id,
@@ -215,7 +215,7 @@ class CommandStorage(
                 // VoiceCommandEntity doesn't track usage stats
                 // Usage stats are tracked in CommandUsageEntity via CommandUsageDao
                 val usageDao = database.commandUsageDao()
-                val usageEntity = com.augmentalis.voiceoscore.database.sqldelight.CommandUsageEntity(
+                val usageEntity = com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.CommandUsageEntity(
                     commandId = commandId,
                     locale = java.util.Locale.getDefault().toLanguageTag(),
                     timestamp = lastUsed,

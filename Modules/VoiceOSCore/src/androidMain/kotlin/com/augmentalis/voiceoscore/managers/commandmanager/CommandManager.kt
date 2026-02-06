@@ -63,7 +63,7 @@ class CommandManager(private val context: Context) {
 
     // Database command resolver for pattern matching
     private val databaseResolver by lazy {
-        com.augmentalis.commandmanager.loader.DatabaseCommandResolver.create(context)
+        com.augmentalis.voiceoscore.managers.commandmanager.loader.DatabaseCommandResolver.create(context)
     }
 
     // Intent dispatcher for app handler registration

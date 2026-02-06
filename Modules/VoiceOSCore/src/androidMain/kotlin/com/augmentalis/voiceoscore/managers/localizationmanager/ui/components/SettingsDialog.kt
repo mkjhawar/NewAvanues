@@ -26,7 +26,7 @@ import androidx.compose.ui.window.Dialog
 import com.augmentalis.voiceoscore.managers.localizationmanager.data.DebounceDuration
 import com.augmentalis.voiceoscore.managers.localizationmanager.ui.LocalizationColors
 import com.augmentalis.voiceoscore.managers.localizationmanager.ui.LocalizationGlassConfigs
-import com.augmentalis.voiceoscore.managers.localizationmanager.ui.glassMorphism
+import com.augmentalis.datamanager.ui.glassMorphism
 
 /**
  * Settings dialog with user preferences

@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.sqldelight)
+    id("kotlin-parcelize")
 }
 
 // Note: Versions now sourced from gradle/libs.versions.toml
@@ -91,10 +92,11 @@ kotlin {
                 implementation(project(":Modules:Localization"))
 
                 // Voice Data Manager - for data management types
-                //implementation(project(":Modules:VoiceDataManager"))
+                implementation(project(":Modules:VoiceDataManager"))
 
                 // Android Core
                 implementation(libs.androidx.core.ktx)
+                implementation("androidx.fragment:fragment-ktx:1.6.2")
                 implementation(libs.lifecycle.livedata.ktx)
                 implementation(libs.lifecycle.viewmodel.ktx)
                 implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -136,6 +138,12 @@ kotlin {
                 // Unified Database - for command persistence and scraping repositories
                 // (Consolidated from VoiceOS:core:database into Modules:Database)
                 implementation(project(":Modules:Database"))
+
+                // gRPC (transitive deps from Rpc module not exposed)
+                implementation(libs.grpc.okhttp)
+                implementation(libs.grpc.kotlin.stub)
+                implementation(libs.grpc.protobuf.lite)
+                implementation(libs.grpc.stub)
             }
         }
 

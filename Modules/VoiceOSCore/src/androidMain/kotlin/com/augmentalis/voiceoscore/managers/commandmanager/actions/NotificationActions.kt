@@ -187,7 +187,7 @@ object NotificationActions {
      */
     private fun getActiveNotifications(@Suppress("UNUSED_PARAMETER") context: Context): List<NotificationInfo> {
         return try {
-            val listener = com.augmentalis.commandmanager.notifications.VoiceOSNotificationListener.instance
+            val listener = com.augmentalis.voiceoscore.managers.commandmanager.notifications.VoiceOSNotificationListener.instance
             if (listener == null) {
                 Log.w(TAG, "NotificationListener not connected. User must grant notification access.")
                 return emptyList()
@@ -213,7 +213,7 @@ object NotificationActions {
      * Cancel/dismiss a specific notification by key
      */
     private fun cancelNotification(@Suppress("UNUSED_PARAMETER") context: Context, key: String) {
-        val listener = com.augmentalis.commandmanager.notifications.VoiceOSNotificationListener.instance
+        val listener = com.augmentalis.voiceoscore.managers.commandmanager.notifications.VoiceOSNotificationListener.instance
         if (listener == null) {
             Log.w(TAG, "NotificationListener not connected")
             return

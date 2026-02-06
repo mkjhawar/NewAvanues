@@ -9,11 +9,12 @@
  * Provides high-performance SQLDelight operations for speech recognition learning
  * Migrated from Room to SQLDelight for KMP compatibility
  */
-package com.augmentalis.voiceoscore.managers.voicedatamanager.repositories
+package com.augmentalis.datamanager.repositories
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.voiceoscore.managers.voicedatamanager.core.DatabaseManager
+import com.augmentalis.datamanager.LearningTypes
+import com.augmentalis.datamanager.core.DatabaseManager
 import com.augmentalis.database.RecognitionLearningQueries
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

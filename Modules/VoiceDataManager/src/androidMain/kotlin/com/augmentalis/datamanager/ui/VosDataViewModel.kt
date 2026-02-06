@@ -11,7 +11,7 @@
  *
  * Note: This is a simplified stub until the module is enabled.
  */
-package com.augmentalis.voiceoscore.managers.voicedatamanager.ui
+package com.augmentalis.datamanager.ui
 
 import android.content.Context
 import android.util.Log
@@ -20,8 +20,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.augmentalis.voiceoscore.managers.voicedatamanager.core.DatabaseModule
-import com.augmentalis.voiceoscore.managers.voicedatamanager.core.DatabaseManager
+import com.augmentalis.datamanager.core.DatabaseModule
+import com.augmentalis.datamanager.core.DatabaseManager
+import com.augmentalis.datamanager.DataStatistics
+import com.augmentalis.datamanager.StorageInfo
+import com.augmentalis.datamanager.StorageLevel
 import com.augmentalis.database.dto.CommandHistoryDTO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

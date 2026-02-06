@@ -13,7 +13,7 @@
  * The RecognitionLearningRepository already provides the core functionality.
  * This class can be refactored to use RecognitionLearningRepository or removed.
  */
-package com.augmentalis.voiceoscore.managers.voicedatamanager.repositories
+package com.augmentalis.datamanager.repositories
 
 import android.content.Context
 import android.util.Log

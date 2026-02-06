@@ -8,7 +8,7 @@
  *
  * Comprehensive data management interface with glassmorphism design
  */
-package com.augmentalis.voiceoscore.managers.voicedatamanager.ui
+package com.augmentalis.datamanager.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
