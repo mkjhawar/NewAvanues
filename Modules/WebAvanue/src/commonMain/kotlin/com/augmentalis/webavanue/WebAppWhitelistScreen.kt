@@ -431,6 +431,7 @@ private fun WhitelistEntryCard(
 /**
  * Dialog for adding a new web app to whitelist
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddWebAppDialog(
     initialDomain: String,
