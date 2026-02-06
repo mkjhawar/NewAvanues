@@ -73,99 +73,68 @@ interface ComponentProvider {
     fun Icon(
         imageVector: ImageVector,
         contentDescription: String?,
-        variant: IconVariant = IconVariant.Primary,
-        modifier: Modifier = Modifier
+        variant: IconVariant,
+        modifier: Modifier
     )
 
     /**
      * IconButton component
-     *
-     * @param onClick Click handler
-     * @param enabled Enable/disable button
-     * @param modifier Modifier for customization
-     * @param content Icon content
      */
     @Composable
     fun IconButton(
         onClick: () -> Unit,
-        enabled: Boolean = true,
-        modifier: Modifier = Modifier,
+        enabled: Boolean,
+        modifier: Modifier,
         content: @Composable () -> Unit
     )
 
     /**
      * Button component
-     *
-     * @param onClick Click handler
-     * @param enabled Enable/disable button
-     * @param variant Button style variant
-     * @param modifier Modifier for customization
-     * @param content Button content
      */
     @Composable
     fun Button(
         onClick: () -> Unit,
-        enabled: Boolean = true,
-        variant: ButtonVariant = ButtonVariant.Primary,
-        modifier: Modifier = Modifier,
+        enabled: Boolean,
+        variant: ButtonVariant,
+        modifier: Modifier,
         content: @Composable RowScope.() -> Unit
     )
 
     /**
      * Surface component
-     *
-     * @param modifier Modifier for customization
-     * @param variant Surface style variant
-     * @param shape Surface shape
-     * @param onClick Optional click handler
-     * @param content Surface content
      */
     @Composable
     fun Surface(
-        modifier: Modifier = Modifier,
-        variant: SurfaceVariant = SurfaceVariant.Default,
-        shape: Shape? = null,
-        onClick: (() -> Unit)? = null,
+        modifier: Modifier,
+        variant: SurfaceVariant,
+        shape: Shape?,
+        onClick: (() -> Unit)?,
         content: @Composable () -> Unit
     )
 
     /**
      * TextField component
-     *
-     * @param value Current text value
-     * @param onValueChange Text change callback
-     * @param modifier Modifier for customization
-     * @param placeholder Placeholder text
-     * @param leadingIcon Optional leading icon
-     * @param trailingIcon Optional trailing icon
-     * @param enabled Enable/disable field
      */
     @Composable
     fun TextField(
         value: String,
         onValueChange: (String) -> Unit,
-        modifier: Modifier = Modifier,
-        placeholder: String? = null,
-        leadingIcon: (@Composable () -> Unit)? = null,
-        trailingIcon: (@Composable () -> Unit)? = null,
-        enabled: Boolean = true
+        modifier: Modifier,
+        placeholder: String?,
+        leadingIcon: (@Composable () -> Unit)?,
+        trailingIcon: (@Composable () -> Unit)?,
+        enabled: Boolean
     )
 
     /**
      * FloatingActionButton component
-     *
-     * @param onClick Click handler
-     * @param modifier Modifier for customization
-     * @param containerColor Button background color
-     * @param contentColor Button content color
-     * @param content Button content (icon)
      */
     @Composable
     fun FloatingActionButton(
         onClick: () -> Unit,
-        modifier: Modifier = Modifier,
-        containerColor: Color? = null,
-        contentColor: Color? = null,
+        modifier: Modifier,
+        containerColor: Color?,
+        contentColor: Color?,
         content: @Composable () -> Unit
     )
 }

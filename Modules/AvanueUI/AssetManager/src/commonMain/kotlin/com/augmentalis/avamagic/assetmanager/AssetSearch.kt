@@ -1,5 +1,13 @@
 package com.augmentalis.avamagic.assetmanager
 
+import com.augmentalis.universal.assetmanager.AssetManager
+import com.augmentalis.universal.assetmanager.Icon
+import com.augmentalis.universal.assetmanager.IconLibrary
+import com.augmentalis.universal.assetmanager.ImageAsset
+import com.augmentalis.universal.assetmanager.ImageLibrary
+import com.augmentalis.universal.assetmanager.ImageFormat
+import com.augmentalis.universal.assetmanager.Dimensions
+
 /**
  * Asset search engine with relevance scoring
  *
@@ -28,7 +36,7 @@ class AssetSearch(
         val results = mutableListOf<IconSearchResult>()
         val lowerQuery = query.lowercase().trim()
 
-        manager.getIconLibraries().forEach { library ->
+        manager.getAllIconLibraries().forEach { library ->
             // Apply library filter
             if (filters.libraryIds.isNotEmpty() &&
                 library.id !in filters.libraryIds) {
@@ -86,7 +94,7 @@ class AssetSearch(
         val results = mutableListOf<ImageSearchResult>()
         val lowerQuery = query.lowercase().trim()
 
-        manager.getImageLibraries().forEach { library ->
+        manager.getAllImageLibraries().forEach { library ->
             // Apply library filter
             if (filters.libraryIds.isNotEmpty() &&
                 library.id !in filters.libraryIds) {
@@ -140,7 +148,7 @@ class AssetSearch(
         val lowerQuery = partialQuery.lowercase()
 
         // Collect suggestions from icon names, tags, and keywords
-        manager.getIconLibraries().forEach { library ->
+        manager.getAllIconLibraries().forEach { library ->
             library.icons.forEach { icon ->
                 if (icon.name.lowercase().startsWith(lowerQuery)) {
                     suggestions.add(icon.name)
