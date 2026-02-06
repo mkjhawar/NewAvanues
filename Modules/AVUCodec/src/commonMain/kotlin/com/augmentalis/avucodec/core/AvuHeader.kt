@@ -13,12 +13,23 @@ package com.augmentalis.avucodec.core
  * ---
  * schema: avu-2.2
  * version: <version>
+ * type: workflow
  * codes:
  *   SCR: Sync Create (msgId:entityType:entityId:version:data)
  *   SUP: Sync Update (msgId:entityType:entityId:version:data)
+ * permissions:
+ *   GESTURES
+ *   APPS
+ * triggers:
+ *   open {app}
  * ---
- * <messages>
+ * <body>
  * ```
+ *
+ * Core fields (schema, version, type, project, metadata, codes) are parsed into
+ * dedicated properties. Any additional sections (permissions, triggers, imports,
+ * dependencies, etc.) are captured generically in [HeaderData.sections] so that
+ * consumers can extract what they need without requiring AVUCodec changes.
  *
  * @author Augmentalis Engineering
  * @since AVU 2.2
@@ -31,6 +42,10 @@ object AvuHeader {
 
     /**
      * Parsed header data from an AVU file.
+     *
+     * Core fields have dedicated properties. Any other section encountered in the
+     * header (e.g., permissions, triggers, imports) is captured in [sections] as
+     * a map of section name to list of trimmed line values.
      */
     data class HeaderData(
         val formatVersion: String = "2.2",
@@ -39,7 +54,8 @@ object AvuHeader {
         val version: String = "1.0.0",
         val project: String? = null,
         val metadata: Map<String, String> = emptyMap(),
-        val codes: Map<String, String> = emptyMap()  // code -> format/description
+        val codes: Map<String, String> = emptyMap(),
+        val sections: Map<String, List<String>> = emptyMap()
     )
 
     /**
@@ -51,6 +67,7 @@ object AvuHeader {
      * @param metadata Additional metadata key-value pairs
      * @param codes Set of code names to include in legend (looked up from registry)
      * @param includeDescriptions Whether to include code descriptions
+     * @param sections Additional named sections to include (e.g., "permissions" to listOf("GESTURES"))
      * @return Formatted header string
      */
     fun generate(
@@ -59,7 +76,8 @@ object AvuHeader {
         project: String? = null,
         metadata: Map<String, String> = emptyMap(),
         codes: Set<String>? = null,
-        includeDescriptions: Boolean = false
+        includeDescriptions: Boolean = false,
+        sections: Map<String, List<String>> = emptyMap()
     ): String = buildString {
         // Comment header
         appendLine("# Avanues Universal Format v2.2")
@@ -69,6 +87,11 @@ object AvuHeader {
         // Schema and version
         appendLine("schema: $SCHEMA_VERSION")
         appendLine("version: $version")
+
+        // Type as key-value (for DSL files)
+        if (type.isNotEmpty()) {
+            appendLine("type: $type")
+        }
 
         // Optional project
         project?.let { appendLine("project: $it") }
@@ -84,6 +107,14 @@ object AvuHeader {
         // Codes legend
         if (codes != null && codes.isNotEmpty()) {
             append(AvuCodeRegistry.generateLegend(codes, includeDescriptions))
+        }
+
+        // Generic sections
+        for ((sectionName, entries) in sections) {
+            appendLine("$sectionName:")
+            entries.forEach { entry ->
+                appendLine("  $entry")
+            }
         }
 
         appendLine(HEADER_SEPARATOR)
@@ -109,8 +140,12 @@ object AvuHeader {
     /**
      * Parse an AVU file header.
      *
+     * Recognizes core fields (schema, version, type, project, metadata, codes)
+     * into dedicated properties. Any other section (a line ending with `:` followed
+     * by indented lines) is captured in [HeaderData.sections].
+     *
      * @param content The full AVU file content
-     * @return Parsed header data and the index where body starts
+     * @return Parsed header data and the character index where body starts
      */
     fun parse(content: String): Pair<HeaderData, Int> {
         val lines = content.lines()
@@ -121,9 +156,9 @@ object AvuHeader {
         var project: String? = null
         val metadata = mutableMapOf<String, String>()
         val codes = mutableMapOf<String, String>()
+        val sections = mutableMapOf<String, MutableList<String>>()
 
-        var inMetadata = false
-        var inCodes = false
+        var currentSection: String? = null
         var headerEndIndex = 0
         var separatorCount = 0
 
@@ -137,10 +172,12 @@ object AvuHeader {
                     headerEndIndex = lines.take(index + 1).sumOf { it.length + 1 }
                     break
                 }
-                inMetadata = false
-                inCodes = false
+                currentSection = null
                 continue
             }
+
+            // Only parse between separators
+            if (separatorCount < 1) continue
 
             // Skip empty lines in header
             if (trimmed.isEmpty()) continue
@@ -159,34 +196,54 @@ object AvuHeader {
                 continue
             }
 
-            // Parse key-value lines
-            when {
-                trimmed.startsWith("schema:") -> {
-                    schema = trimmed.substringAfter("schema:").trim()
+            val isIndented = line.startsWith("  ") || line.startsWith("\t")
+
+            // Indented line belongs to current section
+            if (isIndented && currentSection != null) {
+                when (currentSection) {
+                    "metadata" -> {
+                        if (trimmed.contains(":")) {
+                            val key = trimmed.substringBefore(":").trim()
+                            val value = trimmed.substringAfter(":").trim()
+                            metadata[key] = value
+                        }
+                    }
+                    "codes" -> {
+                        if (trimmed.contains(":")) {
+                            val code = trimmed.substringBefore(":").trim()
+                            val description = trimmed.substringAfter(":").trim()
+                            codes[code] = description
+                        }
+                    }
+                    else -> {
+                        // Generic section: store trimmed line
+                        sections.getOrPut(currentSection) { mutableListOf() }.add(trimmed)
+                    }
                 }
-                trimmed.startsWith("version:") -> {
-                    version = trimmed.substringAfter("version:").trim()
-                }
-                trimmed.startsWith("project:") -> {
-                    project = trimmed.substringAfter("project:").trim()
-                }
-                trimmed == "metadata:" -> {
-                    inMetadata = true
-                    inCodes = false
-                }
-                trimmed == "codes:" -> {
-                    inCodes = true
-                    inMetadata = false
-                }
-                inMetadata && trimmed.contains(":") -> {
-                    val key = trimmed.substringBefore(":").trim()
-                    val value = trimmed.substringAfter(":").trim()
-                    metadata[key] = value
-                }
-                inCodes && trimmed.contains(":") -> {
-                    val code = trimmed.substringBefore(":").trim()
-                    val description = trimmed.substringAfter(":").trim()
-                    codes[code] = description
+                continue
+            }
+
+            // Non-indented line with colon: top-level key or section header
+            if (trimmed.contains(":")) {
+                val key = trimmed.substringBefore(":").trim()
+                val value = trimmed.substringAfter(":").trim()
+
+                if (value.isEmpty()) {
+                    // Section header (e.g., "metadata:", "codes:", "permissions:")
+                    currentSection = key
+                } else {
+                    // Top-level key: value
+                    currentSection = null
+                    when (key) {
+                        "schema" -> schema = value
+                        "version" -> version = value
+                        "type" -> type = value
+                        "project" -> project = value
+                        else -> {
+                            // Unknown key with value on same line - store as single-entry section
+                            sections.getOrPut(key) { mutableListOf() }.add(value)
+                        }
+                    }
                 }
             }
         }
@@ -198,7 +255,8 @@ object AvuHeader {
             version = version,
             project = project,
             metadata = metadata,
-            codes = codes
+            codes = codes,
+            sections = sections
         ) to headerEndIndex
     }
 
