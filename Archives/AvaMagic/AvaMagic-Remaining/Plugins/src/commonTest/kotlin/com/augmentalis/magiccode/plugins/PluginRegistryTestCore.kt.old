@@ -1,0 +1,1172 @@
+package com.augmentalis.magiccode.plugins
+
+import com.augmentalis.magiccode.plugins.persistence.InMemoryPluginPersistence
+import com.augmentalis.magiccode.plugins.utils.TestUtils
+import com.augmentalis.magiccode.plugins.utils.TestConstants
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlin.test.*
+
+/**
+ * Unit tests for PluginRegistry.
+ *
+ * Tests:
+ * - Registration (new plugin, existing ID, multiple plugins, state changes)
+ * - Retrieval (by ID found/not found, all plugins, by state)
+ * - State management (update state, state transitions, invalid updates)
+ * - Unregistration (existing plugin, non-existent plugin, cleanup)
+ * - Namespace isolation (unique namespaces, collision detection)
+ * - Thread safety (concurrent registration, concurrent reads)
+ * - Persistence integration (save, load, delete)
+ * - Edge cases (null persistence, empty registry, concurrent access)
+ */
+class PluginRegistryTest {
+    private lateinit var registry: PluginRegistry
+    private lateinit var persistence: InMemoryPluginPersistence
+
+    @BeforeTest
+    fun setup() {
+        persistence = InMemoryPluginPersistence()
+        registry = PluginRegistry(persistence)
+    }
+
+    @AfterTest
+    fun teardown() = runTest {
+        registry.clear(clearPersistence = true)
+    }
+
+    // ========================================
+    // REGISTRATION TESTS
+    // ========================================
+
+    // Test 1: Register new plugin successfully
+    @Test
+    fun testRegisterNewPlugin() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        val registered = registry.register(manifest, namespace)
+        assertTrue(registered, "Should successfully register new plugin")
+
+        // Verify plugin is registered
+        assertTrue(registry.isRegistered(manifest.id))
+        assertEquals(1, registry.getPluginCount())
+
+        // Verify plugin info
+        val pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertEquals(manifest.id, pluginInfo.manifest.id)
+        assertEquals(PluginState.INSTALLED, pluginInfo.state)
+        assertEquals(namespace, pluginInfo.namespace)
+    }
+
+    // Test 2: Register with existing ID (should fail)
+    @Test
+    fun testRegisterExistingId() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        // First registration should succeed
+        val firstRegistration = registry.register(manifest, namespace)
+        assertTrue(firstRegistration)
+
+        // Second registration with same ID should fail
+        val secondRegistration = registry.register(manifest, namespace)
+        assertFalse(secondRegistration, "Should not register plugin with existing ID")
+
+        // Only one plugin should be registered
+        assertEquals(1, registry.getPluginCount())
+    }
+
+    // Test 3: Register multiple plugins
+    @Test
+    fun testRegisterMultiplePlugins() = runTest {
+        val manifest1 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID,
+            name = "Plugin 1"
+        )
+        val manifest2 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID_2,
+            name = "Plugin 2"
+        )
+        val manifest3 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID_DEPENDENCY,
+            name = "Plugin 3"
+        )
+
+        val namespace1 = TestUtils.createTestNamespace(manifest1.id)
+        val namespace2 = TestUtils.createTestNamespace(manifest2.id)
+        val namespace3 = TestUtils.createTestNamespace(manifest3.id)
+
+        // Register all three
+        assertTrue(registry.register(manifest1, namespace1))
+        assertTrue(registry.register(manifest2, namespace2))
+        assertTrue(registry.register(manifest3, namespace3))
+
+        // Verify count
+        assertEquals(3, registry.getPluginCount())
+
+        // Verify all are registered
+        assertTrue(registry.isRegistered(manifest1.id))
+        assertTrue(registry.isRegistered(manifest2.id))
+        assertTrue(registry.isRegistered(manifest3.id))
+
+        // Verify all plugins can be retrieved
+        val allPlugins = registry.getAllPlugins()
+        assertEquals(3, allPlugins.size)
+    }
+
+    // Test 4: Verify state changes (LOADING → ACTIVE)
+    @Test
+    fun testRegisterInitialState() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        // Plugin should start in INSTALLED state
+        val pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertEquals(PluginState.INSTALLED, pluginInfo.state)
+
+        // Update to ENABLED
+        assertTrue(registry.updateState(manifest.id, PluginState.ENABLED))
+
+        // Verify state changed
+        val updatedInfo = registry.getPlugin(manifest.id)
+        assertNotNull(updatedInfo)
+        assertEquals(PluginState.ENABLED, updatedInfo.state)
+    }
+
+    // ========================================
+    // RETRIEVAL TESTS
+    // ========================================
+
+    // Test 5: Get plugin by ID (found)
+    @Test
+    fun testGetPluginById() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        val pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertEquals(manifest.id, pluginInfo.manifest.id)
+        assertEquals(manifest.name, pluginInfo.manifest.name)
+        assertEquals(manifest.version, pluginInfo.manifest.version)
+    }
+
+    // Test 6: Get plugin by ID (not found, returns null)
+    @Test
+    fun testGetPluginByIdNotFound() = runTest {
+        val pluginInfo = registry.getPlugin("nonexistent.plugin")
+        assertNull(pluginInfo, "Should return null for non-existent plugin")
+    }
+
+    // Test 7: Get all plugins
+    @Test
+    fun testGetAllPlugins() = runTest {
+        // Empty registry
+        var allPlugins = registry.getAllPlugins()
+        assertEquals(0, allPlugins.size)
+
+        // Add three plugins
+        val manifest1 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID)
+        val manifest2 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_2)
+        val manifest3 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_DEPENDENCY)
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+        registry.register(manifest3, TestUtils.createTestNamespace(manifest3.id))
+
+        allPlugins = registry.getAllPlugins()
+        assertEquals(3, allPlugins.size)
+
+        // Verify all IDs are present
+        val ids = allPlugins.map { it.manifest.id }
+        assertTrue(ids.contains(manifest1.id))
+        assertTrue(ids.contains(manifest2.id))
+        assertTrue(ids.contains(manifest3.id))
+    }
+
+    // Test 8: Get plugins by state (ACTIVE, FAILED, etc.)
+    @Test
+    fun testGetPluginsByState() = runTest {
+        // Register plugins with different states
+        val manifest1 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID)
+        val manifest2 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_2)
+        val manifest3 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_DEPENDENCY)
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+        registry.register(manifest3, TestUtils.createTestNamespace(manifest3.id))
+
+        // All should be INSTALLED initially
+        var installedPlugins = registry.getPluginsByState(PluginState.INSTALLED)
+        assertEquals(3, installedPlugins.size)
+
+        // Update states
+        registry.updateState(manifest1.id, PluginState.ENABLED)
+        registry.updateState(manifest2.id, PluginState.ENABLED)
+        registry.updateState(manifest3.id, PluginState.FAILED)
+
+        // Check ENABLED state
+        val enabledPlugins = registry.getPluginsByState(PluginState.ENABLED)
+        assertEquals(2, enabledPlugins.size)
+        assertTrue(enabledPlugins.any { it.manifest.id == manifest1.id })
+        assertTrue(enabledPlugins.any { it.manifest.id == manifest2.id })
+
+        // Check FAILED state
+        val failedPlugins = registry.getPluginsByState(PluginState.FAILED)
+        assertEquals(1, failedPlugins.size)
+        assertEquals(manifest3.id, failedPlugins[0].manifest.id)
+
+        // Check INSTALLED state (should be empty now)
+        installedPlugins = registry.getPluginsByState(PluginState.INSTALLED)
+        assertEquals(0, installedPlugins.size)
+    }
+
+    // Test 9: Get plugins by source
+    @Test
+    fun testGetPluginsBySource() = runTest {
+        val manifest1 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID,
+            source = "THIRD_PARTY"
+        )
+        val manifest2 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID_2,
+            source = "PRE_BUNDLED"
+        )
+        val manifest3 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID_DEPENDENCY,
+            source = "THIRD_PARTY"
+        )
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+        registry.register(manifest3, TestUtils.createTestNamespace(manifest3.id))
+
+        // Get third-party plugins
+        val thirdPartyPlugins = registry.getPluginsBySource(PluginSource.THIRD_PARTY)
+        assertEquals(2, thirdPartyPlugins.size)
+
+        // Get pre-bundled plugins
+        val preBundledPlugins = registry.getPluginsBySource(PluginSource.PRE_BUNDLED)
+        assertEquals(1, preBundledPlugins.size)
+        assertEquals(manifest2.id, preBundledPlugins[0].manifest.id)
+    }
+
+    // Test 10: Get plugins by verification level
+    @Test
+    fun testGetPluginsByVerificationLevel() = runTest {
+        val manifest1 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID,
+            verificationLevel = "VERIFIED"
+        )
+        val manifest2 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID_2,
+            verificationLevel = "UNVERIFIED"
+        )
+        val manifest3 = TestUtils.createTestManifest(
+            id = TestConstants.TEST_PLUGIN_ID_DEPENDENCY,
+            verificationLevel = "REGISTERED"
+        )
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+        registry.register(manifest3, TestUtils.createTestNamespace(manifest3.id))
+
+        // Get verified plugins
+        val verifiedPlugins = registry.getPluginsByVerificationLevel(DeveloperVerificationLevel.VERIFIED)
+        assertEquals(1, verifiedPlugins.size)
+        assertEquals(manifest1.id, verifiedPlugins[0].manifest.id)
+
+        // Get unverified plugins
+        val unverifiedPlugins = registry.getPluginsByVerificationLevel(DeveloperVerificationLevel.UNVERIFIED)
+        assertEquals(1, unverifiedPlugins.size)
+        assertEquals(manifest2.id, unverifiedPlugins[0].manifest.id)
+
+        // Get registered plugins
+        val registeredPlugins = registry.getPluginsByVerificationLevel(DeveloperVerificationLevel.REGISTERED)
+        assertEquals(1, registeredPlugins.size)
+        assertEquals(manifest3.id, registeredPlugins[0].manifest.id)
+    }
+
+    // ========================================
+    // STATE MANAGEMENT TESTS
+    // ========================================
+
+    // Test 11: Update plugin state
+    @Test
+    fun testUpdatePluginState() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        // Initial state should be INSTALLED
+        var pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertEquals(PluginState.INSTALLED, pluginInfo.state)
+
+        // Update to ENABLED
+        val updated = registry.updateState(manifest.id, PluginState.ENABLED)
+        assertTrue(updated)
+
+        pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertEquals(PluginState.ENABLED, pluginInfo.state)
+    }
+
+    // Test 12: State transitions (LOADING → ACTIVE → UNINSTALLING)
+    @Test
+    fun testStateTransitions() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        // INSTALLED → INSTALLING
+        assertTrue(registry.updateState(manifest.id, PluginState.INSTALLING))
+        assertEquals(PluginState.INSTALLING, registry.getPlugin(manifest.id)?.state)
+
+        // INSTALLING → INSTALLED
+        assertTrue(registry.updateState(manifest.id, PluginState.INSTALLED))
+        assertEquals(PluginState.INSTALLED, registry.getPlugin(manifest.id)?.state)
+
+        // INSTALLED → ENABLED
+        assertTrue(registry.updateState(manifest.id, PluginState.ENABLED))
+        assertEquals(PluginState.ENABLED, registry.getPlugin(manifest.id)?.state)
+
+        // ENABLED → DISABLED
+        assertTrue(registry.updateState(manifest.id, PluginState.DISABLED))
+        assertEquals(PluginState.DISABLED, registry.getPlugin(manifest.id)?.state)
+
+        // DISABLED → UNINSTALLING
+        assertTrue(registry.updateState(manifest.id, PluginState.UNINSTALLING))
+        assertEquals(PluginState.UNINSTALLING, registry.getPlugin(manifest.id)?.state)
+    }
+
+    // Test 13: Invalid state updates (non-existent plugin)
+    @Test
+    fun testUpdateStateNonExistentPlugin() = runTest {
+        val updated = registry.updateState("nonexistent.plugin", PluginState.ENABLED)
+        assertFalse(updated, "Should return false when updating state of non-existent plugin")
+    }
+
+    // Test 14: State index consistency
+    @Test
+    fun testStateIndexConsistency() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        // Check INSTALLED index
+        var installedPlugins = registry.getPluginsByState(PluginState.INSTALLED)
+        assertEquals(1, installedPlugins.size)
+
+        // Update to ENABLED
+        registry.updateState(manifest.id, PluginState.ENABLED)
+
+        // INSTALLED index should be empty
+        installedPlugins = registry.getPluginsByState(PluginState.INSTALLED)
+        assertEquals(0, installedPlugins.size)
+
+        // ENABLED index should have the plugin
+        val enabledPlugins = registry.getPluginsByState(PluginState.ENABLED)
+        assertEquals(1, enabledPlugins.size)
+        assertEquals(manifest.id, enabledPlugins[0].manifest.id)
+    }
+
+    // ========================================
+    // UNREGISTRATION TESTS
+    // ========================================
+
+    // Test 15: Unregister existing plugin
+    @Test
+    fun testUnregisterExistingPlugin() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+        assertTrue(registry.isRegistered(manifest.id))
+
+        val unregistered = registry.unregister(manifest.id)
+        assertTrue(unregistered, "Should successfully unregister existing plugin")
+
+        // Plugin should no longer be registered
+        assertFalse(registry.isRegistered(manifest.id))
+        assertNull(registry.getPlugin(manifest.id))
+        assertEquals(0, registry.getPluginCount())
+    }
+
+    // Test 16: Unregister non-existent plugin
+    @Test
+    fun testUnregisterNonExistentPlugin() = runTest {
+        val unregistered = registry.unregister("nonexistent.plugin")
+        assertFalse(unregistered, "Should return false when unregistering non-existent plugin")
+    }
+
+    // Test 17: Verify cleanup (indexes are updated)
+    @Test
+    fun testUnregisterCleanup() = runTest {
+        val manifest1 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID)
+        val manifest2 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_2)
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+
+        // Update states
+        registry.updateState(manifest1.id, PluginState.ENABLED)
+        registry.updateState(manifest2.id, PluginState.ENABLED)
+
+        // Verify both in ENABLED index
+        var enabledPlugins = registry.getPluginsByState(PluginState.ENABLED)
+        assertEquals(2, enabledPlugins.size)
+
+        // Unregister first plugin
+        registry.unregister(manifest1.id)
+
+        // ENABLED index should only have second plugin
+        enabledPlugins = registry.getPluginsByState(PluginState.ENABLED)
+        assertEquals(1, enabledPlugins.size)
+        assertEquals(manifest2.id, enabledPlugins[0].manifest.id)
+
+        // Source and verification level indexes should also be updated
+        val thirdPartyPlugins = registry.getPluginsBySource(PluginSource.THIRD_PARTY)
+        assertEquals(1, thirdPartyPlugins.size)
+    }
+
+    // ========================================
+    // NAMESPACE ISOLATION TESTS
+    // ========================================
+
+    // Test 18: Verify unique namespaces per plugin
+    @Test
+    fun testUniqueNamespacesPerPlugin() = runTest {
+        val manifest1 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID)
+        val manifest2 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_2)
+
+        val namespace1 = TestUtils.createTestNamespace(
+            pluginId = manifest1.id,
+            baseDir = "/test/data/${manifest1.id}"
+        )
+        val namespace2 = TestUtils.createTestNamespace(
+            pluginId = manifest2.id,
+            baseDir = "/test/data/${manifest2.id}"
+        )
+
+        registry.register(manifest1, namespace1)
+        registry.register(manifest2, namespace2)
+
+        // Retrieve and verify namespaces are different
+        val pluginInfo1 = registry.getPlugin(manifest1.id)
+        val pluginInfo2 = registry.getPlugin(manifest2.id)
+
+        assertNotNull(pluginInfo1)
+        assertNotNull(pluginInfo2)
+
+        assertNotEquals(pluginInfo1.namespace.baseDir, pluginInfo2.namespace.baseDir)
+        assertEquals(manifest1.id, pluginInfo1.namespace.pluginId)
+        assertEquals(manifest2.id, pluginInfo2.namespace.pluginId)
+    }
+
+    // Test 19: Check namespace collision detection
+    @Test
+    fun testNamespaceIsolation() = runTest {
+        val manifest1 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID)
+        val manifest2 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_2)
+
+        // Different namespaces with different base directories
+        val namespace1 = PluginNamespace(
+            pluginId = manifest1.id,
+            baseDir = "/test/plugin1"
+        )
+        val namespace2 = PluginNamespace(
+            pluginId = manifest2.id,
+            baseDir = "/test/plugin2"
+        )
+
+        registry.register(manifest1, namespace1)
+        registry.register(manifest2, namespace2)
+
+        val pluginInfo1 = registry.getPlugin(manifest1.id)
+        val pluginInfo2 = registry.getPlugin(manifest2.id)
+
+        assertNotNull(pluginInfo1)
+        assertNotNull(pluginInfo2)
+
+        // Verify isolation - each plugin has its own namespace
+        assertNotEquals(pluginInfo1.namespace, pluginInfo2.namespace)
+        assertTrue(pluginInfo1.namespace.baseDir.contains("plugin1"))
+        assertTrue(pluginInfo2.namespace.baseDir.contains("plugin2"))
+    }
+
+    // ========================================
+    // THREAD SAFETY TESTS
+    // ========================================
+
+    // Test 20: Concurrent registration
+    @Test
+    fun testConcurrentRegistration() = runTest {
+        val pluginCount = 50
+
+        // Launch concurrent registrations
+        val jobs = (0 until pluginCount).map { i ->
+            launch {
+                val manifest = TestUtils.createTestManifest(
+                    id = "com.test.plugin-$i",
+                    name = "Plugin $i"
+                )
+                val namespace = TestUtils.createTestNamespace(manifest.id)
+                registry.register(manifest, namespace)
+            }
+        }
+
+        // Wait for all to complete
+        jobs.forEach { it.join() }
+
+        // All plugins should be registered
+        assertEquals(pluginCount, registry.getPluginCount())
+
+        // Verify all are accessible
+        for (i in 0 until pluginCount) {
+            val pluginInfo = registry.getPlugin("com.test.plugin-$i")
+            assertNotNull(pluginInfo)
+        }
+    }
+
+    // Test 21: Concurrent reads
+    @Test
+    fun testConcurrentReads() = runTest {
+        // Register some plugins first
+        val manifest1 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID)
+        val manifest2 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_2)
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+
+        // Launch concurrent reads
+        val readCount = 100
+        val jobs = (0 until readCount).map {
+            launch {
+                // Random read operations
+                registry.getPlugin(manifest1.id)
+                registry.getAllPlugins()
+                registry.getPluginsByState(PluginState.INSTALLED)
+                registry.isRegistered(manifest2.id)
+                registry.getPluginCount()
+            }
+        }
+
+        // Wait for all to complete
+        jobs.forEach { it.join() }
+
+        // Registry should remain consistent
+        assertEquals(2, registry.getPluginCount())
+        assertTrue(registry.isRegistered(manifest1.id))
+        assertTrue(registry.isRegistered(manifest2.id))
+    }
+
+    // Test 22: Concurrent state updates
+    @Test
+    fun testConcurrentStateUpdates() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        // Launch concurrent state updates
+        val states = listOf(
+            PluginState.ENABLED,
+            PluginState.DISABLED,
+            PluginState.UPDATING,
+            PluginState.FAILED
+        )
+
+        val jobs = states.map { state ->
+            launch {
+                registry.updateState(manifest.id, state)
+            }
+        }
+
+        // Wait for all to complete
+        jobs.forEach { it.join() }
+
+        // Plugin should have one of the states
+        val pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertTrue(states.contains(pluginInfo.state))
+    }
+
+    // Test 23: Mixed concurrent operations
+    @Test
+    fun testMixedConcurrentOperations() = runTest {
+        // Concurrent mix of register, read, update, unregister
+        val jobs = mutableListOf<kotlinx.coroutines.Job>()
+
+        // Register plugins
+        repeat(10) { i ->
+            jobs.add(launch {
+                val manifest = TestUtils.createTestManifest(id = "com.test.plugin-$i")
+                val namespace = TestUtils.createTestNamespace(manifest.id)
+                registry.register(manifest, namespace)
+            })
+        }
+
+        // Read operations
+        repeat(20) {
+            jobs.add(launch {
+                registry.getAllPlugins()
+                registry.getPluginCount()
+            })
+        }
+
+        // State updates
+        repeat(10) { i ->
+            jobs.add(launch {
+                registry.updateState("com.test.plugin-$i", PluginState.ENABLED)
+            })
+        }
+
+        // Wait for all operations to complete
+        jobs.forEach { it.join() }
+
+        // Verify registry is in consistent state
+        val count = registry.getPluginCount()
+        assertTrue(count >= 0 && count <= 10)
+
+        val allPlugins = registry.getAllPlugins()
+        assertEquals(count, allPlugins.size)
+    }
+
+    // ========================================
+    // UTILITY TESTS
+    // ========================================
+
+    // Test 24: Clear registry
+    @Test
+    fun testClearRegistry() = runTest {
+        // Register multiple plugins
+        val manifest1 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID)
+        val manifest2 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_2)
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+
+        assertEquals(2, registry.getPluginCount())
+
+        // Clear registry
+        registry.clear()
+
+        assertEquals(0, registry.getPluginCount())
+        assertNull(registry.getPlugin(manifest1.id))
+        assertNull(registry.getPlugin(manifest2.id))
+
+        // Indexes should be cleared too
+        assertEquals(0, registry.getPluginsByState(PluginState.INSTALLED).size)
+    }
+
+    // Test 25: isRegistered check
+    @Test
+    fun testIsRegistered() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        // Initially not registered
+        assertFalse(registry.isRegistered(manifest.id))
+
+        // Register plugin
+        registry.register(manifest, namespace)
+
+        // Now should be registered
+        assertTrue(registry.isRegistered(manifest.id))
+
+        // Unregister
+        registry.unregister(manifest.id)
+
+        // Should not be registered anymore
+        assertFalse(registry.isRegistered(manifest.id))
+    }
+
+    // Test 26: Plugin count
+    @Test
+    fun testPluginCount() = runTest {
+        assertEquals(0, registry.getPluginCount())
+
+        val manifest1 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID)
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        assertEquals(1, registry.getPluginCount())
+
+        val manifest2 = TestUtils.createTestManifest(id = TestConstants.TEST_PLUGIN_ID_2)
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+        assertEquals(2, registry.getPluginCount())
+
+        registry.unregister(manifest1.id)
+        assertEquals(1, registry.getPluginCount())
+
+        registry.unregister(manifest2.id)
+        assertEquals(0, registry.getPluginCount())
+    }
+
+    // Test 27: PluginInfo loadedAt timestamp
+    @Test
+    fun testPluginInfoLoadedAt() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        val beforeTime = System.currentTimeMillis()
+        registry.register(manifest, namespace)
+        val afterTime = System.currentTimeMillis()
+
+        val pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+
+        // loadedAt should be between beforeTime and afterTime
+        assertTrue(pluginInfo.loadedAt >= beforeTime)
+        assertTrue(pluginInfo.loadedAt <= afterTime)
+    }
+
+    // Test 28: Multiple state transitions with index updates
+    @Test
+    fun testMultipleStateTransitionsWithIndexes() = runTest {
+        val manifest = TestUtils.createTestManifest()
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        // INSTALLED → ENABLING
+        registry.updateState(manifest.id, PluginState.INSTALLING)
+        assertEquals(1, registry.getPluginsByState(PluginState.INSTALLING).size)
+        assertEquals(0, registry.getPluginsByState(PluginState.INSTALLED).size)
+
+        // INSTALLING → INSTALLED
+        registry.updateState(manifest.id, PluginState.INSTALLED)
+        assertEquals(1, registry.getPluginsByState(PluginState.INSTALLED).size)
+        assertEquals(0, registry.getPluginsByState(PluginState.INSTALLING).size)
+
+        // INSTALLED → ENABLED
+        registry.updateState(manifest.id, PluginState.ENABLED)
+        assertEquals(1, registry.getPluginsByState(PluginState.ENABLED).size)
+        assertEquals(0, registry.getPluginsByState(PluginState.INSTALLED).size)
+
+        // ENABLED → FAILED
+        registry.updateState(manifest.id, PluginState.FAILED)
+        assertEquals(1, registry.getPluginsByState(PluginState.FAILED).size)
+        assertEquals(0, registry.getPluginsByState(PluginState.ENABLED).size)
+    }
+
+    // Test 29: Empty state query
+    @Test
+    fun testEmptyStateQuery() = runTest {
+        // Query for plugins in various states on empty registry
+        assertEquals(0, registry.getPluginsByState(PluginState.INSTALLED).size)
+        assertEquals(0, registry.getPluginsByState(PluginState.ENABLED).size)
+        assertEquals(0, registry.getPluginsByState(PluginState.FAILED).size)
+
+        // Register a plugin in INSTALLED state
+        val manifest = TestUtils.createTestManifest()
+        registry.register(manifest, TestUtils.createTestNamespace(manifest.id))
+
+        // INSTALLED should have 1, others should be empty
+        assertEquals(1, registry.getPluginsByState(PluginState.INSTALLED).size)
+        assertEquals(0, registry.getPluginsByState(PluginState.ENABLED).size)
+        assertEquals(0, registry.getPluginsByState(PluginState.FAILED).size)
+    }
+
+    // Test 30: Manifest preservation
+    @Test
+    fun testManifestPreservation() = runTest {
+        val manifest = TestUtils.createTestManifest(
+            id = "com.test.custom-plugin",
+            name = "Custom Plugin",
+            version = "2.5.1",
+            author = "Test Developer",
+            capabilities = listOf("themes", "ui_components", "data_sync"),
+            permissions = listOf("NETWORK", "STORAGE_READ", "STORAGE_WRITE"),
+            source = "APPAVENUE_STORE",
+            verificationLevel = "VERIFIED"
+        )
+
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+        registry.register(manifest, namespace)
+
+        val pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+
+        // Verify all manifest fields are preserved
+        assertEquals(manifest.id, pluginInfo.manifest.id)
+        assertEquals(manifest.name, pluginInfo.manifest.name)
+        assertEquals(manifest.version, pluginInfo.manifest.version)
+        assertEquals(manifest.author, pluginInfo.manifest.author)
+        assertEquals(manifest.capabilities, pluginInfo.manifest.capabilities)
+        assertEquals(manifest.permissions, pluginInfo.manifest.permissions)
+        assertEquals(manifest.source, pluginInfo.manifest.source)
+        assertEquals(manifest.verificationLevel, pluginInfo.manifest.verificationLevel)
+    }
+
+    // ========================================
+    // PERSISTENCE TESTS
+    // ========================================
+
+    // Test 31: Registration persists plugin
+    @Test
+    fun testRegistrationPersisted() = runTest {
+        val manifest = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        // Verify plugin was saved to persistence
+        val result = persistence.loadPlugin(manifest.id)
+        assertTrue(result.isSuccess, "Plugin should be persisted")
+
+        val persistedPlugin = result.getOrNull()
+        assertNotNull(persistedPlugin)
+        assertEquals(manifest.id, persistedPlugin.manifest.id)
+        assertEquals(PluginState.INSTALLED, persistedPlugin.state)
+    }
+
+    // Test 32: State update persists change
+    @Test
+    fun testStateUpdatePersisted() = runTest {
+        val manifest = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+        registry.updateState(manifest.id, PluginState.ENABLED)
+
+        // Verify state was updated in persistence
+        val result = persistence.loadPlugin(manifest.id)
+        assertTrue(result.isSuccess)
+
+        val persistedPlugin = result.getOrNull()
+        assertNotNull(persistedPlugin)
+        assertEquals(PluginState.ENABLED, persistedPlugin.state)
+    }
+
+    // Test 33: Unregistration deletes from persistence
+    @Test
+    fun testUnregistrationDeletedFromPersistence() = runTest {
+        val manifest = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        registry.register(manifest, namespace)
+
+        // Verify it exists
+        val existsResult = persistence.exists(manifest.id)
+        assertTrue(existsResult.isSuccess)
+        assertTrue(existsResult.getOrNull() ?: false)
+
+        // Unregister
+        registry.unregister(manifest.id)
+
+        // Verify it was deleted from persistence
+        val deletedResult = persistence.exists(manifest.id)
+        assertTrue(deletedResult.isSuccess)
+        assertFalse(deletedResult.getOrNull() ?: true, "Plugin should be deleted from persistence")
+    }
+
+    // Test 34: Load from persistence on startup
+    @Test
+    fun testLoadFromPersistence() = runTest {
+        // Setup: Add plugins directly to persistence (simulating previous app session)
+        val pluginInfo1 = PluginRegistry.PluginInfo(
+            manifest = TestUtils.createTestManifest(id = "com.test.plugin-a", name = "Plugin A"),
+            state = PluginState.INSTALLED,
+            loadedAt = System.currentTimeMillis(),
+            namespace = TestUtils.createTestNamespace("com.test.plugin-a")
+        )
+        val pluginInfo2 = PluginRegistry.PluginInfo(
+            manifest = TestUtils.createTestManifest(id = "com.test.plugin-b", name = "Plugin B"),
+            state = PluginState.ENABLED,
+            loadedAt = System.currentTimeMillis(),
+            namespace = TestUtils.createTestNamespace("com.test.plugin-b")
+        )
+
+        persistence.savePlugin(pluginInfo1)
+        persistence.savePlugin(pluginInfo2)
+
+        // Create new registry and load from persistence
+        val newRegistry = PluginRegistry(persistence)
+        val result = newRegistry.loadFromPersistence()
+
+        assertTrue(result.isSuccess, "Load from persistence should succeed")
+        assertEquals(2, result.getOrNull(), "Should load 2 plugins")
+        assertEquals(2, newRegistry.getPluginCount(), "Registry should contain 2 plugins")
+        assertTrue(newRegistry.isRegistered("com.test.plugin-a"))
+        assertTrue(newRegistry.isRegistered("com.test.plugin-b"))
+
+        // Verify states were preserved
+        val plugin1 = newRegistry.getPlugin("com.test.plugin-a")
+        val plugin2 = newRegistry.getPlugin("com.test.plugin-b")
+        assertNotNull(plugin1)
+        assertNotNull(plugin2)
+        assertEquals(PluginState.INSTALLED, plugin1.state)
+        assertEquals(PluginState.ENABLED, plugin2.state)
+    }
+
+    // Test 35: Load from persistence with empty storage
+    @Test
+    fun testLoadFromPersistenceEmpty() = runTest {
+        val newRegistry = PluginRegistry(persistence)
+        val result = newRegistry.loadFromPersistence()
+
+        assertTrue(result.isSuccess, "Load should succeed even with empty persistence")
+        assertEquals(0, result.getOrNull(), "Should load 0 plugins")
+        assertEquals(0, newRegistry.getPluginCount())
+    }
+
+    // Test 36: Load from persistence without persistence layer
+    @Test
+    fun testLoadFromPersistenceWithoutPersistence() = runTest {
+        val noPersistenceRegistry = PluginRegistry(null)
+        val result = noPersistenceRegistry.loadFromPersistence()
+
+        assertTrue(result.isSuccess, "Load should succeed even without persistence")
+        assertEquals(0, result.getOrNull(), "Should load 0 plugins")
+    }
+
+    // Test 37: Clear registry without clearing persistence
+    @Test
+    fun testClearRegistryKeepsPersistence() = runTest {
+        val manifest1 = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        val manifest2 = TestUtils.createTestManifest(id = "com.test.plugin-b")
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+
+        registry.clear(clearPersistence = false)
+
+        // Registry should be empty
+        assertEquals(0, registry.getPluginCount())
+        assertFalse(registry.isRegistered(manifest1.id))
+        assertFalse(registry.isRegistered(manifest2.id))
+
+        // Persistence should still have plugins
+        val countResult = persistence.getPluginCount()
+        assertEquals(2, countResult.getOrNull(), "Persistence should still contain plugins")
+    }
+
+    // Test 38: Clear registry with persistence
+    @Test
+    fun testClearRegistryWithPersistence() = runTest {
+        val manifest1 = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        val manifest2 = TestUtils.createTestManifest(id = "com.test.plugin-b")
+
+        registry.register(manifest1, TestUtils.createTestNamespace(manifest1.id))
+        registry.register(manifest2, TestUtils.createTestNamespace(manifest2.id))
+
+        registry.clear(clearPersistence = true)
+
+        // Registry should be empty
+        assertEquals(0, registry.getPluginCount())
+
+        // Persistence should also be cleared
+        val countResult = persistence.getPluginCount()
+        assertEquals(0, countResult.getOrNull(), "Persistence should be cleared")
+    }
+
+    // ========================================
+    // NULL PERSISTENCE TESTS
+    // ========================================
+
+    // Test 39: Registry works without persistence
+    @Test
+    fun testRegistryWithoutPersistence() = runTest {
+        val noPersistenceRegistry = PluginRegistry(null)
+        val manifest = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        // Registration should work
+        val registered = noPersistenceRegistry.register(manifest, namespace)
+        assertTrue(registered, "Registration should work without persistence")
+        assertTrue(noPersistenceRegistry.isRegistered(manifest.id))
+
+        // State update should work
+        noPersistenceRegistry.updateState(manifest.id, PluginState.ENABLED)
+        val pluginInfo = noPersistenceRegistry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertEquals(PluginState.ENABLED, pluginInfo.state)
+
+        // Unregister should work
+        noPersistenceRegistry.unregister(manifest.id)
+        assertFalse(noPersistenceRegistry.isRegistered(manifest.id))
+    }
+
+    // Test 40: Multiple operations without persistence
+    @Test
+    fun testMultipleOperationsWithoutPersistence() = runTest {
+        val noPersistenceRegistry = PluginRegistry(null)
+
+        val plugins = List(5) { index ->
+            TestUtils.createTestManifest(id = "com.test.plugin-$index")
+        }
+
+        // Register all plugins
+        plugins.forEach { manifest ->
+            noPersistenceRegistry.register(manifest, TestUtils.createTestNamespace(manifest.id))
+        }
+
+        assertEquals(5, noPersistenceRegistry.getPluginCount())
+
+        // Update states
+        plugins.forEach { manifest ->
+            noPersistenceRegistry.updateState(manifest.id, PluginState.ENABLED)
+        }
+
+        val enabledPlugins = noPersistenceRegistry.getPluginsByState(PluginState.ENABLED)
+        assertEquals(5, enabledPlugins.size)
+
+        // Unregister half
+        plugins.take(2).forEach { manifest ->
+            noPersistenceRegistry.unregister(manifest.id)
+        }
+
+        assertEquals(3, noPersistenceRegistry.getPluginCount())
+    }
+
+    // ========================================
+    // EDGE CASES & STRESS TESTS
+    // ========================================
+
+    // Test 41: Concurrent registration with same ID
+    @Test
+    fun testConcurrentDuplicateRegistration() = runTest {
+        val manifest = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        // Launch multiple concurrent registrations with same ID
+        val jobs = List(10) {
+            launch {
+                registry.register(manifest, namespace)
+            }
+        }
+
+        jobs.forEach { it.join() }
+
+        // Only one should succeed
+        assertEquals(1, registry.getPluginCount(), "Only one registration should succeed")
+    }
+
+    // Test 42: Concurrent unregistration
+    @Test
+    fun testConcurrentUnregistration() = runTest {
+        val manifest = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        registry.register(manifest, TestUtils.createTestNamespace(manifest.id))
+
+        // Multiple concurrent unregister attempts
+        val jobs = List(5) {
+            launch {
+                registry.unregister(manifest.id)
+            }
+        }
+
+        jobs.forEach { it.join() }
+
+        // Should be safely unregistered without errors
+        assertFalse(registry.isRegistered(manifest.id))
+        assertEquals(0, registry.getPluginCount())
+    }
+
+    // Test 43: Concurrent read-write operations
+    @Test
+    fun testConcurrentReadWriteOperations() = runTest {
+        val manifest = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        registry.register(manifest, TestUtils.createTestNamespace(manifest.id))
+
+        val readJobs = List(10) {
+            launch {
+                repeat(5) {
+                    registry.getPlugin(manifest.id)
+                    registry.getAllPlugins()
+                    delay(1)
+                }
+            }
+        }
+
+        val writeJobs = List(5) { index ->
+            launch {
+                repeat(5) {
+                    val states = PluginState.values()
+                    registry.updateState(manifest.id, states[index % states.size])
+                    delay(1)
+                }
+            }
+        }
+
+        (readJobs + writeJobs).forEach { it.join() }
+
+        // Verify registry is still consistent
+        assertTrue(registry.isRegistered(manifest.id))
+        assertNotNull(registry.getPlugin(manifest.id))
+    }
+
+    // Test 44: Load from persistence rebuilds indexes
+    @Test
+    fun testLoadFromPersistenceRebuildsIndexes() = runTest {
+        // Add plugins to persistence
+        val pluginInfo1 = PluginRegistry.PluginInfo(
+            manifest = TestUtils.createTestManifest(id = "com.test.plugin-a", source = "THIRD_PARTY"),
+            state = PluginState.ENABLED,
+            loadedAt = System.currentTimeMillis(),
+            namespace = TestUtils.createTestNamespace("com.test.plugin-a")
+        )
+        val pluginInfo2 = PluginRegistry.PluginInfo(
+            manifest = TestUtils.createTestManifest(id = "com.test.plugin-b", source = "OFFICIAL"),
+            state = PluginState.INSTALLED,
+            loadedAt = System.currentTimeMillis(),
+            namespace = TestUtils.createTestNamespace("com.test.plugin-b")
+        )
+
+        persistence.savePlugin(pluginInfo1)
+        persistence.savePlugin(pluginInfo2)
+
+        // Create new registry and load
+        val newRegistry = PluginRegistry(persistence)
+        newRegistry.loadFromPersistence()
+
+        // Verify indexes are rebuilt correctly
+        val enabledPlugins = newRegistry.getPluginsByState(PluginState.ENABLED)
+        assertEquals(1, enabledPlugins.size)
+        assertEquals("com.test.plugin-a", enabledPlugins[0].manifest.id)
+
+        val installedPlugins = newRegistry.getPluginsByState(PluginState.INSTALLED)
+        assertEquals(1, installedPlugins.size)
+        assertEquals("com.test.plugin-b", installedPlugins[0].manifest.id)
+
+        val thirdPartyPlugins = newRegistry.getPluginsBySource(PluginSource.THIRD_PARTY)
+        assertEquals(1, thirdPartyPlugins.size)
+
+        val officialPlugins = newRegistry.getPluginsBySource(PluginSource.OFFICIAL)
+        assertEquals(1, officialPlugins.size)
+    }
+
+    // Test 45: State consistency across registry lifecycle
+    @Test
+    fun testStateConsistencyAcrossLifecycle() = runTest {
+        val manifest = TestUtils.createTestManifest(id = "com.test.plugin-a")
+        val namespace = TestUtils.createTestNamespace(manifest.id)
+
+        // Register and update state
+        registry.register(manifest, namespace)
+        registry.updateState(manifest.id, PluginState.ENABLED)
+
+        // Verify in-memory state
+        var pluginInfo = registry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertEquals(PluginState.ENABLED, pluginInfo.state)
+
+        // Create new registry from same persistence
+        val newRegistry = PluginRegistry(persistence)
+        newRegistry.loadFromPersistence()
+
+        // Verify persisted state was restored
+        pluginInfo = newRegistry.getPlugin(manifest.id)
+        assertNotNull(pluginInfo)
+        assertEquals(PluginState.ENABLED, pluginInfo.state)
+    }
+}

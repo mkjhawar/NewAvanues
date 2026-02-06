@@ -1,0 +1,898 @@
+package com.augmentalis.magiccode.plugins
+
+import com.augmentalis.magiccode.plugins.core.GrantStatus
+import com.augmentalis.magiccode.plugins.core.Permission
+import com.augmentalis.magiccode.plugins.core.PermissionDeniedException
+import com.augmentalis.magiccode.plugins.mocks.MockPermissionStorage
+import com.augmentalis.magiccode.plugins.mocks.MockPermissionUIHandler
+import kotlinx.coroutines.test.runTest
+import kotlin.test.*
+
+/**
+ * Comprehensive unit tests for PermissionManager.
+ *
+ * Test coverage (40 tests):
+ * - Permission requests (single, multiple, already granted, empty set)
+ * - Permission status checking (hasPermission, getGrantedPermissions, getDeniedPermissions)
+ * - Permission granting and persistence
+ * - Permission revocation (single, all, partial)
+ * - Permission groups and concurrent requests
+ * - UI handler integration (dialogs, rationale, settings)
+ * - Storage integration and persistence
+ * - Rationale display and handling
+ * - Don't ask again functionality
+ * - Edge cases (no UI handler, no persistence, cancelled dialogs)
+ * - Permission state transitions (GRANTED → REVOKED → GRANTED)
+ * - Multi-plugin isolation
+ * - Cache synchronization with persistence
+ * - Permission enforcement (enforcePermission)
+ * - All Permission enum values coverage
+ * - Error handling and failure scenarios
+ */
+class PermissionManagerTest {
+    private lateinit var manager: PermissionManager
+    private lateinit var mockUIHandler: MockPermissionUIHandler
+    private lateinit var mockStorage: MockPermissionStorage
+    private lateinit var persistence: PermissionPersistence
+
+    companion object {
+        private const val TEST_PLUGIN_ID = "com.test.plugin"
+        private const val TEST_PLUGIN_NAME = "Test Plugin"
+    }
+
+    @BeforeTest
+    fun setup() {
+        mockUIHandler = MockPermissionUIHandler()
+        mockStorage = MockPermissionStorage()
+        persistence = PermissionPersistence(mockStorage)
+        manager = PermissionManager(mockUIHandler, persistence)
+    }
+
+    @AfterTest
+    fun teardown() {
+        mockUIHandler.reset()
+        mockStorage.reset()
+    }
+
+    // Test 1: Request Permission - Granted
+    @Test
+    fun testRequestPermissionGranted() = runTest {
+        // Configure mock to grant permission
+        mockUIHandler.autoGrantAll = true
+
+        // Request permission
+        val granted = manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA)
+        )
+
+        // Verify result
+        assertTrue(granted)
+        assertEquals(1, mockUIHandler.requestCount)
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Verify persistence
+        val state = persistence.getPermissionState(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.GRANTED, state.permissions[Permission.CAMERA]?.status)
+    }
+
+    // Test 2: Request Permission - Denied
+    @Test
+    fun testRequestPermissionDenied() = runTest {
+        // Configure mock to deny permission
+        mockUIHandler.autoDenyAll = true
+
+        // Request permission
+        val granted = manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA)
+        )
+
+        // Verify result
+        assertFalse(granted)
+        assertEquals(1, mockUIHandler.requestCount)
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Verify persistence
+        val state = persistence.getPermissionState(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.DENIED, state.permissions[Permission.CAMERA]?.status)
+    }
+
+    // Test 3: Request Permission - Already Granted
+    @Test
+    fun testRequestPermissionAlreadyGranted() = runTest {
+        // Grant permission first
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Reset UI handler tracking
+        mockUIHandler.reset()
+        mockUIHandler.autoGrantAll = true
+
+        // Request same permission again
+        val granted = manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA)
+        )
+
+        // Should be granted without showing UI
+        assertTrue(granted)
+        assertEquals(0, mockUIHandler.requestCount)
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+    }
+
+    // Test 4: Check Permission Status
+    @Test
+    fun testCheckPermissionStatus() = runTest {
+        // Initially no permission
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Grant permission
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Check status
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.LOCATION))
+    }
+
+    // Test 5: Revoke Permission
+    @Test
+    fun testRevokePermission() = runTest {
+        // Grant permission
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Revoke permission
+        manager.revokePermission(TEST_PLUGIN_ID, Permission.CAMERA)
+
+        // Verify revoked
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Verify persistence
+        val state = persistence.getPermissionState(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.REVOKED, state.permissions[Permission.CAMERA]?.status)
+    }
+
+    // Test 6: Request Multiple Permissions - All Granted
+    @Test
+    fun testRequestMultiplePermissionsAllGranted() = runTest {
+        val permissions = setOf(Permission.CAMERA, Permission.LOCATION, Permission.MICROPHONE)
+
+        // Configure mock to grant all
+        mockUIHandler.autoGrantAll = true
+
+        // Request all permissions
+        val granted = manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, permissions)
+
+        // Verify all granted
+        assertTrue(granted)
+        permissions.forEach { permission ->
+            assertTrue(manager.hasPermission(TEST_PLUGIN_ID, permission))
+        }
+
+        // Verify request was made once with all permissions
+        assertEquals(1, mockUIHandler.requestCount)
+        assertEquals(permissions, mockUIHandler.lastRequest?.permissions)
+    }
+
+    // Test 7: Request Multiple Permissions - Some Granted
+    @Test
+    fun testRequestMultiplePermissionsSomeGranted() = runTest {
+        val permissions = setOf(Permission.CAMERA, Permission.LOCATION, Permission.MICROPHONE)
+
+        // Configure mock to grant only CAMERA and LOCATION
+        mockUIHandler.setPermissionResponses(
+            mapOf(
+                Permission.CAMERA to true,
+                Permission.LOCATION to true,
+                Permission.MICROPHONE to false
+            )
+        )
+
+        // Request all permissions
+        val granted = manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, permissions)
+
+        // Should return false since not all were granted
+        assertFalse(granted)
+
+        // Verify individual statuses
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.LOCATION))
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.MICROPHONE))
+    }
+
+    // Test 8: Persistent Permission Storage
+    @Test
+    fun testPersistentPermissionStorage() = runTest {
+        // Grant permissions
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA, Permission.LOCATION)
+        )
+
+        // Create new manager with same persistence (simulating app restart)
+        val newManager = PermissionManager(mockUIHandler, persistence)
+        newManager.initialize()
+
+        // Permissions should still be available
+        assertTrue(newManager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertTrue(newManager.hasPermission(TEST_PLUGIN_ID, Permission.LOCATION))
+    }
+
+    // Test 9: Get Granted Permissions
+    @Test
+    fun testGetGrantedPermissions() = runTest {
+        // Grant some permissions
+        mockUIHandler.autoGrantAll = true
+        val requestedPermissions = setOf(Permission.CAMERA, Permission.LOCATION)
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, requestedPermissions)
+
+        // Get granted permissions
+        val grantedPermissions = manager.getGrantedPermissions(TEST_PLUGIN_ID)
+
+        // Verify
+        assertEquals(requestedPermissions, grantedPermissions)
+    }
+
+    // Test 10: Get Denied Permissions
+    @Test
+    fun testGetDeniedPermissions() = runTest {
+        // Deny some permissions
+        mockUIHandler.autoDenyAll = true
+        val requestedPermissions = setOf(Permission.CAMERA, Permission.LOCATION)
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, requestedPermissions)
+
+        // Get denied permissions
+        val deniedPermissions = manager.getDeniedPermissions(TEST_PLUGIN_ID)
+
+        // Verify
+        assertEquals(requestedPermissions, deniedPermissions)
+    }
+
+    // Test 11: Enforce Permission - Success
+    @Test
+    fun testEnforcePermissionSuccess() = runTest {
+        // Grant permission
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Should not throw
+        manager.enforcePermission(TEST_PLUGIN_ID, Permission.CAMERA)
+    }
+
+    // Test 12: Enforce Permission - Failure
+    @Test
+    fun testEnforcePermissionFailure() = runTest {
+        // Don't grant permission
+        mockUIHandler.autoDenyAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Should throw PermissionDeniedException
+        assertFailsWith<PermissionDeniedException> {
+            manager.enforcePermission(TEST_PLUGIN_ID, Permission.CAMERA)
+        }
+    }
+
+    // Test 13: Revoke All Permissions
+    @Test
+    fun testRevokeAllPermissions() = runTest {
+        // Grant multiple permissions
+        mockUIHandler.autoGrantAll = true
+        val permissions = setOf(Permission.CAMERA, Permission.LOCATION, Permission.MICROPHONE)
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, permissions)
+
+        // Verify all granted
+        permissions.forEach { permission ->
+            assertTrue(manager.hasPermission(TEST_PLUGIN_ID, permission))
+        }
+
+        // Revoke all
+        manager.revokeAllPermissions(TEST_PLUGIN_ID)
+
+        // Verify all revoked
+        permissions.forEach { permission ->
+            assertFalse(manager.hasPermission(TEST_PLUGIN_ID, permission))
+        }
+    }
+
+    // Test 14: Rationale Handling
+    @Test
+    fun testRationaleHandling() = runTest {
+        val rationales = mapOf(
+            Permission.CAMERA to "We need camera access to scan QR codes",
+            Permission.LOCATION to "We need location to show nearby places"
+        )
+
+        // Configure mock
+        mockUIHandler.autoGrantAll = true
+
+        // Request with rationales
+        manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            rationales.keys,
+            rationales
+        )
+
+        // Verify rationales were passed to UI
+        val lastRequest = mockUIHandler.lastRequest
+        assertNotNull(lastRequest)
+        assertEquals(rationales, lastRequest.rationales)
+    }
+
+    // Test 15: Show Rationale Dialog
+    @Test
+    fun testShowRationaleDialog() = runTest {
+        // Configure mock
+        mockUIHandler.rationaleDialogResult = true
+
+        // Show rationale
+        val result = manager.showRationale(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            "We need camera access to scan QR codes"
+        )
+
+        // Verify
+        assertTrue(result)
+        assertEquals(1, mockUIHandler.rationaleCount)
+
+        val rationaleRequest = mockUIHandler.lastRationaleRequest
+        assertNotNull(rationaleRequest)
+        assertEquals(TEST_PLUGIN_ID, rationaleRequest.pluginId)
+        assertEquals(Permission.CAMERA, rationaleRequest.permission)
+    }
+
+    // Test 16: Don't Ask Again
+    @Test
+    fun testDontAskAgain() = runTest {
+        // Deny with "don't ask again"
+        mockUIHandler.permissionDialogResult = PermissionResult(
+            granted = emptySet(),
+            denied = setOf(Permission.CAMERA),
+            dontAskAgain = setOf(Permission.CAMERA)
+        )
+
+        // First request
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Reset UI handler
+        mockUIHandler.reset()
+        mockUIHandler.autoGrantAll = true
+
+        // Second request - should not show UI due to "don't ask again"
+        val granted = manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA)
+        )
+
+        // Should not show UI
+        assertEquals(0, mockUIHandler.requestCount)
+        assertFalse(granted)
+    }
+
+    // Test 17: Permission Settings Dialog
+    @Test
+    fun testPermissionSettingsDialog() = runTest {
+        // Grant initial permissions
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA, Permission.LOCATION)
+        )
+
+        // Configure settings dialog to revoke CAMERA and add MICROPHONE
+        mockUIHandler.settingsDialogResult = mapOf(
+            Permission.CAMERA to false,
+            Permission.LOCATION to true,
+            Permission.MICROPHONE to true
+        )
+
+        // Show settings
+        val changed = manager.showPermissionSettings(TEST_PLUGIN_ID, TEST_PLUGIN_NAME)
+
+        // Verify changes were applied
+        assertTrue(changed)
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.LOCATION))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.MICROPHONE))
+    }
+
+    // Test 18: No UI Handler - Auto Deny
+    @Test
+    fun testNoUIHandlerAutoDeny() = runTest {
+        // Create manager without UI handler
+        val managerNoUI = PermissionManager(null, persistence)
+
+        // Request permission
+        val granted = managerNoUI.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA)
+        )
+
+        // Should be denied
+        assertFalse(granted)
+        assertFalse(managerNoUI.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+    }
+
+    // Test 19: No Persistence - Cache Only
+    @Test
+    fun testNoPersistenceCacheOnly() = runTest {
+        // Create manager without persistence
+        val managerNoPerst = PermissionManager(mockUIHandler, null)
+
+        // Grant permission
+        mockUIHandler.autoGrantAll = true
+        val granted = managerNoPerst.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA)
+        )
+
+        // Should work with cache
+        assertTrue(granted)
+        assertTrue(managerNoPerst.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+    }
+
+    // Test 20: Legacy Request Method
+    @Test
+    fun testLegacyRequestMethod() = runTest {
+        // Use legacy method (without plugin name and rationales)
+        mockUIHandler.autoGrantAll = true
+
+        val granted = manager.requestPermissions(TEST_PLUGIN_ID, setOf(Permission.CAMERA))
+
+        // Should work
+        assertTrue(granted)
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Plugin name should default to plugin ID
+        assertEquals(TEST_PLUGIN_ID, mockUIHandler.lastRequest?.pluginName)
+    }
+
+    // Test 21: Initialize from Persistence
+    @Test
+    fun testInitializeFromPersistence() = runTest {
+        // Add permission state directly to storage
+        val permissionRecord = PermissionRecord(
+            permission = Permission.CAMERA,
+            status = GrantStatus.GRANTED,
+            grantedAt = System.currentTimeMillis(),
+            deniedAt = null,
+            dontAskAgain = false,
+            askedCount = 1
+        )
+
+        val state = PluginPermissionState(
+            pluginId = TEST_PLUGIN_ID,
+            pluginName = TEST_PLUGIN_NAME,
+            permissions = mapOf(Permission.CAMERA to permissionRecord),
+            lastUpdated = System.currentTimeMillis()
+        )
+
+        mockStorage.addState(state)
+
+        // Create new manager and initialize
+        val newManager = PermissionManager(mockUIHandler, persistence)
+        newManager.initialize()
+
+        // Permission should be available from cache
+        assertTrue(newManager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+    }
+
+    // Test 22: Concurrent Permission Requests
+    @Test
+    fun testConcurrentPermissionRequests() = runTest {
+        mockUIHandler.autoGrantAll = true
+
+        // Request multiple permissions concurrently
+        val permissions = setOf(
+            Permission.CAMERA,
+            Permission.LOCATION,
+            Permission.MICROPHONE,
+            Permission.STORAGE_READ
+        )
+
+        val granted = manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, permissions)
+
+        // All should be granted
+        assertTrue(granted)
+        permissions.forEach { permission ->
+            assertTrue(manager.hasPermission(TEST_PLUGIN_ID, permission))
+        }
+    }
+
+    // Test 23: Mixed Already Granted and New Permissions
+    @Test
+    fun testMixedAlreadyGrantedAndNewPermissions() = runTest {
+        // Grant CAMERA first
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Reset UI tracking
+        mockUIHandler.reset()
+        mockUIHandler.autoGrantAll = true
+
+        // Request CAMERA (already granted) and LOCATION (new)
+        val granted = manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA, Permission.LOCATION)
+        )
+
+        // Should only show UI for LOCATION
+        assertEquals(1, mockUIHandler.requestCount)
+        assertEquals(setOf(Permission.LOCATION), mockUIHandler.lastRequest?.permissions)
+
+        // Both should be granted
+        assertTrue(granted)
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.LOCATION))
+    }
+
+    // Test 24: Permission Request Tracking
+    @Test
+    fun testPermissionRequestTracking() = runTest {
+        // First request - denied
+        mockUIHandler.autoDenyAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Second request - granted
+        mockUIHandler.reset()
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Verify asked count
+        val state = persistence.getPermissionState(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        val record = state.permissions[Permission.CAMERA]
+        assertNotNull(record)
+        assertEquals(2, record.askedCount)
+    }
+
+    // Test 25: Empty Permission Set
+    @Test
+    fun testEmptyPermissionSet() = runTest {
+        // Request empty set
+        val granted = manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            emptySet()
+        )
+
+        // Should return true (vacuously true - all zero requested permissions are granted)
+        assertTrue(granted)
+
+        // UI should not be shown
+        assertEquals(0, mockUIHandler.requestCount)
+    }
+
+    // Test 26: Settings Dialog Cancelled
+    @Test
+    fun testSettingsDialogCancelled() = runTest {
+        // Grant initial permissions
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA, Permission.LOCATION)
+        )
+
+        // Configure settings dialog to return null (cancelled)
+        mockUIHandler.settingsDialogResult = null
+
+        // Show settings
+        val changed = manager.showPermissionSettings(TEST_PLUGIN_ID, TEST_PLUGIN_NAME)
+
+        // No changes should be applied
+        assertFalse(changed)
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.LOCATION))
+    }
+
+    // Test 27: Settings Dialog With No Changes
+    @Test
+    fun testSettingsDialogWithNoChanges() = runTest {
+        // Grant initial permissions
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA, Permission.LOCATION)
+        )
+
+        // Configure settings dialog to return same state
+        mockUIHandler.settingsDialogResult = mapOf(
+            Permission.CAMERA to true,
+            Permission.LOCATION to true
+        )
+
+        // Show settings
+        val changed = manager.showPermissionSettings(TEST_PLUGIN_ID, TEST_PLUGIN_NAME)
+
+        // No actual changes
+        assertFalse(changed)
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.LOCATION))
+    }
+
+    // Test 28: Permission State Transitions
+    @Test
+    fun testPermissionStateTransitions() = runTest {
+        // Initial state: GRANTED
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        var state = persistence.getPermissionState(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.GRANTED, state.permissions[Permission.CAMERA]?.status)
+
+        // Transition to REVOKED
+        manager.revokePermission(TEST_PLUGIN_ID, Permission.CAMERA)
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        state = persistence.getPermissionState(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.REVOKED, state.permissions[Permission.CAMERA]?.status)
+
+        // Transition to GRANTED again
+        mockUIHandler.reset()
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        state = persistence.getPermissionState(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.GRANTED, state.permissions[Permission.CAMERA]?.status)
+    }
+
+    // Test 29: Multiple Plugins Isolation
+    @Test
+    fun testMultiplePluginsIsolation() = runTest {
+        val plugin1 = "com.test.plugin1"
+        val plugin2 = "com.test.plugin2"
+
+        // Grant CAMERA to plugin1
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(plugin1, "Plugin 1", setOf(Permission.CAMERA))
+
+        // Grant LOCATION to plugin2
+        mockUIHandler.reset()
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(plugin2, "Plugin 2", setOf(Permission.LOCATION))
+
+        // Verify isolation
+        assertTrue(manager.hasPermission(plugin1, Permission.CAMERA))
+        assertFalse(manager.hasPermission(plugin1, Permission.LOCATION))
+
+        assertFalse(manager.hasPermission(plugin2, Permission.CAMERA))
+        assertTrue(manager.hasPermission(plugin2, Permission.LOCATION))
+
+        // Revoke from plugin1 shouldn't affect plugin2
+        manager.revokePermission(plugin1, Permission.CAMERA)
+        assertFalse(manager.hasPermission(plugin1, Permission.CAMERA))
+        assertTrue(manager.hasPermission(plugin2, Permission.LOCATION))
+    }
+
+    // Test 30: Permission Cache Synchronization
+    @Test
+    fun testPermissionCacheSynchronization() = runTest {
+        // Grant permission
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+
+        // Check permission is in cache (fast path)
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Revoke permission
+        manager.revokePermission(TEST_PLUGIN_ID, Permission.CAMERA)
+
+        // Cache should be updated immediately
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Persistence should also be updated
+        val state = persistence.getPermissionState(TEST_PLUGIN_ID)
+        assertNotNull(state)
+        assertEquals(GrantStatus.REVOKED, state.permissions[Permission.CAMERA]?.status)
+    }
+
+    // Test 31: Show Rationale Without UI Handler
+    @Test
+    fun testShowRationaleWithoutUIHandler() = runTest {
+        // Create manager without UI handler
+        val managerNoUI = PermissionManager(null, persistence)
+
+        // Show rationale should return false
+        val result = managerNoUI.showRationale(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            Permission.CAMERA,
+            "We need camera access"
+        )
+
+        assertFalse(result)
+    }
+
+    // Test 32: Show Settings Without UI Handler
+    @Test
+    fun testShowSettingsWithoutUIHandler() = runTest {
+        // Create manager without UI handler
+        val managerNoUI = PermissionManager(null, persistence)
+
+        // Show settings should return false
+        val result = managerNoUI.showPermissionSettings(TEST_PLUGIN_ID, TEST_PLUGIN_NAME)
+
+        assertFalse(result)
+    }
+
+    // Test 33: Request Permission After Revocation
+    @Test
+    fun testRequestPermissionAfterRevocation() = runTest {
+        // Grant permission
+        mockUIHandler.autoGrantAll = true
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, setOf(Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Revoke permission
+        manager.revokePermission(TEST_PLUGIN_ID, Permission.CAMERA)
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+
+        // Request again - should show UI
+        mockUIHandler.reset()
+        mockUIHandler.autoGrantAll = true
+        val granted = manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            setOf(Permission.CAMERA)
+        )
+
+        // Should show UI and grant
+        assertTrue(granted)
+        assertEquals(1, mockUIHandler.requestCount)
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+    }
+
+    // Test 34: Get Granted Permissions When Empty
+    @Test
+    fun testGetGrantedPermissionsWhenEmpty() = runTest {
+        // Get granted permissions for plugin with no permissions
+        val granted = manager.getGrantedPermissions("unknown.plugin")
+
+        // Should return empty set
+        assertTrue(granted.isEmpty())
+    }
+
+    // Test 35: Get Denied Permissions When Empty
+    @Test
+    fun testGetDeniedPermissionsWhenEmpty() = runTest {
+        // Get denied permissions for plugin with no permissions
+        val denied = manager.getDeniedPermissions("unknown.plugin")
+
+        // Should return empty set
+        assertTrue(denied.isEmpty())
+    }
+
+    // Test 36: Initialize Empty Manager
+    @Test
+    fun testInitializeEmptyManager() = runTest {
+        // Create fresh manager
+        val freshManager = PermissionManager(mockUIHandler, persistence)
+
+        // Initialize with no data
+        freshManager.initialize()
+
+        // Should not fail and should have no permissions
+        assertFalse(freshManager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+    }
+
+    // Test 37: All Permissions Enum Coverage
+    @Test
+    fun testAllPermissionsEnumCoverage() = runTest {
+        // Request all available permissions
+        val allPermissions = Permission.values().toSet()
+
+        mockUIHandler.autoGrantAll = true
+        val granted = manager.requestPermissions(
+            TEST_PLUGIN_ID,
+            TEST_PLUGIN_NAME,
+            allPermissions
+        )
+
+        // All should be granted
+        assertTrue(granted)
+        allPermissions.forEach { permission ->
+            assertTrue(manager.hasPermission(TEST_PLUGIN_ID, permission))
+        }
+
+        // Verify count
+        assertEquals(allPermissions.size, manager.getGrantedPermissions(TEST_PLUGIN_ID).size)
+    }
+
+    // Test 38: Partial Revocation
+    @Test
+    fun testPartialRevocation() = runTest {
+        // Grant multiple permissions
+        mockUIHandler.autoGrantAll = true
+        val permissions = setOf(
+            Permission.CAMERA,
+            Permission.LOCATION,
+            Permission.MICROPHONE,
+            Permission.STORAGE_READ
+        )
+        manager.requestPermissions(TEST_PLUGIN_ID, TEST_PLUGIN_NAME, permissions)
+
+        // Revoke only some permissions
+        manager.revokePermission(TEST_PLUGIN_ID, Permission.CAMERA)
+        manager.revokePermission(TEST_PLUGIN_ID, Permission.MICROPHONE)
+
+        // Verify partial revocation
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.CAMERA))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.LOCATION))
+        assertFalse(manager.hasPermission(TEST_PLUGIN_ID, Permission.MICROPHONE))
+        assertTrue(manager.hasPermission(TEST_PLUGIN_ID, Permission.STORAGE_READ))
+
+        // Verify granted set
+        val granted = manager.getGrantedPermissions(TEST_PLUGIN_ID)
+        assertEquals(2, granted.size)
+        assertTrue(Permission.LOCATION in granted)
+        assertTrue(Permission.STORAGE_READ in granted)
+    }
+
+    // Test 39: Permission Result Properties
+    @Test
+    fun testPermissionResultProperties() = runTest {
+        // Test allGranted property
+        val allGrantedResult = PermissionResult(
+            granted = setOf(Permission.CAMERA, Permission.LOCATION),
+            denied = emptySet()
+        )
+        assertTrue(allGrantedResult.allGranted)
+        assertTrue(allGrantedResult.anyGranted)
+
+        // Test partial grant
+        val partialResult = PermissionResult(
+            granted = setOf(Permission.CAMERA),
+            denied = setOf(Permission.LOCATION)
+        )
+        assertFalse(partialResult.allGranted)
+        assertTrue(partialResult.anyGranted)
+
+        // Test all denied
+        val allDeniedResult = PermissionResult(
+            granted = emptySet(),
+            denied = setOf(Permission.CAMERA, Permission.LOCATION)
+        )
+        assertTrue(allDeniedResult.allGranted) // No denied means all granted (of the granted set)
+        assertFalse(allDeniedResult.anyGranted)
+    }
+
+    // Test 40: Persistence Load Failure Handling
+    @Test
+    fun testPersistenceLoadFailureHandling() = runTest {
+        // Configure storage to fail on loads
+        mockStorage.shouldFailLoads = true
+
+        // Create new manager with failing storage
+        val failingManager = PermissionManager(mockUIHandler, persistence)
+
+        // Initialize should not crash
+        assertFailsWith<RuntimeException> {
+            failingManager.initialize()
+        }
+    }
+}

@@ -1,0 +1,59 @@
+package com.augmentalis.magiccode.plugins
+
+/**
+ * Mock implementation of TrustStore for testing.
+ *
+ * Allows control over trusted publisher keys for testing.
+ */
+class MockTrustStore {
+    private val trustedKeys = mutableMapOf<String, String>()
+
+    /**
+     * Add a trusted publisher public key.
+     */
+    fun addTrustedKey(publisherId: String, publicKeyPath: String) {
+        trustedKeys[publisherId] = publicKeyPath
+    }
+
+    /**
+     * Remove a trusted publisher.
+     */
+    fun removeTrustedKey(publisherId: String): Boolean {
+        return trustedKeys.remove(publisherId) != null
+    }
+
+    /**
+     * Get public key path for a trusted publisher.
+     */
+    fun getPublicKeyPath(publisherId: String): String? {
+        return trustedKeys[publisherId]
+    }
+
+    /**
+     * Check if publisher is trusted.
+     */
+    fun isTrusted(publisherId: String): Boolean {
+        return trustedKeys.containsKey(publisherId)
+    }
+
+    /**
+     * Get all trusted publishers.
+     */
+    fun getTrustedPublishers(): Set<String> {
+        return trustedKeys.keys.toSet()
+    }
+
+    /**
+     * Clear all trusted keys.
+     */
+    fun clear() {
+        trustedKeys.clear()
+    }
+
+    /**
+     * Reset mock state.
+     */
+    fun reset() {
+        trustedKeys.clear()
+    }
+}

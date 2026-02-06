@@ -1,0 +1,137 @@
+{
+  "name": "DarkTheme",
+  "description": "Modern dark theme for VoiceOS applications",
+  "colors": {
+    "primary": "#2196F3",
+    "primaryVariant": "#1976D2",
+    "secondary": "#FF5722",
+    "secondaryVariant": "#E64A19",
+    "background": "#121212",
+    "surface": "#1E1E1E",
+    "error": "#CF6679",
+    "onPrimary": "#FFFFFF",
+    "onSecondary": "#000000",
+    "onBackground": "#FFFFFF",
+    "onSurface": "#FFFFFF",
+    "onError": "#000000",
+    "success": "#4CAF50",
+    "warning": "#FFC107",
+    "info": "#2196F3",
+    "textPrimary": "#FFFFFF",
+    "textSecondary": "#B3B3B3",
+    "textDisabled": "#666666",
+    "divider": "#333333"
+  },
+  "typography": {
+    "h1": {
+      "fontFamily": "Roboto",
+      "fontSize": 96,
+      "fontWeight": "300",
+      "lineHeight": 1.2
+    },
+    "h2": {
+      "fontFamily": "Roboto",
+      "fontSize": 60,
+      "fontWeight": "300",
+      "lineHeight": 1.2
+    },
+    "h3": {
+      "fontFamily": "Roboto",
+      "fontSize": 48,
+      "fontWeight": "400",
+      "lineHeight": 1.2
+    },
+    "h4": {
+      "fontFamily": "Roboto",
+      "fontSize": 34,
+      "fontWeight": "400",
+      "lineHeight": 1.2
+    },
+    "h5": {
+      "fontFamily": "Roboto",
+      "fontSize": 24,
+      "fontWeight": "400",
+      "lineHeight": 1.2
+    },
+    "h6": {
+      "fontFamily": "Roboto",
+      "fontSize": 20,
+      "fontWeight": "500",
+      "lineHeight": 1.2
+    },
+    "body1": {
+      "fontFamily": "Roboto",
+      "fontSize": 16,
+      "fontWeight": "400",
+      "lineHeight": 1.5
+    },
+    "body2": {
+      "fontFamily": "Roboto",
+      "fontSize": 14,
+      "fontWeight": "400",
+      "lineHeight": 1.5
+    },
+    "button": {
+      "fontFamily": "Roboto",
+      "fontSize": 14,
+      "fontWeight": "500",
+      "lineHeight": 1.5
+    },
+    "caption": {
+      "fontFamily": "Roboto",
+      "fontSize": 12,
+      "fontWeight": "400",
+      "lineHeight": 1.5
+    },
+    "overline": {
+      "fontFamily": "Roboto",
+      "fontSize": 10,
+      "fontWeight": "400",
+      "lineHeight": 1.5
+    }
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "xxl": 48
+  },
+  "shapes": {
+    "button": {
+      "cornerRadius": 8,
+      "borderWidth": 0
+    },
+    "card": {
+      "cornerRadius": 12,
+      "borderWidth": 0
+    },
+    "dialog": {
+      "cornerRadius": 16,
+      "borderWidth": 0
+    },
+    "chip": {
+      "cornerRadius": 16,
+      "borderWidth": 1,
+      "borderColor": "#333333"
+    },
+    "textField": {
+      "cornerRadius": 8,
+      "borderWidth": 1,
+      "borderColor": "#333333"
+    }
+  },
+  "elevation": {
+    "none": 0,
+    "low": 2,
+    "medium": 4,
+    "high": 8,
+    "highest": 16
+  },
+  "animation": {
+    "fast": 150,
+    "normal": 300,
+    "slow": 500
+  }
+}

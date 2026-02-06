@@ -134,42 +134,42 @@ include(":Modules:WebAvanue")            // Merged flat structure: data + UI in 
 // Rpc - Cross-platform RPC module
 include(":Modules:Rpc")                  // Root module with KMP + Wire
 
-// AvaMagic Modules
-include(":Modules:AvaMagic:MagicTools:LanguageServer")  // AVA Language Server (LSP)
-include(":Modules:AvaMagic:AVACode")                    // Kotlin Builder Functions (DSL)
-include(":Modules:AvaMagic:AVURuntime")                 // AVU file parsing/processing
+// AvanueUI Core & Base Types (promoted from AvaMagic/AvaUI — 2026-02-07)
+include(":Modules:AvanueUI:Core")                       // Base types, interfaces
+include(":Modules:AvanueUI:CoreTypes")                  // Shared type definitions
+include(":Modules:AvanueUI:Foundation")                 // Foundation components
+include(":Modules:AvanueUI:Theme")                      // Theme system
+include(":Modules:AvanueUI:ThemeBridge")                // Theme conversion utilities
+include(":Modules:AvanueUI:DesignSystem")               // Design tokens
+include(":Modules:AvanueUI:StateManagement")            // State management
+include(":Modules:AvanueUI:UIConvertor")                // UI conversion utilities
 
-// AvaUI Core & Base Types
-include(":Modules:AvaMagic:AvaUI:Core")                 // Base types, interfaces
-include(":Modules:AvaMagic:AvaUI:CoreTypes")            // Shared type definitions
-include(":Modules:AvaMagic:AvaUI:Foundation")           // Foundation components
-include(":Modules:AvaMagic:AvaUI:Theme")                // Theme system
-include(":Modules:AvaMagic:AvaUI:ThemeBridge")          // Theme conversion utilities
-include(":Modules:AvaMagic:AvaUI:DesignSystem")         // Design tokens
-include(":Modules:AvaMagic:AvaUI:StateManagement")      // State management
-include(":Modules:AvaMagic:AvaUI:UIConvertor")          // UI conversion utilities
+// AvanueUI Component Modules
+include(":Modules:AvanueUI:Input")                      // Input components
+include(":Modules:AvanueUI:Display")                    // Display components
+include(":Modules:AvanueUI:Feedback")                   // Feedback components
+include(":Modules:AvanueUI:Layout")                     // Layout components
+include(":Modules:AvanueUI:Navigation")                 // Navigation components
+include(":Modules:AvanueUI:Floating")                   // Floating components
+include(":Modules:AvanueUI:Data")                       // Data components
+include(":Modules:AvanueUI:Voice")                      // Voice UI components
 
-// AvaUI Component Modules
-include(":Modules:AvaMagic:AvaUI:Input")                // Input components
-include(":Modules:AvaMagic:AvaUI:Display")              // Display components
-include(":Modules:AvaMagic:AvaUI:Feedback")             // Feedback components
-include(":Modules:AvaMagic:AvaUI:Layout")               // Layout components
-include(":Modules:AvaMagic:AvaUI:Navigation")           // Navigation components
-include(":Modules:AvaMagic:AvaUI:Floating")             // Floating components
-include(":Modules:AvaMagic:AvaUI:Data")                 // Data components
-include(":Modules:AvaMagic:AvaUI:Voice")                // Voice UI components
+// AvanueUI Infrastructure
+include(":Modules:AvanueUI:Adapters")                   // Platform adapters
+include(":Modules:AvanueUI:TemplateLibrary")            // Component templates
+include(":Modules:AvanueUI:VoiceCommandRouter")         // Voice command routing
+include(":Modules:AvanueUI:ARGScanner")                 // ARG scanning utilities
+include(":Modules:AvanueUI:AssetManager")               // Asset management
 
-// AvaUI Infrastructure
-include(":Modules:AvaMagic:AvaUI:Adapters")             // Platform adapters
-include(":Modules:AvaMagic:AvaUI:TemplateLibrary")      // Component templates
-include(":Modules:AvaMagic:AvaUI:VoiceCommandRouter")   // Voice command routing
-include(":Modules:AvaMagic:IPC")                         // Unified AVU IPC Protocol
-include(":Modules:AvaMagic:AvaUI:ARGScanner")           // ARG scanning utilities
-include(":Modules:AvaMagic:AvaUI:AssetManager")         // Asset management
+// AvanueUI Platform Renderers
+include(":Modules:AvanueUI:Renderers:Android")          // Android Compose renderer
+include(":Modules:AvanueUI:AvanueUIVoiceHandlers")      // Voice command handlers for AvanueUI components
 
-// AvaUI Platform Renderers
-include(":Modules:AvaMagic:AvaUI:Renderers:Android")    // Android Compose renderer
-include(":Modules:AvaMagic:MagicVoiceHandlers")          // Voice command handlers for AVAMagic UI
+// Promoted from AvaMagic to top-level (2026-02-07)
+include(":Modules:AVACode")                             // Kotlin Builder Functions (DSL)
+include(":Modules:IPC")                                 // AVU IPC Protocol (standby — gRPC via :Modules:Rpc preferred)
+include(":Modules:AvanueUI:AvanueLanguageServer")        // AvanueUI Language Server (LSP for .magicui / .avp DSL files)
+// include(":Modules:AvaMagic:AVURuntime")              // ARCHIVED (2026-02-07) — empty stub, no source code
 
 // Cursor and Eye Tracking Modules (KMP)
 include(":Modules:VoiceCursor")                    // KMP cursor control, dwell click, filtering

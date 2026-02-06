@@ -75,7 +75,7 @@ dependencies {
     
     // VOS4 Modules
     implementation(project(":Modules:SpeechRecognition"))
-    // implementation(project(":Modules:AvaMagic:AvaUI:Voice"))  // DISABLED: Module path mapping issue
+    // implementation(project(":Modules:AvanueUI:Voice"))  // DISABLED: Module path mapping issue
     // implementation(project(":Modules:VoiceOS:managers:VoiceDataManager"))  // DISABLED: Depends on SQLDelight
     implementation(project(":Modules:Localization"))  // KMP LocalizationManager module
     
