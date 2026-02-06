@@ -57,8 +57,8 @@ kotlin {
                 // AVID - Avanues Voice ID unified identifier system
                 implementation(project(":Modules:AVID"))
 
-                // AVUCodec - Avanues Universal Codec (for ACD parsing)
-                implementation(project(":Modules:AVUCodec"))
+                // AVU - Avanues Universal Codec (for ACD parsing)
+                implementation(project(":Modules:AVU"))
 
                 // Database - Unified KMP database
                 implementation(project(":Modules:Database"))

@@ -1,6 +1,6 @@
 package com.augmentalis.magiccode.plugins.core
 
-import com.augmentalis.avucodec.core.AvuEscape
+import com.avanues.avu.codec.core.AvuEscape
 
 /**
  * AVU Manifest Parser - Parses Avanues Universal Format plugin manifests.

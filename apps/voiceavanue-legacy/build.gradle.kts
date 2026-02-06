@@ -136,8 +136,8 @@ dependencies {
     // AVID - Avanues Voice ID system
     implementation(project(":Modules:AVID"))
 
-    // AVUCodec - Universal codec for ACD parsing
-    implementation(project(":Modules:AVUCodec"))
+    // AVU - Universal codec for ACD parsing
+    implementation(project(":Modules:AVU"))
 
     // SpeechRecognition - KMP speech module
     implementation(project(":Modules:SpeechRecognition"))

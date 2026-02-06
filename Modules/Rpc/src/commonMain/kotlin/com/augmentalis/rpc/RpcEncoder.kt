@@ -20,7 +20,7 @@
  */
 package com.augmentalis.rpc
 
-import com.augmentalis.avucodec.core.AvuEscape
+import com.avanues.avu.codec.core.AvuEscape
 
 /**
  * Cross-platform encoder for RPC Protocol

@@ -53,7 +53,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                api(project(":Modules:AVUCodec"))
+                api(project(":Modules:AVU"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.wire.runtime)

@@ -1,6 +1,6 @@
 package com.augmentalis.avamagic.ipc
 
-import com.augmentalis.avucodec.core.AvuEscape
+import com.avanues.avu.codec.core.AvuEscape
 
 /**
  * AVU RPC Format Parser

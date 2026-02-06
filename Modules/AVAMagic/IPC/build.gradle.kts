@@ -28,8 +28,8 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
 
-            // AVUCodec - KMP AVU Protocol encoder/decoder (re-exported to consumers)
-            api(project(":Modules:AVUCodec"))
+            // AVU - KMP AVU Protocol encoder/decoder (re-exported to consumers)
+            api(project(":Modules:AVU"))
         }
 
         commonTest.dependencies {

@@ -15,7 +15,7 @@
 
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.avucodec.AVUDecoder
+import com.avanues.avu.codec.AVUDecoder
 
 /**
  * Interface for platform-specific asset reading.

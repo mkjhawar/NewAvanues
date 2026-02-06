@@ -1,7 +1,7 @@
 package com.augmentalis.avamagic.ipc
 
-import com.augmentalis.avucodec.AVUEncoder as BaseEncoder
-import com.augmentalis.avucodec.AVUDecoder as BaseDecoder
+import com.avanues.avu.codec.AVUEncoder as BaseEncoder
+import com.avanues.avu.codec.AVUDecoder as BaseDecoder
 
 /**
  * IPC Encoder - Wrapper around AVUEncoder for AvaMagic module.
@@ -72,7 +72,7 @@ object IPCEncoder {
 
 /**
  * Type alias for backward compatibility.
- * Prefer using com.augmentalis.avucodec.AVUEncoder directly.
+ * Prefer using com.avanues.avu.codec.AVUEncoder directly.
  */
 typealias AVUEncoder = BaseEncoder
 
@@ -84,7 +84,7 @@ typealias RpcEncoder = BaseEncoder
 
 /**
  * Type alias for backward compatibility for decoder.
- * Prefer using com.augmentalis.avucodec.AVUDecoder directly.
+ * Prefer using com.avanues.avu.codec.AVUDecoder directly.
  */
 typealias AVUDecoder = BaseDecoder
 

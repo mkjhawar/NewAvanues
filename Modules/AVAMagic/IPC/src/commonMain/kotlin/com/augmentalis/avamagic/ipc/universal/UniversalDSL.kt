@@ -1,7 +1,7 @@
 package com.augmentalis.avamagic.ipc.universal
 
 import com.augmentalis.avamagic.ipc.*
-import com.augmentalis.avucodec.core.AvuEscape
+import com.avanues.avu.codec.core.AvuEscape
 
 /**
  * Avanues Universal DSL - Unified RPC Protocol

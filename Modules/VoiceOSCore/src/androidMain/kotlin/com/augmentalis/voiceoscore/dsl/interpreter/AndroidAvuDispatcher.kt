@@ -1,5 +1,9 @@
 package com.augmentalis.voiceoscore.dsl.interpreter
 
+import com.avanues.avu.dsl.interpreter.DispatchResult
+import com.avanues.avu.dsl.interpreter.IAvuDispatcher
+import com.avanues.avu.dsl.interpreter.IAvuEnvironment
+import com.avanues.avu.dsl.interpreter.StubEnvironment
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.HandlerRegistry
 import com.augmentalis.voiceoscore.HandlerResult
