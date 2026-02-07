@@ -32,13 +32,11 @@ kotlin {
             }
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        iosX64()
-        iosArm64()
-        iosSimulatorArm64()
+
+    // iOS targets
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
     // Desktop targets (JVM-based)
     jvm("desktop") {
@@ -59,7 +57,6 @@ kotlin {
     // macOS native
     macosX64()
     macosArm64()
-    }
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -97,27 +94,20 @@ kotlin {
                 implementation("com.jakewharton.timber:timber:5.0.1")
             }
         }
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any {
-                it.contains("ios", ignoreCase = true) || it.contains(
-                    "Framework",
-                    ignoreCase = true
-                )
+
+        // iOS shared source set
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                implementation("io.ktor:ktor-client-darwin:2.3.7")
             }
-        ) {
-            // iOS shared source set
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
-            val iosMain by creating {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-                dependencies {
-                    implementation("io.ktor:ktor-client-darwin:2.3.7")
-                }
-            }
+        }
 
         // Desktop (JVM) source set
         val desktopMain by getting {
@@ -161,7 +151,6 @@ kotlin {
         // Windows native
         val mingwX64Main by getting {
             dependsOn(commonMain)
-        }
         }
     }
 }
