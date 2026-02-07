@@ -139,7 +139,6 @@ include(":Modules:AvanueUI:Core")                       // Base types, interface
 include(":Modules:AvanueUI:CoreTypes")                  // Shared type definitions
 include(":Modules:AvanueUI:Foundation")                 // Foundation components
 include(":Modules:AvanueUI:Theme")                      // Theme system
-include(":Modules:AvanueUI:ThemeBridge")                // Theme conversion utilities
 include(":Modules:AvanueUI:DesignSystem")               // Design tokens
 include(":Modules:AvanueUI:StateManagement")            // State management
 include(":Modules:AvanueUI:UIConvertor")                // UI conversion utilities
@@ -156,7 +155,6 @@ include(":Modules:AvanueUI:Voice")                      // Voice UI components
 
 // AvanueUI Infrastructure
 include(":Modules:AvanueUI:Adapters")                   // Platform adapters
-include(":Modules:AvanueUI:TemplateLibrary")            // Component templates
 include(":Modules:AvanueUI:VoiceCommandRouter")         // Voice command routing
 include(":Modules:AvanueUI:ARGScanner")                 // ARG scanning utilities
 include(":Modules:AvanueUI:AssetManager")               // Asset management
