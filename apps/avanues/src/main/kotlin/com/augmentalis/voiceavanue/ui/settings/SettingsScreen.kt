@@ -11,6 +11,7 @@ package com.augmentalis.voiceavanue.ui.settings
 
 import android.content.Intent
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.augmentalis.voiceavanue.BuildConfig
 import com.augmentalis.voiceavanue.data.AvanuesSettings
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -66,10 +70,13 @@ class SettingsViewModel @Inject constructor(
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToDeveloperConsole: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val settings by viewModel.settings
+    var versionTapCount by remember { mutableIntStateOf(0) }
+    var lastTapTime by remember { mutableLongStateOf(0L) }
 
     Scaffold(
         topBar = {
@@ -227,15 +234,6 @@ fun SettingsScreen(
                 )
             }
 
-            item {
-                SettingsItem(
-                    title = "RPC Servers",
-                    subtitle = "VoiceOS: 50051, WebAvanue: 50055",
-                    icon = Icons.Default.Hub,
-                    onClick = { /* TODO: RPC server status */ }
-                )
-            }
-
             // About Section
             item {
                 SettingsSectionHeader(title = "About")
@@ -244,9 +242,31 @@ fun SettingsScreen(
             item {
                 SettingsItem(
                     title = "Version",
-                    subtitle = "1.0.0-alpha01",
+                    subtitle = BuildConfig.VERSION_NAME,
                     icon = Icons.Default.Info,
-                    onClick = { }
+                    onClick = {
+                        val now = System.currentTimeMillis()
+                        if (now - lastTapTime > 2000L) {
+                            versionTapCount = 1
+                        } else {
+                            versionTapCount++
+                        }
+                        lastTapTime = now
+
+                        when {
+                            versionTapCount >= 7 -> {
+                                versionTapCount = 0
+                                onNavigateToDeveloperConsole()
+                            }
+                            versionTapCount >= 4 -> {
+                                Toast.makeText(
+                                    context,
+                                    "${7 - versionTapCount} taps to developer console",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
                 )
             }
 

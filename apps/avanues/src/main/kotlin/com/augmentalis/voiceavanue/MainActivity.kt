@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import com.avanueui.AvanueTheme
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
+import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
 import com.augmentalis.voiceavanue.ui.settings.SettingsScreen
 import com.augmentalis.webavanue.BrowserApp
@@ -93,7 +94,8 @@ class MainActivity : ComponentActivity() {
 enum class AvanueMode(val route: String, val label: String) {
     VOICE("voice_home", "VoiceAvanue"),
     BROWSER("browser", "WebAvanue"),
-    SETTINGS("settings", "Settings")
+    SETTINGS("settings", "Settings"),
+    DEVELOPER_CONSOLE("developer_console", "Developer Console")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
 }
 
@@ -119,6 +121,15 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.VOICE) {
 
         composable(AvanueMode.SETTINGS.route) {
             SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDeveloperConsole = {
+                    navController.navigate(AvanueMode.DEVELOPER_CONSOLE.route)
+                }
+            )
+        }
+
+        composable(AvanueMode.DEVELOPER_CONSOLE.route) {
+            DeveloperConsoleScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
