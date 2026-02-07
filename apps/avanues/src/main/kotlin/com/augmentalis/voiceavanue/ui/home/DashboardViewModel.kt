@@ -1,0 +1,445 @@
+/**
+ * DashboardViewModel.kt - Dashboard state management for Avanues app
+ *
+ * Manages and observes:
+ * - Service states (VoiceAvanue, WebAvanue, VoiceCursor)
+ * - System permissions (accessibility, overlay, microphone, battery, notifications)
+ * - Last heard command
+ * - Command data (static categories, dynamic, custom, synonyms)
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ */
+
+package com.augmentalis.voiceavanue.ui.home
+
+import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.augmentalis.foundation.state.LastHeardCommand
+import com.augmentalis.foundation.state.ServiceState
+import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
+import com.augmentalis.voiceoscore.StaticCommandRegistry
+import com.augmentalis.voiceoscore.StaticCommand as CoreStaticCommand
+import com.augmentalis.voiceoscore.CommandCategory as CoreCommandCategory
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+/**
+ * ModuleStatus - Status of a single module/service on the dashboard.
+ */
+data class ModuleStatus(
+    val moduleId: String,
+    val displayName: String,
+    val description: String,
+    val state: ServiceState,
+    val metadata: Map<String, String> = emptyMap()
+)
+
+/**
+ * PermissionStatus - Current status of all required system permissions.
+ */
+data class PermissionStatus(
+    val accessibilityEnabled: Boolean = false,
+    val overlayEnabled: Boolean = false,
+    val microphoneGranted: Boolean = false,
+    val batteryOptimized: Boolean = false,
+    val notificationsEnabled: Boolean = false
+) {
+    val allGranted: Boolean
+        get() = accessibilityEnabled && overlayEnabled && microphoneGranted &&
+                batteryOptimized && notificationsEnabled
+}
+
+/**
+ * StaticCommand - A single static voice command with enable/disable toggle.
+ */
+data class StaticCommand(
+    val id: String,
+    val phrase: String,
+    val enabled: Boolean = true,
+    val synonyms: List<String> = emptyList(),
+    val description: String = ""
+)
+
+/**
+ * CustomCommandInfo - A user-created custom voice command.
+ */
+data class CustomCommandInfo(
+    val id: String,
+    val name: String,
+    val phrases: List<String>,
+    val isActive: Boolean = true
+)
+
+/**
+ * SynonymEntryInfo - A verb synonym mapping (canonical -> alternatives).
+ */
+data class SynonymEntryInfo(
+    val canonical: String,
+    val synonyms: List<String>
+)
+
+/**
+ * CommandCategory - A named group of static commands (e.g. Navigation, Text, Cursor).
+ */
+data class CommandCategory(
+    val name: String,
+    val commands: List<StaticCommand>
+)
+
+/**
+ * CommandsUiState - Complete command management state for the dashboard.
+ * Static categories contain actual command data; counts for other types
+ * until full command sources are wired in Task #19.
+ */
+data class CommandsUiState(
+    val staticCategories: List<CommandCategory> = emptyList(),
+    val customCommands: List<CustomCommandInfo> = emptyList(),
+    val synonymEntries: List<SynonymEntryInfo> = emptyList(),
+    val dynamicCommandCount: Int = 0
+) {
+    val staticCount: Int get() = staticCategories.sumOf { it.commands.size }
+    val customCount: Int get() = customCommands.size
+    val synonymCount: Int get() = synonymEntries.size
+    val dynamicCount: Int get() = dynamicCommandCount
+}
+
+/**
+ * DashboardUiState - Complete dashboard state combining all observable streams.
+ */
+data class DashboardUiState(
+    val modules: List<ModuleStatus> = emptyList(),
+    val permissions: PermissionStatus = PermissionStatus(),
+    val lastHeardCommand: LastHeardCommand = LastHeardCommand.NONE,
+    val commands: CommandsUiState = CommandsUiState()
+) {
+    val voiceAvanue: ModuleStatus? get() = modules.find { it.moduleId == "voiceavanue" }
+    val webAvanue: ModuleStatus? get() = modules.find { it.moduleId == "webavanue" }
+    val voiceCursor: ModuleStatus? get() = modules.find { it.moduleId == "voicecursor" }
+    val hasLastCommand: Boolean get() = lastHeardCommand.phrase.isNotEmpty()
+}
+
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    @ApplicationContext private val context: Context
+) : ViewModel() {
+
+    private val _modules = MutableStateFlow<List<ModuleStatus>>(emptyList())
+    private val _permissions = MutableStateFlow(PermissionStatus())
+    private val _lastHeardCommand = MutableStateFlow(LastHeardCommand.NONE)
+    private val _commands = MutableStateFlow(CommandsUiState())
+
+    val uiState: StateFlow<DashboardUiState> = combine(
+        _modules,
+        _permissions,
+        _lastHeardCommand,
+        _commands
+    ) { modules, perms, command, commands ->
+        DashboardUiState(
+            modules = modules,
+            permissions = perms,
+            lastHeardCommand = command,
+            commands = commands
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = DashboardUiState()
+    )
+
+    init {
+        refreshAll()
+        loadStaticCommands()
+        loadDefaultSynonyms()
+    }
+
+    /**
+     * Refreshes all state (modules + permissions).
+     * Call on lifecycle resume to pick up external changes.
+     */
+    fun refreshAll() {
+        refreshModuleStates()
+        refreshPermissions()
+    }
+
+    /**
+     * Loads static commands from VoiceOSCore's StaticCommandRegistry,
+     * grouped by CommandCategory.
+     */
+    private fun loadStaticCommands() {
+        val coreCommands = StaticCommandRegistry.all()
+        val grouped = coreCommands.groupBy { it.category }
+
+        val categories = grouped.mapNotNull { (coreCat, cmds) ->
+            if (cmds.isEmpty()) return@mapNotNull null
+            CommandCategory(
+                name = formatCategoryName(coreCat),
+                commands = cmds.map { cmd ->
+                    StaticCommand(
+                        id = cmd.actionType.name,
+                        phrase = cmd.primaryPhrase,
+                        enabled = true,
+                        synonyms = cmd.phrases.drop(1),
+                        description = cmd.description
+                    )
+                }
+            )
+        }
+
+        val current = _commands.value
+        _commands.value = current.copy(staticCategories = categories)
+    }
+
+    /**
+     * Loads default verb synonym mappings.
+     * These represent interchangeable action verbs used by the NLU engine.
+     */
+    private fun loadDefaultSynonyms() {
+        val entries = listOf(
+            SynonymEntryInfo("click", listOf("tap", "press", "push", "select", "hit")),
+            SynonymEntryInfo("scroll up", listOf("swipe up", "go up", "page up")),
+            SynonymEntryInfo("scroll down", listOf("swipe down", "go down", "page down")),
+            SynonymEntryInfo("scroll left", listOf("swipe left", "go left")),
+            SynonymEntryInfo("scroll right", listOf("swipe right", "go right")),
+            SynonymEntryInfo("open", listOf("launch", "start", "run", "show")),
+            SynonymEntryInfo("close", listOf("exit", "quit", "dismiss", "hide")),
+            SynonymEntryInfo("back", listOf("go back", "return", "previous")),
+            SynonymEntryInfo("home", listOf("go home", "home screen", "main screen")),
+            SynonymEntryInfo("search", listOf("find", "look for", "search for")),
+            SynonymEntryInfo("type", listOf("enter", "input", "write")),
+            SynonymEntryInfo("delete", listOf("remove", "erase", "clear")),
+            SynonymEntryInfo("copy", listOf("duplicate")),
+            SynonymEntryInfo("paste", listOf("insert")),
+            SynonymEntryInfo("undo", listOf("reverse", "take back")),
+            SynonymEntryInfo("long press", listOf("long click", "press and hold", "hold"))
+        )
+
+        val current = _commands.value
+        _commands.value = current.copy(synonymEntries = entries)
+    }
+
+    private fun formatCategoryName(category: CoreCommandCategory): String {
+        return category.name.lowercase()
+            .replace('_', ' ')
+            .replaceFirstChar { it.uppercaseChar() }
+    }
+
+    /**
+     * Refreshes module states by checking actual service/permission status.
+     */
+    private fun refreshModuleStates() {
+        viewModelScope.launch {
+            val accessibilityOn = VoiceAvanueAccessibilityService.isEnabled(context)
+            val overlayOn = Settings.canDrawOverlays(context)
+
+            val voiceAvanueState = if (accessibilityOn) {
+                ServiceState.Running(
+                    metadata = mapOf(
+                        "engine" to "Android STT",
+                        "language" to "en-US"
+                    )
+                )
+            } else {
+                ServiceState.Stopped
+            }
+
+            val webAvanueState = ServiceState.Ready(
+                metadata = mapOf(
+                    "browser" to "Available",
+                    "tabs" to "0"
+                )
+            )
+
+            val voiceCursorState = if (overlayOn) {
+                ServiceState.Ready(
+                    metadata = mapOf("overlay" to "Granted")
+                )
+            } else {
+                ServiceState.Stopped
+            }
+
+            _modules.value = listOf(
+                ModuleStatus(
+                    moduleId = "voiceavanue",
+                    displayName = "VoiceAvanue",
+                    description = "Voice command recognition and accessibility service",
+                    state = voiceAvanueState,
+                    metadata = (voiceAvanueState as? ServiceState.Running)?.metadata ?: emptyMap()
+                ),
+                ModuleStatus(
+                    moduleId = "webavanue",
+                    displayName = "WebAvanue",
+                    description = "Voice-controlled web browser",
+                    state = webAvanueState,
+                    metadata = webAvanueState.metadata
+                ),
+                ModuleStatus(
+                    moduleId = "voicecursor",
+                    displayName = "VoiceCursor",
+                    description = "Hands-free cursor control with voice and head tracking",
+                    state = voiceCursorState,
+                    metadata = (voiceCursorState as? ServiceState.Ready)?.metadata ?: emptyMap()
+                )
+            )
+        }
+    }
+
+    /**
+     * Refreshes permission states by checking actual system permissions.
+     */
+    fun refreshPermissions() {
+        viewModelScope.launch {
+            _permissions.value = PermissionStatus(
+                accessibilityEnabled = VoiceAvanueAccessibilityService.isEnabled(context),
+                overlayEnabled = Settings.canDrawOverlays(context),
+                microphoneGranted = checkMicrophonePermission(),
+                batteryOptimized = checkBatteryOptimization(),
+                notificationsEnabled = checkNotificationPermission()
+            )
+        }
+    }
+
+    /**
+     * Updates the last heard command display.
+     * Called from VoiceOSCore when a new command is processed.
+     */
+    fun updateLastCommand(command: LastHeardCommand) {
+        _lastHeardCommand.value = command
+    }
+
+    /**
+     * Toggles a static command's enabled state by ID.
+     * Updates in-memory state; DB persistence wired in Task #19.
+     */
+    fun toggleCommand(commandId: String) {
+        val current = _commands.value
+        _commands.value = current.copy(
+            staticCategories = current.staticCategories.map { category ->
+                category.copy(
+                    commands = category.commands.map { cmd ->
+                        if (cmd.id == commandId) cmd.copy(enabled = !cmd.enabled) else cmd
+                    }
+                )
+            }
+        )
+    }
+
+    /**
+     * Adds a user-created custom voice command.
+     */
+    fun addCustomCommand(name: String, phrases: List<String>) {
+        if (name.isBlank() || phrases.isEmpty()) return
+        val current = _commands.value
+        val newCommand = CustomCommandInfo(
+            id = "custom_${System.currentTimeMillis()}",
+            name = name,
+            phrases = phrases,
+            isActive = true
+        )
+        _commands.value = current.copy(
+            customCommands = current.customCommands + newCommand
+        )
+    }
+
+    /**
+     * Removes a custom command by ID.
+     */
+    fun removeCustomCommand(id: String) {
+        val current = _commands.value
+        _commands.value = current.copy(
+            customCommands = current.customCommands.filter { it.id != id }
+        )
+    }
+
+    /**
+     * Toggles a custom command's active state.
+     */
+    fun toggleCustomCommand(id: String) {
+        val current = _commands.value
+        _commands.value = current.copy(
+            customCommands = current.customCommands.map { cmd ->
+                if (cmd.id == id) cmd.copy(isActive = !cmd.isActive) else cmd
+            }
+        )
+    }
+
+    /**
+     * Adds a verb synonym mapping (canonical → alternatives).
+     * Merges with existing entry if canonical already exists.
+     */
+    fun addSynonym(canonical: String, synonyms: List<String>) {
+        if (canonical.isBlank() || synonyms.isEmpty()) return
+        val current = _commands.value
+        val existing = current.synonymEntries.toMutableList()
+        val existingIndex = existing.indexOfFirst {
+            it.canonical.equals(canonical, ignoreCase = true)
+        }
+        if (existingIndex >= 0) {
+            val entry = existing[existingIndex]
+            existing[existingIndex] = entry.copy(
+                synonyms = (entry.synonyms + synonyms).distinct()
+            )
+        } else {
+            existing.add(SynonymEntryInfo(canonical, synonyms))
+        }
+        _commands.value = current.copy(synonymEntries = existing)
+    }
+
+    /**
+     * Removes a verb synonym mapping by canonical name.
+     */
+    fun removeSynonym(canonical: String) {
+        val current = _commands.value
+        _commands.value = current.copy(
+            synonymEntries = current.synonymEntries.filter { it.canonical != canonical }
+        )
+    }
+
+    private fun checkMicrophonePermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun checkBatteryOptimization(): Boolean {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            ?: return false
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            powerManager.isIgnoringBatteryOptimizations(context.packageName)
+        } else {
+            true
+        }
+    }
+
+    private fun checkNotificationPermission(): Boolean {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                ?: return false
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            notificationManager.areNotificationsEnabled()
+        } else {
+            true
+        }
+    }
+}

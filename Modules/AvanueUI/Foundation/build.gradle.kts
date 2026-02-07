@@ -31,6 +31,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                implementation(project(":Modules:Foundation"))
                 implementation(project(":Modules:AvanueUI:DesignSystem"))
                 implementation(project(":Modules:AvanueUI:CoreTypes"))
                 implementation(project(":Modules:AvanueUI:StateManagement"))

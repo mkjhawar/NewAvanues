@@ -1,331 +1,937 @@
-/**
- * HomeScreen.kt - Main dashboard for AVA Unified
- *
- * Shows status of all modules and quick actions.
- *
- * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+/*
+ * Copyright (c) 2026 Manoj Jhawar, Aman Jhawar
+ * Intelligent Devices LLC
+ * All rights reserved.
  */
 
 package com.augmentalis.voiceavanue.ui.home
 
-import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.augmentalis.avamagic.ui.foundation.GlassCard
+import com.augmentalis.avamagic.ui.foundation.GlassChip
+import com.augmentalis.avamagic.ui.foundation.GlassLevel
+import com.augmentalis.avamagic.ui.foundation.GlassSurface
+import com.augmentalis.avamagic.ui.foundation.OceanDesignTokens
+import com.augmentalis.avamagic.ui.foundation.OceanTheme
+import com.augmentalis.avamagic.ui.foundation.PulseDot
+import com.augmentalis.avamagic.ui.foundation.StatusBadge
+import com.augmentalis.foundation.state.LastHeardCommand
+import com.augmentalis.foundation.state.ServiceState
 
+/**
+ * Aggregated callbacks for all command management actions.
+ */
+data class CommandCallbacks(
+    val onToggleStaticCommand: (String) -> Unit = {},
+    val onAddCustomCommand: (String, List<String>) -> Unit = { _, _ -> },
+    val onRemoveCustomCommand: (String) -> Unit = {},
+    val onToggleCustomCommand: (String) -> Unit = {},
+    val onAddSynonym: (String, List<String>) -> Unit = { _, _ -> },
+    val onRemoveSynonym: (String) -> Unit = {}
+)
+
+/**
+ * Main home screen for the Avanues app.
+ * Reactive Service Bus dashboard showing module status, system health, and commands.
+ * Landscape: 3-column no-scroll layout (smart glasses compatible).
+ * Portrait: fixed top + scrollable commands.
+ */
 @Composable
 fun HomeScreen(
     onNavigateToBrowser: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-
-    var accessibilityEnabled by remember { mutableStateOf(false) }
-    var overlayEnabled by remember { mutableStateOf(false) }
-
-    // Refresh permission status on every resume (not just once)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                accessibilityEnabled = VoiceAvanueAccessibilityService.isEnabled(context)
-                overlayEnabled = Settings.canDrawOverlays(context)
+                viewModel.refreshAll()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Avanues") },
-                actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Status Cards
-            item {
-                Text(
-                    text = "System Status",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            item {
-                StatusCard(
-                    title = "Accessibility Service",
-                    isEnabled = accessibilityEnabled,
-                    icon = Icons.Default.Accessibility,
-                    onEnable = {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    }
-                )
-            }
-
-            item {
-                StatusCard(
-                    title = "Overlay Permission",
-                    isEnabled = overlayEnabled,
-                    icon = Icons.Default.Layers,
-                    onEnable = {
-                        context.startActivity(
-                            Intent(
-                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                android.net.Uri.parse("package:${context.packageName}")
-                            )
-                        )
-                    }
-                )
-            }
-
-            // Quick Actions
-            item {
-                Text(
-                    text = "Quick Actions",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    QuickActionCard(
-                        title = "Browser",
-                        icon = Icons.Default.Language,
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToBrowser
-                    )
-
-                    QuickActionCard(
-                        title = "Voice",
-                        icon = Icons.Default.Mic,
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Start voice recognition */ }
-                    )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    QuickActionCard(
-                        title = "Cursor",
-                        icon = Icons.Default.TouchApp,
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Toggle cursor overlay */ }
-                    )
-
-                    QuickActionCard(
-                        title = "Learn",
-                        icon = Icons.Default.School,
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: Start app learning */ }
-                    )
-                }
-            }
-
-            // Module Info
-            item {
-                Text(
-                    text = "Active Modules",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            item {
-                ModuleInfoCard(
-                    title = "VoiceOSCore",
-                    description = "Voice commands, accessibility control",
-                    isActive = accessibilityEnabled
-                )
-            }
-
-            item {
-                ModuleInfoCard(
-                    title = "WebAvanue",
-                    description = "Voice-controlled browser",
-                    isActive = true
-                )
-            }
-
-            item {
-                ModuleInfoCard(
-                    title = "VoiceCursor",
-                    description = "Eye tracking, gaze control, dwell click",
-                    isActive = overlayEnabled
-                )
-            }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
-}
 
-@Composable
-fun StatusCard(
-    title: String,
-    isEnabled: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onEnable: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isEnabled)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.errorContainer
+    val commandCallbacks = remember(viewModel) {
+        CommandCallbacks(
+            onToggleStaticCommand = viewModel::toggleCommand,
+            onAddCustomCommand = viewModel::addCustomCommand,
+            onRemoveCustomCommand = viewModel::removeCustomCommand,
+            onToggleCustomCommand = viewModel::toggleCustomCommand,
+            onAddSynonym = viewModel::addSynonym,
+            onRemoveSynonym = viewModel::removeSynonym
         )
+    }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(OceanTheme.background)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = if (isEnabled)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.error
+        val isLandscape = maxWidth > maxHeight || maxWidth >= 600.dp
+
+        if (isLandscape) {
+            DashboardLandscape(
+                uiState = uiState,
+                onNavigateToBrowser = onNavigateToBrowser,
+                onNavigateToSettings = onNavigateToSettings,
+                callbacks = commandCallbacks
             )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Text(
-                    text = if (isEnabled) "Enabled" else "Disabled",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isEnabled)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.error
-                )
-            }
-
-            if (!isEnabled) {
-                Button(onClick = onEnable) {
-                    Text("Enable")
-                }
-            } else {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Enabled",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+        } else {
+            DashboardPortrait(
+                uiState = uiState,
+                onNavigateToBrowser = onNavigateToBrowser,
+                onNavigateToSettings = onNavigateToSettings,
+                callbacks = commandCallbacks
+            )
         }
     }
 }
 
+// ──────────────────────────── LANDSCAPE ────────────────────────────
+
 @Composable
-fun QuickActionCard(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
+private fun DashboardLandscape(
+    uiState: DashboardUiState,
+    onNavigateToBrowser: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    callbacks: CommandCallbacks
 ) {
-    Card(
-        modifier = modifier,
-        onClick = onClick
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(OceanDesignTokens.Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
     ) {
+        // Column 1: MODULES
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .weight(1f)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge
+                text = "MODULES",
+                style = MaterialTheme.typography.labelLarge,
+                color = OceanDesignTokens.Text.secondary
+            )
+            uiState.modules.forEach { module ->
+                ModuleCard(
+                    module = module,
+                    onClick = {
+                        when (module.moduleId) {
+                            "webavanue" -> onNavigateToBrowser()
+                            else -> onNavigateToSettings()
+                        }
+                    }
+                )
+            }
+        }
+
+        // Column 2: SYSTEM + LAST HEARD
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
+        ) {
+            Text(
+                text = "SYSTEM",
+                style = MaterialTheme.typography.labelLarge,
+                color = OceanDesignTokens.Text.secondary
+            )
+            SystemHealthBar(permissions = uiState.permissions)
+            if (uiState.hasLastCommand) {
+                LastHeardCard(command = uiState.lastHeardCommand)
+            }
+        }
+
+        // Column 3: COMMANDS (scrollable)
+        Column(
+            modifier = Modifier
+                .weight(1.2f)
+                .fillMaxHeight()
+        ) {
+            Text(
+                text = "COMMANDS",
+                style = MaterialTheme.typography.labelLarge,
+                color = OceanDesignTokens.Text.secondary,
+                modifier = Modifier.padding(bottom = OceanDesignTokens.Spacing.sm)
+            )
+            CommandsSection(
+                commands = uiState.commands,
+                callbacks = callbacks,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+// ──────────────────────────── PORTRAIT ────────────────────────────
+
+@Composable
+private fun DashboardPortrait(
+    uiState: DashboardUiState,
+    onNavigateToBrowser: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    callbacks: CommandCallbacks
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = OceanDesignTokens.Spacing.md)
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = OceanDesignTokens.Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
+        ) {
+            uiState.voiceAvanue?.let { module ->
+                ModuleCard(module = module, onClick = onNavigateToSettings)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
+            ) {
+                uiState.webAvanue?.let { module ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        ModuleCard(module = module, onClick = onNavigateToBrowser)
+                    }
+                }
+                uiState.voiceCursor?.let { module ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        ModuleCard(module = module, onClick = onNavigateToSettings)
+                    }
+                }
+            }
+            SystemHealthBar(permissions = uiState.permissions)
+            if (uiState.hasLastCommand) {
+                LastHeardCard(command = uiState.lastHeardCommand)
+            }
+        }
+
+        Text(
+            text = "COMMANDS",
+            style = MaterialTheme.typography.labelLarge,
+            color = OceanDesignTokens.Text.secondary,
+            modifier = Modifier.padding(vertical = OceanDesignTokens.Spacing.sm)
+        )
+        CommandsSection(
+            commands = uiState.commands,
+            callbacks = callbacks,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+// ──────────────────────────── MODULE CARD ────────────────────────────
+
+@Composable
+private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
+    val context = LocalContext.current
+    GlassCard(
+        onClick = {
+            if (module.state is ServiceState.Stopped) {
+                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            } else {
+                onClick()
+            }
+        },
+        glassLevel = GlassLevel.MEDIUM,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PulseDot(state = module.state, dotSize = 12.dp)
+                Text(
+                    text = module.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = OceanDesignTokens.Text.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                StatusBadge(state = module.state)
+            }
+            Text(
+                text = module.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = OceanDesignTokens.Text.secondary
+            )
+            if (module.metadata.isNotEmpty()) {
+                Text(
+                    text = module.metadata.entries.joinToString(" \u00B7 ") { "${it.key}: ${it.value}" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OceanDesignTokens.Text.primary.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+// ──────────────────────────── SYSTEM HEALTH ────────────────────────────
+
+@Composable
+private fun SystemHealthBar(permissions: PermissionStatus) {
+    Column(
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+    ) {
+        if (permissions.allGranted) {
+            GlassSurface(
+                glassLevel = GlassLevel.LIGHT,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, "All OK", tint = OceanDesignTokens.State.success, modifier = Modifier.size(20.dp))
+                    Text("All permissions granted", style = MaterialTheme.typography.bodyMedium, color = OceanDesignTokens.Text.primary)
+                }
+            }
+        } else {
+            Text("PERMISSIONS REQUIRED", style = MaterialTheme.typography.labelMedium, color = OceanDesignTokens.State.error)
+            if (!permissions.microphoneGranted) {
+                PermissionErrorCard("Microphone", "Required for voice recognition", Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            }
+            if (!permissions.accessibilityEnabled) {
+                PermissionErrorCard("Accessibility Service", "Required for voice control", Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            }
+            if (!permissions.overlayEnabled) {
+                PermissionErrorCard("Display Over Apps", "Required for voice cursor", Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            }
+            if (!permissions.notificationsEnabled) {
+                PermissionErrorCard(
+                    "Notifications", "Required for system alerts",
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                    else Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionErrorCard(title: String, description: String, action: String) {
+    val context = LocalContext.current
+    GlassCard(
+        onClick = {
+            val intent = Intent(action).apply {
+                when (action) {
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS ->
+                        data = android.net.Uri.parse("package:${context.packageName}")
+                    Settings.ACTION_APP_NOTIFICATION_SETTINGS ->
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                }
+            }
+            try { context.startActivity(intent) } catch (_: Exception) { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+        },
+        glassLevel = GlassLevel.LIGHT,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Warning, null, tint = OceanDesignTokens.State.error, modifier = Modifier.size(20.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyMedium, color = OceanDesignTokens.Text.primary)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = OceanDesignTokens.Text.secondary)
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, "Open settings", tint = OceanDesignTokens.Text.secondary, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+// ──────────────────────────── LAST HEARD ────────────────────────────
+
+@Composable
+private fun LastHeardCard(command: LastHeardCommand) {
+    val timeAgo = remember(command.timestampMs) { formatTimeAgo(command.timestampMs) }
+    GlassCard(glassLevel = GlassLevel.LIGHT, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)
+        ) {
+            Text("LAST HEARD", style = MaterialTheme.typography.labelSmall, color = OceanDesignTokens.Text.secondary)
+            Text("\"${command.phrase}\"", style = MaterialTheme.typography.titleMedium, color = OceanDesignTokens.Text.primary)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)) {
+                Text("Confidence: ${(command.confidence * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = OceanDesignTokens.Text.secondary)
+                Text(timeAgo, style = MaterialTheme.typography.bodySmall, color = OceanDesignTokens.Text.secondary)
+            }
+        }
+    }
+}
+
+// ──────────────────────────── COMMANDS ────────────────────────────
+
+@Composable
+private fun CommandsSection(
+    commands: CommandsUiState,
+    callbacks: CommandCallbacks,
+    modifier: Modifier = Modifier
+) {
+    var selectedTab by remember { mutableStateOf(0) }
+
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)) {
+            CommandTab("Static", 0, selectedTab) { selectedTab = 0 }
+            CommandTab("App", 1, selectedTab) { selectedTab = 1 }
+            CommandTab("+ Custom", 2, selectedTab) { selectedTab = 2 }
+            CommandTab("\u2248 Synonyms", 3, selectedTab) { selectedTab = 3 }
+        }
+
+        when (selectedTab) {
+            0 -> StaticCommandsTab(
+                categories = commands.staticCategories,
+                onToggleCommand = callbacks.onToggleStaticCommand
+            )
+            1 -> DynamicCommandsInfoTab(dynamicCount = commands.dynamicCount)
+            2 -> CustomCommandsTab(
+                customCommands = commands.customCommands,
+                onAdd = callbacks.onAddCustomCommand,
+                onRemove = callbacks.onRemoveCustomCommand,
+                onToggle = callbacks.onToggleCustomCommand
+            )
+            3 -> SynonymsTab(
+                entries = commands.synonymEntries,
+                onAdd = callbacks.onAddSynonym,
+                onRemove = callbacks.onRemoveSynonym
             )
         }
     }
 }
 
 @Composable
-fun ModuleInfoCard(
-    title: String,
-    description: String,
-    isActive: Boolean
+private fun CommandTab(label: String, index: Int, selectedTab: Int, onClick: () -> Unit) {
+    val isSelected = index == selectedTab
+    GlassChip(
+        onClick = onClick,
+        label = {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isSelected) OceanDesignTokens.State.info else OceanDesignTokens.Text.secondary
+            )
+        },
+        glass = isSelected,
+        glassLevel = if (isSelected) GlassLevel.MEDIUM else GlassLevel.LIGHT
+    )
+}
+
+// ──────────────── TAB 0: STATIC COMMANDS ────────────────
+
+@Composable
+private fun StaticCommandsTab(categories: List<CommandCategory>, onToggleCommand: (String) -> Unit) {
+    if (categories.isEmpty()) {
+        EmptyStateMessage("No static commands loaded")
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+        ) {
+            items(categories, key = { it.name }) { category ->
+                ExpandableCommandCategory(category = category, onToggleCommand = onToggleCommand)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpandableCommandCategory(category: CommandCategory, onToggleCommand: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)) {
+        GlassSurface(
+            onClick = { expanded = !expanded },
+            glassLevel = GlassLevel.LIGHT,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(category.name, style = MaterialTheme.typography.titleSmall, color = OceanDesignTokens.Text.primary, modifier = Modifier.weight(1f))
+                Text("${category.commands.size}", style = MaterialTheme.typography.bodySmall, color = OceanDesignTokens.Text.secondary)
+                Icon(
+                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    if (expanded) "Collapse" else "Expand",
+                    tint = OceanDesignTokens.Text.secondary, modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        if (expanded) {
+            Column(Modifier.fillMaxWidth().padding(start = OceanDesignTokens.Spacing.md), verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)) {
+                category.commands.forEach { command ->
+                    CommandRow(command = command, onToggle = { onToggleCommand(command.id) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommandRow(command: StaticCommand, onToggle: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = command.enabled, onCheckedChange = { onToggle() },
+            colors = CheckboxDefaults.colors(checkedColor = OceanDesignTokens.State.success, uncheckedColor = OceanDesignTokens.Text.secondary)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(command.phrase, style = MaterialTheme.typography.bodyMedium, color = OceanDesignTokens.Text.primary)
+            if (command.description.isNotEmpty()) {
+                Text(command.description, style = MaterialTheme.typography.bodySmall, color = OceanDesignTokens.Text.secondary)
+            }
+            if (command.synonyms.isNotEmpty()) {
+                Text(
+                    "Also: ${command.synonyms.joinToString(", ")}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OceanDesignTokens.Text.disabled
+                )
+            }
+        }
+    }
+}
+
+// ──────────────── TAB 1: DYNAMIC APP COMMANDS ────────────────
+
+@Composable
+private fun DynamicCommandsInfoTab(dynamicCount: Int) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.Apps,
+            contentDescription = null,
+            tint = OceanDesignTokens.Text.secondary,
+            modifier = Modifier.size(48.dp)
+        )
+        Text(
+            text = "Dynamic App Commands",
+            style = MaterialTheme.typography.titleMedium,
+            color = OceanDesignTokens.Text.primary
+        )
+        Text(
+            text = "Commands are auto-generated from the screen you're viewing. " +
+                    "Every clickable element becomes a voice command automatically.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = OceanDesignTokens.Text.secondary,
+            textAlign = TextAlign.Center
+        )
+        if (dynamicCount > 0) {
+            GlassSurface(
+                glassLevel = GlassLevel.LIGHT,
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
+                Text(
+                    text = "$dynamicCount commands on current screen",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = OceanDesignTokens.State.info,
+                    modifier = Modifier.padding(
+                        horizontal = OceanDesignTokens.Spacing.lg,
+                        vertical = OceanDesignTokens.Spacing.md
+                    )
+                )
+            }
+        }
+    }
+}
+
+// ──────────────── TAB 2: CUSTOM COMMANDS ────────────────
+
+@Composable
+private fun CustomCommandsTab(
+    customCommands: List<CustomCommandInfo>,
+    onAdd: (String, List<String>) -> Unit,
+    onRemove: (String) -> Unit,
+    onToggle: (String) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)) {
+        GlassChip(
+            onClick = { showAddDialog = true },
+            label = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = OceanDesignTokens.State.info)
+                    Text("Add Command", style = MaterialTheme.typography.labelSmall, color = OceanDesignTokens.State.info)
+                }
+            },
+            glass = true,
+            glassLevel = GlassLevel.LIGHT
+        )
+
+        if (customCommands.isEmpty()) {
+            EmptyStateMessage("No custom commands yet.\nTap + to create one.")
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+            ) {
+                items(customCommands, key = { it.id }) { command ->
+                    CustomCommandRow(
+                        command = command,
+                        onToggle = { onToggle(command.id) },
+                        onRemove = { onRemove(command.id) }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AddCustomCommandDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { name, phrases ->
+                onAdd(name, phrases)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun CustomCommandRow(
+    command: CustomCommandInfo,
+    onToggle: () -> Unit,
+    onRemove: () -> Unit
+) {
+    GlassSurface(
+        glassLevel = GlassLevel.LIGHT,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+    ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(command.name, style = MaterialTheme.typography.bodyMedium, color = OceanDesignTokens.Text.primary)
+                Text(
+                    command.phrases.joinToString(", "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OceanDesignTokens.Text.secondary
+                )
+            }
+            Switch(
+                checked = command.isActive,
+                onCheckedChange = { onToggle() },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = OceanDesignTokens.State.success,
+                    checkedTrackColor = OceanDesignTokens.State.success.copy(alpha = 0.3f),
+                    uncheckedThumbColor = OceanDesignTokens.Text.disabled,
+                    uncheckedTrackColor = OceanDesignTokens.Text.disabled.copy(alpha = 0.3f)
+                )
+            )
+            IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Close, "Remove", tint = OceanDesignTokens.State.error, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddCustomCommandDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, List<String>) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var phrasesText by remember { mutableStateOf("") }
+
+    val textFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = OceanDesignTokens.Text.primary,
+        unfocusedTextColor = OceanDesignTokens.Text.primary,
+        focusedBorderColor = OceanDesignTokens.State.info,
+        unfocusedBorderColor = OceanDesignTokens.Text.disabled,
+        focusedLabelColor = OceanDesignTokens.State.info,
+        unfocusedLabelColor = OceanDesignTokens.Text.secondary,
+        cursorColor = OceanDesignTokens.State.info
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Custom Command", color = OceanDesignTokens.Text.primary) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Command name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = textFieldColors
+                )
+                OutlinedTextField(
+                    value = phrasesText,
+                    onValueChange = { phrasesText = it },
+                    label = { Text("Trigger phrases (comma-separated)") },
+                    singleLine = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = textFieldColors
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val phrases = phrasesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                    if (name.isNotBlank() && phrases.isNotEmpty()) {
+                        onConfirm(name, phrases)
+                    }
+                }
+            ) {
+                Text("Add", color = OceanDesignTokens.State.info)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = OceanDesignTokens.Text.secondary)
+            }
+        },
+        containerColor = OceanTheme.surface
+    )
+}
+
+// ──────────────── TAB 3: SYNONYMS ────────────────
+
+@Composable
+private fun SynonymsTab(
+    entries: List<SynonymEntryInfo>,
+    onAdd: (String, List<String>) -> Unit,
+    onRemove: (String) -> Unit
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)) {
+        GlassChip(
+            onClick = { showAddDialog = true },
+            label = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = OceanDesignTokens.State.info)
+                    Text("Add Synonym", style = MaterialTheme.typography.labelSmall, color = OceanDesignTokens.State.info)
+                }
+            },
+            glass = true,
+            glassLevel = GlassLevel.LIGHT
+        )
+
+        if (entries.isEmpty()) {
+            EmptyStateMessage("No synonyms configured")
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+            ) {
+                items(entries, key = { it.canonical }) { entry ->
+                    SynonymRow(entry = entry, onRemove = { onRemove(entry.canonical) })
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AddSynonymDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { canonical, synonyms ->
+                onAdd(canonical, synonyms)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun SynonymRow(entry: SynonymEntryInfo, onRemove: () -> Unit) {
+    GlassSurface(
+        glassLevel = GlassLevel.LIGHT,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall
+                    text = entry.canonical,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OceanDesignTokens.State.info
                 )
                 Text(
-                    text = description,
+                    text = entry.synonyms.joinToString(", "),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = OceanDesignTokens.Text.secondary
                 )
             }
-
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .padding(2.dp)
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    shape = MaterialTheme.shapes.small,
-                    color = if (isActive)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.outline
-                ) {}
+            IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Close, "Remove", tint = OceanDesignTokens.State.error, modifier = Modifier.size(18.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun AddSynonymDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, List<String>) -> Unit
+) {
+    var canonical by remember { mutableStateOf("") }
+    var synonymsText by remember { mutableStateOf("") }
+
+    val textFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = OceanDesignTokens.Text.primary,
+        unfocusedTextColor = OceanDesignTokens.Text.primary,
+        focusedBorderColor = OceanDesignTokens.State.info,
+        unfocusedBorderColor = OceanDesignTokens.Text.disabled,
+        focusedLabelColor = OceanDesignTokens.State.info,
+        unfocusedLabelColor = OceanDesignTokens.Text.secondary,
+        cursorColor = OceanDesignTokens.State.info
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Synonym Mapping", color = OceanDesignTokens.Text.primary) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)) {
+                OutlinedTextField(
+                    value = canonical,
+                    onValueChange = { canonical = it },
+                    label = { Text("Canonical action (e.g., \"click\")") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = textFieldColors
+                )
+                OutlinedTextField(
+                    value = synonymsText,
+                    onValueChange = { synonymsText = it },
+                    label = { Text("Synonyms (comma-separated)") },
+                    singleLine = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = textFieldColors
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val synonyms = synonymsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                    if (canonical.isNotBlank() && synonyms.isNotEmpty()) {
+                        onConfirm(canonical.trim(), synonyms)
+                    }
+                }
+            ) {
+                Text("Add", color = OceanDesignTokens.State.info)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = OceanDesignTokens.Text.secondary)
+            }
+        },
+        containerColor = OceanTheme.surface
+    )
+}
+
+// ──────────────────────────── SHARED ────────────────────────────
+
+@Composable
+private fun EmptyStateMessage(message: String) {
+    Box(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            color = OceanDesignTokens.Text.secondary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+private fun formatTimeAgo(timestampMs: Long): String {
+    if (timestampMs == 0L) return ""
+    val diff = System.currentTimeMillis() - timestampMs
+    return when {
+        diff < 1000L -> "just now"
+        diff < 60_000L -> "${diff / 1000}s ago"
+        diff < 3_600_000L -> "${diff / 60_000}m ago"
+        diff < 86_400_000L -> "${diff / 3_600_000}h ago"
+        else -> "${diff / 86_400_000}d ago"
     }
 }

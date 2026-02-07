@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import com.augmentalis.voicecursor.overlay.CursorOverlayService
 import kotlinx.coroutines.launch
 
 private const val TAG = "BootReceiver"
