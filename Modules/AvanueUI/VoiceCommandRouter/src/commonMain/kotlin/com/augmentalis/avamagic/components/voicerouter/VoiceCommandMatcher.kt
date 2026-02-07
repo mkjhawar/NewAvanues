@@ -297,7 +297,7 @@ class VoiceCommandMatcher(
  * Voice command match result
  */
 data class VoiceCommandMatch(
-    val app: com.augmentalis.avanues.avamagic.components.argscanner.AppInfo,
+    val app: com.augmentalis.avamagic.components.argscanner.AppInfo,
     val capability: Capability,
     val pattern: String,
     val parameters: Map<String, String>,
@@ -318,7 +318,7 @@ private data class PatternMatchResult(
 private data class ParameterPlaceholder(
     val name: String,
     val position: Int,
-    val type: com.augmentalis.avanues.avamagic.components.argscanner.ParamType?,
+    val type: com.augmentalis.avamagic.components.argscanner.ParamType?,
     val required: Boolean
 )
 

@@ -16,13 +16,13 @@ import androidx.lifecycle.viewModelScope
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechConfig
 import com.augmentalis.speechrecognition.SpeechMode
-import com.augmentalis.voiceos.speech.api.RecognitionResult
-import com.augmentalis.voiceos.speech.api.SpeechListenerManager
-// import com.augmentalis.voiceos.speech.engines.android.AndroidSTTEngine  // DISABLED: User wants only VivokaEngine
-// import com.augmentalis.voiceos.speech.engines.vosk.VoskEngine  // DISABLED: Learning dependency
-import com.augmentalis.voiceos.speech.engines.vivoka.VivokaEngine
+import com.augmentalis.speechrecognition.RecognitionResult
+import com.augmentalis.speechrecognition.SpeechListenerManager
+// import com.augmentalis.speechrecognition.android.AndroidSTTEngine  // DISABLED: User wants only VivokaEngine
+// import com.augmentalis.speechrecognition.vosk.VoskEngine  // DISABLED: Learning dependency
+import com.augmentalis.speechrecognition.vivoka.VivokaEngine
 // GoogleCloudEngine temporarily disabled
-// import com.augmentalis.voiceos.speech.engines.whisper.WhisperEngine  // DISABLED: Learning dependency
+// import com.augmentalis.speechrecognition.whisper.WhisperEngine  // DISABLED: Learning dependency
 import com.augmentalis.voicerecognition.ui.SpeechConfigurationData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -89,9 +89,9 @@ class SpeechViewModel(application: Application) : AndroidViewModel(application) 
             handleSpeechResult(result)
         }
 
-        listenerManager.onError = { error, code ->
+        listenerManager.onError = { error ->
             _uiState.value = _uiState.value.copy(
-                errorMessage = "Error ($code): $error",
+                errorMessage = "Error (${error.code}): ${error.message}",
                 isListening = false,
                 engineStatus = "Error occurred"
             )
@@ -99,7 +99,7 @@ class SpeechViewModel(application: Application) : AndroidViewModel(application) 
 
         listenerManager.onStateChange = { state, message ->
             _uiState.value = _uiState.value.copy(
-                engineStatus = if (message != null) "$state: $message" else state
+                engineStatus = if (message != null) "${state.name}: $message" else state.name
             )
         }
     }
@@ -439,16 +439,16 @@ class SpeechViewModel(application: Application) : AndroidViewModel(application) 
                 engineInstance.setResultListener { result ->
                     listenerManager.onResult?.invoke(result)
                 }
-                engineInstance.setErrorListener { error, code ->
-                    listenerManager.onError?.invoke(error, code)
+                engineInstance.setErrorListener { error ->
+                    listenerManager.onError?.invoke(error)
                 }
             }
             // is WhisperEngine -> {  // DISABLED: Learning dependency
             //     engineInstance.setResultListener { result ->
             //         listenerManager.onResult?.invoke(result)
             //     }
-            //     engineInstance.setErrorListener { error, code ->
-            //         listenerManager.onError?.invoke(error, code)
+            //     engineInstance.setErrorListener { error ->
+            //         listenerManager.onError?.invoke(error)
             //     }
             // }
             else -> {

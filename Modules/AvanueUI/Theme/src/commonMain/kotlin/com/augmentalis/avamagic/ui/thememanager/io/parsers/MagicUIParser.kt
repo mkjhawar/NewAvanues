@@ -288,10 +288,10 @@ data class FontDTO(
     val letterSpacing: Float? = null
 ) {
     fun toFont() = Font(
-        family = family,
+        family = family ?: "System",
         size = size,
         weight = Font.Weight.fromValue(weight),
-        lineHeight = lineHeight,
+        lineHeight = lineHeight ?: (size * 1.5f),
         letterSpacing = letterSpacing
     )
 

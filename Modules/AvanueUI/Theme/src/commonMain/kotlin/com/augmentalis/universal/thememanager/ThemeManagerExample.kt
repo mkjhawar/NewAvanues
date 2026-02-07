@@ -253,9 +253,9 @@ object ThemeManagerExample {
         val customTheme = baseTheme.copy(
             name = "AIAvanue Dark Mode",
             colorScheme = baseTheme.colorScheme.copy(
-                mode = com.augmentalis.avanues.avamagic.components.core.ColorScheme.ColorMode.Dark,
-                primary = com.augmentalis.avanues.avamagic.components.core.Color.hex("#BB86FC"),
-                background = com.augmentalis.avanues.avamagic.components.core.Color.hex("#121212")
+                mode = com.augmentalis.avamagic.components.core.ColorScheme.ColorMode.Dark,
+                primary = com.augmentalis.avamagic.components.core.Color.hex("#BB86FC"),
+                background = com.augmentalis.avamagic.components.core.Color.hex("#121212")
             )
         )
 

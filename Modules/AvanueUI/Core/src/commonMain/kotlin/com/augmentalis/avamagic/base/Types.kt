@@ -38,6 +38,50 @@ data class Color(
             return Color(r, g, b, a)
         }
 
+        /**
+         * Parse a color string in various formats: hex (#RRGGBB, #RRGGBBAA),
+         * rgb(r,g,b), rgba(r,g,b,a), or named colors.
+         * Returns null if the string cannot be parsed.
+         */
+        fun parse(value: String): Color? {
+            val trimmed = value.trim()
+            return try {
+                when {
+                    trimmed.startsWith("#") -> hex(trimmed)
+                    trimmed.startsWith("rgba(") -> {
+                        val parts = trimmed.removePrefix("rgba(").removeSuffix(")").split(",").map { it.trim() }
+                        if (parts.size == 4) Color(parts[0].toInt(), parts[1].toInt(), parts[2].toInt(), parts[3].toFloat())
+                        else null
+                    }
+                    trimmed.startsWith("rgb(") -> {
+                        val parts = trimmed.removePrefix("rgb(").removeSuffix(")").split(",").map { it.trim() }
+                        if (parts.size == 3) Color(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())
+                        else null
+                    }
+                    else -> colorNames[trimmed.lowercase()]
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        private val colorNames = mapOf(
+            "transparent" to Color(0, 0, 0, 0.0f),
+            "black" to Color(0, 0, 0),
+            "white" to Color(255, 255, 255),
+            "red" to Color(255, 0, 0),
+            "green" to Color(0, 128, 0),
+            "blue" to Color(0, 0, 255),
+            "yellow" to Color(255, 255, 0),
+            "cyan" to Color(0, 255, 255),
+            "magenta" to Color(255, 0, 255),
+            "orange" to Color(255, 165, 0),
+            "purple" to Color(128, 0, 128),
+            "pink" to Color(255, 192, 203),
+            "gray" to Color(128, 128, 128),
+            "grey" to Color(128, 128, 128)
+        )
+
         val Transparent = Color(0, 0, 0, 0.0f)
         val Black = Color(0, 0, 0)
         val White = Color(255, 255, 255)
@@ -115,18 +159,34 @@ data class Font(
     val size: Float = 16f,
     val weight: Weight = Weight.Regular,
     val style: Style = Style.Normal,
-    val lineHeight: Float = size * 1.5f  // Default to 1.5x the font size
+    val lineHeight: Float = size * 1.5f,  // Default to 1.5x the font size
+    val letterSpacing: Float? = null
 ) {
-    enum class Weight {
-        Thin,        // 100
-        ExtraLight,  // 200
-        Light,       // 300
-        Regular,     // 400
-        Medium,      // 500
-        SemiBold,    // 600
-        Bold,        // 700
-        ExtraBold,   // 800
-        Black        // 900
+    enum class Weight(val value: Int) {
+        Thin(100),
+        ExtraLight(200),
+        Light(300),
+        Regular(400),
+        Medium(500),
+        SemiBold(600),
+        Bold(700),
+        ExtraBold(800),
+        Black(900);
+
+        companion object {
+            fun fromValue(value: Int): Weight = when (value) {
+                in 0..149 -> Thin
+                in 150..249 -> ExtraLight
+                in 250..349 -> Light
+                in 350..449 -> Regular
+                in 450..549 -> Medium
+                in 550..649 -> SemiBold
+                in 650..749 -> Bold
+                in 750..849 -> ExtraBold
+                in 850..1000 -> Black
+                else -> Regular
+            }
+        }
     }
 
     enum class Style {

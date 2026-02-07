@@ -20,12 +20,12 @@ import android.util.Log
 import com.augmentalis.speechrecognition.SpeechEngine
 import com.augmentalis.speechrecognition.SpeechConfig
 import com.augmentalis.speechrecognition.SpeechMode
-import com.augmentalis.voiceos.speech.api.RecognitionResult
-import com.augmentalis.voiceos.speech.api.SpeechListenerManager
-// import com.augmentalis.voiceos.speech.engines.android.AndroidSTTEngine  // DISABLED: User wants only VivokaEngine
-// import com.augmentalis.voiceos.speech.engines.vosk.VoskEngine  // DISABLED: Learning dependency
-import com.augmentalis.voiceos.speech.engines.vivoka.VivokaEngine
-// import com.augmentalis.voiceos.speech.engines.whisper.WhisperEngine  // DISABLED: Learning dependency
+import com.augmentalis.speechrecognition.RecognitionResult
+import com.augmentalis.speechrecognition.SpeechListenerManager
+// import com.augmentalis.speechrecognition.android.AndroidSTTEngine  // DISABLED: User wants only VivokaEngine
+// import com.augmentalis.speechrecognition.vosk.VoskEngine  // DISABLED: Learning dependency
+import com.augmentalis.speechrecognition.vivoka.VivokaEngine
+// import com.augmentalis.speechrecognition.whisper.WhisperEngine  // DISABLED: Learning dependency
 import com.augmentalis.voicerecognition.IVoiceRecognitionService
 import com.augmentalis.voicerecognition.IRecognitionCallback
 import kotlinx.coroutines.*
@@ -165,22 +165,22 @@ class VoiceRecognitionService : Service() {
             handleSpeechResult(result)
         }
 
-        listenerManager.onError = { error, code ->
-            broadcastError(code, error)
+        listenerManager.onError = { error ->
+            broadcastError(error.code, error.message)
             isCurrentlyRecognizing = false
             broadcastStateChange(0, "Error occurred")
         }
 
         listenerManager.onStateChange = { state, message ->
-            // Convert string state to int for AIDL callback
-            val stateInt = when (state.lowercase()) {
-                "idle" -> 0
+            // Convert enum state to int for AIDL callback
+            val stateInt = when (state.name.lowercase()) {
+                "uninitialized", "stopped", "ready" -> 0
                 "listening" -> 1
-                "processing" -> 2
+                "processing", "initializing" -> 2
                 "error" -> 3
                 else -> 0
             }
-            broadcastStateChange(stateInt, message ?: state)
+            broadcastStateChange(stateInt, message ?: state.name)
         }
     }
 
@@ -229,7 +229,7 @@ class VoiceRecognitionService : Service() {
                     VivokaEngine(this@VoiceRecognitionService).apply {
                         initialize(config.copy(engine =  SpeechEngine.VIVOKA))
                         setResultListener { result -> listenerManager.onResult?.invoke(result) }
-                        setErrorListener { error, code -> listenerManager.onError?.invoke(error, code) }
+                        setErrorListener { error -> listenerManager.onError?.invoke(error) }
                     }
                 }
                 // SpeechEngine.GOOGLE_CLOUD -> {  // DISABLED: Learning dependency
@@ -237,14 +237,14 @@ class VoiceRecognitionService : Service() {
                 //     AndroidSTTEngine(this@VoiceRecognitionService).apply {
                 //         initialize(this@VoiceRecognitionService, config)
                 //         setResultListener { result -> listenerManager.onResult?.invoke(result) }
-                //         setErrorListener { error, code -> listenerManager.onError?.invoke(error, code) }
+                //         setErrorListener { error -> listenerManager.onError?.invoke(error) }
                 //     }
                 // }
                 // SpeechEngine.WHISPER -> {  // DISABLED: Learning dependency
                 //     WhisperEngine(this@VoiceRecognitionService).apply {
                 //         initialize(config)
                 //         setResultListener { result -> listenerManager.onResult?.invoke(result) }
-                //         setErrorListener { error, code -> listenerManager.onError?.invoke(error, code) }
+                //         setErrorListener { error -> listenerManager.onError?.invoke(error) }
                 //     }
                 // }
                 else -> {
@@ -252,7 +252,7 @@ class VoiceRecognitionService : Service() {
                     VivokaEngine(this@VoiceRecognitionService).apply {
                         initialize(config.copy(engine = SpeechEngine.VIVOKA))
                         setResultListener { result -> listenerManager.onResult?.invoke(result) }
-                        setErrorListener { error, code -> listenerManager.onError?.invoke(error, code) }
+                        setErrorListener { error -> listenerManager.onError?.invoke(error) }
                     }
                 }
             }

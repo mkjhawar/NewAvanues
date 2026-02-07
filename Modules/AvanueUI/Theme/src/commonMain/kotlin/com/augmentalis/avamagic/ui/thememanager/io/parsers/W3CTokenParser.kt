@@ -222,7 +222,7 @@ class W3CTokenParser {
             val family = tokens["$prefix.fontFamily"]?.asString()
 
             return Font(
-                family = family,
+                family = family ?: "System",
                 size = size,
                 weight = weight,
                 lineHeight = lineHeight

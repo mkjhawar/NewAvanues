@@ -141,7 +141,7 @@ include(":Modules:AvanueUI:Foundation")                 // Foundation components
 include(":Modules:AvanueUI:Theme")                      // Theme system
 include(":Modules:AvanueUI:DesignSystem")               // Design tokens
 include(":Modules:AvanueUI:StateManagement")            // State management
-include(":Modules:AvanueUI:UIConvertor")                // UI conversion utilities
+// include(":Modules:AvanueUI:UIConvertor")             // DISABLED (2026-02-07) — references dead types (ColorRGBA, LegacyComponent)
 
 // AvanueUI Component Modules
 include(":Modules:AvanueUI:Input")                      // Input components
@@ -154,13 +154,13 @@ include(":Modules:AvanueUI:Data")                       // Data components
 include(":Modules:AvanueUI:Voice")                      // Voice UI components
 
 // AvanueUI Infrastructure
-include(":Modules:AvanueUI:Adapters")                   // Platform adapters
+// include(":Modules:AvanueUI:Adapters")                // DISABLED (2026-02-07) — androidMain uses dead net.ideahq package, commonMain refs non-existent types
 include(":Modules:AvanueUI:VoiceCommandRouter")         // Voice command routing
 include(":Modules:AvanueUI:ARGScanner")                 // ARG scanning utilities
 include(":Modules:AvanueUI:AssetManager")               // Asset management
 
 // AvanueUI Platform Renderers
-include(":Modules:AvanueUI:Renderers:Android")          // Android Compose renderer
+// include(":Modules:AvanueUI:Renderers:Android")       // DISABLED (2026-02-07) — unresolved component types cause cascading overload ambiguity in Render extensions
 include(":Modules:AvanueUI:AvanueUIVoiceHandlers")      // Voice command handlers for AvanueUI components
 
 // Promoted from AvaMagic to top-level (2026-02-07)
@@ -183,7 +183,7 @@ include(":android:apps:VoiceOSIPCTest")            // IPC testing
 // Android Apps - Legacy (for comparison)
 include(":apps:voiceavanue-legacy")                // Legacy VoiceAvanue app
 include(":android:apps:webavanue-legacy")          // Legacy WebAvanue browser
-include(":android:apps:webavanue-ipc-legacy")      // Legacy browser (broadcast IPC)
+// include(":android:apps:webavanue-ipc-legacy")   // DISABLED (2026-02-07) — legacy, missing domain layer
 // include(":android:apps:ava-legacy")             // Old AVA app - archived
 // include(":android:apps:browseravanue-legacy")   // Old browser - archived
 // include(":android:apps:VoiceOS")                // ARCHIVED (2026-02-04)
