@@ -119,7 +119,7 @@
 
         <!-- Cursor Overlay Service -->
         <service
-            android:name=".service.CursorOverlayService"
+            android:name="com.augmentalis.voicecursor.overlay.CursorOverlayService"
             android:foregroundServiceType="specialUse"
             android:exported="false">
             <property

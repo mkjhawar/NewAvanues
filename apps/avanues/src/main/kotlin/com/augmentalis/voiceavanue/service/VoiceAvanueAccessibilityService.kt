@@ -31,6 +31,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 private const val TAG = "VoiceAvanueService"
 
@@ -96,9 +98,17 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     }
 
     override fun onDestroy() {
-        serviceScope.launch { voiceOSCore?.dispose() }
-        serviceScope.cancel()
         instance = null
+        try {
+            runBlocking {
+                withTimeout(3000L) {
+                    voiceOSCore?.dispose()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "VoiceOSCore dispose timed out or failed", e)
+        }
+        serviceScope.cancel()
         super.onDestroy()
     }
 

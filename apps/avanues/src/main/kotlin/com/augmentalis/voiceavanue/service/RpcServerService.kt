@@ -78,7 +78,7 @@ class RpcServerService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("AVA Unified")
             .setContentText("RPC Servers Active")
-            .setSmallIcon(android.R.drawable.ic_menu_manage)
+            .setSmallIcon(R.drawable.ic_notification_rpc)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

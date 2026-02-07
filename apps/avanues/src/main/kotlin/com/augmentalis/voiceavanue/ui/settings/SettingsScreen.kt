@@ -2,6 +2,7 @@
  * SettingsScreen.kt - App settings and configuration
  *
  * Configure VoiceOS, WebAvanue, and VoiceCursor modules.
+ * All settings are persisted via AvanuesSettingsRepository (DataStore).
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -22,20 +23,53 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.augmentalis.voiceavanue.data.AvanuesSettings
+import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val repository: AvanuesSettingsRepository
+) : ViewModel() {
+
+    val settings: State<AvanuesSettings> @Composable get() {
+        return repository.settings.collectAsState(initial = AvanuesSettings())
+    }
+
+    fun updateDwellClickEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.updateDwellClickEnabled(enabled) }
+    }
+
+    fun updateDwellClickDelay(delayMs: Float) {
+        viewModelScope.launch { repository.updateDwellClickDelay(delayMs) }
+    }
+
+    fun updateCursorSmoothing(enabled: Boolean) {
+        viewModelScope.launch { repository.updateCursorSmoothing(enabled) }
+    }
+
+    fun updateVoiceFeedback(enabled: Boolean) {
+        viewModelScope.launch { repository.updateVoiceFeedback(enabled) }
+    }
+
+    fun updateAutoStartOnBoot(enabled: Boolean) {
+        viewModelScope.launch { repository.updateAutoStartOnBoot(enabled) }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-
-    // Settings state
-    var dwellClickEnabled by remember { mutableStateOf(true) }
-    var dwellClickDelay by remember { mutableStateOf(1500f) }
-    var cursorSmoothing by remember { mutableStateOf(true) }
-    var voiceFeedback by remember { mutableStateOf(true) }
-    var autoStartOnBoot by remember { mutableStateOf(false) }
+    val settings by viewModel.settings
 
     Scaffold(
         topBar = {
@@ -96,19 +130,19 @@ fun SettingsScreen(
                     title = "Dwell Click",
                     subtitle = "Auto-click when cursor stays still",
                     icon = Icons.Default.TouchApp,
-                    checked = dwellClickEnabled,
-                    onCheckedChange = { dwellClickEnabled = it }
+                    checked = settings.dwellClickEnabled,
+                    onCheckedChange = { viewModel.updateDwellClickEnabled(it) }
                 )
             }
 
             item {
                 SettingsSlider(
                     title = "Dwell Click Delay",
-                    subtitle = "${dwellClickDelay.toInt()} ms",
+                    subtitle = "${settings.dwellClickDelayMs.toInt()} ms",
                     icon = Icons.Default.Timer,
-                    value = dwellClickDelay,
+                    value = settings.dwellClickDelayMs,
                     valueRange = 500f..3000f,
-                    onValueChange = { dwellClickDelay = it }
+                    onValueChange = { viewModel.updateDwellClickDelay(it) }
                 )
             }
 
@@ -117,8 +151,8 @@ fun SettingsScreen(
                     title = "Cursor Smoothing",
                     subtitle = "Reduce cursor jitter",
                     icon = Icons.Default.Tune,
-                    checked = cursorSmoothing,
-                    onCheckedChange = { cursorSmoothing = it }
+                    checked = settings.cursorSmoothing,
+                    onCheckedChange = { viewModel.updateCursorSmoothing(it) }
                 )
             }
 
@@ -132,8 +166,8 @@ fun SettingsScreen(
                     title = "Voice Feedback",
                     subtitle = "Speak command confirmations",
                     icon = Icons.Default.RecordVoiceOver,
-                    checked = voiceFeedback,
-                    onCheckedChange = { voiceFeedback = it }
+                    checked = settings.voiceFeedback,
+                    onCheckedChange = { viewModel.updateVoiceFeedback(it) }
                 )
             }
 
@@ -163,7 +197,7 @@ fun SettingsScreen(
             item {
                 SettingsItem(
                     title = "Search Engine",
-                    subtitle = "Google",
+                    subtitle = settings.searchEngine,
                     icon = Icons.Default.Search,
                     onClick = { /* TODO: Search engine picker */ }
                 )
@@ -188,8 +222,8 @@ fun SettingsScreen(
                     title = "Start on Boot",
                     subtitle = "Launch AVA when device starts",
                     icon = Icons.Default.PowerSettingsNew,
-                    checked = autoStartOnBoot,
-                    onCheckedChange = { autoStartOnBoot = it }
+                    checked = settings.autoStartOnBoot,
+                    onCheckedChange = { viewModel.updateAutoStartOnBoot(it) }
                 )
             }
 

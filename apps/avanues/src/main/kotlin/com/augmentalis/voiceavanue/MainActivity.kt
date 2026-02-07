@@ -3,7 +3,7 @@
  *
  * Routes to different modules based on which launcher icon was tapped:
  * - VoiceAvanue alias → voice dashboard (HomeScreen)
- * - WebAvanue alias → full browser (BrowserScreen)
+ * - WebAvanue alias → full browser (WebAvanue BrowserApp)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -22,14 +22,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.avanueui.AvanueTheme
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
+import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
-import com.augmentalis.voiceavanue.ui.browser.BrowserScreen
 import com.augmentalis.voiceavanue.ui.settings.SettingsScreen
+import com.augmentalis.webavanue.BrowserApp
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -111,9 +113,8 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.VOICE) {
         }
 
         composable(AvanueMode.BROWSER.route) {
-            BrowserScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            val browserViewModel: BrowserEntryViewModel = hiltViewModel()
+            BrowserApp(repository = browserViewModel.repository)
         }
 
         composable(AvanueMode.SETTINGS.route) {

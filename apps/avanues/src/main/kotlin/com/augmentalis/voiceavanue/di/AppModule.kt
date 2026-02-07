@@ -12,7 +12,12 @@ import android.content.Context
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.voiceoscore.rpc.VoiceOSServerConfig
+import com.augmentalis.webavanue.BrowserRepository
+import com.augmentalis.webavanue.BrowserRepositoryImpl
+import com.augmentalis.webavanue.createAndroidDriver
+import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.rpc.WebAvanueServerConfig
+import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -66,4 +71,26 @@ object AppModule {
     @Singleton
     fun provideWebAvanueServerConfig(): WebAvanueServerConfig =
         WebAvanueServerConfig(port = 50055)
+
+    @Provides
+    @Singleton
+    fun provideAvanuesSettingsRepository(
+        @ApplicationContext context: Context
+    ): AvanuesSettingsRepository = AvanuesSettingsRepository(context)
+
+    // Browser (WebAvanue module) - separate database from VoiceOS
+    @Provides
+    @Singleton
+    fun provideBrowserDatabase(
+        @ApplicationContext context: Context
+    ): BrowserDatabase {
+        val driver = createAndroidDriver(context)
+        return BrowserDatabase(driver)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBrowserRepository(
+        database: BrowserDatabase
+    ): BrowserRepository = BrowserRepositoryImpl(database)
 }

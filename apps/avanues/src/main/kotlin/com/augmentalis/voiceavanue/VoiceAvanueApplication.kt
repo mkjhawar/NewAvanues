@@ -41,7 +41,6 @@ class VoiceAvanueApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
 
         Log.i(TAG, "Avanues starting...")
         Log.i(TAG, "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
@@ -124,13 +123,5 @@ class VoiceAvanueApplication : Application() {
     override fun onTerminate() {
         super.onTerminate()
         stopRpcServers()
-    }
-
-    companion object {
-        @Volatile
-        private var instance: VoiceAvanueApplication? = null
-
-        fun getInstance(): VoiceAvanueApplication =
-            instance ?: throw IllegalStateException("Application not initialized")
     }
 }

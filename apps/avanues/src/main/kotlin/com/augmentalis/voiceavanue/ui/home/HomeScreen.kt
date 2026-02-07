@@ -20,7 +20,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 
 @Composable
@@ -33,9 +36,17 @@ fun HomeScreen(
     var accessibilityEnabled by remember { mutableStateOf(false) }
     var overlayEnabled by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        accessibilityEnabled = VoiceAvanueAccessibilityService.isEnabled(context)
-        overlayEnabled = Settings.canDrawOverlays(context)
+    // Refresh permission status on every resume (not just once)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                accessibilityEnabled = VoiceAvanueAccessibilityService.isEnabled(context)
+                overlayEnabled = Settings.canDrawOverlays(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(
