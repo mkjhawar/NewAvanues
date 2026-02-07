@@ -277,6 +277,35 @@ The AVA AI Developer Manual is now **COMPLETE** with all 30 chapters documented!
 
 ---
 
+### **PART X: CONSOLIDATION & UI ARCHITECTURE** (Chapters 81-90)
+
+#### **Chapters 81-87: AVU DSL Evolution**
+- Wire Protocol, DSL Format, Runtime Interpreter
+- Plugin paradigm (.avp text files)
+- See branch `claude/060226-avu-dsl-evolution`
+
+#### **Chapter 88: Avanues Consolidated App**
+- Consolidated VoiceAvanue + WebAvanue into single app
+- Dual launcher icons via activity-alias
+- AvanueMode enum for modular navigation
+
+#### **Chapter 89: AvaUI Design System**
+- DesignTokens, GlassmorphicComponents, themes
+- OceanTheme, MagicTheme, GlassAvanue, AvanueTheme
+- ComponentProvider, Spatial/AR tokens
+
+#### **Chapter 90: Unified Adaptive Settings Architecture** (NEW)
+- Module-provider architecture replacing monolithic SettingsScreen
+- ModuleSettingsProvider (KMP) + ComposableSettingsProvider (Compose)
+- Hilt @IntoSet multibinding for auto-discovery
+- Material3 ListDetailPaneScaffold (phone/tablet/foldable)
+- Smart glasses adaptation (monocular + binocular)
+- Manufacturer accent colors per SmartGlassType
+- How to add new module settings (3 steps)
+- Voice navigation via VoiceOSCore
+
+---
+
 ## 📊 Documentation Statistics
 
 ### Coverage Metrics
@@ -469,9 +498,21 @@ The AVA AI Developer Manual is now **COMPLETE** with all 30 chapters documented!
 
 ---
 
-## 📝 Changelog
+## Changelog
 
-### 2025-11-20 - Version 1.2 UPDATED ✅
+### 2026-02-08 - Version 1.5 UPDATED
+- Added Part X: Consolidation & UI Architecture (Chapters 81-90)
+- Chapter 81-87: AVU DSL Evolution (Wire Protocol, DSL Format, Runtime Interpreter)
+- Chapter 88: Avanues Consolidated App (dual launcher, activity-alias, AvanueMode)
+- Chapter 89: AvaUI Design System (DesignTokens, GlassmorphicComponents, themes)
+- Chapter 90: Unified Adaptive Settings Architecture (NEW)
+  - Module-provider architecture with Hilt @IntoSet multibinding
+  - Material3 ListDetailPaneScaffold for phone/tablet/foldable
+  - Smart glasses adaptation (monocular + binocular modes)
+  - How to add new module settings in 3 steps
+- Updated total: 47+ chapters
+
+### 2025-11-20 - Version 1.2 UPDATED
 - ✅ Added Part IX: Recent Additions (Chapters 40-45)
 - ✅ Chapter 40: NLU Initialization Fix
 - ✅ Chapter 41: Status Indicator
