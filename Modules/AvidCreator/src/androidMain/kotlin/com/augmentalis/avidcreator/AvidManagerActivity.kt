@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import java.text.SimpleDateFormat
 import java.util.*
+import com.augmentalis.avamagic.ui.foundation.glassMorphism
 
 class AvidManagerActivity : ComponentActivity() {
     

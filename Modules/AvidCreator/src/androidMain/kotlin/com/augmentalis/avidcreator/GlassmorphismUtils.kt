@@ -10,11 +10,8 @@ package com.augmentalis.avidcreator.ui
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.avanues.ui.GlassMorphismConfig
-
-// Re-export core classes for backward compatibility
-typealias GlassMorphismConfig = com.avanues.ui.GlassMorphismConfig
-typealias DepthLevel = com.avanues.ui.DepthLevel
+import com.augmentalis.avamagic.ui.foundation.GlassMorphismConfig
+import com.augmentalis.avamagic.ui.foundation.DepthLevel
 
 /**
  * UUID Manager color palette
