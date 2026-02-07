@@ -71,6 +71,7 @@ class SettingsViewModel @Inject constructor(
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDeveloperConsole: () -> Unit = {},
+    onNavigateToBrowserSettings: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -180,15 +181,6 @@ fun SettingsScreen(
 
             item {
                 SettingsItem(
-                    title = "Voice Commands",
-                    subtitle = "View and customize commands",
-                    icon = Icons.Default.List,
-                    onClick = { /* TODO: Navigate to commands list */ }
-                )
-            }
-
-            item {
-                SettingsItem(
                     title = "Wake Word",
                     subtitle = "Configure activation phrase",
                     icon = Icons.Default.Mic,
@@ -203,19 +195,10 @@ fun SettingsScreen(
 
             item {
                 SettingsItem(
-                    title = "Search Engine",
-                    subtitle = settings.searchEngine,
-                    icon = Icons.Default.Search,
-                    onClick = { /* TODO: Search engine picker */ }
-                )
-            }
-
-            item {
-                SettingsItem(
-                    title = "Custom Search Engines",
-                    subtitle = "Add your own search providers",
-                    icon = Icons.Default.Add,
-                    onClick = { /* TODO: Custom search engine list */ }
+                    title = "Browser Settings",
+                    subtitle = "Search engine, privacy, appearance, downloads",
+                    icon = Icons.Default.Language,
+                    onClick = onNavigateToBrowserSettings
                 )
             }
 
