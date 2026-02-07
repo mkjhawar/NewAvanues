@@ -13,14 +13,13 @@ kotlin {
         }
     }
 
-    // iOS targets disabled — AVU dependency only supports iOS conditionally
-    // Re-enable when AVU enables iOS unconditionally
-    // listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
-    //     it.binaries.framework {
-    //         baseName = "AvaMagicIPC"
-    //         isStatic = true
-    //     }
-    // }
+    // iOS targets — AVU supports iOS unconditionally
+    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework {
+            baseName = "AvaMagicIPC"
+            isStatic = true
+        }
+    }
 
     jvm("desktop")
 
@@ -43,6 +42,17 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             // DeviceManager for identity and capability detection (Android-only)
             implementation(project(":Modules:DeviceManager"))
+        }
+
+        // iOS source sets
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain.get())
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
         }
     }
 }
