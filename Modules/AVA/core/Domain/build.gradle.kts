@@ -12,25 +12,19 @@ kotlin {
             }
         }
     }
-    // iOS targets - only compiled when explicitly requested
-    // To build iOS: ./gradlew :Modules:VoiceOS:core:accessibility-types:linkDebugFrameworkIosArm64
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        val iosX64Target = iosX64()
-        val iosArm64Target = iosArm64()
-        val iosSimulatorArm64Target = iosSimulatorArm64()
+    // iOS targets
+    val iosX64Target = iosX64()
+    val iosArm64Target = iosArm64()
+    val iosSimulatorArm64Target = iosSimulatorArm64()
 
-        listOf(
-            iosX64Target,
-            iosArm64Target,
-            iosSimulatorArm64Target
-        ).forEach { iosTarget ->
-            iosTarget.binaries.framework {
-                baseName = "Domain"
-                isStatic = true
-            }
+    listOf(
+        iosX64Target,
+        iosArm64Target,
+        iosSimulatorArm64Target
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "Domain"
+            isStatic = true
         }
     }
     // Desktop JVM target
@@ -64,22 +58,17 @@ kotlin {
         val iosMain by creating {
             dependsOn(commonMain)
         }
-        // iOS targets - only compiled when explicitly requested
-        // To build iOS: ./gradlew :Modules:VoiceOS:core:accessibility-types:linkDebugFrameworkIosArm64
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            val iosX64Main by getting {
-                dependsOn(iosMain)
-            }
 
-            val iosArm64Main by getting {
-                dependsOn(iosMain)
-            }
+        val iosX64Main by getting {
+            dependsOn(iosMain)
+        }
 
-            val iosSimulatorArm64Main by getting {
-                dependsOn(iosMain)
-            }
+        val iosArm64Main by getting {
+            dependsOn(iosMain)
+        }
+
+        val iosSimulatorArm64Main by getting {
+            dependsOn(iosMain)
         }
         // Desktop-specific (currently none needed)
         val desktopMain by getting
