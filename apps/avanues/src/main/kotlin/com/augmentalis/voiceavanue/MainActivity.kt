@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,9 +31,8 @@ import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
-import com.augmentalis.voiceavanue.ui.settings.SettingsScreen
+import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
 import com.augmentalis.webavanue.BrowserApp
-import com.augmentalis.webavanue.SettingsViewModel as BrowserSettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -97,7 +95,6 @@ enum class AvanueMode(val route: String, val label: String) {
     VOICE("voice_home", "VoiceAvanue"),
     BROWSER("browser", "WebAvanue"),
     SETTINGS("settings", "Settings"),
-    BROWSER_SETTINGS("browser_settings", "Browser Settings"),
     DEVELOPER_CONSOLE("developer_console", "Developer Console")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
 }
@@ -123,25 +120,11 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.VOICE) {
         }
 
         composable(AvanueMode.SETTINGS.route) {
-            SettingsScreen(
+            UnifiedSettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToBrowserSettings = {
-                    navController.navigate(AvanueMode.BROWSER_SETTINGS.route)
-                },
                 onNavigateToDeveloperConsole = {
                     navController.navigate(AvanueMode.DEVELOPER_CONSOLE.route)
                 }
-            )
-        }
-
-        composable(AvanueMode.BROWSER_SETTINGS.route) {
-            val browserViewModel: BrowserEntryViewModel = hiltViewModel()
-            val settingsViewModel = remember {
-                BrowserSettingsViewModel(repository = browserViewModel.repository)
-            }
-            com.augmentalis.webavanue.SettingsScreen(
-                viewModel = settingsViewModel,
-                onNavigateBack = { navController.popBackStack() }
             )
         }
 

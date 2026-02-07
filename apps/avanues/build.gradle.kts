@@ -141,6 +141,9 @@ dependencies {
     // AVU - Universal codec for ACD parsing
     implementation(project(":Modules:AVU"))
 
+    // DeviceManager - Device detection, smart glass adaptation
+    implementation(project(":Modules:DeviceManager"))
+
     // SpeechRecognition - KMP speech module
     implementation(project(":Modules:SpeechRecognition"))
 
@@ -185,6 +188,11 @@ dependencies {
 
     // Compose Navigation
     implementation(libs.androidx.navigation.compose)
+
+    // Material3 Adaptive (ListDetailPaneScaffold for responsive settings)
+    implementation(libs.material3.adaptive)
+    implementation(libs.material3.adaptive.layout)
+    implementation(libs.material3.adaptive.navigation)
 
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
