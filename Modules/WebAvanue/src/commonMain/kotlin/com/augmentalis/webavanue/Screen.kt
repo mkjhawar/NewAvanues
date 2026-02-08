@@ -3,6 +3,7 @@ package com.augmentalis.webavanue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -15,8 +16,23 @@ import com.augmentalis.webavanue.SettingsScreen
 import com.augmentalis.webavanue.*
 
 /**
+ * CompositionLocals for non-Serializable objects that must NOT be embedded
+ * in Voyager Screen data classes. Voyager serializes Screen objects when
+ * Android saves activity state; any non-Serializable property causes
+ * NotSerializableException crashes.
+ *
+ * These are provided at the BrowserApp level via CompositionLocalProvider.
+ */
+val LocalViewModelHolder = staticCompositionLocalOf<ViewModelHolder> {
+    error("No ViewModelHolder provided. Wrap your Navigator in CompositionLocalProvider(LocalViewModelHolder provides viewModels)")
+}
+
+val LocalXRManager = staticCompositionLocalOf<Any?> { null }
+val LocalXRState = staticCompositionLocalOf<Any?> { null }
+
+/**
  * ViewModelHolder - Holds all ViewModels for the browser app
- * Used to pass ViewModels through Voyager navigation
+ * Provided via LocalViewModelHolder CompositionLocal (NOT via Screen constructors)
  */
 data class ViewModelHolder(
     val repository: BrowserRepository,
@@ -51,14 +67,13 @@ data class ViewModelHolder(
 /**
  * BrowserScreenNav - Main browser screen with tab bar and WebView
  */
-data class BrowserScreenNav(
-    val viewModels: ViewModelHolder,
-    val xrManager: Any? = null,  // XRManager on Android, null on other platforms
-    val xrState: Any? = null     // XRManager.XRState on Android, null on other platforms
-) : Screen {
+class BrowserScreenNav : Screen {
 
     @Composable
     override fun Content() {
+        val viewModels = LocalViewModelHolder.current
+        val xrManager = LocalXRManager.current
+        val xrState = LocalXRState.current
         val navigator = LocalNavigator.currentOrThrow
 
         BrowserScreen(
@@ -71,19 +86,19 @@ data class BrowserScreenNav(
             xrManager = xrManager,
             xrState = xrState,
             onNavigateToBookmarks = {
-                navigator.push(BookmarksScreenNav(viewModels))
+                navigator.push(BookmarksScreenNav())
             },
             onNavigateToDownloads = {
-                navigator.push(DownloadsScreenNav(viewModels))
+                navigator.push(DownloadsScreenNav())
             },
             onNavigateToHistory = {
-                navigator.push(HistoryScreenNav(viewModels))
+                navigator.push(HistoryScreenNav())
             },
             onNavigateToSettings = {
-                navigator.push(SettingsScreenNav(viewModels))
+                navigator.push(SettingsScreenNav())
             },
             onNavigateToXRSettings = {
-                navigator.push(XRSettingsScreenNav(viewModels))
+                navigator.push(XRSettingsScreenNav())
             }
         )
     }
@@ -93,12 +108,12 @@ data class BrowserScreenNav(
  * BookmarksScreenNav - Bookmark/Favorite management screen
  */
 data class BookmarksScreenNav(
-    val viewModels: ViewModelHolder,
     val folderId: String? = null
 ) : Screen {
 
     @Composable
     override fun Content() {
+        val viewModels = LocalViewModelHolder.current
         val navigator = LocalNavigator.currentOrThrow
 
         // Filter by folder if specified
@@ -125,12 +140,11 @@ data class BookmarksScreenNav(
 /**
  * DownloadsScreenNav - Download management screen
  */
-data class DownloadsScreenNav(
-    val viewModels: ViewModelHolder
-) : Screen {
+class DownloadsScreenNav : Screen {
 
     @Composable
     override fun Content() {
+        val viewModels = LocalViewModelHolder.current
         val navigator = LocalNavigator.currentOrThrow
 
         DownloadListScreen(
@@ -148,12 +162,11 @@ data class DownloadsScreenNav(
 /**
  * HistoryScreenNav - Browsing history screen
  */
-data class HistoryScreenNav(
-    val viewModels: ViewModelHolder
-) : Screen {
+class HistoryScreenNav : Screen {
 
     @Composable
     override fun Content() {
+        val viewModels = LocalViewModelHolder.current
         val navigator = LocalNavigator.currentOrThrow
 
         HistoryScreen(
@@ -172,12 +185,11 @@ data class HistoryScreenNav(
 /**
  * SettingsScreenNav - Browser settings screen
  */
-data class SettingsScreenNav(
-    val viewModels: ViewModelHolder
-) : Screen {
+class SettingsScreenNav : Screen {
 
     @Composable
     override fun Content() {
+        val viewModels = LocalViewModelHolder.current
         val navigator = LocalNavigator.currentOrThrow
 
         SettingsScreen(
@@ -193,12 +205,11 @@ data class SettingsScreenNav(
  * XRSettingsScreenNav - WebXR settings screen
  * Note: XR features only work on Android, but UI is cross-platform
  */
-data class XRSettingsScreenNav(
-    val viewModels: ViewModelHolder
-) : Screen {
+class XRSettingsScreenNav : Screen {
 
     @Composable
     override fun Content() {
+        val viewModels = LocalViewModelHolder.current
         val navigator = LocalNavigator.currentOrThrow
         val settings by viewModels.settingsViewModel.settings.collectAsState()
 
@@ -220,9 +231,7 @@ data class XRSettingsScreenNav(
 /**
  * AboutScreenNav - About screen (app info, version, licenses)
  */
-data class AboutScreenNav(
-    val viewModels: ViewModelHolder
-) : Screen {
+class AboutScreenNav : Screen {
 
     @Composable
     override fun Content() {
@@ -237,9 +246,7 @@ data class AboutScreenNav(
 /**
  * ARPreviewScreenNav - AR Layout Preview screen for testing spatial arc layout
  */
-data class ARPreviewScreenNav(
-    val viewModels: ViewModelHolder
-) : Screen {
+class ARPreviewScreenNav : Screen {
 
     @Composable
     override fun Content() {

@@ -2,6 +2,7 @@ package com.augmentalis.webavanue
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -15,6 +16,9 @@ import com.augmentalis.webavanue.BrowserRepository
 import com.augmentalis.webavanue.BrowserSettings
 import com.augmentalis.webavanue.BrowserScreenNav
 import com.augmentalis.webavanue.ViewModelHolder
+import com.augmentalis.webavanue.LocalViewModelHolder
+import com.augmentalis.webavanue.LocalXRManager
+import com.augmentalis.webavanue.LocalXRState
 import com.augmentalis.webavanue.AppTheme
 import com.augmentalis.webavanue.ThemeType
 import com.augmentalis.webavanue.SecureStorageProvider
@@ -166,11 +170,18 @@ fun BrowserApp(
         darkTheme = useDarkTheme,
         themeType = ThemeType.APP_BRANDING  // Force WebAvanue branding
     ) {
-        // Voyager Navigator with slide transitions
-        Navigator(
-            screen = BrowserScreenNav(viewModels, xrManager, xrState)
-        ) { navigator ->
-            SlideTransition(navigator)
+        // Provide non-Serializable objects via CompositionLocals so Voyager
+        // Screen data classes remain serialization-safe (fixes NotSerializableException)
+        CompositionLocalProvider(
+            LocalViewModelHolder provides viewModels,
+            LocalXRManager provides xrManager,
+            LocalXRState provides xrState
+        ) {
+            Navigator(
+                screen = BrowserScreenNav()
+            ) { navigator ->
+                SlideTransition(navigator)
+            }
         }
     }
 }
