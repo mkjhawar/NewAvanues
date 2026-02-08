@@ -1,3 +1,0 @@
-module IssueReporting {
-    header "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/arm64-apple-macosx/debug/IssueReporting.build/include/IssueReporting-Swift.h"
-}

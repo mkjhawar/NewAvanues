@@ -1,4 +1,0 @@
-module SDWebImage {
-    umbrella header "/Volumes/M-Drive/Coding/Avanues/Universal/Libraries/AvaElements/Renderers/iOS/.build/checkouts/SDWebImage/SDWebImage/include/SDWebImage/SDWebImage.h"
-    export *
-}

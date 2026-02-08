@@ -64,4 +64,6 @@ contextsave/
 
 # Archive - deprecated/archived code
 /archive/
+/Archive/
+/Archives/
 **/archive/
