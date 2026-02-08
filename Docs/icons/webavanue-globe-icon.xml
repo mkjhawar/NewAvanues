@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WebAvanue: Globe with meridians (browser symbol) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Globe circle -->
+    <path
+        android:pathData="M54,26 m-26,0 a26,26 0 1,1 52,0 a26,26 0 1,1 -52,0"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2.5"
+        android:fillColor="#00000000" />
+    <!-- Vertical meridian -->
+    <path
+        android:pathData="M54,26 C46,26 40,38 40,54 C40,70 46,82 54,82 C62,82 68,70 68,54 C68,38 62,26 54,26"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2"
+        android:fillColor="#00000000" />
+    <!-- Horizontal equator -->
+    <path
+        android:pathData="M28,54 L80,54"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2"
+        android:fillColor="#00000000" />
+    <!-- Latitude line upper -->
+    <path
+        android:pathData="M32,40 C38,37 46,35 54,35 C62,35 70,37 76,40"
+        android:strokeColor="#7DD3FC"
+        android:strokeAlpha="0.6"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000" />
+    <!-- Latitude line lower -->
+    <path
+        android:pathData="M32,68 C38,71 46,73 54,73 C62,73 70,71 76,68"
+        android:strokeColor="#7DD3FC"
+        android:strokeAlpha="0.6"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000" />
+    <!-- Cursor arrow (browser pointer) -->
+    <path
+        android:fillColor="#7DD3FC"
+        android:pathData="M68,68 L68,82 L73,77 L78,84 L80,83 L75,76 L80,76 Z" />
+</vector>
