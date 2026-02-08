@@ -405,13 +405,9 @@ fun GlassIconButton(
 }
 
 /**
- * Glass effect strength levels
+ * Glass effect strength levels - re-exported from DesignSystem for backward compat.
  */
-enum class GlassLevel {
-    LIGHT,   // 10% white overlay
-    MEDIUM,  // 15% white overlay
-    HEAVY    // 22% white overlay
-}
+typealias GlassLevel = com.augmentalis.avanueui.glass.GlassLevel
 
 /**
  * Bubble alignment options
@@ -423,12 +419,9 @@ enum class BubbleAlign {
 }
 
 /**
- * Glass border configuration
+ * Glass border configuration - re-exported from DesignSystem for backward compat.
  */
-data class GlassBorder(
-    val width: Dp,
-    val color: Color
-)
+typealias GlassBorder = com.augmentalis.avanueui.glass.GlassBorder
 
 /**
  * CardColors extension to copy with new container color
