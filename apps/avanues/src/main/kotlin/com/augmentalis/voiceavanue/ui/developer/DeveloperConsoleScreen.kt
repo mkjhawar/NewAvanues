@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.augmentalis.avamagic.ui.foundation.GlassCard
+import com.augmentalis.avanueui.components.glass.GlassCard
 import com.augmentalis.avanueui.glass.GlassLevel
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceavanue.BuildConfig

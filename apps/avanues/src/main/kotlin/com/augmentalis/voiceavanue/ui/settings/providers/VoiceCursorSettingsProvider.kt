@@ -18,9 +18,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.avanueui.settings.SettingsGroupCard
-import com.avanueui.settings.SettingsSliderRow
-import com.avanueui.settings.SettingsSwitchRow
+import com.augmentalis.avanueui.components.settings.SettingsGroupCard
+import com.augmentalis.avanueui.components.settings.SettingsSliderRow
+import com.augmentalis.avanueui.components.settings.SettingsSwitchRow
 import com.augmentalis.foundation.settings.SearchableSettingEntry
 import com.augmentalis.foundation.settings.SettingsSection
 import com.augmentalis.voiceavanue.data.AvanuesSettings

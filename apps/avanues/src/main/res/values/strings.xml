@@ -29,4 +29,8 @@
     <string name="settings_cursor">Cursor</string>
     <string name="settings_browser">Browser</string>
     <string name="settings_about">About</string>
+
+    <!-- Hub Dashboard -->
+    <string name="voiceavanue_active_title">VoiceAvanue is Active</string>
+    <string name="voiceavanue_active_subtitle">Voice control is running in the background</string>
 </resources>

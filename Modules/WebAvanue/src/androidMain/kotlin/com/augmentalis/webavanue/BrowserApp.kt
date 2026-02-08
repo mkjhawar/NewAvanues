@@ -76,6 +76,7 @@ fun BrowserApp(
     downloadQueue: DownloadQueue? = null,  // AndroidDownloadQueue on Android, null on other platforms
     xrManager: Any? = null,  // XRManager on Android, null on other platforms
     xrState: Any? = null,    // XRManager.XRState on Android, null on other platforms
+    onExitBrowser: (() -> Unit)? = null,  // Exit browser and return to parent navigation
     modifier: Modifier = Modifier
 ) {
     // FIX: Use remember to ensure ViewModels are created only once and persist across recompositions
@@ -175,7 +176,8 @@ fun BrowserApp(
         CompositionLocalProvider(
             LocalViewModelHolder provides viewModels,
             LocalXRManager provides xrManager,
-            LocalXRState provides xrState
+            LocalXRState provides xrState,
+            LocalExitBrowser provides onExitBrowser
         ) {
             Navigator(
                 screen = BrowserScreenNav()

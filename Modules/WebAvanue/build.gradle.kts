@@ -67,8 +67,7 @@ kotlin {
                 // AvaTheme - Canonical theme system (OceanTheme, GlassmorphicComponents)
                 api(project(":Modules:AvanueUI"))
 
-                // DesignSystem - Unified token system (SpacingTokens, ShapeTokens, AvanueTheme)
-                api(project(":Modules:AvanueUI:DesignSystem"))
+                // AvanueUI now includes all tokens, theme, and components (consolidated)
 
                 // Logging - Canonical KMP logging infrastructure
                 implementation(project(":Modules:Logging"))

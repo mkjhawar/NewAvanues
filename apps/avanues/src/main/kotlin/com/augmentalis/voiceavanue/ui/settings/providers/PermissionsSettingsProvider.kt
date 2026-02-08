@@ -18,8 +18,8 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import com.avanueui.settings.SettingsGroupCard
-import com.avanueui.settings.SettingsNavigationRow
+import com.augmentalis.avanueui.components.settings.SettingsGroupCard
+import com.augmentalis.avanueui.components.settings.SettingsNavigationRow
 import com.augmentalis.foundation.settings.SearchableSettingEntry
 import com.augmentalis.foundation.settings.SettingsSection
 import com.augmentalis.voiceavanue.ui.settings.ComposableSettingsProvider

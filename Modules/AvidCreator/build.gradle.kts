@@ -72,8 +72,8 @@ kotlin {
                 // SQLDelight KMP Database
                 implementation(project(":Modules:Database"))
 
-                // AvanueUI Foundation (GlassMorphism, DepthLevel)
-                implementation(project(":Modules:AvanueUI:Foundation"))
+                // AvanueUI (GlassMorphism, DepthLevel - consolidated)
+                implementation(project(":Modules:AvanueUI"))
 
                 // Compatibility Support
                 implementation("androidx.multidex:multidex:2.0.1")

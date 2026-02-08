@@ -29,6 +29,7 @@ val LocalViewModelHolder = staticCompositionLocalOf<ViewModelHolder> {
 
 val LocalXRManager = staticCompositionLocalOf<Any?> { null }
 val LocalXRState = staticCompositionLocalOf<Any?> { null }
+val LocalExitBrowser = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 /**
  * ViewModelHolder - Holds all ViewModels for the browser app
@@ -74,6 +75,7 @@ class BrowserScreenNav : Screen {
         val viewModels = LocalViewModelHolder.current
         val xrManager = LocalXRManager.current
         val xrState = LocalXRState.current
+        val exitBrowser = LocalExitBrowser.current
         val navigator = LocalNavigator.currentOrThrow
 
         BrowserScreen(
@@ -99,7 +101,8 @@ class BrowserScreenNav : Screen {
             },
             onNavigateToXRSettings = {
                 navigator.push(XRSettingsScreenNav())
-            }
+            },
+            onExitBrowser = exitBrowser
         )
     }
 }

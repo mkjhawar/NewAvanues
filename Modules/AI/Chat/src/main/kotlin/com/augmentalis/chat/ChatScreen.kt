@@ -49,15 +49,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.augmentalis.ava.core.domain.model.Message
 import com.augmentalis.ava.core.domain.model.MessageRole
-import com.avanueui.GlassIntensity
-import com.avanueui.GlassSurface
-import com.avanueui.GlassCard
-import com.avanueui.GlassIndicator
-import com.avanueui.GlassTextField
-import com.avanueui.OceanButton
-import com.avanueui.OceanButtonStyle
-import com.avanueui.OceanGradients
-import com.avanueui.OceanShapes
+import com.augmentalis.avanueui.components.glass.GlassCard
+import com.augmentalis.avanueui.components.glass.GlassIndicator
+import com.augmentalis.avanueui.components.glass.GlassSurface
+import com.augmentalis.avanueui.components.glass.OceanButton
+import com.augmentalis.avanueui.glass.GlassLevel
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.ShapeTokens
 import com.augmentalis.chat.components.ConversationSummary
@@ -203,9 +199,9 @@ fun ChatScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp),
-                intensity = GlassIntensity.LIGHT,
+                glassLevel = GlassLevel.LIGHT,
                 shape = RoundedCornerShape(ShapeTokens.sm),
-                showBorder = false
+                border = null
             ) {
                 Row(
                     modifier = Modifier
@@ -261,7 +257,7 @@ fun ChatScreen(
                     ) {
                         GlassCard(
                             modifier = Modifier.padding(32.dp),
-                            intensity = GlassIntensity.MEDIUM,
+                            glassLevel = GlassLevel.MEDIUM,
                             shape = RoundedCornerShape(ShapeTokens.lg)
                         ) {
                             Column(
@@ -388,7 +384,7 @@ fun ChatScreen(
                                     modifier = Modifier
                                         .padding(horizontal = 16.dp, vertical = 8.dp)
                                         .widthIn(max = 160.dp),
-                                    intensity = GlassIntensity.LIGHT,
+                                    glassLevel = GlassLevel.LIGHT,
                                     shape = RoundedCornerShape(
                                         topStart = ShapeTokens.lg,
                                         topEnd = ShapeTokens.lg,
@@ -551,7 +547,7 @@ private fun MessageInputField(
         if (isRAGActive) {
             GlassIndicator(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                intensity = GlassIntensity.MEDIUM
+                glassLevel = GlassLevel.MEDIUM
             ) {
                 Icon(
                     imageVector = Icons.Filled.AutoAwesome,
@@ -577,9 +573,8 @@ private fun MessageInputField(
         // Input area with Ocean Glass styling - consistent radii on all corners
         GlassSurface(
             modifier = Modifier.fillMaxWidth(),
-            intensity = GlassIntensity.LIGHT,
-            shape = RoundedCornerShape(ShapeTokens.md), // Consistent radii all corners
-            showBorder = true
+            glassLevel = GlassLevel.LIGHT,
+            shape = RoundedCornerShape(ShapeTokens.md) // Consistent radii all corners
         ) {
             Row(
                 modifier = Modifier
@@ -728,18 +723,12 @@ private fun AccessibilityPromptDialog(
             )
         },
         confirmButton = {
-            OceanButton(
-                onClick = onOpenSettings,
-                style = OceanButtonStyle.PRIMARY
-            ) {
+            OceanButton(onClick = onOpenSettings) {
                 Text("Open Settings")
             }
         },
         dismissButton = {
-            OceanButton(
-                onClick = onDismiss,
-                style = OceanButtonStyle.SECONDARY
-            ) {
+            TextButton(onClick = onDismiss) {
                 Text("Later")
             }
         },

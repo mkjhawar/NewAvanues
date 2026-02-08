@@ -30,7 +30,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.avanueui.GlassIntensity
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.ShapeTokens
 import com.augmentalis.avanueui.tokens.SizeTokens

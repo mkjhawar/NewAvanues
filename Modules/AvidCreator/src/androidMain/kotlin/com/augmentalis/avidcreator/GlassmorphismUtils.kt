@@ -10,8 +10,8 @@ package com.augmentalis.avidcreator.ui
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.augmentalis.avamagic.ui.foundation.GlassMorphismConfig
-import com.augmentalis.avamagic.ui.foundation.DepthLevel
+import com.augmentalis.avanueui.components.glass.GlassMorphismConfig
+import com.augmentalis.avanueui.components.glass.DepthLevel
 
 /**
  * UUID Manager color palette
