@@ -54,15 +54,25 @@ fun Modifier.glass(
     border: GlassBorder? = null,
     shape: Shape = GlassDefaults.shape
 ): Modifier {
-    val (opacity, blurRadius) = when (glassLevel) {
-        GlassLevel.LIGHT -> 0.05f to 6.dp
-        GlassLevel.MEDIUM -> 0.08f to 8.dp
-        GlassLevel.HEAVY -> 0.12f to 10.dp
+    val opacity = when (glassLevel) {
+        GlassLevel.LIGHT -> 0.10f
+        GlassLevel.MEDIUM -> 0.15f
+        GlassLevel.HEAVY -> 0.22f
+    }
+
+    // Glassmorphism: overlay contrasts with the background color.
+    // Dark backgrounds get white overlay, light backgrounds get dark overlay.
+    // NOTE: Modifier.blur() blurs the entire node including children (text), so we
+    // skip it here. For true backdrop blur, use a layered composable approach.
+    val luminance = 0.2126f * backgroundColor.red + 0.7152f * backgroundColor.green + 0.0722f * backgroundColor.blue
+    val glassOverlay = if (luminance < 0.5f) {
+        Color.White.copy(alpha = opacity)
+    } else {
+        Color.Black.copy(alpha = opacity)
     }
 
     return this
-        .background(backgroundColor.copy(alpha = opacity))
-        .blur(blurRadius)
+        .background(glassOverlay)
         .then(
             if (border != null) {
                 Modifier.border(
@@ -75,7 +85,7 @@ fun Modifier.glass(
 }
 
 /**
- * Apply light glassmorphic effect (8% opacity, 8dp blur)
+ * Apply light glassmorphic effect (8% white overlay, 6dp blur)
  *
  * MagicUI equivalent: Modifier.magicGlassLight()
  */
@@ -85,7 +95,7 @@ fun Modifier.glassLight(
 ): Modifier = glass(backgroundColor, GlassLevel.LIGHT, border)
 
 /**
- * Apply medium glassmorphic effect (12% opacity, 12dp blur)
+ * Apply medium glassmorphic effect (12% white overlay, 8dp blur)
  *
  * MagicUI equivalent: Modifier.magicGlassMedium()
  */
@@ -95,7 +105,7 @@ fun Modifier.glassMedium(
 ): Modifier = glass(backgroundColor, GlassLevel.MEDIUM, border)
 
 /**
- * Apply heavy glassmorphic effect (20% opacity, 16dp blur)
+ * Apply heavy glassmorphic effect (18% white overlay, 10dp blur)
  *
  * MagicUI equivalent: Modifier.magicGlassHeavy()
  */

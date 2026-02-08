@@ -228,13 +228,13 @@ object OceanDesignTokens {
      * Usage: Glassmorphic components
      */
     object Glass {
-        /** Light glass - 5% opacity, subtle blur */
-        const val light: Float = 0.05f
+        /** Light glass - 10% white overlay */
+        const val light: Float = 0.10f
 
-        /** Medium glass - 8% opacity, moderate blur */
-        const val medium: Float = 0.08f
+        /** Medium glass - 15% white overlay */
+        const val medium: Float = 0.15f
 
-        /** Heavy glass - 12% opacity, strong blur */
-        const val heavy: Float = 0.12f
+        /** Heavy glass - 22% white overlay */
+        const val heavy: Float = 0.22f
     }
 }

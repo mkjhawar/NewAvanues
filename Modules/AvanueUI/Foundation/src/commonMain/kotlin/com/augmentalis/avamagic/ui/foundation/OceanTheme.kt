@@ -111,15 +111,15 @@ object OceanTheme {
     /** Loading/progress indicator */
     val loading = primary
 
-    // ========== Glassmorphism Overlays ==========
-    /** Light glass (8% opacity) */
-    val glassLight = Color(0x141E293B)
+    // ========== Glassmorphism Overlays (white-based for dark backgrounds) ==========
+    /** Light glass (10% white) */
+    val glassLight = Color(0x1AFFFFFF)
 
-    /** Medium glass (12% opacity) */
-    val glassMedium = Color(0x1F334155)
+    /** Medium glass (15% white) */
+    val glassMedium = Color(0x26FFFFFF)
 
-    /** Heavy glass (20% opacity) */
-    val glassHeavy = Color(0x33334155)
+    /** Heavy glass (22% white) */
+    val glassHeavy = Color(0x38FFFFFF)
 
     /** Glass border */
     val glassBorder = Color(0x262563EB)

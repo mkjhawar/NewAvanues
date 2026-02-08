@@ -39,6 +39,7 @@ object ColorTokens {
     val OceanDepth = Color(0xFF0F172A)             // Primary background
     val OceanMid = Color(0xFF1E293B)               // Mid-level surfaces
     val OceanShallow = Color(0xFF334155)           // Elevated surfaces
+    val SurfaceHighest = Color(0xFF475569)          // Highest surface tint
 
     // Gradient colors (Ocean Blue theme)
     val GradientStart = Color(0xFF0A1929)          // Deep ocean (top)

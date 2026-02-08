@@ -137,10 +137,18 @@ private val DarkColorScheme = darkColorScheme(
     background = ColorTokens.DarkBackground,
     onBackground = ColorTokens.DarkOnBackground,
 
-    surface = ColorTokens.DarkSurface,
+    // Solid ocean surfaces for readability (not transparent glass)
+    surface = ColorTokens.OceanMid,                           // #1E293B solid
     onSurface = ColorTokens.DarkOnSurface,
-    surfaceVariant = ColorTokens.DarkSurfaceVariant,
+    surfaceVariant = ColorTokens.OceanShallow,                // #334155 solid
     onSurfaceVariant = ColorTokens.DarkOnSurfaceVariant,
+
+    // Surface container tonal hierarchy (solid ocean blues)
+    surfaceContainerLowest = ColorTokens.DeepOcean,           // #0A1929
+    surfaceContainerLow = ColorTokens.OceanDepth,             // #0F172A
+    surfaceContainer = ColorTokens.OceanMid,                  // #1E293B
+    surfaceContainerHigh = ColorTokens.OceanShallow,          // #334155
+    surfaceContainerHighest = ColorTokens.SurfaceHighest,     // #475569
 
     outline = ColorTokens.DarkOutline,
     outlineVariant = ColorTokens.DarkOutlineVariant

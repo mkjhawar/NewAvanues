@@ -408,9 +408,9 @@ fun GlassIconButton(
  * Glass effect strength levels
  */
 enum class GlassLevel {
-    LIGHT,   // 5% opacity, subtle blur
-    MEDIUM,  // 8% opacity, moderate blur
-    HEAVY    // 12% opacity, strong blur
+    LIGHT,   // 10% white overlay
+    MEDIUM,  // 15% white overlay
+    HEAVY    // 22% white overlay
 }
 
 /**
