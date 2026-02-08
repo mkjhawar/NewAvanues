@@ -7,7 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Dialog shown on app startup if crash recovery session is detected
@@ -40,7 +40,7 @@ fun SessionRestoreDialog(
             Icon(
                 imageVector = Icons.Default.Restore,
                 contentDescription = "Restore session",
-                tint = OceanTheme.primary,
+                tint = AvanueTheme.colors.primary,
                 modifier = Modifier.size(48.dp)
             )
         },
@@ -61,7 +61,7 @@ fun SessionRestoreDialog(
                 Text(
                     "Restore $tabCount ${if (tabCount == 1) "tab" else "tabs"}?",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = OceanTheme.primary
+                    color = AvanueTheme.colors.primary
                 )
             }
         },
@@ -69,7 +69,7 @@ fun SessionRestoreDialog(
             Button(
                 onClick = onRestore,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = OceanTheme.primary
+                    containerColor = AvanueTheme.colors.primary
                 )
             ) {
                 Text("Restore Tabs")

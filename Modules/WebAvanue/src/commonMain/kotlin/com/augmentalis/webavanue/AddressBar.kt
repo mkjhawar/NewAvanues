@@ -32,13 +32,11 @@ import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.ShapeTokens
 import com.augmentalis.avanueui.tokens.SpacingTokens
-import com.augmentalis.webavanue.OceanComponents
 import com.augmentalis.webavanue.IconVariant
-import com.augmentalis.webavanue.SurfaceVariant
+import com.augmentalis.webavanue.toColor
 import com.augmentalis.webavanue.CompactTabCounterBadge
 import com.augmentalis.webavanue.TabUiState
 import com.augmentalis.webavanue.Favorite
-import com.augmentalis.webavanue.OceanComponents.Surface
 
 /**
  * AddressBar - Browser address bar with Ocean component system
@@ -196,9 +194,8 @@ fun AddressBar(
         // Solid surface background (no blur)
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            variant = SurfaceVariant.Elevated,
-            shape = null,
-            onClick = null
+            color = AvanueTheme.colors.surfaceElevated,
+            shape = RoundedCornerShape(12.dp)
         ) {
             if (isPortrait) {
                 // Portrait mode: Two-level layout for better URL visibility
@@ -238,10 +235,10 @@ fun AddressBar(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier.fillMaxSize()
                                 ) {
-                                    OceanComponents.Icon(
+                                    Icon(
                                         imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                         contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                        variant = if (isFavorite) IconVariant.Warning else IconVariant.Secondary,
+                                        tint = if (isFavorite) IconVariant.Warning.toColor() else IconVariant.Secondary.toColor(),
                                         modifier = Modifier.size(14.dp)
                                     )
                                 }
@@ -298,16 +295,16 @@ fun AddressBar(
                                     .clickable(onClick = onHistoryClick),
                                 contentAlignment = Alignment.Center
                             ) {
-                                OceanComponents.Icon(
+                                Icon(
                                     imageVector = Icons.Default.History,
                                     contentDescription = "History",
-                                    variant = IconVariant.Secondary,
+                                    tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
 
                             // Go button - smaller for portrait
-                            OceanComponents.IconButton(
+                            IconButton(
                                 onClick = {
                                     dismissKeyboard()
                                     onGo()
@@ -315,10 +312,10 @@ fun AddressBar(
                                 modifier = Modifier.size(24.dp),
                                 enabled = true
                             ) {
-                                OceanComponents.Icon(
+                                Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Go (Voice: go)",
-                                    variant = IconVariant.Secondary,
+                                    tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -335,58 +332,58 @@ fun AddressBar(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         // Back button - small
-                        OceanComponents.IconButton(
+                        IconButton(
                             onClick = onBack,
                             enabled = canGoBack,
                             modifier = Modifier.size(24.dp)
                         ) {
-                            OceanComponents.Icon(
+                            Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                variant = if (canGoBack) IconVariant.Primary else IconVariant.Disabled,
+                                tint = if (canGoBack) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
 
                         // Forward button - small
-                        OceanComponents.IconButton(
+                        IconButton(
                             onClick = onForward,
                             enabled = canGoForward,
                             modifier = Modifier.size(24.dp)
                         ) {
-                            OceanComponents.Icon(
+                            Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = "Forward",
-                                variant = if (canGoForward) IconVariant.Primary else IconVariant.Disabled,
+                                tint = if (canGoForward) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
 
                         // Refresh button - small
-                        OceanComponents.IconButton(
+                        IconButton(
                             onClick = onRefresh,
                             modifier = Modifier.size(24.dp),
                             enabled = true
                         ) {
-                            OceanComponents.Icon(
+                            Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Refresh",
-                                variant = IconVariant.Primary,
+                                tint = IconVariant.Primary.toColor(),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
 
                         // Reading Mode button - only show if article detected (Phase 4)
                         if (isArticleAvailable) {
-                            OceanComponents.IconButton(
+                            IconButton(
                                 onClick = onReadingModeToggle,
                                 modifier = Modifier.size(24.dp),
                                 enabled = true
                             ) {
-                                OceanComponents.Icon(
+                                Icon(
                                     imageVector = Icons.Default.MenuBook,
                                     contentDescription = "Reading Mode",
-                                    variant = if (isReadingMode) IconVariant.Primary else IconVariant.Secondary,
+                                    tint = if (isReadingMode) IconVariant.Primary.toColor() else IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -409,29 +406,29 @@ fun AddressBar(
                         )
 
                         // Command bar toggle button - shows/hides bottom command bar
-                        OceanComponents.IconButton(
+                        IconButton(
                             onClick = onCommandBarToggle,
                             modifier = Modifier.size(24.dp),
                             enabled = true
                         ) {
-                            OceanComponents.Icon(
+                            Icon(
                                 imageVector = Icons.Default.Dehaze,
                                 contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
-                                variant = IconVariant.Primary,
+                                tint = IconVariant.Primary.toColor(),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
 
                         // Voice/Mic button - tap to start listening
-                        OceanComponents.IconButton(
+                        IconButton(
                             onClick = { if (!isListening) onStartListening() },
                             modifier = Modifier.size(24.dp),
                             enabled = true
                         ) {
-                            OceanComponents.Icon(
+                            Icon(
                                 imageVector = Icons.Default.Mic,
                                 contentDescription = if (isListening) "Listening..." else "Tap to speak",
-                                variant = if (isListening) IconVariant.Success else IconVariant.Primary,
+                                tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor(),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -451,43 +448,43 @@ fun AddressBar(
                     horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
                 ) {
                     // Back button
-                    OceanComponents.IconButton(
+                    IconButton(
                         onClick = onBack,
                         enabled = canGoBack,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        OceanComponents.Icon(
+                        Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back (Voice: go back)",
-                            variant = if (canGoBack) IconVariant.Primary else IconVariant.Disabled,
+                            tint = if (canGoBack) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
                             modifier = Modifier
                         )
                     }
 
                     // Forward button
-                    OceanComponents.IconButton(
+                    IconButton(
                         onClick = onForward,
                         enabled = canGoForward,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        OceanComponents.Icon(
+                        Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "Forward (Voice: go forward)",
-                            variant = if (canGoForward) IconVariant.Primary else IconVariant.Disabled,
+                            tint = if (canGoForward) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
                             modifier = Modifier
                         )
                     }
 
                     // Refresh button - moved next to navigation arrows (left of URL)
-                    OceanComponents.IconButton(
+                    IconButton(
                         onClick = onRefresh,
                         modifier = Modifier.size(36.dp),
                         enabled = true
                     ) {
-                        OceanComponents.Icon(
+                        Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh (Voice: refresh)",
-                            variant = IconVariant.Primary,
+                            tint = IconVariant.Primary.toColor(),
                             modifier = Modifier
                         )
                     }
@@ -520,10 +517,10 @@ fun AddressBar(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier.fillMaxSize()
                                 ) {
-                                    OceanComponents.Icon(
+                                    Icon(
                                         imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                         contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                        variant = if (isFavorite) IconVariant.Warning else IconVariant.Secondary,
+                                        tint = if (isFavorite) IconVariant.Warning.toColor() else IconVariant.Secondary.toColor(),
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -580,10 +577,10 @@ fun AddressBar(
                                     .clickable(onClick = onHistoryClick),
                                 contentAlignment = Alignment.Center
                             ) {
-                                OceanComponents.Icon(
+                                Icon(
                                     imageVector = Icons.Default.History,
                                     contentDescription = "History",
-                                    variant = IconVariant.Secondary,
+                                    tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -597,7 +594,7 @@ fun AddressBar(
                                     .alpha(if (isWebGLSite) 0.5f else 1f)
                             )
 
-                            OceanComponents.IconButton(
+                            IconButton(
                                 onClick = {
                                     dismissKeyboard()
                                     onGo()
@@ -605,10 +602,10 @@ fun AddressBar(
                                 modifier = Modifier.size(32.dp),
                                 enabled = true
                             ) {
-                                OceanComponents.Icon(
+                                Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Go (Voice: go)",
-                                    variant = IconVariant.Secondary,
+                                    tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -622,29 +619,29 @@ fun AddressBar(
                     )
 
                     // Command bar toggle button - shows/hides bottom command bar
-                    OceanComponents.IconButton(
+                    IconButton(
                         onClick = onCommandBarToggle,
                         modifier = Modifier.size(36.dp),
                         enabled = true
                     ) {
-                        OceanComponents.Icon(
+                        Icon(
                             imageVector = Icons.Default.Dehaze,
                             contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
-                            variant = IconVariant.Primary,
+                            tint = IconVariant.Primary.toColor(),
                             modifier = Modifier
                         )
                     }
 
                     // Voice/Mic button - tap to start listening
-                    OceanComponents.IconButton(
+                    IconButton(
                         onClick = { if (!isListening) onStartListening() },
                         modifier = Modifier.size(36.dp),
                         enabled = true
                     ) {
-                        OceanComponents.Icon(
+                        Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = if (isListening) "Listening for command..." else "Tap to speak command",
-                            variant = if (isListening) IconVariant.Success else IconVariant.Primary,
+                            tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor(),
                             modifier = Modifier
                         )
                     }

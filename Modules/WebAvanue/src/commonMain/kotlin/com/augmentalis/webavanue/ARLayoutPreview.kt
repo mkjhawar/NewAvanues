@@ -14,11 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.augmentalis.webavanue.*
-import com.augmentalis.webavanue.ArcLayout
-import com.augmentalis.webavanue.ArcOrientation
-import com.augmentalis.webavanue.isLandscape
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * ARLayoutPreview - Interactive demo screen for testing spatial arc layout
@@ -76,16 +73,16 @@ fun ARLayoutPreview(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(OceanTheme.background.copy(alpha = 0.95f))
+                .background(AvanueTheme.colors.background.copy(alpha = 0.95f))
         )
 
         // Main content
         Column(modifier = Modifier.fillMaxSize()) {
             // Top bar
-            GlassSurface(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                glassLevel = GlassLevel.MEDIUM,
-                border = GlassDefaults.borderSubtle
+                color = AvanueTheme.colors.surfaceElevated.copy(alpha = 0.85f),
+                shape = RoundedCornerShape(0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -95,33 +92,29 @@ fun ARLayoutPreview(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GlassIconButton(
-                        onClick = onBack,
-                        glass = true,
-                        glassLevel = GlassLevel.LIGHT
+                    IconButton(
+                        onClick = onBack
                     ) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = OceanTheme.textPrimary
+                            tint = AvanueTheme.colors.textPrimary
                         )
                     }
 
                     Text(
                         text = "AR Layout Preview",
                         style = MaterialTheme.typography.titleMedium,
-                        color = OceanTheme.textPrimary
+                        color = AvanueTheme.colors.textPrimary
                     )
 
-                    GlassIconButton(
-                        onClick = { showDebugInfo = !showDebugInfo },
-                        glass = true,
-                        glassLevel = GlassLevel.LIGHT
+                    IconButton(
+                        onClick = { showDebugInfo = !showDebugInfo }
                     ) {
                         Icon(
                             imageVector = if (showDebugInfo) Icons.Default.BugReport else Icons.Default.Info,
                             contentDescription = "Toggle debug",
-                            tint = if (showDebugInfo) OceanTheme.primary else OceanTheme.textSecondary
+                            tint = if (showDebugInfo) AvanueTheme.colors.primary else AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -188,7 +181,7 @@ fun ARLayoutPreview(
                         text = if (effectiveOrientation == ArcOrientation.VERTICAL)
                             "↑ Swipe ↓" else "← Swipe to rotate arc →",
                         style = MaterialTheme.typography.bodySmall,
-                        color = OceanTheme.textTertiary.copy(alpha = 0.6f),
+                        color = AvanueTheme.colors.textTertiary.copy(alpha = 0.6f),
                         modifier = Modifier
                             .align(
                                 if (effectiveOrientation == ArcOrientation.VERTICAL)
@@ -207,12 +200,12 @@ fun ARLayoutPreview(
                 Text(
                     text = "${currentIndex + 1} / ${demoItems.size}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanTheme.textPrimary.copy(alpha = 0.8f),
+                    color = AvanueTheme.colors.textPrimary.copy(alpha = 0.8f),
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = 24.dp)
                         .background(
-                            color = OceanTheme.surface.copy(alpha = 0.6f),
+                            color = AvanueTheme.colors.surface.copy(alpha = 0.6f),
                             shape = RoundedCornerShape(16.dp)
                         )
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -264,12 +257,11 @@ private fun DemoItemCard(
 
     val elevation = if (isCenterItem) 8.dp else 4.dp
 
-    GlassCard(
+    Card(
         modifier = cardSize,
-        glassLevel = glassLevel,
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         shape = RoundedCornerShape(12.dp),
-        border = GlassDefaults.border
+        colors = CardDefaults.cardColors(containerColor = AvanueTheme.colors.surfaceElevated.copy(alpha = 0.7f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Background gradient
@@ -312,7 +304,7 @@ private fun DemoItemCard(
                         MaterialTheme.typography.titleSmall
                     else
                         MaterialTheme.typography.bodySmall,
-                    color = OceanTheme.textPrimary,
+                    color = AvanueTheme.colors.textPrimary,
                     textAlign = TextAlign.Center,
                     maxLines = 2
                 )
@@ -322,7 +314,7 @@ private fun DemoItemCard(
                     Text(
                         text = item.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = OceanTheme.textSecondary,
+                        color = AvanueTheme.colors.textSecondary,
                         textAlign = TextAlign.Center,
                         maxLines = 1
                     )
@@ -337,7 +329,7 @@ private fun DemoItemCard(
                         .padding(8.dp)
                         .size(8.dp)
                         .background(
-                            color = OceanTheme.primary,
+                            color = AvanueTheme.colors.primary,
                             shape = androidx.compose.foundation.shape.CircleShape
                         )
                 )
@@ -359,10 +351,10 @@ private fun ControlPanel(
     onToggleGestureHints: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    GlassSurface(
+    Surface(
         modifier = modifier,
-        glassLevel = GlassLevel.MEDIUM,
-        border = GlassDefaults.borderSubtle
+        color = AvanueTheme.colors.surfaceElevated.copy(alpha = 0.85f),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
@@ -379,16 +371,15 @@ private fun ControlPanel(
                 Text(
                     text = "Glass Level:",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanTheme.textPrimary
+                    color = AvanueTheme.colors.textPrimary
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GlassLevel.values().forEach { level ->
-                        GlassChip(
+                    GlassLevel.entries.forEach { level ->
+                        FilterChip(
                             onClick = { onGlassLevelChange(level) },
                             label = { Text(level.name) },
-                            glass = true,
-                            glassLevel = if (selectedGlassLevel == level) GlassLevel.HEAVY else GlassLevel.LIGHT
+                            selected = selectedGlassLevel == level
                         )
                     }
                 }
@@ -403,7 +394,7 @@ private fun ControlPanel(
                 Text(
                     text = "Orientation:",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanTheme.textPrimary
+                    color = AvanueTheme.colors.textPrimary
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -412,16 +403,14 @@ private fun ControlPanel(
                         Triple("H", ArcOrientation.HORIZONTAL, Icons.Default.ViewCarousel),
                         Triple("V", ArcOrientation.VERTICAL, Icons.Default.ViewColumn)
                     ).forEach { (label, orientation, icon) ->
-                        GlassIconButton(
+                        IconButton(
                             onClick = { onOrientationChange(orientation) },
-                            glass = true,
-                            glassLevel = if (forceOrientation == orientation) GlassLevel.HEAVY else GlassLevel.LIGHT,
                             modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = label,
-                                tint = if (forceOrientation == orientation) OceanTheme.primary else OceanTheme.textSecondary
+                                tint = if (forceOrientation == orientation) AvanueTheme.colors.primary else AvanueTheme.colors.textSecondary
                             )
                         }
                     }
@@ -437,15 +426,15 @@ private fun ControlPanel(
                 Text(
                     text = "Gesture Hints:",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanTheme.textPrimary
+                    color = AvanueTheme.colors.textPrimary
                 )
 
                 Switch(
                     checked = showGestureHints,
                     onCheckedChange = { onToggleGestureHints() },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = OceanTheme.primary,
-                        checkedTrackColor = OceanTheme.primary.copy(alpha = 0.5f)
+                        checkedThumbColor = AvanueTheme.colors.primary,
+                        checkedTrackColor = AvanueTheme.colors.primary.copy(alpha = 0.5f)
                     )
                 )
             }
@@ -464,10 +453,10 @@ private fun DebugInfoOverlay(
     glassLevel: GlassLevel,
     modifier: Modifier = Modifier
 ) {
-    GlassCard(
+    Card(
         modifier = modifier.width(200.dp),
-        glassLevel = GlassLevel.HEAVY,
-        border = GlassDefaults.border
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = AvanueTheme.colors.surfaceElevated.copy(alpha = 0.85f))
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -476,12 +465,12 @@ private fun DebugInfoOverlay(
             Text(
                 text = "Debug Info",
                 style = MaterialTheme.typography.titleSmall,
-                color = OceanTheme.textPrimary
+                color = AvanueTheme.colors.textPrimary
             )
 
             Divider(
                 modifier = Modifier.padding(vertical = 4.dp),
-                color = OceanTheme.textTertiary.copy(alpha = 0.3f)
+                color = AvanueTheme.colors.textTertiary.copy(alpha = 0.3f)
             )
 
             DebugRow("Current Index", "$currentIndex")
@@ -503,12 +492,12 @@ private fun DebugRow(label: String, value: String) {
         Text(
             text = "$label:",
             style = MaterialTheme.typography.bodySmall,
-            color = OceanTheme.textSecondary
+            color = AvanueTheme.colors.textSecondary
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = OceanTheme.textPrimary
+            color = AvanueTheme.colors.textPrimary
         )
     }
 }

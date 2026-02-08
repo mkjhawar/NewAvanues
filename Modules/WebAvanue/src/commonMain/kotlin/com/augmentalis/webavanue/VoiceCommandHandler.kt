@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * VoiceCommandHandler - Composable that shows voice listening state and feedback
@@ -67,7 +67,7 @@ fun VoiceListeningIndicator(
                         .size(80.dp)
                         .scale(scale)
                         .background(
-                            color = OceanTheme.primary.copy(alpha = 0.3f),
+                            color = AvanueTheme.colors.primary.copy(alpha = 0.3f),
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -76,7 +76,7 @@ fun VoiceListeningIndicator(
                         modifier = Modifier
                             .size(60.dp)
                             .background(
-                                color = OceanTheme.primary,
+                                color = AvanueTheme.colors.primary,
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -93,14 +93,14 @@ fun VoiceListeningIndicator(
                 Text(
                     text = "Listening...",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanTheme.textPrimary
+                    color = AvanueTheme.colors.textPrimary
                 )
             }
 
             // Show last recognized command
             lastCommand?.let { command ->
                 Surface(
-                    color = OceanTheme.surface,
+                    color = AvanueTheme.colors.surface,
                     shape = RoundedCornerShape(8.dp),
                     shadowElevation = 4.dp
                 ) {
@@ -108,7 +108,7 @@ fun VoiceListeningIndicator(
                         text = "\"$command\"",
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = OceanTheme.textPrimary
+                        color = AvanueTheme.colors.textPrimary
                     )
                 }
             }

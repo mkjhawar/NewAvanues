@@ -11,7 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 import kotlinx.coroutines.delay
 
 /**
@@ -93,7 +93,7 @@ fun VoiceCommandFeedback(
             modifier = Modifier
                 .padding(16.dp)
                 .background(
-                    color = OceanTheme.surface.copy(alpha = 0.95f),
+                    color = AvanueTheme.colors.surface.copy(alpha = 0.95f),
                     shape = RoundedCornerShape(12.dp)
                 )
                 .padding(horizontal = 24.dp, vertical = 16.dp)
@@ -105,14 +105,14 @@ fun VoiceCommandFeedback(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Success",
-                    tint = OceanTheme.success,
+                    tint = AvanueTheme.colors.success,
                     modifier = Modifier.size(24.dp)
                 )
 
                 Text(
                     text = command,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = OceanTheme.textPrimary
+                    color = AvanueTheme.colors.textPrimary
                 )
             }
         }

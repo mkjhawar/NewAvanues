@@ -2,6 +2,7 @@ package com.augmentalis.webavanue
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -21,11 +22,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.SpacingTokens
-import com.augmentalis.webavanue.AppIcon
-import com.augmentalis.webavanue.AppIconButton
-import com.augmentalis.webavanue.AppSurface
 import com.augmentalis.webavanue.IconVariant
-import com.augmentalis.webavanue.SurfaceVariant
+import com.augmentalis.webavanue.toColor
 
 /**
  * FindInPageBar - Text search UI for browser
@@ -76,13 +74,12 @@ fun FindInPageBar(
         focusRequester.requestFocus()
     }
 
-    AppSurface(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
-        variant = SurfaceVariant.Elevated,
-        shape = null,
-        onClick = null
+        color = AvanueTheme.colors.surfaceElevated,
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier
@@ -152,29 +149,29 @@ fun FindInPageBar(
             }
 
             // Previous button
-            AppIconButton(
+            IconButton(
                 onClick = onPrevious,
                 enabled = totalMatches > 0,
                 modifier = Modifier.size(36.dp)
             ) {
-                AppIcon(
+                Icon(
                     imageVector = Icons.Default.ArrowUpward,
                     contentDescription = "Previous match (Shift+Enter)",
-                    variant = if (totalMatches > 0) IconVariant.Primary else IconVariant.Disabled,
+                    tint = if (totalMatches > 0) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
                     modifier = Modifier
                 )
             }
 
             // Next button
-            AppIconButton(
+            IconButton(
                 onClick = onNext,
                 enabled = totalMatches > 0,
                 modifier = Modifier.size(36.dp)
             ) {
-                AppIcon(
+                Icon(
                     imageVector = Icons.Default.ArrowDownward,
                     contentDescription = "Next match (Enter)",
-                    variant = if (totalMatches > 0) IconVariant.Primary else IconVariant.Disabled,
+                    tint = if (totalMatches > 0) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
                     modifier = Modifier
                 )
             }
@@ -196,7 +193,7 @@ fun FindInPageBar(
             */
 
             // Close button
-            AppIconButton(
+            IconButton(
                 onClick = {
                     focusManager.clearFocus()
                     onClose()
@@ -204,10 +201,10 @@ fun FindInPageBar(
                 modifier = Modifier.size(36.dp),
                 enabled = true
             ) {
-                AppIcon(
+                Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close find bar (Escape)",
-                    variant = IconVariant.Secondary,
+                    tint = IconVariant.Secondary.toColor(),
                     modifier = Modifier
                 )
             }

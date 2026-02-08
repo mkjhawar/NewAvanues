@@ -25,7 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.webavanue.Favorite
 import kotlin.math.abs
 
@@ -78,7 +78,7 @@ fun SpatialFavoritesShelf(
                 Icon(
                     imageVector = Icons.Default.Star,
                     contentDescription = null,
-                    tint = OceanTheme.starActive
+                    tint = AvanueTheme.colors.starActive
                 )
                 Text(
                     text = "Favorites",
@@ -108,7 +108,7 @@ fun SpatialFavoritesShelf(
                 Icon(
                     imageVector = Icons.Default.Star,
                     contentDescription = null,
-                    tint = OceanTheme.starActive.copy(alpha = 0.3f),
+                    tint = AvanueTheme.colors.starActive.copy(alpha = 0.3f),
                     modifier = Modifier.size(64.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -201,13 +201,13 @@ fun SpatialFavoriteCard(
             .shadow(
                 elevation = 16.dp,
                 shape = RoundedCornerShape(16.dp),
-                ambientColor = OceanTheme.primary.copy(alpha = 0.2f),
-                spotColor = OceanTheme.primary.copy(alpha = 0.4f)
+                ambientColor = AvanueTheme.colors.primary.copy(alpha = 0.2f),
+                spotColor = AvanueTheme.colors.primary.copy(alpha = 0.4f)
             )
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = OceanTheme.surfaceElevated
+            containerColor = AvanueTheme.colors.surfaceElevated
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -225,8 +225,8 @@ fun SpatialFavoriteCard(
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
-                                OceanTheme.primary.copy(alpha = 0.3f),
-                                OceanTheme.primary.copy(alpha = 0.1f)
+                                AvanueTheme.colors.primary.copy(alpha = 0.3f),
+                                AvanueTheme.colors.primary.copy(alpha = 0.1f)
                             )
                         ),
                         shape = RoundedCornerShape(12.dp)
@@ -237,7 +237,7 @@ fun SpatialFavoriteCard(
                 Text(
                     text = favorite.title.take(1).uppercase(),
                     style = MaterialTheme.typography.headlineMedium,
-                    color = OceanTheme.primary
+                    color = AvanueTheme.colors.primary
                 )
             }
 
@@ -245,7 +245,7 @@ fun SpatialFavoriteCard(
             Text(
                 text = favorite.title,
                 style = MaterialTheme.typography.titleSmall,
-                color = OceanTheme.textPrimary,
+                color = AvanueTheme.colors.textPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -260,7 +260,7 @@ fun SpatialFavoriteCard(
                     .removePrefix("www.")
                     .take(20) + if (favorite.url.length > 20) "..." else "",
                 style = MaterialTheme.typography.bodySmall,
-                color = OceanTheme.textSecondary,
+                color = AvanueTheme.colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -271,7 +271,7 @@ fun SpatialFavoriteCard(
             Icon(
                 imageVector = Icons.Default.Star,
                 contentDescription = null,
-                tint = OceanTheme.starActive,
+                tint = AvanueTheme.colors.starActive,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -334,7 +334,7 @@ fun CompactFavoriteCard(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
-        color = OceanTheme.surfaceElevated,
+        color = AvanueTheme.colors.surfaceElevated,
         shape = RoundedCornerShape(12.dp),
         shadowElevation = 4.dp
     ) {
@@ -349,7 +349,7 @@ fun CompactFavoriteCard(
                 modifier = Modifier
                     .size(40.dp)
                     .background(
-                        OceanTheme.primary.copy(alpha = 0.2f),
+                        AvanueTheme.colors.primary.copy(alpha = 0.2f),
                         RoundedCornerShape(8.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -357,7 +357,7 @@ fun CompactFavoriteCard(
                 Text(
                     text = favorite.title.take(1).uppercase(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = OceanTheme.primary
+                    color = AvanueTheme.colors.primary
                 )
             }
 
@@ -366,7 +366,7 @@ fun CompactFavoriteCard(
             Text(
                 text = favorite.title,
                 style = MaterialTheme.typography.labelSmall,
-                color = OceanTheme.textPrimary,
+                color = AvanueTheme.colors.textPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center

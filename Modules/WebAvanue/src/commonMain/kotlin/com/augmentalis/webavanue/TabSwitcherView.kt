@@ -24,7 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.glassCard
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.webavanue.TabUiState
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.CornerRadius
@@ -99,7 +99,7 @@ fun TabSwitcherView(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(OceanTheme.background)
+            .background(AvanueTheme.colors.background)
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -171,8 +171,8 @@ private fun TabSwitcherHeader(
         modifier = modifier
             .fillMaxWidth()
             .glassCard(cornerRadius = 0.dp)
-            .background(OceanTheme.surface),
-        color = OceanTheme.surface,
+            .background(AvanueTheme.colors.surface),
+        color = AvanueTheme.colors.surface,
         tonalElevation = 0.dp
     ) {
         Row(
@@ -195,7 +195,7 @@ private fun TabSwitcherHeader(
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
-                        tint = OceanTheme.textPrimary,
+                        tint = AvanueTheme.colors.textPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -204,7 +204,7 @@ private fun TabSwitcherHeader(
                 Text(
                     text = "$tabCount ${if (tabCount == 1) "tab" else "tabs"}",
                     style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                    color = OceanTheme.textPrimary
+                    color = AvanueTheme.colors.textPrimary
                 )
             }
 
@@ -215,7 +215,7 @@ private fun TabSwitcherHeader(
                 // View mode toggle
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = OceanTheme.surfaceElevated,
+                    color = AvanueTheme.colors.surfaceElevated,
                     modifier = Modifier.height(36.dp)
                 ) {
                     Row(
@@ -229,12 +229,12 @@ private fun TabSwitcherHeader(
                                 .size(28.dp)
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(
-                                    if (viewMode == TabViewMode.GRID) OceanTheme.primary
+                                    if (viewMode == TabViewMode.GRID) AvanueTheme.colors.primary
                                     else Color.Transparent
                                 )
                         ) {
                             CustomGridViewIcon(
-                                tint = if (viewMode == TabViewMode.GRID) OceanTheme.textOnPrimary else OceanTheme.textSecondary,
+                                tint = if (viewMode == TabViewMode.GRID) AvanueTheme.colors.textOnPrimary else AvanueTheme.colors.textSecondary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -246,12 +246,12 @@ private fun TabSwitcherHeader(
                                 .size(28.dp)
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(
-                                    if (viewMode == TabViewMode.LIST) OceanTheme.primary
+                                    if (viewMode == TabViewMode.LIST) AvanueTheme.colors.primary
                                     else Color.Transparent
                                 )
                         ) {
                             CustomListViewIcon(
-                                tint = if (viewMode == TabViewMode.LIST) OceanTheme.textOnPrimary else OceanTheme.textSecondary,
+                                tint = if (viewMode == TabViewMode.LIST) AvanueTheme.colors.textOnPrimary else AvanueTheme.colors.textSecondary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -265,7 +265,7 @@ private fun TabSwitcherHeader(
                     modifier = Modifier.size(48.dp)
                 ) {
                     Surface(
-                        color = OceanTheme.primary,
+                        color = AvanueTheme.colors.primary,
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
@@ -296,9 +296,9 @@ private fun CategoryTabs(
         selectedTabIndex = TabCategory.entries.indexOf(selectedCategory),
         modifier = modifier
             .fillMaxWidth()
-            .background(OceanTheme.surface),
-        containerColor = OceanTheme.surface,
-        contentColor = OceanTheme.textPrimary,
+            .background(AvanueTheme.colors.surface),
+        containerColor = AvanueTheme.colors.surface,
+        contentColor = AvanueTheme.colors.textPrimary,
         edgePadding = 16.dp,
         divider = {}
     ) {
@@ -320,19 +320,19 @@ private fun CategoryTabs(
                     Text(
                         text = category.displayName,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (selectedCategory == category) OceanTheme.primary else OceanTheme.textSecondary
+                        color = if (selectedCategory == category) AvanueTheme.colors.primary else AvanueTheme.colors.textSecondary
                     )
                     if (count != null && count > 0) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = if (selectedCategory == category) OceanTheme.primary else OceanTheme.surfaceElevated,
+                            color = if (selectedCategory == category) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
                             modifier = Modifier.size(20.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = count.toString(),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (selectedCategory == category) OceanTheme.textOnPrimary else OceanTheme.textTertiary
+                                    color = if (selectedCategory == category) AvanueTheme.colors.textOnPrimary else AvanueTheme.colors.textTertiary
                                 )
                             }
                         }
@@ -445,9 +445,9 @@ private fun TabGridCard(
             ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isActive) OceanTheme.surfaceElevated else OceanTheme.surface
+            containerColor = if (isActive) AvanueTheme.colors.surfaceElevated else AvanueTheme.colors.surface
         ),
-        border = if (isActive) BorderStroke(2.dp, OceanTheme.primary) else BorderStroke(1.dp, OceanTheme.border)
+        border = if (isActive) BorderStroke(2.dp, AvanueTheme.colors.primary) else BorderStroke(1.dp, AvanueTheme.colors.border)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -466,7 +466,7 @@ private fun TabGridCard(
                         Icon(
                             imageVector = Icons.Default.PushPin,
                             contentDescription = "Pinned",
-                            tint = OceanTheme.primary,
+                            tint = AvanueTheme.colors.primary,
                             modifier = Modifier.size(if (isCompact) 12.dp else 14.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -475,7 +475,7 @@ private fun TabGridCard(
                     Text(
                         text = tabState.tab.title.ifBlank { "New Tab" },
                         style = if (isCompact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleSmall,
-                        color = OceanTheme.textPrimary,
+                        color = AvanueTheme.colors.textPrimary,
                         maxLines = if (isCompact) 1 else 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -485,7 +485,7 @@ private fun TabGridCard(
                         Text(
                             text = tabState.tab.url.ifBlank { "about:blank" },
                             style = MaterialTheme.typography.labelSmall,
-                            color = OceanTheme.textTertiary,
+                            color = AvanueTheme.colors.textTertiary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -498,7 +498,7 @@ private fun TabGridCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(2.dp)
-                            .background(OceanTheme.primary, RoundedCornerShape(1.dp))
+                            .background(AvanueTheme.colors.primary, RoundedCornerShape(1.dp))
                     )
                 }
             }
@@ -514,7 +514,7 @@ private fun TabGridCard(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close Tab",
-                    tint = OceanTheme.iconActive,
+                    tint = AvanueTheme.colors.textPrimary,
                     modifier = Modifier.size(if (isCompact) 14.dp else 16.dp)
                 )
             }
@@ -544,8 +544,8 @@ private fun TabListItem(
                 onLongClick = onLongClick
             ),
         shape = RoundedCornerShape(8.dp),
-        color = if (isActive) OceanTheme.surfaceElevated else OceanTheme.surface,
-        border = if (isActive) BorderStroke(1.dp, OceanTheme.primary) else null
+        color = if (isActive) AvanueTheme.colors.surfaceElevated else AvanueTheme.colors.surface,
+        border = if (isActive) BorderStroke(1.dp, AvanueTheme.colors.primary) else null
     ) {
         Row(
             modifier = Modifier
@@ -559,7 +559,7 @@ private fun TabListItem(
                 Box(
                     modifier = Modifier
                         .size(8.dp)
-                        .background(OceanTheme.primary, RoundedCornerShape(4.dp))
+                        .background(AvanueTheme.colors.primary, RoundedCornerShape(4.dp))
                 )
             }
 
@@ -568,7 +568,7 @@ private fun TabListItem(
                 Icon(
                     imageVector = Icons.Default.PushPin,
                     contentDescription = "Pinned",
-                    tint = OceanTheme.primary,
+                    tint = AvanueTheme.colors.primary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -580,14 +580,14 @@ private fun TabListItem(
                 Text(
                     text = tabState.tab.title.ifBlank { "New Tab" },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanTheme.textPrimary,
+                    color = AvanueTheme.colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = tabState.tab.url.ifBlank { "about:blank" },
                     style = MaterialTheme.typography.labelSmall,
-                    color = OceanTheme.textTertiary,
+                    color = AvanueTheme.colors.textTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -601,7 +601,7 @@ private fun TabListItem(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close Tab",
-                    tint = OceanTheme.iconActive,
+                    tint = AvanueTheme.colors.textPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -634,7 +634,7 @@ private fun EmptyTabsState(
                     TabCategory.GROUPED -> Icons.Default.Folder
                 },
                 contentDescription = null,
-                tint = OceanTheme.textTertiary,
+                tint = AvanueTheme.colors.textTertiary,
                 modifier = Modifier.size(48.dp)
             )
 
@@ -646,7 +646,7 @@ private fun EmptyTabsState(
                     TabCategory.GROUPED -> "No tab groups"
                 },
                 style = MaterialTheme.typography.titleMedium,
-                color = OceanTheme.textPrimary,
+                color = AvanueTheme.colors.textPrimary,
                 textAlign = TextAlign.Center
             )
 
@@ -658,7 +658,7 @@ private fun EmptyTabsState(
                     TabCategory.GROUPED -> "Group tabs to organize your browsing"
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = OceanTheme.textSecondary,
+                color = AvanueTheme.colors.textSecondary,
                 textAlign = TextAlign.Center
             )
 
@@ -666,7 +666,7 @@ private fun EmptyTabsState(
                 Button(
                     onClick = onNewTab,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = OceanTheme.primary
+                        containerColor = AvanueTheme.colors.primary
                     )
                 ) {
                     Icon(

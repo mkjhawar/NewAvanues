@@ -159,8 +159,8 @@ interface ComponentProvider {
 }
 
 /**
- * Icon color variants
- * Maps to OceanDesignTokens.Icon.*
+ * Icon color variants - maps semantic intent to theme colors.
+ * Use [toColor] to resolve to the current theme's color.
  */
 enum class IconVariant {
     Primary,    // Always visible blue
@@ -170,6 +170,21 @@ enum class IconVariant {
     Warning,    // Caution amber
     Error,      // Error red
     OnPrimary   // White (on blue backgrounds)
+}
+
+/**
+ * Resolve [IconVariant] to the current theme color.
+ * Replaces OceanComponents.Icon(variant=...) pattern.
+ */
+@Composable
+fun IconVariant.toColor(): androidx.compose.ui.graphics.Color = when (this) {
+    IconVariant.Primary -> com.augmentalis.avanueui.theme.AvanueTheme.colors.iconPrimary
+    IconVariant.Secondary -> com.augmentalis.avanueui.theme.AvanueTheme.colors.iconSecondary
+    IconVariant.Disabled -> com.augmentalis.avanueui.theme.AvanueTheme.colors.iconDisabled
+    IconVariant.Success -> com.augmentalis.avanueui.theme.AvanueTheme.colors.success
+    IconVariant.Warning -> com.augmentalis.avanueui.theme.AvanueTheme.colors.warning
+    IconVariant.Error -> com.augmentalis.avanueui.theme.AvanueTheme.colors.error
+    IconVariant.OnPrimary -> com.augmentalis.avanueui.theme.AvanueTheme.colors.textOnPrimary
 }
 
 /**

@@ -5,7 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * MainCommandBarFlat - MAIN level (6 buttons max, no scrolling)
@@ -34,7 +34,7 @@ fun MainCommandBarFlat(
         onClick = onBack,
         onFocus = { onLabelChange("Go Back") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Home
@@ -44,7 +44,7 @@ fun MainCommandBarFlat(
         onClick = onHome,
         onFocus = { onLabelChange("Go Home") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Tabs - 3D Spatial Tab Switcher (directly accessible)
@@ -54,7 +54,7 @@ fun MainCommandBarFlat(
         onClick = onShowTabs,
         onFocus = { onLabelChange("Show Tabs (3D View)") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.primary.copy(alpha = 0.3f)
+        backgroundColor = AvanueTheme.colors.primary.copy(alpha = 0.3f)
     )
 
     // Favorites - 3D Spatial Favorites Shelf (directly accessible)
@@ -64,7 +64,7 @@ fun MainCommandBarFlat(
         onClick = onShowFavorites,
         onFocus = { onLabelChange("Show Favorites (3D View)") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.starActive.copy(alpha = 0.3f)
+        backgroundColor = AvanueTheme.colors.starActive.copy(alpha = 0.3f)
     )
 
     // Page Commands (includes scroll and zoom)
@@ -74,7 +74,7 @@ fun MainCommandBarFlat(
         onClick = onPageClick,
         onFocus = { onLabelChange("Page Controls") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Menu (settings, history, etc)
@@ -84,7 +84,7 @@ fun MainCommandBarFlat(
         onClick = onMenuClick,
         onFocus = { onLabelChange("Menu") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 }
 
@@ -112,7 +112,7 @@ fun ScrollCommandBarFlat(
         onClick = onBackToMain,
         onFocus = { onLabelChange("Back to Main") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Scroll Up
@@ -122,7 +122,7 @@ fun ScrollCommandBarFlat(
         onClick = onScrollUp,
         onFocus = { onLabelChange("Scroll Up") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Scroll Down
@@ -132,7 +132,7 @@ fun ScrollCommandBarFlat(
         onClick = onScrollDown,
         onFocus = { onLabelChange("Scroll Down") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Scroll Top
@@ -142,7 +142,7 @@ fun ScrollCommandBarFlat(
         onClick = onScrollTop,
         onFocus = { onLabelChange("Go to Top") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Scroll Bottom
@@ -152,7 +152,7 @@ fun ScrollCommandBarFlat(
         onClick = onScrollBottom,
         onFocus = { onLabelChange("Go to Bottom") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Freeze Page
@@ -162,7 +162,7 @@ fun ScrollCommandBarFlat(
         onClick = onFreezePage,
         onFocus = { onLabelChange(if (isScrollFrozen) "Unfreeze" else "Freeze") },
         onBlur = { onLabelChange("") },
-        backgroundColor = if (isScrollFrozen) OceanTheme.primary else OceanTheme.surfaceElevated,
+        backgroundColor = if (isScrollFrozen) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
         isActive = isScrollFrozen
     )
 }
@@ -188,7 +188,7 @@ fun ZoomCommandBarFlat(
         onClick = onBackToMain,
         onFocus = { onLabelChange("Back to Main") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Zoom Out
@@ -198,7 +198,7 @@ fun ZoomCommandBarFlat(
         onClick = onZoomOut,
         onFocus = { onLabelChange("Zoom Out") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Zoom In
@@ -208,7 +208,7 @@ fun ZoomCommandBarFlat(
         onClick = onZoomIn,
         onFocus = { onLabelChange("Zoom In") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // 50% zoom
@@ -263,7 +263,7 @@ fun PageCommandBarFlat(
         onClick = onBackToMain,
         onFocus = { onLabelChange("Back to Main") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Previous Page
@@ -273,7 +273,7 @@ fun PageCommandBarFlat(
         onClick = onPreviousPage,
         onFocus = { onLabelChange("Previous Page") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Next Page
@@ -283,7 +283,7 @@ fun PageCommandBarFlat(
         onClick = onNextPage,
         onFocus = { onLabelChange("Next Page") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Reload
@@ -293,7 +293,7 @@ fun PageCommandBarFlat(
         onClick = onReload,
         onFocus = { onLabelChange("Reload Page") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     if (isHeadlessMode) {
@@ -304,7 +304,7 @@ fun PageCommandBarFlat(
             onClick = onDesktopModeToggle,
             onFocus = { onLabelChange(if (isDesktopMode) "Switch to Mobile" else "Switch to Desktop") },
             onBlur = { onLabelChange("") },
-            backgroundColor = if (isDesktopMode) OceanTheme.primary else OceanTheme.surfaceElevated,
+            backgroundColor = if (isDesktopMode) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
             isActive = isDesktopMode
         )
 
@@ -314,7 +314,7 @@ fun PageCommandBarFlat(
             onClick = onFavorite,
             onFocus = { onLabelChange("Add to Favorites") },
             onBlur = { onLabelChange("") },
-            backgroundColor = OceanTheme.surfaceElevated
+            backgroundColor = AvanueTheme.colors.surfaceElevated
         )
     } else {
         // Normal mode: Show Zoom controls (Desktop/Favorite are in AddressBar)
@@ -324,7 +324,7 @@ fun PageCommandBarFlat(
             onClick = onZoomIn,
             onFocus = { onLabelChange("Zoom In") },
             onBlur = { onLabelChange("") },
-            backgroundColor = OceanTheme.surfaceElevated
+            backgroundColor = AvanueTheme.colors.surfaceElevated
         )
 
         CommandButton(
@@ -333,7 +333,7 @@ fun PageCommandBarFlat(
             onClick = onZoomOut,
             onFocus = { onLabelChange("Zoom Out") },
             onBlur = { onLabelChange("") },
-            backgroundColor = OceanTheme.surfaceElevated
+            backgroundColor = AvanueTheme.colors.surfaceElevated
         )
     }
 }
@@ -366,7 +366,7 @@ fun MenuCommandBarFlat(
         onClick = onBackToMain,
         onFocus = { onLabelChange("Back to Main") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // New Tab
@@ -376,7 +376,7 @@ fun MenuCommandBarFlat(
         onClick = onNewTab,
         onFocus = { onLabelChange("Create New Tab") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Scroll Controls
@@ -386,7 +386,7 @@ fun MenuCommandBarFlat(
         onClick = onScrollClick,
         onFocus = { onLabelChange("Scroll Controls") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // History
@@ -396,7 +396,7 @@ fun MenuCommandBarFlat(
         onClick = onHistory,
         onFocus = { onLabelChange("History") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Downloads
@@ -406,7 +406,7 @@ fun MenuCommandBarFlat(
         onClick = onDownloads,
         onFocus = { onLabelChange("Downloads") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Settings
@@ -416,7 +416,7 @@ fun MenuCommandBarFlat(
         onClick = onSettings,
         onFocus = { onLabelChange("Settings") },
         onBlur = { onLabelChange("") },
-        backgroundColor = OceanTheme.surfaceElevated
+        backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
     // Fullscreen toggle (Headless mode)
@@ -426,7 +426,7 @@ fun MenuCommandBarFlat(
         onClick = onToggleHeadlessMode,
         onFocus = { onLabelChange(if (isHeadlessMode) "Exit Fullscreen Mode" else "Enter Fullscreen Mode") },
         onBlur = { onLabelChange("") },
-        backgroundColor = if (isHeadlessMode) OceanTheme.primary else OceanTheme.surfaceElevated,
+        backgroundColor = if (isHeadlessMode) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
         isActive = isHeadlessMode
     )
 }

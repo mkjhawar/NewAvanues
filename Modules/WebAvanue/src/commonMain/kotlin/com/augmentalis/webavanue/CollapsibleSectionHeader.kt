@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * CollapsibleSectionHeader - Expandable/collapsible section header for settings
@@ -45,7 +45,7 @@ fun CollapsibleSectionHeader(
             .clickable(onClick = onToggle)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         color = if (matchesSearch && !isExpanded) {
-            OceanTheme.primary.copy(alpha = 0.15f)
+            AvanueTheme.colors.primary.copy(alpha = 0.15f)
         } else {
             Color.Transparent
         },
@@ -62,9 +62,9 @@ fun CollapsibleSectionHeader(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 color = if (matchesSearch) {
-                    OceanTheme.primary
+                    AvanueTheme.colors.primary
                 } else {
-                    OceanTheme.textPrimary
+                    AvanueTheme.colors.textPrimary
                 }
             )
 
@@ -75,9 +75,9 @@ fun CollapsibleSectionHeader(
                     .size(24.dp)
                     .rotate(rotation),
                 tint = if (matchesSearch) {
-                    OceanTheme.primary
+                    AvanueTheme.colors.primary
                 } else {
-                    OceanTheme.textSecondary
+                    AvanueTheme.colors.textSecondary
                 }
             )
         }

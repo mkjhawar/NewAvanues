@@ -18,8 +18,8 @@ import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.avanueui.tokens.ShapeTokens
 import com.augmentalis.avanueui.tokens.ElevationTokens
-import com.augmentalis.webavanue.AppIcon
 import com.augmentalis.webavanue.IconVariant
+import com.augmentalis.webavanue.toColor
 import kotlinx.coroutines.delay
 
 /**
@@ -157,10 +157,10 @@ private fun ColumnScope.NetworkStatusContent(status: NetworkStatus) {
                 ),
                 label = "rotation"
             )
-            AppIcon(
+            Icon(
                 imageVector = icon,
                 contentDescription = title,
-                variant = iconVariant,
+                tint = iconVariant.toColor(),
                 modifier = Modifier
                     .size(32.dp)
                     .graphicsLayer {
@@ -168,10 +168,10 @@ private fun ColumnScope.NetworkStatusContent(status: NetworkStatus) {
                     }
             )
         } else {
-            AppIcon(
+            Icon(
                 imageVector = icon,
                 contentDescription = title,
-                variant = iconVariant,
+                tint = iconVariant.toColor(),
                 modifier = Modifier.size(32.dp)
             )
         }

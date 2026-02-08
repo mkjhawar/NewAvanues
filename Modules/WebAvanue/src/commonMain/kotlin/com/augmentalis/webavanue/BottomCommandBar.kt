@@ -22,7 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.glassBar
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * CommandBarWrapper - Handles visibility toggle and orientation for the command bar
@@ -64,8 +64,8 @@ fun CommandBarWrapper(
             Surface(
                 onClick = onToggleVisibility,
                 shape = CircleShape,
-                color = OceanTheme.surface,
-                border = BorderStroke(1.dp, OceanTheme.border),
+                color = AvanueTheme.colors.surface,
+                border = BorderStroke(1.dp, AvanueTheme.colors.border),
                 shadowElevation = 4.dp,
                 modifier = Modifier.size(48.dp)
             ) {
@@ -76,7 +76,7 @@ fun CommandBarWrapper(
                     Icon(
                         imageVector = if (isLandscape) Icons.Default.KeyboardArrowLeft else Icons.Default.KeyboardArrowUp,
                         contentDescription = "Show Command Bar",
-                        tint = OceanTheme.iconActive,
+                        tint = AvanueTheme.colors.textPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -214,15 +214,15 @@ fun BottomCommandBar(
                 Surface(
                     modifier = Modifier
                         .glassBar(cornerRadius = 4.dp)
-                        .background(OceanTheme.surface),
-                    color = OceanTheme.surface,
+                        .background(AvanueTheme.colors.surface),
+                    color = AvanueTheme.colors.surface,
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
                         text = currentLabel.uppercase(),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
-                        color = OceanTheme.textPrimary
+                        color = AvanueTheme.colors.textPrimary
                     )
                 }
             }
@@ -231,11 +231,11 @@ fun BottomCommandBar(
             Surface(
                 modifier = Modifier
                     .glassBar(cornerRadius = 27.dp)
-                    .background(OceanTheme.surface),
-                color = OceanTheme.surface,
+                    .background(AvanueTheme.colors.surface),
+                color = AvanueTheme.colors.surface,
                 shape = RoundedCornerShape(27.dp),
                 shadowElevation = 0.dp,
-                border = BorderStroke(1.dp, OceanTheme.border)
+                border = BorderStroke(1.dp, AvanueTheme.colors.border)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -363,14 +363,14 @@ private fun VerticalCommandBarInternal(
         ) {
             Surface(
                 modifier = Modifier.glassBar(cornerRadius = 8.dp),
-                color = OceanTheme.surface,
+                color = AvanueTheme.colors.surface,
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
                     text = currentLabel.uppercase(),
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = OceanTheme.textPrimary
+                    color = AvanueTheme.colors.textPrimary
                 )
             }
         }
@@ -378,10 +378,10 @@ private fun VerticalCommandBarInternal(
         // Vertical command bar container
         Surface(
             modifier = Modifier.glassBar(cornerRadius = 27.dp),
-            color = OceanTheme.surface,
+            color = AvanueTheme.colors.surface,
             shape = RoundedCornerShape(27.dp),
             shadowElevation = 0.dp,
-            border = BorderStroke(1.dp, OceanTheme.border)
+            border = BorderStroke(1.dp, AvanueTheme.colors.border)
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
@@ -462,7 +462,7 @@ private fun VerticalCommandBarContent(
                 onClick = onBack,
                 onFocus = { onLabelChange("Go Back") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.Home,
@@ -470,7 +470,7 @@ private fun VerticalCommandBarContent(
                 onClick = onHome,
                 onFocus = { onLabelChange("Go Home") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.Layers,
@@ -478,7 +478,7 @@ private fun VerticalCommandBarContent(
                 onClick = onShowTabs,
                 onFocus = { onLabelChange("Show Tabs (3D View)") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.primary.copy(alpha = 0.3f)
+                backgroundColor = AvanueTheme.colors.primary.copy(alpha = 0.3f)
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.Star,
@@ -486,7 +486,7 @@ private fun VerticalCommandBarContent(
                 onClick = onShowFavorites,
                 onFocus = { onLabelChange("Show Favorites (3D View)") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.starActive.copy(alpha = 0.3f)
+                backgroundColor = AvanueTheme.colors.starActive.copy(alpha = 0.3f)
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.Web,
@@ -494,7 +494,7 @@ private fun VerticalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.PAGE) },
                 onFocus = { onLabelChange("Page Controls") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.MoreVert,
@@ -502,7 +502,7 @@ private fun VerticalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MENU) },
                 onFocus = { onLabelChange("Menu") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
         }
         CommandBarLevel.SCROLL -> {
@@ -512,7 +512,7 @@ private fun VerticalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MAIN) },
                 onFocus = { onLabelChange("Back to Main") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.KeyboardArrowUp,
@@ -520,7 +520,7 @@ private fun VerticalCommandBarContent(
                 onClick = onScrollUp,
                 onFocus = { onLabelChange("Scroll Up") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
@@ -528,7 +528,7 @@ private fun VerticalCommandBarContent(
                 onClick = onScrollDown,
                 onFocus = { onLabelChange("Scroll Down") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.VerticalAlignTop,
@@ -536,7 +536,7 @@ private fun VerticalCommandBarContent(
                 onClick = onScrollTop,
                 onFocus = { onLabelChange("Go to Top") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.VerticalAlignBottom,
@@ -544,7 +544,7 @@ private fun VerticalCommandBarContent(
                 onClick = onScrollBottom,
                 onFocus = { onLabelChange("Go to Bottom") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = if (isScrollFrozen) androidx.compose.material.icons.Icons.Default.LockOpen else androidx.compose.material.icons.Icons.Default.Lock,
@@ -552,7 +552,7 @@ private fun VerticalCommandBarContent(
                 onClick = onFreezePage,
                 onFocus = { onLabelChange(if (isScrollFrozen) "Unfreeze" else "Freeze") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = if (isScrollFrozen) OceanTheme.primary else OceanTheme.surfaceElevated,
+                backgroundColor = if (isScrollFrozen) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
                 isActive = isScrollFrozen
             )
         }
@@ -563,7 +563,7 @@ private fun VerticalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MAIN) },
                 onFocus = { onLabelChange("Back to Main") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.ZoomOut,
@@ -571,7 +571,7 @@ private fun VerticalCommandBarContent(
                 onClick = onZoomOut,
                 onFocus = { onLabelChange("Zoom Out") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.ZoomIn,
@@ -579,7 +579,7 @@ private fun VerticalCommandBarContent(
                 onClick = onZoomIn,
                 onFocus = { onLabelChange("Zoom In") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             ZoomLevelButton(label = "50%", onClick = { onZoomLevel(1) }, onFocus = { onLabelChange("Zoom 50%") }, onBlur = { onLabelChange("") })
             ZoomLevelButton(label = "100%", onClick = { onZoomLevel(3) }, onFocus = { onLabelChange("Zoom 100%") }, onBlur = { onLabelChange("") })
@@ -592,7 +592,7 @@ private fun VerticalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MAIN) },
                 onFocus = { onLabelChange("Back to Main") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
@@ -600,7 +600,7 @@ private fun VerticalCommandBarContent(
                 onClick = onPreviousPage,
                 onFocus = { onLabelChange("Previous Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForward,
@@ -608,7 +608,7 @@ private fun VerticalCommandBarContent(
                 onClick = onNextPage,
                 onFocus = { onLabelChange("Next Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.Refresh,
@@ -616,7 +616,7 @@ private fun VerticalCommandBarContent(
                 onClick = onReload,
                 onFocus = { onLabelChange("Reload Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             if (isHeadlessMode) {
                 CommandButton(
@@ -625,7 +625,7 @@ private fun VerticalCommandBarContent(
                     onClick = onDesktopModeToggle,
                     onFocus = { onLabelChange(if (isDesktopMode) "Switch to Mobile" else "Switch to Desktop") },
                     onBlur = { onLabelChange("") },
-                    backgroundColor = if (isDesktopMode) OceanTheme.primary else OceanTheme.surfaceElevated,
+                    backgroundColor = if (isDesktopMode) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
                     isActive = isDesktopMode
                 )
                 CommandButton(
@@ -634,7 +634,7 @@ private fun VerticalCommandBarContent(
                     onClick = onFavorite,
                     onFocus = { onLabelChange("Add to Favorites") },
                     onBlur = { onLabelChange("") },
-                    backgroundColor = OceanTheme.surfaceElevated
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
                 )
             } else {
                 CommandButton(
@@ -643,7 +643,7 @@ private fun VerticalCommandBarContent(
                     onClick = onZoomIn,
                     onFocus = { onLabelChange("Zoom In") },
                     onBlur = { onLabelChange("") },
-                    backgroundColor = OceanTheme.surfaceElevated
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
                 )
                 CommandButton(
                     icon = androidx.compose.material.icons.Icons.Default.ZoomOut,
@@ -651,7 +651,7 @@ private fun VerticalCommandBarContent(
                     onClick = onZoomOut,
                     onFocus = { onLabelChange("Zoom Out") },
                     onBlur = { onLabelChange("") },
-                    backgroundColor = OceanTheme.surfaceElevated
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
                 )
             }
         }
@@ -662,7 +662,7 @@ private fun VerticalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MAIN) },
                 onFocus = { onLabelChange("Back to Main") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.Add,
@@ -670,7 +670,7 @@ private fun VerticalCommandBarContent(
                 onClick = onNewTab,
                 onFocus = { onLabelChange("Create New Tab") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.SwapVert,
@@ -678,7 +678,7 @@ private fun VerticalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.SCROLL) },
                 onFocus = { onLabelChange("Scroll Controls") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.History,
@@ -686,7 +686,7 @@ private fun VerticalCommandBarContent(
                 onClick = onHistory,
                 onFocus = { onLabelChange("History") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.Download,
@@ -694,7 +694,7 @@ private fun VerticalCommandBarContent(
                 onClick = onDownloads,
                 onFocus = { onLabelChange("Downloads") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = androidx.compose.material.icons.Icons.Default.Settings,
@@ -702,7 +702,7 @@ private fun VerticalCommandBarContent(
                 onClick = onSettings,
                 onFocus = { onLabelChange("Settings") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
         }
     }

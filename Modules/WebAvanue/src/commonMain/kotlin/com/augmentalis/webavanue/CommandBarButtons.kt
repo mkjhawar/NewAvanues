@@ -20,8 +20,8 @@ import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.ShapeTokens
 import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.avanueui.tokens.ElevationTokens
-import com.augmentalis.webavanue.AppIcon
 import com.augmentalis.webavanue.IconVariant
+import com.augmentalis.webavanue.toColor
 
 /**
  * CommandButton - Standard command button with icon and label
@@ -63,10 +63,10 @@ fun CommandButton(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            AppIcon(
+            Icon(
                 imageVector = icon,
                 contentDescription = label,
-                variant = if (isActive) IconVariant.OnPrimary else IconVariant.Primary,
+                tint = if (isActive) IconVariant.OnPrimary.toColor() else IconVariant.Primary.toColor(),
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.height(1.dp))

@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * TextCommandInput - Text command input field
@@ -171,7 +171,7 @@ fun VoiceCommandsPanel(
         exit = fadeOut()
     ) {
         Surface(
-            color = OceanTheme.surface.copy(alpha = 0.95f),
+            color = AvanueTheme.colors.surface.copy(alpha = 0.95f),
             shape = RoundedCornerShape(12.dp),
             shadowElevation = 12.dp,
             modifier = modifier
@@ -190,7 +190,7 @@ fun VoiceCommandsPanel(
                     Text(
                         text = "Voice Commands",
                         style = MaterialTheme.typography.titleMedium,
-                        color = OceanTheme.textPrimary
+                        color = AvanueTheme.colors.textPrimary
                     )
                     // AR/XR: Larger close button (48dp minimum touch target)
                     IconButton(
@@ -198,13 +198,13 @@ fun VoiceCommandsPanel(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Surface(
-                            color = OceanTheme.surfaceElevated,
+                            color = AvanueTheme.colors.surfaceElevated,
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = "Close",
-                                tint = OceanTheme.textSecondary,
+                                tint = AvanueTheme.colors.textSecondary,
                                 modifier = Modifier
                                     .padding(8.dp)
                                     .size(24.dp)
@@ -213,19 +213,19 @@ fun VoiceCommandsPanel(
                     }
                 }
 
-                HorizontalDivider(color = OceanTheme.border.copy(alpha = 0.5f))
+                HorizontalDivider(color = AvanueTheme.colors.border.copy(alpha = 0.5f))
 
                 commands.forEach { (command, description) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(OceanTheme.surfaceElevated, RoundedCornerShape(12.dp))
+                            .background(AvanueTheme.colors.surfaceElevated, RoundedCornerShape(12.dp))
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            color = OceanTheme.primary,
+                            color = AvanueTheme.colors.primary,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
@@ -238,7 +238,7 @@ fun VoiceCommandsPanel(
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = OceanTheme.textSecondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }

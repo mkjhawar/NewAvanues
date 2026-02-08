@@ -26,7 +26,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.webavanue.TabUiState
 import kotlin.math.abs
 
@@ -200,7 +200,7 @@ fun SpatialTabSwitcher(
                     modifier = Modifier
                         .size(if (index == currentIndex) 12.dp else 8.dp)
                         .background(
-                            color = if (index == currentIndex) OceanTheme.primary else Color.White.copy(alpha = 0.3f),
+                            color = if (index == currentIndex) AvanueTheme.colors.primary else Color.White.copy(alpha = 0.3f),
                             shape = RoundedCornerShape(50)
                         )
                         .clickable { currentIndex = index }
@@ -244,13 +244,13 @@ fun SpatialTabCard(
             .shadow(
                 elevation = if (isActive) 24.dp else 8.dp,
                 shape = RoundedCornerShape(16.dp),
-                ambientColor = if (isPinned) Color(0xFFFFD700).copy(alpha = 0.3f) else OceanTheme.primary.copy(alpha = 0.3f),
-                spotColor = if (isPinned) Color(0xFFFFD700).copy(alpha = 0.5f) else OceanTheme.primary.copy(alpha = 0.5f)
+                ambientColor = if (isPinned) Color(0xFFFFD700).copy(alpha = 0.3f) else AvanueTheme.colors.primary.copy(alpha = 0.3f),
+                spotColor = if (isPinned) Color(0xFFFFD700).copy(alpha = 0.5f) else AvanueTheme.colors.primary.copy(alpha = 0.5f)
             )
             .clip(RoundedCornerShape(16.dp))
             .clickable { onSelect() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isActive) OceanTheme.surface else OceanTheme.surfaceElevated
+            containerColor = if (isActive) AvanueTheme.colors.surface else AvanueTheme.colors.surfaceElevated
         ),
         shape = RoundedCornerShape(16.dp),
         border = if (isPinned) BorderStroke(2.dp, Color(0xFFFFD700).copy(alpha = 0.6f)) else null
@@ -265,7 +265,7 @@ fun SpatialTabCard(
                     .background(
                         when {
                             isPinned -> Color(0xFFFFD700).copy(alpha = 0.15f)
-                            isActive -> OceanTheme.primary.copy(alpha = 0.2f)
+                            isActive -> AvanueTheme.colors.primary.copy(alpha = 0.2f)
                             else -> Color.Black.copy(alpha = 0.2f)
                         }
                     )
@@ -281,7 +281,7 @@ fun SpatialTabCard(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                color = if (isPinned) Color(0xFFFFD700).copy(alpha = 0.3f) else OceanTheme.primary.copy(alpha = 0.3f),
+                                color = if (isPinned) Color(0xFFFFD700).copy(alpha = 0.3f) else AvanueTheme.colors.primary.copy(alpha = 0.3f),
                                 shape = RoundedCornerShape(4.dp)
                             )
                     )
@@ -302,7 +302,7 @@ fun SpatialTabCard(
                 Text(
                     text = tabState.tab.title.ifBlank { "New Tab" },
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (isActive) OceanTheme.textPrimary else OceanTheme.textSecondary,
+                    color = if (isActive) AvanueTheme.colors.textPrimary else AvanueTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
@@ -318,7 +318,7 @@ fun SpatialTabCard(
                     Icon(
                         imageVector = if (isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin,
                         contentDescription = if (isPinned) "Unpin tab" else "Pin tab",
-                        tint = if (isPinned) Color(0xFFFFD700) else OceanTheme.textSecondary,
+                        tint = if (isPinned) Color(0xFFFFD700) else AvanueTheme.colors.textSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -332,7 +332,7 @@ fun SpatialTabCard(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = if (isPinned) "Unpin to close" else "Close tab",
-                        tint = if (isPinned) OceanTheme.textSecondary.copy(alpha = 0.4f) else OceanTheme.textSecondary,
+                        tint = if (isPinned) AvanueTheme.colors.textSecondary.copy(alpha = 0.4f) else AvanueTheme.colors.textSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -352,7 +352,7 @@ fun SpatialTabCard(
                 Text(
                     text = tabState.tab.url.ifBlank { "about:blank" },
                     style = MaterialTheme.typography.bodySmall,
-                    color = OceanTheme.textSecondary,
+                    color = AvanueTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -377,7 +377,7 @@ fun SpatialTabCard(
                 // Show loading indicator or preview
                 if (tabState.isLoading) {
                     CircularProgressIndicator(
-                        color = OceanTheme.primary,
+                        color = AvanueTheme.colors.primary,
                         modifier = Modifier.size(32.dp)
                     )
                 } else {
@@ -389,7 +389,7 @@ fun SpatialTabCard(
                         Text(
                             text = tabState.tab.title.take(1).uppercase().ifEmpty { "?" },
                             style = MaterialTheme.typography.displayLarge,
-                            color = OceanTheme.primary.copy(alpha = 0.3f)
+                            color = AvanueTheme.colors.primary.copy(alpha = 0.3f)
                         )
                     }
                 }

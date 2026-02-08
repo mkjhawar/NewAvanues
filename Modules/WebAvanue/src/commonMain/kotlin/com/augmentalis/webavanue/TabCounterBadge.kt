@@ -15,7 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * TabCounterBadge - Chrome-like tab counter badge with Ocean theme
@@ -45,8 +45,8 @@ fun TabCounterBadge(
             .size(40.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(8.dp),
-        color = OceanTheme.surfaceElevated,
-        border = BorderStroke(1.5.dp, OceanTheme.border),
+        color = AvanueTheme.colors.surfaceElevated,
+        border = BorderStroke(1.5.dp, AvanueTheme.colors.border),
         shadowElevation = 2.dp
     ) {
         Box(
@@ -66,7 +66,7 @@ fun TabCounterBadge(
                     fontWeight = FontWeight.Bold,
                     fontSize = if (tabCount < 100) 14.sp else 11.sp
                 ),
-                color = OceanTheme.textPrimary
+                color = AvanueTheme.colors.textPrimary
             )
         }
     }
@@ -93,8 +93,8 @@ fun CompactTabCounterBadge(
             .height(28.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(6.dp),
-        color = OceanTheme.surfaceElevated,
-        border = BorderStroke(1.dp, OceanTheme.border)
+        color = AvanueTheme.colors.surfaceElevated,
+        border = BorderStroke(1.dp, AvanueTheme.colors.border)
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -112,7 +112,7 @@ fun CompactTabCounterBadge(
                     fontWeight = FontWeight.Bold,
                     fontSize = if (tabCount < 10) 12.sp else 10.sp
                 ),
-                color = OceanTheme.textPrimary
+                color = AvanueTheme.colors.textPrimary
             )
         }
     }

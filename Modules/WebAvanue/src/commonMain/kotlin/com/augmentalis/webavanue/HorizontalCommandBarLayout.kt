@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.glassBar
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * HorizontalCommandBarLayout - Public composable for portrait mode command bar
@@ -82,7 +82,7 @@ fun HorizontalCommandBarLayout(
         ) {
             Surface(
                 modifier = Modifier.glassBar(cornerRadius = 12.dp),
-                color = OceanTheme.surface.copy(alpha = 0.92f),
+                color = AvanueTheme.colors.surface.copy(alpha = 0.92f),
                 shape = RoundedCornerShape(12.dp),
                 shadowElevation = 8.dp,
                 tonalElevation = 4.dp
@@ -91,7 +91,7 @@ fun HorizontalCommandBarLayout(
                     text = currentLabel.uppercase(),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = OceanTheme.textPrimary
+                    color = AvanueTheme.colors.textPrimary
                 )
             }
         }
@@ -101,7 +101,7 @@ fun HorizontalCommandBarLayout(
             modifier = Modifier
                 .glassBar(cornerRadius = 12.dp)
                 .graphicsLayer { shadowElevation = 12f },
-            color = OceanTheme.surface.copy(alpha = 0.92f),
+            color = AvanueTheme.colors.surface.copy(alpha = 0.92f),
             shape = RoundedCornerShape(12.dp),
             shadowElevation = 12.dp,
             tonalElevation = 8.dp
@@ -118,12 +118,12 @@ fun HorizontalCommandBarLayout(
                     onClick = onHide,
                     onFocus = { currentLabel = "Hide Bar" },
                     onBlur = { currentLabel = "" },
-                    backgroundColor = OceanTheme.surfaceElevated
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
                 )
 
                 VerticalDivider(
                     modifier = Modifier.height(40.dp).padding(horizontal = 4.dp),
-                    color = OceanTheme.border
+                    color = AvanueTheme.colors.border
                 )
 
                 HorizontalCommandBarContent(
@@ -194,7 +194,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onBack,
                 onFocus = { onLabelChange("Go Back") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.Home,
@@ -202,7 +202,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onHome,
                 onFocus = { onLabelChange("Go Home") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.Add,
@@ -210,7 +210,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onNewTab,
                 onFocus = { onLabelChange("New Tab") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.SwapVert,
@@ -218,7 +218,7 @@ private fun HorizontalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.SCROLL) },
                 onFocus = { onLabelChange("Scroll") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.Web,
@@ -226,7 +226,7 @@ private fun HorizontalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.PAGE) },
                 onFocus = { onLabelChange("Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.MoreVert,
@@ -234,7 +234,7 @@ private fun HorizontalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MENU) },
                 onFocus = { onLabelChange("Menu") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
         }
         CommandBarLevel.SCROLL -> {
@@ -244,7 +244,7 @@ private fun HorizontalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MAIN) },
                 onFocus = { onLabelChange("Back to Main") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.KeyboardArrowUp,
@@ -252,7 +252,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onScrollUp,
                 onFocus = { onLabelChange("Scroll Up") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.KeyboardArrowDown,
@@ -260,7 +260,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onScrollDown,
                 onFocus = { onLabelChange("Scroll Down") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.VerticalAlignTop,
@@ -268,7 +268,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onScrollTop,
                 onFocus = { onLabelChange("Go to Top") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.VerticalAlignBottom,
@@ -276,7 +276,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onScrollBottom,
                 onFocus = { onLabelChange("Go to Bottom") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = if (isScrollFrozen) Icons.Default.LockOpen else Icons.Default.Lock,
@@ -284,7 +284,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onFreezePage,
                 onFocus = { onLabelChange(if (isScrollFrozen) "Unfreeze" else "Freeze") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = if (isScrollFrozen) OceanTheme.primary else OceanTheme.surfaceElevated,
+                backgroundColor = if (isScrollFrozen) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
                 isActive = isScrollFrozen
             )
         }
@@ -295,7 +295,7 @@ private fun HorizontalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MAIN) },
                 onFocus = { onLabelChange("Back to Main") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.ZoomOut,
@@ -303,7 +303,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onZoomOut,
                 onFocus = { onLabelChange("Zoom Out") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.ZoomIn,
@@ -311,7 +311,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onZoomIn,
                 onFocus = { onLabelChange("Zoom In") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             ZoomLevelButton(label = "50%", onClick = { onZoomLevel(1) }, onFocus = { onLabelChange("Zoom 50%") }, onBlur = { onLabelChange("") })
             ZoomLevelButton(label = "100%", onClick = { onZoomLevel(3) }, onFocus = { onLabelChange("Zoom 100%") }, onBlur = { onLabelChange("") })
@@ -324,7 +324,7 @@ private fun HorizontalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MAIN) },
                 onFocus = { onLabelChange("Back to Main") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
@@ -332,7 +332,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onBack,
                 onFocus = { onLabelChange("Previous Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.AutoMirrored.Filled.ArrowForward,
@@ -340,7 +340,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onForward,
                 onFocus = { onLabelChange("Next Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.Refresh,
@@ -348,7 +348,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onRefresh,
                 onFocus = { onLabelChange("Reload Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             if (isHeadlessMode) {
                 CommandButton(
@@ -357,7 +357,7 @@ private fun HorizontalCommandBarContent(
                     onClick = onDesktopModeToggle,
                     onFocus = { onLabelChange(if (isDesktopMode) "Switch to Mobile" else "Switch to Desktop") },
                     onBlur = { onLabelChange("") },
-                    backgroundColor = if (isDesktopMode) OceanTheme.primary else OceanTheme.surfaceElevated,
+                    backgroundColor = if (isDesktopMode) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
                     isActive = isDesktopMode
                 )
                 CommandButton(
@@ -366,7 +366,7 @@ private fun HorizontalCommandBarContent(
                     onClick = onFavorite,
                     onFocus = { onLabelChange("Add to Favorites") },
                     onBlur = { onLabelChange("") },
-                    backgroundColor = OceanTheme.surfaceElevated
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
                 )
             } else {
                 CommandButton(
@@ -375,7 +375,7 @@ private fun HorizontalCommandBarContent(
                     onClick = onZoomIn,
                     onFocus = { onLabelChange("Zoom In") },
                     onBlur = { onLabelChange("") },
-                    backgroundColor = OceanTheme.surfaceElevated
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
                 )
                 CommandButton(
                     icon = Icons.Default.ZoomOut,
@@ -383,7 +383,7 @@ private fun HorizontalCommandBarContent(
                     onClick = onZoomOut,
                     onFocus = { onLabelChange("Zoom Out") },
                     onBlur = { onLabelChange("") },
-                    backgroundColor = OceanTheme.surfaceElevated
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
                 )
             }
         }
@@ -394,7 +394,7 @@ private fun HorizontalCommandBarContent(
                 onClick = { onLevelChange(CommandBarLevel.MAIN) },
                 onFocus = { onLabelChange("Back to Main") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.Bookmarks,
@@ -402,7 +402,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onBookmarks,
                 onFocus = { onLabelChange("Bookmarks") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.FileDownload,
@@ -410,7 +410,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onDownloads,
                 onFocus = { onLabelChange("Downloads") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.History,
@@ -418,7 +418,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onHistory,
                 onFocus = { onLabelChange("History") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
                 icon = Icons.Default.Settings,
@@ -426,7 +426,7 @@ private fun HorizontalCommandBarContent(
                 onClick = onSettings,
                 onFocus = { onLabelChange("Settings") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = OceanTheme.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated
             )
         }
     }

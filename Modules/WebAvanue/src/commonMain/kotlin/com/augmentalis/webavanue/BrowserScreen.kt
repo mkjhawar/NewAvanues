@@ -23,9 +23,9 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
-import com.avanueui.OceanTheme
-import com.augmentalis.webavanue.OceanComponents
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.webavanue.IconVariant
+import com.augmentalis.webavanue.toColor
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
@@ -1167,16 +1167,15 @@ fun BrowserScreen(
                 )
                 .zIndex(20f)  // Elevated z-level above all other UI elements
         ) {
-            OceanComponents.FloatingActionButton(
+            FloatingActionButton(
                 onClick = { showVoiceHelp = !showVoiceHelp },
-                modifier = Modifier,
-                containerColor = null,
-                contentColor = null
+                containerColor = AvanueTheme.colors.primary,
+                contentColor = AvanueTheme.colors.textOnPrimary
             ) {
-                OceanComponents.Icon(
+                Icon(
                     imageVector = Icons.Default.HelpOutline,
                     contentDescription = "Voice commands help",
-                    variant = IconVariant.OnPrimary,
+                    tint = IconVariant.OnPrimary.toColor(),
                     modifier = Modifier.size(28.dp)
                 )
             }
