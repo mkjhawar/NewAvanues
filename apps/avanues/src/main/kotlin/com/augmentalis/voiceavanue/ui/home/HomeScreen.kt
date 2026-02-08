@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -289,7 +290,7 @@ private fun DashboardPortrait(
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
+                horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
             ) {
                 uiState.webAvanue?.let { module ->
                     Box(modifier = Modifier.weight(1f)) {
@@ -331,35 +332,48 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
         glassLevel = GlassLevel.MEDIUM,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(OceanDesignTokens.Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            // Responsive padding: compact on narrow cards, standard on wide
+            val isCompact = maxWidth < 200.dp
+            val cardPadding = if (isCompact) OceanDesignTokens.Spacing.sm else OceanDesignTokens.Spacing.md
+
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(cardPadding),
+                verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)
             ) {
-                PulseDot(state = module.state, dotSize = 12.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PulseDot(state = module.state, dotSize = 12.dp)
+                    Text(
+                        text = module.displayName,
+                        style = if (isCompact) MaterialTheme.typography.labelLarge
+                               else MaterialTheme.typography.titleSmall,
+                        color = OceanDesignTokens.Text.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatusBadge(state = module.state)
+                }
                 Text(
-                    text = module.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = OceanDesignTokens.Text.primary,
-                    modifier = Modifier.weight(1f)
-                )
-                StatusBadge(state = module.state)
-            }
-            Text(
-                text = module.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = OceanDesignTokens.Text.secondary
-            )
-            if (module.metadata.isNotEmpty()) {
-                Text(
-                    text = module.metadata.entries.joinToString(" \u00B7 ") { "${it.key}: ${it.value}" },
+                    text = module.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = OceanDesignTokens.Text.primary.copy(alpha = 0.7f)
+                    color = OceanDesignTokens.Text.secondary,
+                    maxLines = if (isCompact) 1 else 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+                if (module.metadata.isNotEmpty()) {
+                    Text(
+                        text = module.metadata.entries.joinToString(" \u00B7 ") { "${it.key}: ${it.value}" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OceanDesignTokens.Text.primary.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
