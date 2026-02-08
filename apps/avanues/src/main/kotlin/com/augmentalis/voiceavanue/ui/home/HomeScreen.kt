@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -172,11 +173,25 @@ private fun DashboardLandscape(
                 .fillMaxHeight(),
             verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
         ) {
-            Text(
-                text = "MODULES",
-                style = MaterialTheme.typography.labelLarge,
-                color = OceanDesignTokens.Text.secondary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "MODULES",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = OceanDesignTokens.Text.secondary
+                )
+                IconButton(onClick = onNavigateToSettings, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = OceanDesignTokens.Text.secondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
             uiState.modules.forEach { module ->
                 ModuleCard(
                     module = module,
@@ -243,8 +258,30 @@ private fun DashboardPortrait(
             .fillMaxSize()
             .padding(horizontal = OceanDesignTokens.Spacing.md)
     ) {
+        // Header with title and settings gear
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = OceanDesignTokens.Spacing.lg, bottom = OceanDesignTokens.Spacing.sm),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "VoiceAvanue",
+                style = MaterialTheme.typography.headlineSmall,
+                color = OceanDesignTokens.Text.primary
+            )
+            IconButton(onClick = onNavigateToSettings) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = OceanDesignTokens.Text.secondary
+                )
+            }
+        }
+
         Column(
-            modifier = Modifier.padding(vertical = OceanDesignTokens.Spacing.md),
+            modifier = Modifier.padding(bottom = OceanDesignTokens.Spacing.md),
             verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
         ) {
             uiState.voiceAvanue?.let { module ->
@@ -289,15 +326,8 @@ private fun DashboardPortrait(
 
 @Composable
 private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
-    val context = LocalContext.current
     GlassCard(
-        onClick = {
-            if (module.state is ServiceState.Stopped) {
-                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            } else {
-                onClick()
-            }
-        },
+        onClick = onClick,
         glassLevel = GlassLevel.MEDIUM,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
     ) {
