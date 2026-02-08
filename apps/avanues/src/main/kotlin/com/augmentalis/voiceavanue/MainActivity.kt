@@ -28,6 +28,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.avanueui.AvanueTheme
+import com.augmentalis.avanueui.theme.AvanueThemeProvider
+import com.augmentalis.avanueui.tokens.DisplayProfile
+import com.augmentalis.avanueui.tokens.DisplayProfileResolver
+import com.augmentalis.devicemanager.DeviceCapabilityFactory
+import com.augmentalis.devicemanager.KmpDeviceType
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
@@ -49,13 +54,18 @@ class MainActivity : ComponentActivity() {
         // Determine launch mode from activity-alias
         val launchMode = determineLaunchMode(intent)
 
+        // Detect display profile from device hardware
+        val displayProfile = detectDisplayProfile()
+
         setContent {
             AvanueTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    AvanuesApp(startMode = launchMode)
+                AvanueThemeProvider(displayProfile = displayProfile) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        AvanuesApp(startMode = launchMode)
+                    }
                 }
             }
         }
@@ -72,6 +82,29 @@ class MainActivity : ComponentActivity() {
         }
         if (!Settings.canDrawOverlays(this)) {
             // Will prompt user in UI
+        }
+    }
+
+    /**
+     * Detects the appropriate DisplayProfile from device hardware.
+     * Uses DeviceManager capabilities + DisplayProfileResolver.
+     */
+    private fun detectDisplayProfile(): DisplayProfile {
+        return try {
+            val provider = DeviceCapabilityFactory.create()
+            val display = provider.getDisplayCapabilities()
+            val deviceInfo = provider.getKmpDeviceInfo()
+            val isSmartGlass = deviceInfo.deviceType == KmpDeviceType.SMART_GLASS
+
+            DisplayProfileResolver.resolve(
+                widthPx = display.widthPixels,
+                heightPx = display.heightPixels,
+                densityDpi = display.densityDpi,
+                isSmartGlass = isSmartGlass
+            )
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "DisplayProfile detection failed, defaulting to PHONE", e)
+            DisplayProfile.PHONE
         }
     }
 

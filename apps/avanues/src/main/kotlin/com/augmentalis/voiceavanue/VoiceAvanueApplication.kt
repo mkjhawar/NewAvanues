@@ -18,6 +18,7 @@ package com.augmentalis.voiceavanue
 
 import android.app.Application
 import android.util.Log
+import com.augmentalis.devicemanager.DeviceCapabilityFactory
 import com.augmentalis.voiceoscore.rpc.VoiceOSAvuRpcServer
 import com.augmentalis.voiceoscore.rpc.VoiceOSServerConfig
 import com.augmentalis.webavanue.rpc.WebAvanueJsonRpcServer
@@ -44,6 +45,9 @@ class VoiceAvanueApplication : Application() {
 
         Log.i(TAG, "Avanues starting...")
         Log.i(TAG, "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+
+        // Initialize DeviceManager for display profile detection
+        DeviceCapabilityFactory.initialize(this)
 
         initializeModules()
     }
