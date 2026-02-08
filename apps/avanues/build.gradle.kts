@@ -156,6 +156,7 @@ dependencies {
 
     implementation(project(":Modules:AVA:core:Utils"))
     implementation(project(":Modules:AvanueUI"))
+    implementation(project(":Modules:AvanueUI:DesignSystem"))
     implementation(project(":Modules:AvanueUI:Foundation"))
 
     // =========================================================================

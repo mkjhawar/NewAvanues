@@ -32,8 +32,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.augmentalis.avamagic.ui.foundation.GlassCard
-import com.augmentalis.avamagic.ui.foundation.GlassLevel
-import com.augmentalis.avamagic.ui.foundation.OceanDesignTokens
+import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceavanue.BuildConfig
 import androidx.datastore.preferences.core.edit
 import com.augmentalis.voiceavanue.data.avanuesDataStore
@@ -266,14 +266,14 @@ fun DeveloperConsoleScreen(
                     icon = Icons.Default.Storage,
                     action = {
                         TextButton(onClick = { showResetConfirm = true }) {
-                            Text("RESET", color = OceanDesignTokens.State.error, fontSize = 12.sp)
+                            Text("RESET", color = AvanueTheme.colors.error, fontSize = 12.sp)
                         }
                     }
                 ) {
                     if (rawPrefs.isEmpty()) {
                         Text(
                             "(empty — all defaults)",
-                            color = OceanDesignTokens.Text.secondary,
+                            color = AvanueTheme.colors.textSecondary,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp
                         )
@@ -299,8 +299,8 @@ fun DeveloperConsoleScreen(
                                 imageVector = if (svc.isHealthy) Icons.Default.CheckCircle
                                 else Icons.Default.Cancel,
                                 contentDescription = null,
-                                tint = if (svc.isHealthy) OceanDesignTokens.State.success
-                                else OceanDesignTokens.State.error,
+                                tint = if (svc.isHealthy) AvanueTheme.colors.success
+                                else AvanueTheme.colors.error,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -314,8 +314,8 @@ fun DeveloperConsoleScreen(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (svc.isHealthy) OceanDesignTokens.State.success
-                                else OceanDesignTokens.State.error
+                                color = if (svc.isHealthy) AvanueTheme.colors.success
+                                else AvanueTheme.colors.error
                             )
                         }
                         svc.details.forEach { (k, v) ->
@@ -323,7 +323,7 @@ fun DeveloperConsoleScreen(
                                 "  $k: $v",
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
-                                color = OceanDesignTokens.Text.secondary,
+                                color = AvanueTheme.colors.textSecondary,
                                 modifier = Modifier.padding(start = 26.dp)
                             )
                         }
@@ -344,24 +344,24 @@ fun DeveloperConsoleScreen(
                             modifier = Modifier.weight(1f),
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                         Text(
                             "Port",
                             modifier = Modifier.width(60.dp),
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                         Text(
                             "Transport",
                             modifier = Modifier.width(72.dp),
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
-                    HorizontalDivider(color = OceanDesignTokens.Text.secondary.copy(alpha = 0.3f))
+                    HorizontalDivider(color = AvanueTheme.colors.textSecondary.copy(alpha = 0.3f))
                     viewModel.rpcPorts.forEach { rpc ->
                         Row(
                             modifier = Modifier
@@ -378,14 +378,14 @@ fun DeveloperConsoleScreen(
                                 modifier = Modifier.width(60.dp),
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 13.sp,
-                                color = OceanDesignTokens.State.info
+                                color = AvanueTheme.colors.info
                             )
                             Text(
                                 rpc.transport,
                                 modifier = Modifier.width(72.dp),
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
-                                color = OceanDesignTokens.Text.secondary
+                                color = AvanueTheme.colors.textSecondary
                             )
                         }
                     }
@@ -398,7 +398,7 @@ fun DeveloperConsoleScreen(
                     if (dbFiles.isEmpty()) {
                         Text(
                             "No database files found",
-                            color = OceanDesignTokens.Text.secondary,
+                            color = AvanueTheme.colors.textSecondary,
                             fontSize = 13.sp
                         )
                     } else {
@@ -421,14 +421,14 @@ fun DeveloperConsoleScreen(
                                     Text(
                                         "Modified: ${dateFormat.format(Date(db.lastModified))}",
                                         fontSize = 11.sp,
-                                        color = OceanDesignTokens.Text.secondary
+                                        color = AvanueTheme.colors.textSecondary
                                     )
                                 }
                                 Text(
                                     formatFileSize(db.sizeBytes),
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 12.sp,
-                                    color = OceanDesignTokens.State.info
+                                    color = AvanueTheme.colors.info
                                 )
                             }
                         }
@@ -437,7 +437,7 @@ fun DeveloperConsoleScreen(
                             "Path: /data/data/${BuildConfig.APPLICATION_ID}/databases/",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 10.sp,
-                            color = OceanDesignTokens.Text.secondary,
+                            color = AvanueTheme.colors.textSecondary,
                             modifier = Modifier.horizontalScroll(rememberScrollState())
                         )
                     }
@@ -463,7 +463,7 @@ fun DeveloperConsoleScreen(
                     viewModel.clearDataStore()
                     showResetConfirm = false
                 }) {
-                    Text("Reset", color = OceanDesignTokens.State.error)
+                    Text("Reset", color = AvanueTheme.colors.error)
                 }
             },
             dismissButton = {
@@ -499,7 +499,7 @@ private fun ConsoleSection(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = OceanDesignTokens.State.info,
+                tint = AvanueTheme.colors.info,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -527,7 +527,7 @@ private fun KeyValueRow(key: String, value: String, mono: Boolean = false) {
             key,
             modifier = Modifier.weight(1f),
             fontSize = 13.sp,
-            color = OceanDesignTokens.Text.secondary
+            color = AvanueTheme.colors.textSecondary
         )
         Text(
             value,

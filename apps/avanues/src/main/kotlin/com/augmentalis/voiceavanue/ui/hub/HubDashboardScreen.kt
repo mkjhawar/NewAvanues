@@ -45,10 +45,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avamagic.ui.foundation.GlassCard
-import com.augmentalis.avamagic.ui.foundation.GlassLevel
 import com.augmentalis.avamagic.ui.foundation.GlassSurface
-import com.augmentalis.avamagic.ui.foundation.OceanDesignTokens
-import com.augmentalis.avamagic.ui.foundation.OceanTheme
+import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.tokens.SpacingTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Master hub dashboard for the Avanues ecosystem.
@@ -63,7 +63,7 @@ fun HubDashboardScreen(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(OceanTheme.background)
+            .background(AvanueTheme.colors.background)
     ) {
         val isLandscape = maxWidth > maxHeight || maxWidth >= 600.dp
 
@@ -94,20 +94,20 @@ private fun HubPortrait(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = OceanDesignTokens.Spacing.md)
+            .padding(horizontal = SpacingTokens.md)
             .verticalScroll(rememberScrollState())
     ) {
         // Header
         HubHeader(onNavigateToSettings = onNavigateToSettings)
 
-        Spacer(modifier = Modifier.height(OceanDesignTokens.Spacing.lg))
+        Spacer(modifier = Modifier.height(SpacingTokens.lg))
 
         // Section: Apps
         Text(
             text = "APPS",
             style = MaterialTheme.typography.labelLarge,
-            color = OceanDesignTokens.Text.secondary,
-            modifier = Modifier.padding(bottom = OceanDesignTokens.Spacing.sm)
+            color = AvanueTheme.colors.textSecondary,
+            modifier = Modifier.padding(bottom = SpacingTokens.sm)
         )
 
         // App cards stacked
@@ -115,28 +115,28 @@ private fun HubPortrait(
             title = "VoiceAvanue",
             subtitle = "Voice control & accessibility platform",
             icon = Icons.Default.Mic,
-            accentColor = OceanDesignTokens.State.success,
+            accentColor = AvanueTheme.colors.success,
             onClick = onNavigateToVoice
         )
 
-        Spacer(modifier = Modifier.height(OceanDesignTokens.Spacing.md))
+        Spacer(modifier = Modifier.height(SpacingTokens.md))
 
         AppCard(
             title = "WebAvanue",
             subtitle = "Voice-enabled web browser",
             icon = Icons.Default.Language,
-            accentColor = OceanDesignTokens.State.info,
+            accentColor = AvanueTheme.colors.info,
             onClick = onNavigateToBrowser
         )
 
-        Spacer(modifier = Modifier.height(OceanDesignTokens.Spacing.xl))
+        Spacer(modifier = Modifier.height(SpacingTokens.xl))
 
         // Section: Ecosystem
         Text(
             text = "ECOSYSTEM",
             style = MaterialTheme.typography.labelLarge,
-            color = OceanDesignTokens.Text.secondary,
-            modifier = Modifier.padding(bottom = OceanDesignTokens.Spacing.sm)
+            color = AvanueTheme.colors.textSecondary,
+            modifier = Modifier.padding(bottom = SpacingTokens.sm)
         )
 
         EcosystemItem(
@@ -146,7 +146,7 @@ private fun HubPortrait(
             onClick = onNavigateToSettings
         )
 
-        Spacer(modifier = Modifier.height(OceanDesignTokens.Spacing.sm))
+        Spacer(modifier = Modifier.height(SpacingTokens.sm))
 
         EcosystemItem(
             title = "About Avanues",
@@ -155,16 +155,16 @@ private fun HubPortrait(
             onClick = onNavigateToSettings // Opens settings where About section lives
         )
 
-        Spacer(modifier = Modifier.height(OceanDesignTokens.Spacing.xl))
+        Spacer(modifier = Modifier.height(SpacingTokens.xl))
 
         // Footer: Branding
         Text(
             text = "Avanues Ecosystem",
             style = MaterialTheme.typography.bodySmall,
-            color = OceanDesignTokens.Text.disabled,
+            color = AvanueTheme.colors.textDisabled,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = OceanDesignTokens.Spacing.lg)
+                .padding(bottom = SpacingTokens.lg)
         )
     }
 }
@@ -180,22 +180,22 @@ private fun HubLandscape(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(OceanDesignTokens.Spacing.md),
-        horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
+            .padding(SpacingTokens.md),
+        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md)
     ) {
         // Left: Header + Ecosystem
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
         ) {
             HubHeader(onNavigateToSettings = onNavigateToSettings)
 
-            Spacer(modifier = Modifier.height(OceanDesignTokens.Spacing.sm))
+            Spacer(modifier = Modifier.height(SpacingTokens.sm))
 
             Text(
                 text = "ECOSYSTEM",
                 style = MaterialTheme.typography.labelLarge,
-                color = OceanDesignTokens.Text.secondary
+                color = AvanueTheme.colors.textSecondary
             )
 
             EcosystemItem(
@@ -216,19 +216,19 @@ private fun HubLandscape(
         // Right: App cards
         Column(
             modifier = Modifier.weight(1.2f),
-            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md)
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
         ) {
             Text(
                 text = "APPS",
                 style = MaterialTheme.typography.labelLarge,
-                color = OceanDesignTokens.Text.secondary
+                color = AvanueTheme.colors.textSecondary
             )
 
             AppCard(
                 title = "VoiceAvanue",
                 subtitle = "Voice control & accessibility platform",
                 icon = Icons.Default.Mic,
-                accentColor = OceanDesignTokens.State.success,
+                accentColor = AvanueTheme.colors.success,
                 onClick = onNavigateToVoice
             )
 
@@ -236,7 +236,7 @@ private fun HubLandscape(
                 title = "WebAvanue",
                 subtitle = "Voice-enabled web browser",
                 icon = Icons.Default.Language,
-                accentColor = OceanDesignTokens.State.info,
+                accentColor = AvanueTheme.colors.info,
                 onClick = onNavigateToBrowser
             )
         }
@@ -250,7 +250,7 @@ private fun HubHeader(onNavigateToSettings: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = OceanDesignTokens.Spacing.lg),
+            .padding(top = SpacingTokens.lg),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -258,20 +258,20 @@ private fun HubHeader(onNavigateToSettings: () -> Unit) {
             Text(
                 text = "Avanues",
                 style = MaterialTheme.typography.headlineMedium,
-                color = OceanDesignTokens.Text.primary,
+                color = AvanueTheme.colors.textPrimary,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = "Your accessibility ecosystem",
                 style = MaterialTheme.typography.bodyMedium,
-                color = OceanDesignTokens.Text.secondary
+                color = AvanueTheme.colors.textSecondary
             )
         }
         IconButton(onClick = onNavigateToSettings) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Settings",
-                tint = OceanDesignTokens.Text.secondary,
+                tint = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.size(28.dp)
             )
         }
@@ -296,8 +296,8 @@ private fun AppCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(OceanDesignTokens.Spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md),
+                .padding(SpacingTokens.lg),
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Icon container
@@ -321,18 +321,18 @@ private fun AppCard(
             // Text content
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)
+                verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
-                    color = OceanDesignTokens.Text.primary,
+                    color = AvanueTheme.colors.textPrimary,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
 
@@ -340,7 +340,7 @@ private fun AppCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Open $title",
-                tint = OceanDesignTokens.Text.secondary,
+                tint = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -365,34 +365,34 @@ private fun EcosystemItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = OceanDesignTokens.Spacing.md,
-                    vertical = OceanDesignTokens.Spacing.sm
+                    horizontal = SpacingTokens.md,
+                    vertical = SpacingTokens.sm
                 ),
-            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = OceanDesignTokens.Text.secondary,
+                tint = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.size(24.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = OceanDesignTokens.Text.primary
+                    color = AvanueTheme.colors.textPrimary
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Open $title",
-                tint = OceanDesignTokens.Text.disabled,
+                tint = AvanueTheme.colors.textDisabled,
                 modifier = Modifier.size(20.dp)
             )
         }
