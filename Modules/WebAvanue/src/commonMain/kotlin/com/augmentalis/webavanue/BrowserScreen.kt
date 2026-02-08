@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.avanueui.theme.AvanueTheme
@@ -233,6 +234,7 @@ fun BrowserScreen(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToXRSettings: () -> Unit = {},
+    onExitBrowser: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val activeTab by tabViewModel.activeTab.collectAsState()
@@ -451,6 +453,19 @@ fun BrowserScreen(
         }
     }
 
+    // BackHandler: if WebView can go back, go back in web history;
+    // otherwise exit browser and return to parent navigation (Hub)
+    if (onExitBrowser != null) {
+        val canWebGoBack = activeTab?.canGoBack ?: false
+        BackHandler(enabled = true) {
+            if (canWebGoBack) {
+                webViewController.goBack()
+            } else {
+                onExitBrowser()
+            }
+        }
+    }
+
     // Command bar at bottom, overlays on webpage, auto-hides in voice mode
 
     BoxWithConstraints(
@@ -579,6 +594,7 @@ fun BrowserScreen(
                     onCommandBarToggle = {
                         isCommandBarVisible = !isCommandBarVisible
                     },
+                    onExitBrowser = onExitBrowser,
                     isListening = isListening,
                     onStartListening = {
                         // Start voice recognition - for now just show indicator
@@ -703,14 +719,20 @@ fun BrowserScreen(
                 )
 
                 // Overlay command bar at bottom (z-level above WebView)
-                // FIX: Add zIndex(20f) to ensure command bar appears above WebView
                 androidx.compose.animation.AnimatedVisibility(
                     visible = isCommandBarVisible,
-                    enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
-                    exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut(),
+                    enter = androidx.compose.animation.slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = androidx.compose.animation.core.tween(200)
+                    ),
+                    exit = androidx.compose.animation.slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = androidx.compose.animation.core.tween(200)
+                    ),
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .zIndex(20f)  // Ensure command bar renders above WebView
+                        .navigationBarsPadding()
+                        .zIndex(20f)
                 ) {
                     HorizontalCommandBarLayout(
                         onBack = { webViewController.goBack() },
@@ -770,6 +792,8 @@ fun BrowserScreen(
                         onNewTab = { showAddPageDialog = true },
                         onShowTabs = { showSpatialTabSwitcher = true },
                         onShowFavorites = { showSpatialFavorites = true },
+                        onExitBrowser = onExitBrowser,
+                        onShowHelp = { showVoiceHelp = true },
                         onHide = { isCommandBarVisible = false },
                         isHeadlessMode = isHeadlessMode,
                         onToggleHeadlessMode = { isHeadlessMode = !isHeadlessMode },
@@ -1151,35 +1175,8 @@ fun BrowserScreen(
             )
         }
 
-        // Help FAB (?) - positioned above command bar with higher z-level
-        // Shows voice commands help when tapped
-        // REWRITTEN: December 2025 - Uses Ocean component system
-        // Hidden in headless mode for true fullscreen browsing
-        androidx.compose.animation.AnimatedVisibility(
-            visible = !isHeadlessMode,
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
-            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(
-                    end = 16.dp,
-                    bottom = if (isCommandBarVisible) 100.dp else 16.dp  // Move up when command bar visible
-                )
-                .zIndex(20f)  // Elevated z-level above all other UI elements
-        ) {
-            FloatingActionButton(
-                onClick = { showVoiceHelp = !showVoiceHelp },
-                containerColor = AvanueTheme.colors.primary,
-                contentColor = AvanueTheme.colors.textOnPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.HelpOutline,
-                    contentDescription = "Voice commands help",
-                    tint = IconVariant.OnPrimary.toColor(),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-        }
+        // Voice help is triggered via voice command "Help" or command bar menu
+        // FAB removed to reduce visual clutter
 
         // Voice commands help dialog - categorized with submenus
         // Supports voice-based navigation: say category names to navigate

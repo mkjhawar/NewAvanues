@@ -53,6 +53,8 @@ fun HorizontalCommandBarLayout(
     onNewTab: () -> Unit,
     onShowTabs: () -> Unit,
     onShowFavorites: () -> Unit,
+    onExitBrowser: (() -> Unit)? = null,
+    onShowHelp: (() -> Unit)? = null,
     onHide: () -> Unit,
     isHeadlessMode: Boolean = false,
     onToggleHeadlessMode: () -> Unit = {},
@@ -66,45 +68,36 @@ fun HorizontalCommandBarLayout(
         scrollState.scrollTo(0)
     }
 
-    // Spatial z-level container - command bar floats at HUD layer
+    // Command bar container with optional label
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
-            .padding(horizontal = 8.dp, vertical = 8.dp)
-            .graphicsLayer { shadowElevation = 16f }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        // Command label - floats above command bar
+        // Command label — shown above bar on hover/focus
         AnimatedVisibility(
             visible = currentLabel.isNotEmpty(),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            Surface(
-                modifier = Modifier.glassBar(cornerRadius = 12.dp),
-                color = AvanueTheme.colors.surface.copy(alpha = 0.92f),
-                shape = RoundedCornerShape(12.dp),
-                shadowElevation = 8.dp,
-                tonalElevation = 4.dp
-            ) {
-                Text(
-                    text = currentLabel.uppercase(),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AvanueTheme.colors.textPrimary
-                )
-            }
+            Text(
+                text = currentLabel.uppercase(),
+                modifier = Modifier
+                    .glassBar(cornerRadius = 8.dp)
+                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = AvanueTheme.colors.textSecondary
+            )
         }
 
-        // Command bar container - Rounded square with muted radius (12.dp) for XR aesthetic
+        // Command bar — single glass surface
         Surface(
-            modifier = Modifier
-                .glassBar(cornerRadius = 12.dp)
-                .graphicsLayer { shadowElevation = 12f },
-            color = AvanueTheme.colors.surface.copy(alpha = 0.92f),
+            modifier = Modifier.glassBar(cornerRadius = 12.dp),
+            color = AvanueTheme.colors.surface.copy(alpha = 0.88f),
             shape = RoundedCornerShape(12.dp),
-            shadowElevation = 12.dp,
-            tonalElevation = 8.dp
+            shadowElevation = 4.dp,
+            tonalElevation = 2.dp
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -151,7 +144,9 @@ fun HorizontalCommandBarLayout(
                     onDownloads = onDownloads,
                     onHistory = onHistory,
                     onSettings = onSettings,
-                    onNewTab = onNewTab
+                    onNewTab = onNewTab,
+                    onExitBrowser = onExitBrowser,
+                    onShowHelp = onShowHelp
                 )
             }
         }
@@ -184,7 +179,9 @@ private fun HorizontalCommandBarContent(
     onDownloads: () -> Unit,
     onHistory: () -> Unit,
     onSettings: () -> Unit,
-    onNewTab: () -> Unit
+    onNewTab: () -> Unit,
+    onExitBrowser: (() -> Unit)? = null,
+    onShowHelp: (() -> Unit)? = null
 ) {
     when (currentLevel) {
         CommandBarLevel.MAIN -> {
@@ -428,6 +425,26 @@ private fun HorizontalCommandBarContent(
                 onBlur = { onLabelChange("") },
                 backgroundColor = AvanueTheme.colors.surfaceElevated
             )
+            if (onShowHelp != null) {
+                CommandButton(
+                    icon = Icons.Default.HelpOutline,
+                    label = "Help",
+                    onClick = onShowHelp,
+                    onFocus = { onLabelChange("Voice Commands Help") },
+                    onBlur = { onLabelChange("") },
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
+                )
+            }
+            if (onExitBrowser != null) {
+                CommandButton(
+                    icon = Icons.Default.ExitToApp,
+                    label = "Exit",
+                    onClick = onExitBrowser,
+                    onFocus = { onLabelChange("Exit Browser") },
+                    onBlur = { onLabelChange("") },
+                    backgroundColor = AvanueTheme.colors.surfaceElevated
+                )
+            }
         }
     }
 }

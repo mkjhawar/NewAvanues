@@ -27,15 +27,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.avanueui.AvanueTheme
 import com.augmentalis.avanueui.theme.AvanueThemeProvider
-import com.augmentalis.avanueui.tokens.DisplayProfile
-import com.augmentalis.avanueui.tokens.DisplayProfileResolver
+import com.augmentalis.avanueui.display.DisplayProfile
+import com.augmentalis.avanueui.display.DisplayProfileResolver
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
 import com.augmentalis.devicemanager.KmpDeviceType
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
+import com.augmentalis.voiceavanue.ui.home.CommandsScreen
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
 import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
 import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
@@ -58,14 +58,12 @@ class MainActivity : ComponentActivity() {
         val displayProfile = detectDisplayProfile()
 
         setContent {
-            AvanueTheme {
-                AvanueThemeProvider(displayProfile = displayProfile) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        AvanuesApp(startMode = launchMode)
-                    }
+            AvanueThemeProvider(displayProfile = displayProfile) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AvanuesApp(startMode = launchMode)
                 }
             }
         }
@@ -132,6 +130,7 @@ enum class AvanueMode(val route: String, val label: String) {
     HUB("hub", "Avanues"),
     VOICE("voice_home", "VoiceAvanue"),
     BROWSER("browser", "WebAvanue"),
+    COMMANDS("commands", "Voice Commands"),
     SETTINGS("settings", "Settings"),
     DEVELOPER_CONSOLE("developer_console", "Developer Console")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
@@ -168,13 +167,23 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.HUB) {
         composable(AvanueMode.VOICE.route) {
             HomeScreen(
                 onNavigateToBrowser = { navController.navigate(AvanueMode.BROWSER.route) },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) },
+                onNavigateToCommands = { navController.navigate(AvanueMode.COMMANDS.route) }
+            )
+        }
+
+        composable(AvanueMode.COMMANDS.route) {
+            CommandsScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
         composable(AvanueMode.BROWSER.route) {
             val browserViewModel: BrowserEntryViewModel = hiltViewModel()
-            BrowserApp(repository = browserViewModel.repository)
+            BrowserApp(
+                repository = browserViewModel.repository,
+                onExitBrowser = { navController.popBackStack() }
+            )
         }
 
         composable(AvanueMode.SETTINGS.route) {

@@ -20,6 +20,7 @@ package com.augmentalis.voiceavanue.ui.settings
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,8 +28,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Description
@@ -47,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
@@ -68,8 +73,8 @@ import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetection
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassDetection
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassType
 import com.augmentalis.voiceavanue.BuildConfig
-import com.avanueui.settings.SettingsGroupCard
-import com.avanueui.settings.SettingsNavigationRow
+import com.augmentalis.avanueui.components.settings.SettingsGroupCard
+import com.augmentalis.avanueui.components.settings.SettingsNavigationRow
 
 /**
  * Display mode for the settings screen, detected at entry from DeviceManager.
@@ -189,7 +194,10 @@ private fun StandardSettingsScreen(
             if (selectedModuleId != null) {
                 val provider = viewModel.providerById(selectedModuleId)
                 if (provider != null) {
-                    SettingsDetailPane(provider = provider)
+                    SettingsDetailPane(
+                        provider = provider,
+                        onNavigateBack = { navigator.navigateBack() }
+                    )
                 }
             } else {
                 // Empty state for expanded layouts (tablet)
@@ -372,36 +380,63 @@ private fun ModuleListItem(
 // Detail Pane
 // =============================================================================
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsDetailPane(
-    provider: ComposableSettingsProvider
+    provider: ComposableSettingsProvider,
+    onNavigateBack: () -> Unit
 ) {
     val sections = provider.sections.sortedBy { it.sortOrder }
 
-    if (sections.size <= 1) {
-        // Single section — render directly
-        Column(modifier = Modifier.fillMaxSize()) {
-            provider.SectionContent(sections.firstOrNull()?.id ?: "")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(provider.displayName) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
         }
-    } else {
-        // Multiple sections — tabbed layout
-        var selectedTabIndex by remember { mutableIntStateOf(0) }
-
-        Column(modifier = Modifier.fillMaxSize()) {
-            ScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
-                modifier = Modifier.fillMaxWidth()
+    ) { padding ->
+        if (sections.size <= 1) {
+            // Single section — render directly with scroll support
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
             ) {
-                sections.forEachIndexed { index, section ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = { Text(section.title) }
-                    )
-                }
+                provider.SectionContent(sections.firstOrNull()?.id ?: "")
             }
+        } else {
+            // Multiple sections — tabbed layout
+            var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-            provider.SectionContent(sections[selectedTabIndex].id)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    sections.forEachIndexed { index, section ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index },
+                            text = { Text(section.title) }
+                        )
+                    }
+                }
+
+                provider.SectionContent(sections[selectedTabIndex].id)
+            }
         }
     }
 }
@@ -417,6 +452,7 @@ private fun AboutSettingsFooter(
     val context = LocalContext.current
     var versionTapCount by remember { mutableIntStateOf(0) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
+    var showLicensesDialog by remember { mutableStateOf(false) }
 
     SettingsGroupCard {
         SettingsNavigationRow(
@@ -452,7 +488,71 @@ private fun AboutSettingsFooter(
             title = "Licenses",
             subtitle = "Open source licenses",
             icon = Icons.Default.Description,
-            onClick = { /* TODO: Show licenses screen */ }
+            onClick = { showLicensesDialog = true }
         )
     }
+
+    if (showLicensesDialog) {
+        OssLicensesDialog(onDismiss = { showLicensesDialog = false })
+    }
 }
+
+@Composable
+private fun OssLicensesDialog(onDismiss: () -> Unit) {
+    val licenses = remember {
+        listOf(
+            OssLicense("Jetpack Compose", "Google", "Apache License 2.0"),
+            OssLicense("Jetpack Compose Material 3", "Google", "Apache License 2.0"),
+            OssLicense("Jetpack Compose Material 3 Adaptive", "Google", "Apache License 2.0"),
+            OssLicense("Kotlin", "JetBrains", "Apache License 2.0"),
+            OssLicense("Kotlin Coroutines", "JetBrains", "Apache License 2.0"),
+            OssLicense("Kotlin Multiplatform", "JetBrains", "Apache License 2.0"),
+            OssLicense("kotlinx-datetime", "JetBrains", "Apache License 2.0"),
+            OssLicense("Hilt / Dagger", "Google", "Apache License 2.0"),
+            OssLicense("AndroidX Core", "Google", "Apache License 2.0"),
+            OssLicense("AndroidX Activity", "Google", "Apache License 2.0"),
+            OssLicense("AndroidX Navigation", "Google", "Apache License 2.0"),
+            OssLicense("AndroidX Lifecycle", "Google", "Apache License 2.0"),
+            OssLicense("AndroidX SplashScreen", "Google", "Apache License 2.0"),
+            OssLicense("SQLDelight", "CashApp / Square", "Apache License 2.0"),
+            OssLicense("Voyager", "Adriel Cafe", "MIT License"),
+            OssLicense("Material Icons Extended", "Google", "Apache License 2.0"),
+        )
+    }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Open Source Licenses") },
+        text = {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(licenses) { license ->
+                    Column {
+                        Text(
+                            text = license.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${license.author} — ${license.license}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+private data class OssLicense(
+    val name: String,
+    val author: String,
+    val license: String
+)

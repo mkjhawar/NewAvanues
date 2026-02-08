@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,10 +25,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
@@ -66,23 +69,23 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.augmentalis.avamagic.ui.foundation.GlassCard
-import com.augmentalis.avamagic.ui.foundation.GlassChip
-import com.augmentalis.avamagic.ui.foundation.GlassSurface
-import com.augmentalis.avamagic.ui.foundation.PulseDot
-import com.augmentalis.avamagic.ui.foundation.StatusBadge
+import com.augmentalis.avanueui.components.glass.GlassCard
+import com.augmentalis.avanueui.components.glass.GlassChip
+import com.augmentalis.avanueui.components.glass.GlassSurface
+import com.augmentalis.avanueui.glass.GlassBorder
 import com.augmentalis.avanueui.glass.GlassLevel
 import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.foundation.state.LastHeardCommand
 import com.augmentalis.foundation.state.ServiceState
+import com.augmentalis.voiceoscore.CommandActionType
 
 /**
  * Aggregated callbacks for all command management actions.
  */
 data class CommandCallbacks(
     val onToggleStaticCommand: (String) -> Unit = {},
-    val onAddCustomCommand: (String, List<String>) -> Unit = { _, _ -> },
+    val onAddCustomCommand: (String, List<String>, CommandActionType, String) -> Unit = { _, _, _, _ -> },
     val onRemoveCustomCommand: (String) -> Unit = {},
     val onToggleCustomCommand: (String) -> Unit = {},
     val onAddSynonym: (String, List<String>) -> Unit = { _, _ -> },
@@ -99,6 +102,7 @@ data class CommandCallbacks(
 fun HomeScreen(
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToCommands: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -131,6 +135,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(AvanueTheme.colors.background)
+            .statusBarsPadding()
     ) {
         val isLandscape = maxWidth > maxHeight || maxWidth >= 600.dp
 
@@ -139,6 +144,7 @@ fun HomeScreen(
                 uiState = uiState,
                 onNavigateToBrowser = onNavigateToBrowser,
                 onNavigateToSettings = onNavigateToSettings,
+                onNavigateToCommands = onNavigateToCommands,
                 callbacks = commandCallbacks
             )
         } else {
@@ -146,9 +152,69 @@ fun HomeScreen(
                 uiState = uiState,
                 onNavigateToBrowser = onNavigateToBrowser,
                 onNavigateToSettings = onNavigateToSettings,
+                onNavigateToCommands = onNavigateToCommands,
                 callbacks = commandCallbacks
             )
         }
+    }
+}
+
+/**
+ * Full-screen Commands management screen.
+ * Launched from the CommandsSummaryCard on the dashboard.
+ */
+@Composable
+fun CommandsScreen(
+    onNavigateBack: () -> Unit,
+    viewModel: DashboardViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val callbacks = remember(viewModel) {
+        CommandCallbacks(
+            onToggleStaticCommand = viewModel::toggleCommand,
+            onAddCustomCommand = viewModel::addCustomCommand,
+            onRemoveCustomCommand = viewModel::removeCustomCommand,
+            onToggleCustomCommand = viewModel::toggleCustomCommand,
+            onAddSynonym = viewModel::addSynonym,
+            onRemoveSynonym = viewModel::removeSynonym
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AvanueTheme.colors.background)
+            .statusBarsPadding()
+            .padding(horizontal = SpacingTokens.md)
+    ) {
+        // Header with back button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = SpacingTokens.sm, bottom = SpacingTokens.md),
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onNavigateBack, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = AvanueTheme.colors.textPrimary
+                )
+            }
+            Text(
+                text = "Voice Commands",
+                style = MaterialTheme.typography.headlineSmall,
+                color = AvanueTheme.colors.textPrimary
+            )
+        }
+
+        CommandsSection(
+            commands = uiState.commands,
+            callbacks = callbacks,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -159,6 +225,7 @@ private fun DashboardLandscape(
     uiState: DashboardUiState,
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToCommands: () -> Unit,
     callbacks: CommandCallbacks
 ) {
     Row(
@@ -224,23 +291,19 @@ private fun DashboardLandscape(
             }
         }
 
-        // Column 3: COMMANDS (scrollable)
+        // Column 3: COMMANDS button + Last Heard
         Column(
             modifier = Modifier
                 .weight(1.2f)
-                .fillMaxHeight()
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
         ) {
             Text(
                 text = "COMMANDS",
                 style = MaterialTheme.typography.labelLarge,
-                color = AvanueTheme.colors.textSecondary,
-                modifier = Modifier.padding(bottom = SpacingTokens.sm)
+                color = AvanueTheme.colors.textSecondary
             )
-            CommandsSection(
-                commands = uiState.commands,
-                callbacks = callbacks,
-                modifier = Modifier.weight(1f)
-            )
+            CommandsSummaryCard(commands = uiState.commands, onClick = onNavigateToCommands)
         }
     }
 }
@@ -252,6 +315,7 @@ private fun DashboardPortrait(
     uiState: DashboardUiState,
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToCommands: () -> Unit,
     callbacks: CommandCallbacks
 ) {
     Column(
@@ -309,31 +373,37 @@ private fun DashboardPortrait(
             }
         }
 
-        Text(
-            text = "COMMANDS",
-            style = MaterialTheme.typography.labelLarge,
-            color = AvanueTheme.colors.textSecondary,
-            modifier = Modifier.padding(vertical = SpacingTokens.sm)
-        )
-        CommandsSection(
-            commands = uiState.commands,
-            callbacks = callbacks,
-            modifier = Modifier.weight(1f)
-        )
+        CommandsSummaryCard(commands = uiState.commands, onClick = onNavigateToCommands)
     }
 }
 
 // ──────────────────────────── MODULE CARD ────────────────────────────
 
+/**
+ * Returns the status border color: green=running, blue=ready, orange=degraded, red=error, gray=stopped.
+ */
+@Composable
+private fun statusBorderColor(state: ServiceState): androidx.compose.ui.graphics.Color {
+    return when (state) {
+        is ServiceState.Running -> AvanueTheme.colors.success
+        is ServiceState.Ready -> AvanueTheme.colors.info
+        is ServiceState.Degraded -> AvanueTheme.colors.warning
+        is ServiceState.Error -> AvanueTheme.colors.error
+        is ServiceState.Stopped -> AvanueTheme.colors.textDisabled
+    }
+}
+
 @Composable
 private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
+    val borderColor = statusBorderColor(module.state)
+
     GlassCard(
         onClick = onClick,
         glassLevel = GlassLevel.MEDIUM,
+        border = GlassBorder(width = 1.5.dp, color = borderColor),
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            // Responsive padding: compact on narrow cards, standard on wide
             val isCompact = maxWidth < 200.dp
             val cardPadding = if (isCompact) SpacingTokens.sm else SpacingTokens.md
 
@@ -341,23 +411,14 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(cardPadding),
                 verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    PulseDot(state = module.state, dotSize = 12.dp)
-                    Text(
-                        text = module.displayName,
-                        style = if (isCompact) MaterialTheme.typography.labelLarge
-                               else MaterialTheme.typography.titleSmall,
-                        color = AvanueTheme.colors.textPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatusBadge(state = module.state)
-                }
+                Text(
+                    text = module.displayName,
+                    style = if (isCompact) MaterialTheme.typography.labelLarge
+                           else MaterialTheme.typography.titleSmall,
+                    color = AvanueTheme.colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Text(
                     text = module.description,
                     style = MaterialTheme.typography.bodySmall,
@@ -439,6 +500,7 @@ private fun PermissionErrorCard(title: String, description: String, action: Stri
             try { context.startActivity(intent) } catch (_: Exception) { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
         },
         glassLevel = GlassLevel.LIGHT,
+        border = GlassBorder(width = 1.5.dp, color = AvanueTheme.colors.error),
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
     ) {
         Row(
@@ -446,7 +508,6 @@ private fun PermissionErrorCard(title: String, description: String, action: Stri
             horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Warning, null, tint = AvanueTheme.colors.error, modifier = Modifier.size(20.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.bodyMedium, color = AvanueTheme.colors.textPrimary)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
@@ -476,7 +537,47 @@ private fun LastHeardCard(command: LastHeardCommand) {
     }
 }
 
-// ──────────────────────────── COMMANDS ────────────────────────────
+// ──────────────────────────── COMMANDS SUMMARY ────────────────────────────
+
+/**
+ * Compact card showing command counts with tap-to-open-full-screen.
+ * Replaces the inline CommandsSection for space efficiency.
+ */
+@Composable
+private fun CommandsSummaryCard(commands: CommandsUiState, onClick: () -> Unit) {
+    GlassCard(
+        onClick = onClick,
+        glassLevel = GlassLevel.LIGHT,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(SpacingTokens.md),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
+                Text(
+                    text = "COMMANDS",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = AvanueTheme.colors.textSecondary
+                )
+                Text(
+                    text = "${commands.staticCount} static \u00B7 ${commands.customCount} custom \u00B7 ${commands.synonymCount} synonyms",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AvanueTheme.colors.textPrimary
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Open commands",
+                tint = AvanueTheme.colors.textSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+// ──────────────────────────── COMMANDS (FULL SCREEN) ────────────────────────────
 
 @Composable
 private fun CommandsSection(
@@ -661,11 +762,12 @@ private fun DynamicCommandsInfoTab(dynamicCount: Int) {
 @Composable
 private fun CustomCommandsTab(
     customCommands: List<CustomCommandInfo>,
-    onAdd: (String, List<String>) -> Unit,
+    onAdd: (String, List<String>, CommandActionType, String) -> Unit,
     onRemove: (String) -> Unit,
     onToggle: (String) -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var commandToDelete by remember { mutableStateOf<CustomCommandInfo?>(null) }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)) {
         GlassChip(
@@ -691,7 +793,7 @@ private fun CustomCommandsTab(
                     CustomCommandRow(
                         command = command,
                         onToggle = { onToggle(command.id) },
-                        onRemove = { onRemove(command.id) }
+                        onRemove = { commandToDelete = command }
                     )
                 }
             }
@@ -701,10 +803,22 @@ private fun CustomCommandsTab(
     if (showAddDialog) {
         AddCustomCommandDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, phrases ->
-                onAdd(name, phrases)
+            onConfirm = { name, phrases, actionType, actionTarget ->
+                onAdd(name, phrases, actionType, actionTarget)
                 showAddDialog = false
             }
+        )
+    }
+
+    commandToDelete?.let { command ->
+        ConfirmDeleteDialog(
+            title = "Delete Command",
+            message = "Delete \"${command.name}\"? This cannot be undone.",
+            onConfirm = {
+                onRemove(command.id)
+                commandToDelete = null
+            },
+            onDismiss = { commandToDelete = null }
         )
     }
 }
@@ -731,6 +845,14 @@ private fun CustomCommandRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = AvanueTheme.colors.textSecondary
                 )
+                Text(
+                    buildString {
+                        append(command.actionType.name.lowercase().replace('_', ' '))
+                        if (command.actionTarget.isNotBlank()) append(" → ${command.actionTarget}")
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AvanueTheme.colors.info
+                )
             }
             Switch(
                 checked = command.isActive,
@@ -749,13 +871,48 @@ private fun CustomCommandRow(
     }
 }
 
+/**
+ * User-friendly action groups for the dropdown.
+ * Maps readable labels to CommandActionType values.
+ */
+private val actionTypeGroups = listOf(
+    "Click / Tap" to CommandActionType.CLICK,
+    "Long Press" to CommandActionType.LONG_CLICK,
+    "Type Text" to CommandActionType.TYPE,
+    "Navigate Back" to CommandActionType.BACK,
+    "Go Home" to CommandActionType.HOME,
+    "Open App" to CommandActionType.OPEN_APP,
+    "Open Settings" to CommandActionType.OPEN_SETTINGS,
+    "Scroll Down" to CommandActionType.SCROLL_DOWN,
+    "Scroll Up" to CommandActionType.SCROLL_UP,
+    "Play Media" to CommandActionType.MEDIA_PLAY,
+    "Pause Media" to CommandActionType.MEDIA_PAUSE,
+    "Volume Up" to CommandActionType.VOLUME_UP,
+    "Volume Down" to CommandActionType.VOLUME_DOWN,
+    "Mute" to CommandActionType.VOLUME_MUTE,
+    "Take Screenshot" to CommandActionType.SCREENSHOT,
+    "Flashlight On" to CommandActionType.FLASHLIGHT_ON,
+    "Flashlight Off" to CommandActionType.FLASHLIGHT_OFF,
+    "Start Dictation" to CommandActionType.DICTATION_START,
+    "Show Commands" to CommandActionType.SHOW_COMMANDS,
+    "Custom" to CommandActionType.CUSTOM
+)
+
 @Composable
 private fun AddCustomCommandDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, List<String>) -> Unit
+    onConfirm: (String, List<String>, CommandActionType, String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var phrasesText by remember { mutableStateOf("") }
+    var selectedActionType by remember { mutableStateOf(CommandActionType.CLICK) }
+    var actionTarget by remember { mutableStateOf("") }
+    var actionDropdownExpanded by remember { mutableStateOf(false) }
+
+    val selectedLabel = actionTypeGroups.find { it.second == selectedActionType }?.first ?: "Click / Tap"
+    val needsTarget = selectedActionType in listOf(
+        CommandActionType.OPEN_APP, CommandActionType.TYPE, CommandActionType.NAVIGATE, CommandActionType.CUSTOM
+    )
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = AvanueTheme.colors.textPrimary,
@@ -788,6 +945,62 @@ private fun AddCustomCommandDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = textFieldColors
                 )
+
+                // Action type dropdown
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedLabel,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Action") },
+                        trailingIcon = {
+                            IconButton(onClick = { actionDropdownExpanded = !actionDropdownExpanded }) {
+                                Icon(
+                                    if (actionDropdownExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    "Select action",
+                                    tint = AvanueTheme.colors.textSecondary
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = textFieldColors
+                    )
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = actionDropdownExpanded,
+                        onDismissRequest = { actionDropdownExpanded = false }
+                    ) {
+                        actionTypeGroups.forEach { (label, type) ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(label, color = AvanueTheme.colors.textPrimary) },
+                                onClick = {
+                                    selectedActionType = type
+                                    actionDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Action target (shown when action needs a target)
+                if (needsTarget) {
+                    OutlinedTextField(
+                        value = actionTarget,
+                        onValueChange = { actionTarget = it },
+                        label = {
+                            Text(
+                                when (selectedActionType) {
+                                    CommandActionType.OPEN_APP -> "App package (e.g., com.google.chrome)"
+                                    CommandActionType.TYPE -> "Text to type"
+                                    CommandActionType.NAVIGATE -> "Screen or URL"
+                                    else -> "Action target"
+                                }
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = textFieldColors
+                    )
+                }
             }
         },
         confirmButton = {
@@ -795,7 +1008,7 @@ private fun AddCustomCommandDialog(
                 onClick = {
                     val phrases = phrasesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                     if (name.isNotBlank() && phrases.isNotEmpty()) {
-                        onConfirm(name, phrases)
+                        onConfirm(name, phrases, selectedActionType, actionTarget.trim())
                     }
                 }
             ) {
@@ -820,6 +1033,7 @@ private fun SynonymsTab(
     onRemove: (String) -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var synonymToDelete by remember { mutableStateOf<SynonymEntryInfo?>(null) }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)) {
         GlassChip(
@@ -842,7 +1056,10 @@ private fun SynonymsTab(
                 verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
             ) {
                 items(entries, key = { it.canonical }) { entry ->
-                    SynonymRow(entry = entry, onRemove = { onRemove(entry.canonical) })
+                    SynonymRow(
+                        entry = entry,
+                        onRemove = if (entry.isDefault) null else {{ synonymToDelete = entry }}
+                    )
                 }
             }
         }
@@ -857,10 +1074,22 @@ private fun SynonymsTab(
             }
         )
     }
+
+    synonymToDelete?.let { entry ->
+        ConfirmDeleteDialog(
+            title = "Delete Synonym",
+            message = "Delete synonym mapping for \"${entry.canonical}\"? This cannot be undone.",
+            onConfirm = {
+                onRemove(entry.canonical)
+                synonymToDelete = null
+            },
+            onDismiss = { synonymToDelete = null }
+        )
+    }
 }
 
 @Composable
-private fun SynonymRow(entry: SynonymEntryInfo, onRemove: () -> Unit) {
+private fun SynonymRow(entry: SynonymEntryInfo, onRemove: (() -> Unit)?) {
     GlassSurface(
         glassLevel = GlassLevel.LIGHT,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
@@ -871,19 +1100,33 @@ private fun SynonymRow(entry: SynonymEntryInfo, onRemove: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = entry.canonical,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AvanueTheme.colors.info
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                ) {
+                    Text(
+                        text = entry.canonical,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AvanueTheme.colors.info
+                    )
+                    if (entry.isDefault) {
+                        Text(
+                            text = "BUILT-IN",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AvanueTheme.colors.textDisabled
+                        )
+                    }
+                }
                 Text(
                     text = entry.synonyms.joinToString(", "),
                     style = MaterialTheme.typography.bodySmall,
                     color = AvanueTheme.colors.textSecondary
                 )
             }
-            IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Close, "Remove", tint = AvanueTheme.colors.error, modifier = Modifier.size(18.dp))
+            if (onRemove != null) {
+                IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Close, "Remove", tint = AvanueTheme.colors.error, modifier = Modifier.size(18.dp))
+                }
             }
         }
     }
@@ -952,6 +1195,31 @@ private fun AddSynonymDialog(
 }
 
 // ──────────────────────────── SHARED ────────────────────────────
+
+@Composable
+private fun ConfirmDeleteDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, color = AvanueTheme.colors.textPrimary) },
+        text = { Text(message, color = AvanueTheme.colors.textSecondary) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Delete", color = AvanueTheme.colors.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = AvanueTheme.colors.textSecondary)
+            }
+        },
+        containerColor = AvanueTheme.colors.surface
+    )
+}
 
 @Composable
 private fun EmptyStateMessage(message: String) {

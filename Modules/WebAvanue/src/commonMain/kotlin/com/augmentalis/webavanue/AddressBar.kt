@@ -28,7 +28,10 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.ShapeTokens
 import com.augmentalis.avanueui.tokens.SpacingTokens
@@ -134,6 +137,7 @@ fun AddressBar(
     onCommandBarToggle: () -> Unit = {},
     isListening: Boolean = false,
     onStartListening: () -> Unit = {},
+    onExitBrowser: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // Keyboard and focus management
@@ -264,7 +268,7 @@ fun AddressBar(
                                         }
                                     },
                                 singleLine = true,
-                                textStyle = MaterialTheme.typography.bodySmall.copy(
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
                                     color = AvanueTheme.colors.textPrimary
                                 ),
                                 cursorBrush = SolidColor(AvanueTheme.colors.primary),
@@ -279,7 +283,7 @@ fun AddressBar(
                                     if (textFieldValue.text.isEmpty()) {
                                         Text(
                                             text = "Enter URL or search",
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = AvanueTheme.colors.textSecondary
                                         )
                                     }
@@ -322,116 +326,94 @@ fun AddressBar(
                         }
                     }
 
-                    // Bottom Row: Navigation controls at half size (~18dp buttons)
+                    // Bottom Row: Navigation controls with text labels
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(28.dp)
                             .padding(top = SpacingTokens.xs),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Top,
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        // Back button - small
-                        IconButton(
+                        LabeledNavButton(
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            label = "Back",
                             onClick = onBack,
                             enabled = canGoBack,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = if (canGoBack) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                            tint = if (canGoBack) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor()
+                        )
 
-                        // Forward button - small
-                        IconButton(
+                        LabeledNavButton(
+                            icon = Icons.AutoMirrored.Filled.ArrowForward,
+                            label = "Fwd",
                             onClick = onForward,
                             enabled = canGoForward,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = "Forward",
-                                tint = if (canGoForward) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                            tint = if (canGoForward) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor()
+                        )
 
-                        // Refresh button - small
-                        IconButton(
+                        LabeledNavButton(
+                            icon = Icons.Default.Refresh,
+                            label = "Reload",
                             onClick = onRefresh,
-                            modifier = Modifier.size(24.dp),
-                            enabled = true
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh",
-                                tint = IconVariant.Primary.toColor(),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                            tint = IconVariant.Primary.toColor()
+                        )
 
-                        // Reading Mode button - only show if article detected (Phase 4)
                         if (isArticleAvailable) {
-                            IconButton(
+                            LabeledNavButton(
+                                icon = Icons.Default.MenuBook,
+                                label = "Read",
                                 onClick = onReadingModeToggle,
-                                modifier = Modifier.size(24.dp),
-                                enabled = true
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MenuBook,
-                                    contentDescription = "Reading Mode",
-                                    tint = if (isReadingMode) IconVariant.Primary.toColor() else IconVariant.Secondary.toColor(),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+                                tint = if (isReadingMode) IconVariant.Primary.toColor() else IconVariant.Secondary.toColor()
+                            )
                         }
 
-                        // Desktop mode toggle - small
-                        CompactDesktopModeIndicator(
-                            isDesktopMode = isDesktopMode,
-                            onClick = onDesktopModeToggle,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .alpha(if (isWebGLSite) 0.5f else 1f)
-                        )
+                        // Desktop mode toggle
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.alpha(if (isWebGLSite) 0.5f else 1f)
+                        ) {
+                            CompactDesktopModeIndicator(
+                                isDesktopMode = isDesktopMode,
+                                onClick = onDesktopModeToggle,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text(
+                                text = "Desktop",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 8.sp,
+                                color = AvanueTheme.colors.textSecondary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
 
-                        // Tab counter badge - compact
-                        CompactTabCounterBadge(
-                            tabCount = tabCount,
-                            onClick = onTabSwitcherClick,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        // Tab counter badge
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CompactTabCounterBadge(
+                                tabCount = tabCount,
+                                onClick = onTabSwitcherClick,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text(
+                                text = "Tabs",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 8.sp,
+                                color = AvanueTheme.colors.textSecondary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
 
-                        // Command bar toggle button - shows/hides bottom command bar
-                        IconButton(
+                        LabeledNavButton(
+                            icon = Icons.Default.RecordVoiceOver,
+                            label = "Cmds",
                             onClick = onCommandBarToggle,
-                            modifier = Modifier.size(24.dp),
-                            enabled = true
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Dehaze,
-                                contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
-                                tint = IconVariant.Primary.toColor(),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                            tint = IconVariant.Primary.toColor()
+                        )
 
-                        // Voice/Mic button - tap to start listening
-                        IconButton(
+                        LabeledNavButton(
+                            icon = Icons.Default.Mic,
+                            label = "Mic",
                             onClick = { if (!isListening) onStartListening() },
-                            modifier = Modifier.size(24.dp),
-                            enabled = true
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Mic,
-                                contentDescription = if (isListening) "Listening..." else "Tap to speak",
-                                tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor(),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                            tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor()
+                        )
                     }
                 }
             } else {
@@ -625,7 +607,7 @@ fun AddressBar(
                         enabled = true
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Dehaze,
+                            imageVector = Icons.Default.RecordVoiceOver,
                             contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
                             tint = IconVariant.Primary.toColor(),
                             modifier = Modifier
@@ -648,5 +630,37 @@ fun AddressBar(
                 }
             }
         }
+    }
+}
+
+/**
+ * Compact labeled icon button for the address bar navigation row.
+ * Shows an icon with a tiny text label below.
+ */
+@Composable
+private fun LabeledNavButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    tint: Color = IconVariant.Primary.toColor()
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(enabled = enabled, onClick = onClick)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 8.sp,
+            color = if (enabled) AvanueTheme.colors.textSecondary else AvanueTheme.colors.textDisabled,
+            textAlign = TextAlign.Center
+        )
     }
 }

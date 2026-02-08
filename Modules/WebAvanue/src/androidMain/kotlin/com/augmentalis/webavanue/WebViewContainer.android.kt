@@ -937,7 +937,10 @@ actual class WebViewController {
     }
 
     actual fun loadUrl(url: String) {
-        webView?.loadUrl(url)
+        val locale = java.util.Locale.getDefault()
+        val languageTag = locale.toLanguageTag()  // e.g. "en-US"
+        val headers = mapOf("Accept-Language" to "$languageTag, ${locale.language};q=0.9")
+        webView?.loadUrl(url, headers)
     }
 
     @SuppressLint("JavascriptInterface")

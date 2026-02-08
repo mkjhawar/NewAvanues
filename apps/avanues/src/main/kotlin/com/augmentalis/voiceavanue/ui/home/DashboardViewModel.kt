@@ -25,6 +25,7 @@ import androidx.lifecycle.viewModelScope
 import com.augmentalis.foundation.state.LastHeardCommand
 import com.augmentalis.foundation.state.ServiceState
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
+import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.StaticCommandRegistry
 import com.augmentalis.voiceoscore.StaticCommand as CoreStaticCommand
 import com.augmentalis.voiceoscore.CommandCategory as CoreCommandCategory
@@ -77,20 +78,26 @@ data class StaticCommand(
 
 /**
  * CustomCommandInfo - A user-created custom voice command.
+ * actionType determines what happens when the command is recognized.
+ * actionTarget provides context (e.g., app package for OPEN_APP, URL for NAVIGATE).
  */
 data class CustomCommandInfo(
     val id: String,
     val name: String,
     val phrases: List<String>,
+    val actionType: CommandActionType = CommandActionType.CUSTOM,
+    val actionTarget: String = "",
     val isActive: Boolean = true
 )
 
 /**
  * SynonymEntryInfo - A verb synonym mapping (canonical -> alternatives).
+ * isDefault=true for system-provided synonyms (cannot be deleted, only reset).
  */
 data class SynonymEntryInfo(
     val canonical: String,
-    val synonyms: List<String>
+    val synonyms: List<String>,
+    val isDefault: Boolean = false
 )
 
 /**
@@ -210,22 +217,22 @@ class DashboardViewModel @Inject constructor(
      */
     private fun loadDefaultSynonyms() {
         val entries = listOf(
-            SynonymEntryInfo("click", listOf("tap", "press", "push", "select", "hit")),
-            SynonymEntryInfo("scroll up", listOf("swipe up", "go up", "page up")),
-            SynonymEntryInfo("scroll down", listOf("swipe down", "go down", "page down")),
-            SynonymEntryInfo("scroll left", listOf("swipe left", "go left")),
-            SynonymEntryInfo("scroll right", listOf("swipe right", "go right")),
-            SynonymEntryInfo("open", listOf("launch", "start", "run", "show")),
-            SynonymEntryInfo("close", listOf("exit", "quit", "dismiss", "hide")),
-            SynonymEntryInfo("back", listOf("go back", "return", "previous")),
-            SynonymEntryInfo("home", listOf("go home", "home screen", "main screen")),
-            SynonymEntryInfo("search", listOf("find", "look for", "search for")),
-            SynonymEntryInfo("type", listOf("enter", "input", "write")),
-            SynonymEntryInfo("delete", listOf("remove", "erase", "clear")),
-            SynonymEntryInfo("copy", listOf("duplicate")),
-            SynonymEntryInfo("paste", listOf("insert")),
-            SynonymEntryInfo("undo", listOf("reverse", "take back")),
-            SynonymEntryInfo("long press", listOf("long click", "press and hold", "hold"))
+            SynonymEntryInfo("click", listOf("tap", "press", "push", "select", "hit"), isDefault = true),
+            SynonymEntryInfo("scroll up", listOf("swipe up", "go up", "page up"), isDefault = true),
+            SynonymEntryInfo("scroll down", listOf("swipe down", "go down", "page down"), isDefault = true),
+            SynonymEntryInfo("scroll left", listOf("swipe left", "go left"), isDefault = true),
+            SynonymEntryInfo("scroll right", listOf("swipe right", "go right"), isDefault = true),
+            SynonymEntryInfo("open", listOf("launch", "start", "run", "show"), isDefault = true),
+            SynonymEntryInfo("close", listOf("exit", "quit", "dismiss", "hide"), isDefault = true),
+            SynonymEntryInfo("back", listOf("go back", "return", "previous"), isDefault = true),
+            SynonymEntryInfo("home", listOf("go home", "home screen", "main screen"), isDefault = true),
+            SynonymEntryInfo("search", listOf("find", "look for", "search for"), isDefault = true),
+            SynonymEntryInfo("type", listOf("enter", "input", "write"), isDefault = true),
+            SynonymEntryInfo("delete", listOf("remove", "erase", "clear"), isDefault = true),
+            SynonymEntryInfo("copy", listOf("duplicate"), isDefault = true),
+            SynonymEntryInfo("paste", listOf("insert"), isDefault = true),
+            SynonymEntryInfo("undo", listOf("reverse", "take back"), isDefault = true),
+            SynonymEntryInfo("long press", listOf("long click", "press and hold", "hold"), isDefault = true)
         )
 
         val current = _commands.value
@@ -339,15 +346,22 @@ class DashboardViewModel @Inject constructor(
     }
 
     /**
-     * Adds a user-created custom voice command.
+     * Adds a user-created custom voice command with action binding.
      */
-    fun addCustomCommand(name: String, phrases: List<String>) {
+    fun addCustomCommand(
+        name: String,
+        phrases: List<String>,
+        actionType: CommandActionType = CommandActionType.CUSTOM,
+        actionTarget: String = ""
+    ) {
         if (name.isBlank() || phrases.isEmpty()) return
         val current = _commands.value
         val newCommand = CustomCommandInfo(
             id = "custom_${System.currentTimeMillis()}",
             name = name,
             phrases = phrases,
+            actionType = actionType,
+            actionTarget = actionTarget,
             isActive = true
         )
         _commands.value = current.copy(

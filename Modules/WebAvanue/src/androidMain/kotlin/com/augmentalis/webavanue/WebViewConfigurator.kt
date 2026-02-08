@@ -250,7 +250,18 @@ class WebViewConfigurator {
                 view: AndroidWebView?,
                 request: WebResourceRequest?
             ): Boolean {
-                // Let WebView handle the URL
+                val url = request?.url?.toString() ?: return false
+                val host = request.url?.host?.lowercase() ?: return false
+
+                // Force device language on Google domains via hl= parameter
+                if (host.contains("google.") && !url.contains("hl=")) {
+                    val locale = java.util.Locale.getDefault()
+                    val separator = if (url.contains("?")) "&" else "?"
+                    val localizedUrl = "$url${separator}hl=${locale.language}"
+                    view?.loadUrl(localizedUrl)
+                    return true
+                }
+
                 return false
             }
 
