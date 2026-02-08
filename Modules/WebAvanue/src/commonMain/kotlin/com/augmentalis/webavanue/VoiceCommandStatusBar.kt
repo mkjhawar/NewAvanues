@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.augmentalis.webavanue.OceanDesignTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Voice command status for the status bar
@@ -47,16 +47,16 @@ fun VoiceCommandStatusBar(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = when (status) {
-        is VoiceCommandStatus.Idle -> OceanDesignTokens.Surface.default
-        is VoiceCommandStatus.Scanning -> OceanDesignTokens.Surface.elevated
-        is VoiceCommandStatus.Ready -> OceanDesignTokens.Surface.elevated
-        is VoiceCommandStatus.Listening -> OceanDesignTokens.Icon.primary.copy(alpha = 0.15f)
-        is VoiceCommandStatus.Processing -> OceanDesignTokens.Icon.warning.copy(alpha = 0.15f)
+        is VoiceCommandStatus.Idle -> AvanueTheme.colors.surface
+        is VoiceCommandStatus.Scanning -> AvanueTheme.colors.surfaceElevated
+        is VoiceCommandStatus.Ready -> AvanueTheme.colors.surfaceElevated
+        is VoiceCommandStatus.Listening -> AvanueTheme.colors.primary.copy(alpha = 0.15f)
+        is VoiceCommandStatus.Processing -> AvanueTheme.colors.warning.copy(alpha = 0.15f)
         is VoiceCommandStatus.Executed -> if (status.success)
-            OceanDesignTokens.Icon.success.copy(alpha = 0.15f)
+            AvanueTheme.colors.success.copy(alpha = 0.15f)
         else
-            OceanDesignTokens.Icon.error.copy(alpha = 0.15f)
-        is VoiceCommandStatus.Error -> OceanDesignTokens.Icon.error.copy(alpha = 0.15f)
+            AvanueTheme.colors.error.copy(alpha = 0.15f)
+        is VoiceCommandStatus.Error -> AvanueTheme.colors.error.copy(alpha = 0.15f)
     }
 
     Surface(
@@ -98,7 +98,7 @@ private fun StatusIndicator(status: VoiceCommandStatus) {
             Icon(
                 Icons.Default.MicOff,
                 contentDescription = "Idle",
-                tint = OceanDesignTokens.Icon.disabled,
+                tint = AvanueTheme.colors.iconDisabled,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -118,7 +118,7 @@ private fun StatusIndicator(status: VoiceCommandStatus) {
             Icon(
                 Icons.Default.Search,
                 contentDescription = "Scanning",
-                tint = OceanDesignTokens.Icon.primary,
+                tint = AvanueTheme.colors.iconPrimary,
                 modifier = Modifier.size(20.dp).scale(scale)
             )
         }
@@ -129,7 +129,7 @@ private fun StatusIndicator(status: VoiceCommandStatus) {
                 Icon(
                     Icons.Default.Mic,
                     contentDescription = "Ready",
-                    tint = OceanDesignTokens.Icon.success,
+                    tint = AvanueTheme.colors.success,
                     modifier = Modifier.size(20.dp)
                 )
                 // Command count badge
@@ -140,7 +140,7 @@ private fun StatusIndicator(status: VoiceCommandStatus) {
                             .offset(x = 8.dp, y = (-4).dp)
                             .size(16.dp)
                             .clip(CircleShape)
-                            .background(OceanDesignTokens.Icon.primary),
+                            .background(AvanueTheme.colors.primary),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -170,7 +170,7 @@ private fun StatusIndicator(status: VoiceCommandStatus) {
             Icon(
                 Icons.Default.Mic,
                 contentDescription = "Listening",
-                tint = OceanDesignTokens.Icon.primary,
+                tint = AvanueTheme.colors.iconPrimary,
                 modifier = Modifier.size(20.dp).scale(scale)
             )
         }
@@ -180,7 +180,7 @@ private fun StatusIndicator(status: VoiceCommandStatus) {
             CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
                 strokeWidth = 2.dp,
-                color = OceanDesignTokens.Icon.warning
+                color = AvanueTheme.colors.warning
             )
         }
 
@@ -188,7 +188,7 @@ private fun StatusIndicator(status: VoiceCommandStatus) {
             Icon(
                 if (status.success) Icons.Default.CheckCircle else Icons.Default.Cancel,
                 contentDescription = if (status.success) "Success" else "Failed",
-                tint = if (status.success) OceanDesignTokens.Icon.success else OceanDesignTokens.Icon.error,
+                tint = if (status.success) AvanueTheme.colors.success else AvanueTheme.colors.error,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -197,7 +197,7 @@ private fun StatusIndicator(status: VoiceCommandStatus) {
             Icon(
                 Icons.Default.Error,
                 contentDescription = "Error",
-                tint = OceanDesignTokens.Icon.error,
+                tint = AvanueTheme.colors.error,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -231,10 +231,10 @@ private fun StatusText(
     val color = when (status) {
         is VoiceCommandStatus.Error,
         is VoiceCommandStatus.Executed -> if (status is VoiceCommandStatus.Executed && status.success)
-            OceanDesignTokens.Text.primary
+            AvanueTheme.colors.textPrimary
         else
-            OceanDesignTokens.Icon.error
-        else -> OceanDesignTokens.Text.primary
+            AvanueTheme.colors.error
+        else -> AvanueTheme.colors.textPrimary
     }
 
     Text(
@@ -265,7 +265,7 @@ private fun ActionHint(status: VoiceCommandStatus) {
         Text(
             text = hint,
             style = MaterialTheme.typography.labelSmall,
-            color = OceanDesignTokens.Text.secondary
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -290,7 +290,7 @@ fun VoiceCommandStatusPanel(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        color = OceanDesignTokens.Surface.default,
+        color = AvanueTheme.colors.surface,
         tonalElevation = 8.dp
     ) {
         Column(
@@ -308,13 +308,13 @@ fun VoiceCommandStatusPanel(
                     text = "Voice Commands",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = OceanDesignTokens.Text.primary
+                    color = AvanueTheme.colors.textPrimary
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = OceanDesignTokens.Icon.secondary
+                        tint = AvanueTheme.colors.iconSecondary
                     )
                 }
             }
@@ -325,7 +325,7 @@ fun VoiceCommandStatusPanel(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = OceanDesignTokens.Surface.elevated
+                color = AvanueTheme.colors.surfaceElevated
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -344,7 +344,7 @@ fun VoiceCommandStatusPanel(
                 Text(
                     text = "Recent Commands",
                     style = MaterialTheme.typography.titleSmall,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 recentCommands.take(3).forEach { command ->
@@ -357,14 +357,14 @@ fun VoiceCommandStatusPanel(
                         Icon(
                             Icons.Default.History,
                             contentDescription = null,
-                            tint = OceanDesignTokens.Icon.secondary,
+                            tint = AvanueTheme.colors.iconSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "\"$command\"",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = OceanDesignTokens.Text.primary
+                            color = AvanueTheme.colors.textPrimary
                         )
                     }
                 }
@@ -376,7 +376,7 @@ fun VoiceCommandStatusPanel(
                 Text(
                     text = "Try saying...",
                     style = MaterialTheme.typography.titleSmall,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 availableCommands.take(5).forEach { command ->
@@ -384,12 +384,12 @@ fun VoiceCommandStatusPanel(
                         modifier = Modifier
                             .padding(vertical = 2.dp),
                         shape = RoundedCornerShape(8.dp),
-                        color = OceanDesignTokens.Icon.primary.copy(alpha = 0.1f)
+                        color = AvanueTheme.colors.primary.copy(alpha = 0.1f)
                     ) {
                         Text(
                             text = "\"$command\"",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = OceanDesignTokens.Icon.primary,
+                            color = AvanueTheme.colors.primary,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
@@ -422,14 +422,14 @@ fun VoiceCommandStatusPanel(
                     Icon(
                         Icons.Default.Lightbulb,
                         contentDescription = null,
-                        tint = OceanDesignTokens.Icon.warning,
+                        tint = AvanueTheme.colors.warning,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Save this site for faster voice commands",
                         style = MaterialTheme.typography.bodySmall,
-                        color = OceanDesignTokens.Text.secondary,
+                        color = AvanueTheme.colors.textSecondary,
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(onClick = onSaveWebApp) {
@@ -474,7 +474,7 @@ fun VoiceCommandBadge(
         onClick = onClick,
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
-        color = OceanDesignTokens.Surface.elevated.copy(alpha = 0.9f * alpha),
+        color = AvanueTheme.colors.surfaceElevated.copy(alpha = 0.9f * alpha),
         tonalElevation = 4.dp
     ) {
         Row(
@@ -485,9 +485,9 @@ fun VoiceCommandBadge(
                 if (isScanning) Icons.Default.Search else Icons.Default.Mic,
                 contentDescription = null,
                 tint = if (isScanning)
-                    OceanDesignTokens.Icon.warning
+                    AvanueTheme.colors.warning
                 else
-                    OceanDesignTokens.Icon.success,
+                    AvanueTheme.colors.success,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -495,7 +495,7 @@ fun VoiceCommandBadge(
                 text = if (isScanning) "..." else commandCount.toString(),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = OceanDesignTokens.Text.primary
+                color = AvanueTheme.colors.textPrimary
             )
         }
     }

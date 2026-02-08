@@ -20,8 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
-import com.avanueui.OceanTheme
-import com.augmentalis.webavanue.OceanDesignTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.ShapeTokens
 
 /**
  * Voice command category
@@ -122,7 +122,7 @@ fun VoiceCommandsDialog(
                 .widthIn(min = 320.dp, max = 480.dp)
                 .heightIn(max = 600.dp),
             shape = RoundedCornerShape(16.dp),
-            color = OceanDesignTokens.Surface.default,
+            color = AvanueTheme.colors.surface,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -137,13 +137,13 @@ fun VoiceCommandsDialog(
                     Text(
                         text = "Voice Commands",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = OceanDesignTokens.Text.primary
+                        color = AvanueTheme.colors.textPrimary
                     )
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = OceanDesignTokens.Text.secondary
+                            tint = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -196,10 +196,10 @@ private fun CategoryButton(
             .fillMaxWidth()
             .height(72.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = OceanDesignTokens.Surface.elevated,
-            contentColor = OceanDesignTokens.Text.primary
+            containerColor = AvanueTheme.colors.surfaceElevated,
+            contentColor = AvanueTheme.colors.textPrimary
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(ShapeTokens.md)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -210,7 +210,7 @@ private fun CategoryButton(
                 imageVector = category.icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = OceanDesignTokens.Icon.primary
+                tint = AvanueTheme.colors.iconPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -249,13 +249,13 @@ private fun CommandsView(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = OceanDesignTokens.Text.secondary
+                        tint = AvanueTheme.colors.textSecondary
                     )
                 }
                 Text(
                     text = category.title,
                     style = MaterialTheme.typography.titleLarge,
-                    color = OceanDesignTokens.Text.primary
+                    color = AvanueTheme.colors.textPrimary
                 )
             }
 
@@ -307,9 +307,9 @@ private fun CommandItemCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.outlinedCardColors(
-            containerColor = OceanDesignTokens.Surface.elevated
+            containerColor = AvanueTheme.colors.surfaceElevated
         ),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(ShapeTokens.sm)
     ) {
         Row(
             modifier = Modifier
@@ -322,7 +322,7 @@ private fun CommandItemCard(
                 Text(
                     text = command.command,
                     style = MaterialTheme.typography.titleSmall,
-                    color = OceanDesignTokens.Icon.primary,
+                    color = AvanueTheme.colors.iconPrimary,
                     fontSize = 14.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -330,7 +330,7 @@ private fun CommandItemCard(
                 Text(
                     text = command.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = OceanDesignTokens.Text.secondary,
+                    color = AvanueTheme.colors.textSecondary,
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -339,7 +339,7 @@ private fun CommandItemCard(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = OceanDesignTokens.Text.secondary,
+                tint = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.size(20.dp)
             )
         }

@@ -16,10 +16,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.ShapeTokens
+import com.augmentalis.avanueui.tokens.SpacingTokens
+import com.augmentalis.avanueui.tokens.ElevationTokens
 import com.augmentalis.webavanue.AppIcon
 import com.augmentalis.webavanue.IconVariant
-import com.augmentalis.webavanue.OceanDesignTokens
 
 /**
  * CommandButton - Standard command button with icon and label
@@ -38,7 +40,7 @@ fun CommandButton(
     onClick: () -> Unit,
     onFocus: () -> Unit,
     onBlur: () -> Unit,
-    backgroundColor: Color = OceanDesignTokens.Surface.elevated,
+    backgroundColor: Color = AvanueTheme.colors.surfaceElevated,
     isActive: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -49,15 +51,15 @@ fun CommandButton(
         modifier = modifier
             .width(46.dp)
             .height(46.dp),
-        shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.md),
-        color = if (isActive) OceanDesignTokens.Surface.primary else backgroundColor,
-        border = BorderStroke(1.dp, OceanDesignTokens.Border.default),
-        shadowElevation = OceanDesignTokens.Elevation.sm
+        shape = RoundedCornerShape(ShapeTokens.sm),
+        color = if (isActive) AvanueTheme.colors.primary else backgroundColor,
+        border = BorderStroke(1.dp, AvanueTheme.colors.border),
+        shadowElevation = ElevationTokens.sm
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(OceanDesignTokens.Spacing.xs),
+                .padding(SpacingTokens.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -71,7 +73,7 @@ fun CommandButton(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isActive) OceanDesignTokens.Text.onPrimary else OceanDesignTokens.Text.secondary,
+                color = if (isActive) AvanueTheme.colors.textOnPrimary else AvanueTheme.colors.textSecondary,
                 maxLines = 1
             )
         }
@@ -94,10 +96,10 @@ fun ZoomLevelButton(
         modifier = modifier
             .width(48.dp)
             .height(48.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = OceanTheme.surfaceElevated,
-        border = BorderStroke(1.dp, OceanTheme.border),
-        shadowElevation = 2.dp
+        shape = RoundedCornerShape(ShapeTokens.md),
+        color = AvanueTheme.colors.surfaceElevated,
+        border = BorderStroke(1.dp, AvanueTheme.colors.border),
+        shadowElevation = ElevationTokens.sm
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -106,7 +108,7 @@ fun ZoomLevelButton(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                color = OceanTheme.textPrimary
+                color = AvanueTheme.colors.textPrimary
             )
         }
     }
@@ -121,8 +123,8 @@ fun VoiceButton(
     onClick: () -> Unit,
     onFocus: () -> Unit,
     onBlur: () -> Unit,
-    activeColor: Color = OceanTheme.primary,
-    backgroundColor: Color = OceanTheme.surfaceElevated,
+    activeColor: Color = AvanueTheme.colors.primary,
+    backgroundColor: Color = AvanueTheme.colors.surfaceElevated,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "voice_pulse")
@@ -159,7 +161,7 @@ fun VoiceButton(
             Icon(
                 imageVector = Icons.Default.Mic,
                 contentDescription = if (isListening) "Stop listening" else "Voice input",
-                tint = OceanTheme.textPrimary,
+                tint = AvanueTheme.colors.textPrimary,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -175,8 +177,8 @@ fun DesktopModeButton(
     onClick: () -> Unit,
     onFocus: () -> Unit,
     onBlur: () -> Unit,
-    activeColor: Color = OceanTheme.primary,
-    backgroundColor: Color = OceanTheme.surfaceElevated,
+    activeColor: Color = AvanueTheme.colors.primary,
+    backgroundColor: Color = AvanueTheme.colors.surfaceElevated,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -184,29 +186,29 @@ fun DesktopModeButton(
         modifier = modifier
             .width(48.dp)
             .height(48.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ShapeTokens.md),
         color = if (isDesktopMode) activeColor else backgroundColor,
-        border = BorderStroke(1.dp, OceanTheme.border),
-        shadowElevation = 2.dp
+        border = BorderStroke(1.dp, AvanueTheme.colors.border),
+        shadowElevation = ElevationTokens.sm
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(4.dp),
+                .padding(SpacingTokens.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = if (isDesktopMode) Icons.Default.PhoneAndroid else Icons.Default.Laptop,
                 contentDescription = if (isDesktopMode) "Exit Desktop Mode" else "Enter Desktop Mode",
-                tint = if (isDesktopMode) OceanTheme.textOnPrimary else OceanTheme.textPrimary,
+                tint = if (isDesktopMode) AvanueTheme.colors.textOnPrimary else AvanueTheme.colors.textPrimary,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = if (isDesktopMode) "Mobile" else "Desktop",
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isDesktopMode) OceanTheme.textOnPrimary else OceanTheme.textSecondary,
+                color = if (isDesktopMode) AvanueTheme.colors.textOnPrimary else AvanueTheme.colors.textSecondary,
                 maxLines = 1
             )
         }

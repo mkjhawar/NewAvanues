@@ -19,11 +19,12 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.webavanue.AppIcon
 import com.augmentalis.webavanue.AppIconButton
 import com.augmentalis.webavanue.AppSurface
 import com.augmentalis.webavanue.IconVariant
-import com.augmentalis.webavanue.OceanDesignTokens
 import com.augmentalis.webavanue.SurfaceVariant
 
 /**
@@ -86,24 +87,24 @@ fun FindInPageBar(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = OceanDesignTokens.Spacing.md),
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
         ) {
             // Search input field
             Surface(
                 modifier = Modifier
                     .weight(1f)
                     .height(40.dp),
-                color = OceanDesignTokens.Surface.input,
+                color = AvanueTheme.colors.surfaceInput,
                 shape = MaterialTheme.shapes.medium
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = OceanDesignTokens.Spacing.md),
+                        .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
                 ) {
                     // Search input
                     BasicTextField(
@@ -114,9 +115,9 @@ fun FindInPageBar(
                             .focusRequester(focusRequester),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = OceanDesignTokens.Text.primary
+                            color = AvanueTheme.colors.textPrimary
                         ),
-                        cursorBrush = SolidColor(OceanDesignTokens.Surface.primary),
+                        cursorBrush = SolidColor(AvanueTheme.colors.primary),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(
                             onNext = { onNext() }
@@ -126,7 +127,7 @@ fun FindInPageBar(
                                 Text(
                                     text = "Find in page",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = OceanDesignTokens.Text.secondary
+                                    color = AvanueTheme.colors.textSecondary
                                 )
                             }
                             innerTextField()
@@ -144,7 +145,7 @@ fun FindInPageBar(
                                 ""
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }

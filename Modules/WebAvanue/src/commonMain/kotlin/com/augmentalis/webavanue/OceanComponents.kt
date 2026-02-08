@@ -1,6 +1,7 @@
 package com.augmentalis.webavanue
 
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.theme.OceanColors
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -446,13 +447,13 @@ fun AppIcon(
     modifier: Modifier = Modifier
 ) {
     val tint = when (variant) {
-        IconVariant.Primary -> OceanDesignTokens.Icon.primary
-        IconVariant.Secondary -> OceanDesignTokens.Icon.secondary
-        IconVariant.Disabled -> OceanDesignTokens.Icon.disabled
-        IconVariant.Success -> OceanDesignTokens.Icon.success
-        IconVariant.Warning -> OceanDesignTokens.Icon.warning
-        IconVariant.Error -> OceanDesignTokens.Icon.error
-        IconVariant.OnPrimary -> OceanDesignTokens.Icon.onPrimary
+        IconVariant.Primary -> AvanueTheme.colors.iconPrimary
+        IconVariant.Secondary -> AvanueTheme.colors.iconSecondary
+        IconVariant.Disabled -> AvanueTheme.colors.iconDisabled
+        IconVariant.Success -> AvanueTheme.colors.success
+        IconVariant.Warning -> AvanueTheme.colors.warning
+        IconVariant.Error -> AvanueTheme.colors.error
+        IconVariant.OnPrimary -> AvanueTheme.colors.textOnPrimary
     }
     Icon(
         imageVector = imageVector,
@@ -492,10 +493,10 @@ fun AppSurface(
     content: @Composable () -> Unit
 ) {
     val surfaceColor = when (variant) {
-        SurfaceVariant.Default -> OceanDesignTokens.Surface.default
-        SurfaceVariant.Elevated -> OceanDesignTokens.Surface.elevated
-        SurfaceVariant.Input -> OceanDesignTokens.Surface.input
-        SurfaceVariant.Glass -> OceanDesignTokens.Surface.elevated.copy(alpha = 0.8f)
+        SurfaceVariant.Default -> AvanueTheme.colors.surface
+        SurfaceVariant.Elevated -> AvanueTheme.colors.surfaceElevated
+        SurfaceVariant.Input -> AvanueTheme.colors.surfaceInput
+        SurfaceVariant.Glass -> AvanueTheme.colors.surfaceElevated.copy(alpha = 0.8f)
     }
     val surfaceShape = shape ?: RoundedCornerShape(OceanTokens.CornerRadius)
 
@@ -532,7 +533,7 @@ object OceanComponents {
     fun Text(
         text: String,
         modifier: Modifier = Modifier,
-        color: Color = OceanTheme.textPrimary,
+        color: Color = AvanueTheme.colors.textPrimary,
         style: androidx.compose.ui.text.TextStyle = LocalTextStyle.current
     ) {
         androidx.compose.material3.Text(
@@ -551,7 +552,7 @@ object OceanComponents {
         imageVector: androidx.compose.ui.graphics.vector.ImageVector,
         contentDescription: String?,
         modifier: Modifier = Modifier,
-        tint: Color = OceanTheme.textPrimary
+        tint: Color = AvanueTheme.colors.textPrimary
     ) {
         androidx.compose.material3.Icon(
             imageVector = imageVector,
@@ -572,13 +573,13 @@ object OceanComponents {
         modifier: Modifier = Modifier
     ) {
         val tint = when (variant) {
-            IconVariant.Primary -> OceanDesignTokens.Icon.primary
-            IconVariant.Secondary -> OceanDesignTokens.Icon.secondary
-            IconVariant.Disabled -> OceanDesignTokens.Icon.disabled
-            IconVariant.Success -> OceanDesignTokens.Icon.success
-            IconVariant.Warning -> OceanDesignTokens.Icon.warning
-            IconVariant.Error -> OceanDesignTokens.Icon.error
-            IconVariant.OnPrimary -> OceanDesignTokens.Icon.onPrimary
+            IconVariant.Primary -> AvanueTheme.colors.iconPrimary
+            IconVariant.Secondary -> AvanueTheme.colors.iconSecondary
+            IconVariant.Disabled -> AvanueTheme.colors.iconDisabled
+            IconVariant.Success -> AvanueTheme.colors.success
+            IconVariant.Warning -> AvanueTheme.colors.warning
+            IconVariant.Error -> AvanueTheme.colors.error
+            IconVariant.OnPrimary -> AvanueTheme.colors.textOnPrimary
         }
         androidx.compose.material3.Icon(
             imageVector = imageVector,
@@ -613,7 +614,7 @@ object OceanComponents {
     fun Surface(
         modifier: Modifier = Modifier,
         shape: Shape = RoundedCornerShape(OceanTokens.CornerRadius),
-        color: Color = OceanTheme.surface,
+        color: Color = AvanueTheme.colors.surface,
         onClick: (() -> Unit)? = null,
         content: @Composable () -> Unit
     ) {
@@ -647,10 +648,10 @@ object OceanComponents {
         content: @Composable () -> Unit
     ) {
         val color = when (variant) {
-            SurfaceVariant.Default -> OceanDesignTokens.Surface.default
-            SurfaceVariant.Elevated -> OceanDesignTokens.Surface.elevated
-            SurfaceVariant.Input -> OceanDesignTokens.Surface.input
-            SurfaceVariant.Glass -> OceanDesignTokens.Surface.elevated // Use elevated for glass fallback
+            SurfaceVariant.Default -> AvanueTheme.colors.surface
+            SurfaceVariant.Elevated -> AvanueTheme.colors.surfaceElevated
+            SurfaceVariant.Input -> AvanueTheme.colors.surfaceInput
+            SurfaceVariant.Glass -> AvanueTheme.colors.surfaceElevated // Use elevated for glass fallback
         }
         val actualShape = shape ?: RoundedCornerShape(OceanTokens.CornerRadius)
         if (onClick != null) {
@@ -685,8 +686,8 @@ object OceanComponents {
         androidx.compose.material3.FloatingActionButton(
             onClick = onClick,
             modifier = modifier,
-            containerColor = containerColor ?: OceanTheme.primary,
-            contentColor = contentColor ?: OceanTheme.textOnPrimary,
+            containerColor = containerColor ?: AvanueTheme.colors.primary,
+            contentColor = contentColor ?: AvanueTheme.colors.textOnPrimary,
             content = content
         )
     }

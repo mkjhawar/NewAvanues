@@ -29,11 +29,12 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.ShapeTokens
+import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.webavanue.OceanComponents
-import com.augmentalis.webavanue.OceanDesignTokens
 import com.augmentalis.webavanue.IconVariant
 import com.augmentalis.webavanue.SurfaceVariant
-import com.avanueui.OceanTheme
 import com.augmentalis.webavanue.CompactTabCounterBadge
 import com.augmentalis.webavanue.TabUiState
 import com.augmentalis.webavanue.Favorite
@@ -205,8 +206,8 @@ fun AddressBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(
-                            horizontal = OceanDesignTokens.Spacing.md,
-                            vertical = OceanDesignTokens.Spacing.xs
+                            horizontal = 12.dp,
+                            vertical = SpacingTokens.xs
                         )
                 ) {
                     // Top Row: URL input field - takes full width
@@ -214,24 +215,24 @@ fun AddressBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(36.dp),
-                        color = OceanDesignTokens.Surface.input,
-                        shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.md)
+                        color = AvanueTheme.colors.surfaceInput,
+                        shape = RoundedCornerShape(ShapeTokens.sm)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = OceanDesignTokens.Spacing.sm),
+                                .padding(horizontal = SpacingTokens.sm),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)
+                            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
                         ) {
                             // Bookmark button - smaller for portrait
                             Surface(
                                 modifier = Modifier
                                     .size(24.dp)
-                                    .clip(RoundedCornerShape(OceanDesignTokens.CornerRadius.sm))
+                                    .clip(RoundedCornerShape(ShapeTokens.xs))
                                     .clickable { onAddFavorite() },
-                                shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.sm),
-                                color = if (isFavorite) OceanTheme.starActive.copy(alpha = 0.15f) else Color.Transparent
+                                shape = RoundedCornerShape(ShapeTokens.xs),
+                                color = if (isFavorite) AvanueTheme.colors.starActive.copy(alpha = 0.15f) else Color.Transparent
                             ) {
                                 Box(
                                     contentAlignment = Alignment.Center,
@@ -267,9 +268,9 @@ fun AddressBar(
                                     },
                                 singleLine = true,
                                 textStyle = MaterialTheme.typography.bodySmall.copy(
-                                    color = OceanDesignTokens.Text.primary
+                                    color = AvanueTheme.colors.textPrimary
                                 ),
-                                cursorBrush = SolidColor(OceanDesignTokens.Surface.primary),
+                                cursorBrush = SolidColor(AvanueTheme.colors.primary),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                                 keyboardActions = KeyboardActions(
                                     onGo = {
@@ -282,7 +283,7 @@ fun AddressBar(
                                         Text(
                                             text = "Enter URL or search",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = OceanDesignTokens.Text.secondary
+                                            color = AvanueTheme.colors.textSecondary
                                         )
                                     }
                                     innerTextField()
@@ -293,7 +294,7 @@ fun AddressBar(
                             Box(
                                 modifier = Modifier
                                     .size(24.dp)
-                                    .clip(RoundedCornerShape(OceanDesignTokens.CornerRadius.sm))
+                                    .clip(RoundedCornerShape(ShapeTokens.xs))
                                     .clickable(onClick = onHistoryClick),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -329,7 +330,7 @@ fun AddressBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(28.dp)
-                            .padding(top = OceanDesignTokens.Spacing.xs),
+                            .padding(top = SpacingTokens.xs),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
@@ -443,11 +444,11 @@ fun AddressBar(
                         .fillMaxWidth()
                         .height(56.dp)
                         .padding(
-                            horizontal = OceanDesignTokens.Spacing.md,
-                            vertical = OceanDesignTokens.Spacing.sm
+                            horizontal = 12.dp,
+                            vertical = SpacingTokens.sm
                         ),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
                 ) {
                     // Back button
                     OceanComponents.IconButton(
@@ -496,24 +497,24 @@ fun AddressBar(
                         modifier = Modifier
                             .weight(1f)
                             .height(40.dp),
-                        color = OceanDesignTokens.Surface.input,
-                        shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.md)
+                        color = AvanueTheme.colors.surfaceInput,
+                        shape = RoundedCornerShape(ShapeTokens.sm)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = OceanDesignTokens.Spacing.sm),
+                                .padding(horizontal = SpacingTokens.sm),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.sm)
+                            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
                         ) {
                             // Bookmark button - tap to add/remove from favorites
                             Surface(
                                 modifier = Modifier
                                     .size(28.dp)
-                                    .clip(RoundedCornerShape(OceanDesignTokens.CornerRadius.md))
+                                    .clip(RoundedCornerShape(ShapeTokens.sm))
                                     .clickable { onAddFavorite() },
-                                shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.md),
-                                color = if (isFavorite) OceanTheme.starActive.copy(alpha = 0.15f) else Color.Transparent
+                                shape = RoundedCornerShape(ShapeTokens.sm),
+                                color = if (isFavorite) AvanueTheme.colors.starActive.copy(alpha = 0.15f) else Color.Transparent
                             ) {
                                 Box(
                                     contentAlignment = Alignment.Center,
@@ -549,9 +550,9 @@ fun AddressBar(
                                     },
                                 singleLine = true,
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    color = OceanDesignTokens.Text.primary
+                                    color = AvanueTheme.colors.textPrimary
                                 ),
-                                cursorBrush = SolidColor(OceanDesignTokens.Surface.primary),
+                                cursorBrush = SolidColor(AvanueTheme.colors.primary),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                                 keyboardActions = KeyboardActions(
                                     onGo = {
@@ -564,7 +565,7 @@ fun AddressBar(
                                         Text(
                                             text = "Enter URL or search",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = OceanDesignTokens.Text.secondary
+                                            color = AvanueTheme.colors.textSecondary
                                         )
                                     }
                                     innerTextField()
@@ -575,7 +576,7 @@ fun AddressBar(
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
-                                    .clip(RoundedCornerShape(OceanDesignTokens.CornerRadius.md))
+                                    .clip(RoundedCornerShape(ShapeTokens.sm))
                                     .clickable(onClick = onHistoryClick),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -592,7 +593,7 @@ fun AddressBar(
                                 isDesktopMode = isDesktopMode,
                                 onClick = onDesktopModeToggle,
                                 modifier = Modifier
-                                    .padding(end = OceanDesignTokens.Spacing.xs)
+                                    .padding(end = SpacingTokens.xs)
                                     .alpha(if (isWebGLSite) 0.5f else 1f)
                             )
 

@@ -14,10 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.avanueui.OceanTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.SpacingTokens
+import com.augmentalis.avanueui.tokens.ShapeTokens
+import com.augmentalis.avanueui.tokens.ElevationTokens
 import com.augmentalis.webavanue.AppIcon
 import com.augmentalis.webavanue.IconVariant
-import com.augmentalis.webavanue.OceanDesignTokens
 import kotlinx.coroutines.delay
 
 /**
@@ -84,13 +86,13 @@ fun NetworkStatusIndicator(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = OceanDesignTokens.Spacing.lg,
-                    vertical = OceanDesignTokens.Spacing.sm
+                    horizontal = SpacingTokens.md,
+                    vertical = SpacingTokens.sm
                 ),
-            color = OceanDesignTokens.Surface.elevated,
-            shape = RoundedCornerShape(OceanDesignTokens.CornerRadius.md),
-            tonalElevation = OceanDesignTokens.Elevation.md,
-            shadowElevation = OceanDesignTokens.Elevation.lg
+            color = AvanueTheme.colors.surfaceElevated,
+            shape = RoundedCornerShape(ShapeTokens.sm),
+            tonalElevation = ElevationTokens.md,
+            shadowElevation = ElevationTokens.lg
         ) {
             Column {
                 NetworkStatusContent(status = status)
@@ -139,8 +141,8 @@ private fun ColumnScope.NetworkStatusContent(status: NetworkStatus) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(OceanDesignTokens.Spacing.lg),
-        horizontalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.md),
+            .padding(SpacingTokens.md),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Icon with optional rotation animation for reconnecting
@@ -177,17 +179,17 @@ private fun ColumnScope.NetworkStatusContent(status: NetworkStatus) {
         // Text content
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(OceanDesignTokens.Spacing.xs)
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = OceanDesignTokens.Text.primary
+                color = AvanueTheme.colors.textPrimary
             )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
-                color = OceanDesignTokens.Text.secondary
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }

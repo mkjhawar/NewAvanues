@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.augmentalis.webavanue.OceanDesignTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
 import kotlinx.coroutines.delay
 
 /**
@@ -55,7 +55,7 @@ fun DOMScrapingBar(
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = OceanDesignTokens.Surface.elevated,
+            color = AvanueTheme.colors.surfaceElevated,
             tonalElevation = 2.dp
         ) {
             Column {
@@ -79,7 +79,7 @@ fun DOMScrapingBar(
                     Icon(
                         Icons.Default.Radar,
                         contentDescription = "Scanning",
-                        tint = OceanDesignTokens.Icon.primary,
+                        tint = AvanueTheme.colors.iconPrimary,
                         modifier = Modifier
                             .size(18.dp)
                             .graphicsLayer { rotationZ = rotation }
@@ -90,7 +90,7 @@ fun DOMScrapingBar(
                     Text(
                         text = "Scanning page for voice commands...",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = OceanDesignTokens.Text.primary
+                        color = AvanueTheme.colors.textPrimary
                     )
                 }
 
@@ -99,14 +99,14 @@ fun DOMScrapingBar(
                     LinearProgressIndicator(
                         progress = { state.progress },
                         modifier = Modifier.fillMaxWidth(),
-                        color = OceanDesignTokens.Icon.primary,
-                        trackColor = OceanDesignTokens.Surface.default
+                        color = AvanueTheme.colors.iconPrimary,
+                        trackColor = AvanueTheme.colors.surface
                     )
                 } else {
                     LinearProgressIndicator(
                         modifier = Modifier.fillMaxWidth(),
-                        color = OceanDesignTokens.Icon.primary,
-                        trackColor = OceanDesignTokens.Surface.default
+                        color = AvanueTheme.colors.iconPrimary,
+                        trackColor = AvanueTheme.colors.surface
                     )
                 }
             }
@@ -154,7 +154,7 @@ fun DOMScrapingChip(
                 Surface(
                     onClick = onClick,
                     shape = RoundedCornerShape(16.dp),
-                    color = OceanDesignTokens.Icon.primary.copy(alpha = 0.15f),
+                    color = AvanueTheme.colors.iconPrimary.copy(alpha = 0.15f),
                     modifier = Modifier.scale(pulse)
                 ) {
                     Row(
@@ -164,13 +164,13 @@ fun DOMScrapingChip(
                         CircularProgressIndicator(
                             modifier = Modifier.size(14.dp),
                             strokeWidth = 2.dp,
-                            color = OceanDesignTokens.Icon.primary
+                            color = AvanueTheme.colors.iconPrimary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Scanning...",
                             style = MaterialTheme.typography.labelMedium,
-                            color = OceanDesignTokens.Icon.primary
+                            color = AvanueTheme.colors.iconPrimary
                         )
                     }
                 }
@@ -180,7 +180,7 @@ fun DOMScrapingChip(
                 Surface(
                     onClick = onClick,
                     shape = RoundedCornerShape(16.dp),
-                    color = OceanDesignTokens.Icon.success.copy(alpha = 0.15f)
+                    color = AvanueTheme.colors.success.copy(alpha = 0.15f)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -189,21 +189,21 @@ fun DOMScrapingChip(
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = OceanDesignTokens.Icon.success,
+                            tint = AvanueTheme.colors.success,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "${currentState.commandCount} commands",
                             style = MaterialTheme.typography.labelMedium,
-                            color = OceanDesignTokens.Icon.success
+                            color = AvanueTheme.colors.success
                         )
                         if (currentState.isWhitelisted) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 Icons.Default.Star,
                                 contentDescription = "Saved",
-                                tint = OceanDesignTokens.Icon.warning,
+                                tint = AvanueTheme.colors.warning,
                                 modifier = Modifier.size(12.dp)
                             )
                         }
@@ -215,7 +215,7 @@ fun DOMScrapingChip(
                 Surface(
                     onClick = onClick,
                     shape = RoundedCornerShape(16.dp),
-                    color = OceanDesignTokens.Icon.error.copy(alpha = 0.15f)
+                    color = AvanueTheme.colors.error.copy(alpha = 0.15f)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -224,14 +224,14 @@ fun DOMScrapingChip(
                         Icon(
                             Icons.Default.Error,
                             contentDescription = null,
-                            tint = OceanDesignTokens.Icon.error,
+                            tint = AvanueTheme.colors.error,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Scan failed",
                             style = MaterialTheme.typography.labelMedium,
-                            color = OceanDesignTokens.Icon.error
+                            color = AvanueTheme.colors.error
                         )
                     }
                 }
@@ -272,7 +272,7 @@ fun ScanCompleteToast(
         state?.let { s ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = OceanDesignTokens.Surface.elevated,
+                color = AvanueTheme.colors.surfaceElevated,
                 tonalElevation = 6.dp
             ) {
                 Row(
@@ -282,7 +282,7 @@ fun ScanCompleteToast(
                     Icon(
                         Icons.Default.Mic,
                         contentDescription = null,
-                        tint = OceanDesignTokens.Icon.success,
+                        tint = AvanueTheme.colors.success,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -291,13 +291,13 @@ fun ScanCompleteToast(
                             text = "${s.commandCount} voice commands ready",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
-                            color = OceanDesignTokens.Text.primary
+                            color = AvanueTheme.colors.textPrimary
                         )
                         Text(
                             text = "${s.elementCount} elements scanned" +
                                 if (s.isWhitelisted) " (saved)" else "",
                             style = MaterialTheme.typography.bodySmall,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -376,7 +376,7 @@ fun ScanningOverlay(
                         .scale(adjustedScale)
                         .clip(CircleShape)
                         .background(
-                            OceanDesignTokens.Icon.primary.copy(alpha = adjustedAlpha)
+                            AvanueTheme.colors.iconPrimary.copy(alpha = adjustedAlpha)
                         )
                 )
             }
@@ -386,7 +386,7 @@ fun ScanningOverlay(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .background(OceanDesignTokens.Surface.elevated),
+                    .background(AvanueTheme.colors.surfaceElevated),
                 contentAlignment = Alignment.Center
             ) {
                 val rotation by infiniteTransition.animateFloat(
@@ -401,7 +401,7 @@ fun ScanningOverlay(
                 Icon(
                     Icons.Default.Radar,
                     contentDescription = "Scanning",
-                    tint = OceanDesignTokens.Icon.primary,
+                    tint = AvanueTheme.colors.iconPrimary,
                     modifier = Modifier
                         .size(32.dp)
                         .graphicsLayer { rotationZ = rotation }
@@ -444,7 +444,7 @@ fun ScanningDot(
                 .size(8.dp)
                 .scale(scale)
                 .clip(CircleShape)
-                .background(OceanDesignTokens.Icon.primary)
+                .background(AvanueTheme.colors.iconPrimary)
         )
     }
 }

@@ -21,7 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.augmentalis.webavanue.OceanDesignTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.ShapeTokens
+import com.augmentalis.avanueui.tokens.SpacingTokens
 import kotlinx.coroutines.launch
 
 /**
@@ -85,7 +87,7 @@ fun WebAppWhitelistScreen(
                         Text(
                             text = "${entries.count { it.isEnabled }} active",
                             style = MaterialTheme.typography.bodySmall,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 },
@@ -101,7 +103,7 @@ fun WebAppWhitelistScreen(
                             Icon(
                                 Icons.Default.AddCircle,
                                 contentDescription = "Save current site",
-                                tint = OceanDesignTokens.Icon.success
+                                tint = AvanueTheme.colors.success
                             )
                         }
                     }
@@ -110,7 +112,7 @@ fun WebAppWhitelistScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = OceanDesignTokens.Surface.default
+                    containerColor = AvanueTheme.colors.surface
                 )
             )
         },
@@ -118,8 +120,8 @@ fun WebAppWhitelistScreen(
             if (currentDomain != null && !currentDomainWhitelisted) {
                 ExtendedFloatingActionButton(
                     onClick = { showAddCurrentDomainPrompt = true },
-                    containerColor = OceanDesignTokens.Surface.elevated,
-                    contentColor = OceanDesignTokens.Text.primary,
+                    containerColor = AvanueTheme.colors.surfaceElevated,
+                    contentColor = AvanueTheme.colors.textPrimary,
                     icon = { Icon(Icons.Default.Add, null) },
                     text = { Text("Save This Site") }
                 )
@@ -136,18 +138,18 @@ fun WebAppWhitelistScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = OceanDesignTokens.Surface.elevated
+                    .padding(SpacingTokens.md),
+                shape = RoundedCornerShape(ShapeTokens.md),
+                color = AvanueTheme.colors.surfaceElevated
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(SpacingTokens.md),
                     verticalAlignment = Alignment.Top
                 ) {
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        tint = OceanDesignTokens.Icon.primary,
+                        tint = AvanueTheme.colors.iconPrimary,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -155,13 +157,13 @@ fun WebAppWhitelistScreen(
                         Text(
                             text = "Voice commands for saved web apps load instantly",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = OceanDesignTokens.Text.primary
+                            color = AvanueTheme.colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Commands are cached locally and verified on each visit.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -172,7 +174,7 @@ fun WebAppWhitelistScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(32.dp),
+                        .padding(SpacingTokens.xl),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -182,19 +184,19 @@ fun WebAppWhitelistScreen(
                             Icons.Default.WebAsset,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = OceanDesignTokens.Icon.disabled
+                            tint = AvanueTheme.colors.iconDisabled
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(SpacingTokens.md))
                         Text(
                             text = "No saved web apps",
                             style = MaterialTheme.typography.titleMedium,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(SpacingTokens.sm))
                         Text(
                             text = "Add frequently visited sites to speed up voice commands",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -202,8 +204,8 @@ fun WebAppWhitelistScreen(
                 // Whitelist entries
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(horizontal = SpacingTokens.md, vertical = SpacingTokens.sm),
+                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
                 ) {
                     items(entries, key = { it.id }) { entry ->
                         WhitelistEntryCard(
@@ -257,22 +259,22 @@ private fun WhitelistEntryCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ShapeTokens.md),
         colors = CardDefaults.cardColors(
             containerColor = if (isCurrentDomain)
-                OceanDesignTokens.Surface.elevated
+                AvanueTheme.colors.surfaceElevated
             else
-                OceanDesignTokens.Surface.default
+                AvanueTheme.colors.surface
         ),
         border = if (isCurrentDomain)
-            androidx.compose.foundation.BorderStroke(2.dp, OceanDesignTokens.Icon.primary)
+            androidx.compose.foundation.BorderStroke(2.dp, AvanueTheme.colors.iconPrimary)
         else
             null
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(SpacingTokens.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Category icon
@@ -280,7 +282,7 @@ private fun WhitelistEntryCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(OceanDesignTokens.Surface.elevated),
+                    .background(AvanueTheme.colors.surfaceElevated),
                 contentAlignment = Alignment.Center
             ) {
                 val category = entry.category?.let { cat ->
@@ -291,14 +293,14 @@ private fun WhitelistEntryCard(
                     imageVector = category.icon,
                     contentDescription = null,
                     tint = if (entry.isEnabled)
-                        OceanDesignTokens.Icon.primary
+                        AvanueTheme.colors.iconPrimary
                     else
-                        OceanDesignTokens.Icon.disabled,
+                        AvanueTheme.colors.iconDisabled,
                     modifier = Modifier.size(24.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(SpacingTokens.md))
 
             // Entry details
             Column(modifier = Modifier.weight(1f)) {
@@ -308,22 +310,22 @@ private fun WhitelistEntryCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium,
                         color = if (entry.isEnabled)
-                            OceanDesignTokens.Text.primary
+                            AvanueTheme.colors.textPrimary
                         else
-                            OceanDesignTokens.Text.disabled,
+                            AvanueTheme.colors.textDisabled,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (isCurrentDomain) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(SpacingTokens.sm))
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = OceanDesignTokens.Icon.primary.copy(alpha = 0.2f)
+                            shape = RoundedCornerShape(ShapeTokens.xs),
+                            color = AvanueTheme.colors.iconPrimary.copy(alpha = 0.2f)
                         ) {
                             Text(
                                 text = "CURRENT",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = OceanDesignTokens.Icon.primary,
+                                color = AvanueTheme.colors.iconPrimary,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -333,7 +335,7 @@ private fun WhitelistEntryCard(
                 Text(
                     text = entry.domain,
                     style = MaterialTheme.typography.bodySmall,
-                    color = OceanDesignTokens.Text.secondary,
+                    color = AvanueTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -341,20 +343,20 @@ private fun WhitelistEntryCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.Mic,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = OceanDesignTokens.Icon.secondary
+                            tint = AvanueTheme.colors.iconSecondary
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${entry.commandCount} commands",
                             style = MaterialTheme.typography.labelSmall,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
 
@@ -364,13 +366,13 @@ private fun WhitelistEntryCard(
                                 Icons.Default.Visibility,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = OceanDesignTokens.Icon.secondary
+                                tint = AvanueTheme.colors.iconSecondary
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "${entry.visitCount} visits",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = OceanDesignTokens.Text.secondary
+                                color = AvanueTheme.colors.textSecondary
                             )
                         }
                     }
@@ -382,8 +384,8 @@ private fun WhitelistEntryCard(
                 checked = entry.isEnabled,
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = OceanDesignTokens.Icon.success,
-                    checkedTrackColor = OceanDesignTokens.Icon.success.copy(alpha = 0.3f)
+                    checkedThumbColor = AvanueTheme.colors.success,
+                    checkedTrackColor = AvanueTheme.colors.success.copy(alpha = 0.3f)
                 )
             )
 
@@ -391,7 +393,7 @@ private fun WhitelistEntryCard(
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "Remove",
-                    tint = OceanDesignTokens.Icon.error
+                    tint = AvanueTheme.colors.error
                 )
             }
         }
@@ -401,7 +403,7 @@ private fun WhitelistEntryCard(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            icon = { Icon(Icons.Default.Warning, null, tint = OceanDesignTokens.Icon.warning) },
+            icon = { Icon(Icons.Default.Warning, null, tint = AvanueTheme.colors.warning) },
             title = { Text("Remove ${entry.displayName}?") },
             text = {
                 Text("This will delete ${entry.commandCount} saved voice commands for this site. You can add it again later.")
@@ -413,7 +415,7 @@ private fun WhitelistEntryCard(
                         showDeleteConfirm = false
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = OceanDesignTokens.Icon.error
+                        contentColor = AvanueTheme.colors.error
                     )
                 ) {
                     Text("Remove")
@@ -457,28 +459,28 @@ private fun AddWebAppDialog(
         Surface(
             modifier = Modifier
                 .widthIn(min = 300.dp, max = 400.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = OceanDesignTokens.Surface.default,
+            shape = RoundedCornerShape(ShapeTokens.lg),
+            color = AvanueTheme.colors.surface,
             tonalElevation = 8.dp
         ) {
             Column(
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier.padding(SpacingTokens.lg)
             ) {
                 Text(
                     text = "Save Web App",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = OceanDesignTokens.Text.primary
+                    color = AvanueTheme.colors.textPrimary
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(SpacingTokens.sm))
 
                 Text(
                     text = "Voice commands for this site will be saved for faster loading.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(SpacingTokens.lg))
 
                 // Domain input
                 OutlinedTextField(
@@ -489,10 +491,10 @@ private fun AddWebAppDialog(
                     leadingIcon = { Icon(Icons.Default.Language, null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(ShapeTokens.md)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(SpacingTokens.md))
 
                 // Display name input
                 OutlinedTextField(
@@ -503,10 +505,10 @@ private fun AddWebAppDialog(
                     leadingIcon = { Icon(Icons.Default.Label, null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(ShapeTokens.md)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(SpacingTokens.md))
 
                 // Category selector
                 ExposedDropdownMenuBox(
@@ -528,7 +530,7 @@ private fun AddWebAppDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .menuAnchor(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(ShapeTokens.md)
                     )
 
                     ExposedDropdownMenu(
@@ -548,7 +550,7 @@ private fun AddWebAppDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(SpacingTokens.lg))
 
                 // Action buttons
                 Row(
@@ -558,7 +560,7 @@ private fun AddWebAppDialog(
                     TextButton(onClick = onDismiss) {
                         Text("Cancel")
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(SpacingTokens.sm))
                     Button(
                         onClick = {
                             if (domain.isNotBlank() && displayName.isNotBlank()) {
@@ -566,10 +568,10 @@ private fun AddWebAppDialog(
                             }
                         },
                         enabled = domain.isNotBlank() && displayName.isNotBlank(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(ShapeTokens.md)
                     ) {
                         Icon(Icons.Default.Save, null)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(SpacingTokens.sm))
                         Text("Save")
                     }
                 }

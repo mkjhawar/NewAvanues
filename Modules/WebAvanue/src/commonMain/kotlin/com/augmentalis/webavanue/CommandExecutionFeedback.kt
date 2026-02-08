@@ -20,7 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.augmentalis.webavanue.OceanDesignTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.ShapeTokens
 import kotlinx.coroutines.delay
 
 /**
@@ -142,7 +143,7 @@ private fun SuccessFeedback(
     Surface(
         modifier = Modifier.widthIn(max = 280.dp),
         shape = RoundedCornerShape(16.dp),
-        color = OceanDesignTokens.Icon.success.copy(alpha = 0.15f),
+        color = AvanueTheme.colors.success.copy(alpha = 0.15f),
         tonalElevation = 8.dp
     ) {
         Column(
@@ -155,13 +156,13 @@ private fun SuccessFeedback(
                     .size(64.dp)
                     .scale(scale)
                     .clip(CircleShape)
-                    .background(OceanDesignTokens.Icon.success.copy(alpha = 0.2f)),
+                    .background(AvanueTheme.colors.success.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.Check,
                     contentDescription = "Success",
-                    tint = OceanDesignTokens.Icon.success,
+                    tint = AvanueTheme.colors.success,
                     modifier = Modifier.size(36.dp)
                 )
             }
@@ -173,7 +174,7 @@ private fun SuccessFeedback(
                 text = "\"$command\"",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = OceanDesignTokens.Text.primary,
+                color = AvanueTheme.colors.textPrimary,
                 textAlign = TextAlign.Center
             )
 
@@ -183,7 +184,7 @@ private fun SuccessFeedback(
             Text(
                 text = if (target != null) "$action: $target" else action,
                 style = MaterialTheme.typography.bodyMedium,
-                color = OceanDesignTokens.Text.secondary,
+                color = AvanueTheme.colors.textSecondary,
                 textAlign = TextAlign.Center
             )
         }
@@ -202,7 +203,7 @@ private fun FailureFeedback(
     Surface(
         modifier = Modifier.widthIn(max = 300.dp),
         shape = RoundedCornerShape(16.dp),
-        color = OceanDesignTokens.Icon.error.copy(alpha = 0.15f),
+        color = AvanueTheme.colors.error.copy(alpha = 0.15f),
         tonalElevation = 8.dp
     ) {
         Column(
@@ -214,13 +215,13 @@ private fun FailureFeedback(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .background(OceanDesignTokens.Icon.error.copy(alpha = 0.2f)),
+                    .background(AvanueTheme.colors.error.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Failed",
-                    tint = OceanDesignTokens.Icon.error,
+                    tint = AvanueTheme.colors.error,
                     modifier = Modifier.size(36.dp)
                 )
             }
@@ -231,7 +232,7 @@ private fun FailureFeedback(
                 text = "\"$command\"",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = OceanDesignTokens.Text.primary,
+                color = AvanueTheme.colors.textPrimary,
                 textAlign = TextAlign.Center
             )
 
@@ -240,7 +241,7 @@ private fun FailureFeedback(
             Text(
                 text = reason,
                 style = MaterialTheme.typography.bodyMedium,
-                color = OceanDesignTokens.Icon.error,
+                color = AvanueTheme.colors.error,
                 textAlign = TextAlign.Center
             )
 
@@ -266,7 +267,7 @@ private fun DisambiguationFeedback(
     Surface(
         modifier = Modifier.widthIn(max = 340.dp),
         shape = RoundedCornerShape(16.dp),
-        color = OceanDesignTokens.Surface.default,
+        color = AvanueTheme.colors.surface,
         tonalElevation = 8.dp
     ) {
         Column(
@@ -282,7 +283,7 @@ private fun DisambiguationFeedback(
                     Icon(
                         Icons.Default.HelpOutline,
                         contentDescription = null,
-                        tint = OceanDesignTokens.Icon.warning,
+                        tint = AvanueTheme.colors.warning,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -290,14 +291,14 @@ private fun DisambiguationFeedback(
                         text = "Which one?",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = OceanDesignTokens.Text.primary
+                        color = AvanueTheme.colors.textPrimary
                     )
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = OceanDesignTokens.Icon.secondary
+                        tint = AvanueTheme.colors.iconSecondary
                     )
                 }
             }
@@ -305,7 +306,7 @@ private fun DisambiguationFeedback(
             Text(
                 text = "\"$command\" matches multiple elements:",
                 style = MaterialTheme.typography.bodyMedium,
-                color = OceanDesignTokens.Text.secondary
+                color = AvanueTheme.colors.textSecondary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -315,8 +316,8 @@ private fun DisambiguationFeedback(
                 Surface(
                     onClick = { onSelect(option.index) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = OceanDesignTokens.Surface.elevated
+                    shape = RoundedCornerShape(ShapeTokens.md),
+                    color = AvanueTheme.colors.surfaceElevated
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -327,7 +328,7 @@ private fun DisambiguationFeedback(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(CircleShape)
-                                .background(OceanDesignTokens.Icon.primary),
+                                .background(AvanueTheme.colors.iconPrimary),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -345,13 +346,13 @@ private fun DisambiguationFeedback(
                                 text = option.text,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
-                                color = OceanDesignTokens.Text.primary,
+                                color = AvanueTheme.colors.textPrimary,
                                 maxLines = 1
                             )
                             Text(
                                 text = "${option.elementType} - ${option.preview}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = OceanDesignTokens.Text.secondary,
+                                color = AvanueTheme.colors.textSecondary,
                                 maxLines = 1
                             )
                         }
@@ -359,7 +360,7 @@ private fun DisambiguationFeedback(
                         Icon(
                             Icons.Default.ChevronRight,
                             contentDescription = null,
-                            tint = OceanDesignTokens.Icon.secondary
+                            tint = AvanueTheme.colors.iconSecondary
                         )
                     }
                 }
@@ -374,7 +375,7 @@ private fun DisambiguationFeedback(
             Text(
                 text = "Say the number or tap to select",
                 style = MaterialTheme.typography.labelSmall,
-                color = OceanDesignTokens.Text.secondary,
+                color = AvanueTheme.colors.textSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -395,7 +396,7 @@ private fun NotFoundFeedback(
     Surface(
         modifier = Modifier.widthIn(max = 320.dp),
         shape = RoundedCornerShape(16.dp),
-        color = OceanDesignTokens.Surface.default,
+        color = AvanueTheme.colors.surface,
         tonalElevation = 8.dp
     ) {
         Column(
@@ -407,13 +408,13 @@ private fun NotFoundFeedback(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .background(OceanDesignTokens.Icon.warning.copy(alpha = 0.2f)),
+                    .background(AvanueTheme.colors.warning.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.QuestionMark,
                     contentDescription = "Not found",
-                    tint = OceanDesignTokens.Icon.warning,
+                    tint = AvanueTheme.colors.warning,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -424,13 +425,13 @@ private fun NotFoundFeedback(
                 text = "\"$command\"",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = OceanDesignTokens.Text.primary
+                color = AvanueTheme.colors.textPrimary
             )
 
             Text(
                 text = "No matching command found",
                 style = MaterialTheme.typography.bodyMedium,
-                color = OceanDesignTokens.Text.secondary
+                color = AvanueTheme.colors.textSecondary
             )
 
             if (suggestions.isNotEmpty()) {
@@ -439,7 +440,7 @@ private fun NotFoundFeedback(
                 Text(
                     text = "Did you mean:",
                     style = MaterialTheme.typography.labelMedium,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -448,13 +449,13 @@ private fun NotFoundFeedback(
                     Surface(
                         onClick = { onRetry?.invoke(suggestion) },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = OceanDesignTokens.Icon.primary.copy(alpha = 0.1f)
+                        shape = RoundedCornerShape(ShapeTokens.sm),
+                        color = AvanueTheme.colors.iconPrimary.copy(alpha = 0.1f)
                     ) {
                         Text(
                             text = "\"$suggestion\"",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = OceanDesignTokens.Icon.primary,
+                            color = AvanueTheme.colors.iconPrimary,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                         )
                     }
@@ -489,7 +490,7 @@ private fun NotFoundFeedback(
 fun CommandToast(
     message: String,
     icon: ImageVector = Icons.Default.Check,
-    iconTint: Color = OceanDesignTokens.Icon.success,
+    iconTint: Color = AvanueTheme.colors.success,
     visible: Boolean,
     onDismiss: () -> Unit,
     autoDismissMs: Long = 1500L,
@@ -510,7 +511,7 @@ fun CommandToast(
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = OceanDesignTokens.Surface.elevated,
+            color = AvanueTheme.colors.surfaceElevated,
             tonalElevation = 6.dp
         ) {
             Row(
@@ -527,7 +528,7 @@ fun CommandToast(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = OceanDesignTokens.Text.primary
+                    color = AvanueTheme.colors.textPrimary
                 )
             }
         }
@@ -566,7 +567,7 @@ fun ListeningIndicator(
         Surface(
             modifier = Modifier.widthIn(max = 280.dp),
             shape = RoundedCornerShape(20.dp),
-            color = OceanDesignTokens.Icon.primary.copy(alpha = 0.15f),
+            color = AvanueTheme.colors.iconPrimary.copy(alpha = 0.15f),
             tonalElevation = 8.dp
         ) {
             Column(
@@ -579,13 +580,13 @@ fun ListeningIndicator(
                         .size(80.dp)
                         .scale(scale)
                         .clip(CircleShape)
-                        .background(OceanDesignTokens.Icon.primary.copy(alpha = 0.2f)),
+                        .background(AvanueTheme.colors.iconPrimary.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.Mic,
                         contentDescription = "Listening",
-                        tint = OceanDesignTokens.Icon.primary,
+                        tint = AvanueTheme.colors.iconPrimary,
                         modifier = Modifier.size(40.dp)
                     )
                 }
@@ -595,7 +596,7 @@ fun ListeningIndicator(
                 Text(
                     text = partialResult ?: "Listening...",
                     style = MaterialTheme.typography.titleMedium,
-                    color = OceanDesignTokens.Text.primary,
+                    color = AvanueTheme.colors.textPrimary,
                     textAlign = TextAlign.Center
                 )
 
@@ -604,7 +605,7 @@ fun ListeningIndicator(
                 Text(
                     text = "Speak your command",
                     style = MaterialTheme.typography.bodySmall,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))

@@ -27,7 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.augmentalis.webavanue.OceanDesignTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.ShapeTokens
 
 /**
  * Web Voice Command for display in help dialog
@@ -112,13 +113,13 @@ fun WebVoiceCommandsDialog(
                 .widthIn(min = 340.dp, max = 500.dp)
                 .heightIn(max = 650.dp),
             shape = RoundedCornerShape(20.dp),
-            color = OceanDesignTokens.Surface.default,
+            color = AvanueTheme.colors.surface,
             tonalElevation = 8.dp
         ) {
             Column {
                 // Header
                 Surface(
-                    color = OceanDesignTokens.Surface.elevated,
+                    color = AvanueTheme.colors.surfaceElevated,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -134,7 +135,7 @@ fun WebVoiceCommandsDialog(
                                     Icon(
                                         Icons.AutoMirrored.Filled.ArrowBack,
                                         contentDescription = "Back",
-                                        tint = OceanDesignTokens.Icon.primary
+                                        tint = AvanueTheme.colors.iconPrimary
                                     )
                                 }
                             }
@@ -144,7 +145,7 @@ fun WebVoiceCommandsDialog(
                                     text = selectedCategory?.title ?: "Voice Commands",
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = OceanDesignTokens.Text.primary,
+                                    color = AvanueTheme.colors.textPrimary,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -169,7 +170,7 @@ fun WebVoiceCommandsDialog(
                                         },
                                         singleLine = true,
                                         modifier = Modifier.widthIn(max = 280.dp),
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = RoundedCornerShape(ShapeTokens.md)
                                     )
                                 }
 
@@ -177,7 +178,7 @@ fun WebVoiceCommandsDialog(
                                     Icon(
                                         if (showSearchField) Icons.Default.Close else Icons.Default.Search,
                                         contentDescription = "Search",
-                                        tint = OceanDesignTokens.Icon.primary
+                                        tint = AvanueTheme.colors.iconPrimary
                                     )
                                 }
 
@@ -185,7 +186,7 @@ fun WebVoiceCommandsDialog(
                                     Icon(
                                         Icons.Default.Close,
                                         contentDescription = "Close",
-                                        tint = OceanDesignTokens.Icon.secondary
+                                        tint = AvanueTheme.colors.iconSecondary
                                     )
                                 }
                             }
@@ -201,26 +202,26 @@ fun WebVoiceCommandsDialog(
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(14.dp),
                                         strokeWidth = 2.dp,
-                                        color = OceanDesignTokens.Icon.primary
+                                        color = AvanueTheme.colors.iconPrimary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "Scanning page...",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = OceanDesignTokens.Text.secondary
+                                        color = AvanueTheme.colors.textSecondary
                                     )
                                 } else {
                                     Icon(
                                         Icons.Default.Mic,
                                         contentDescription = null,
-                                        tint = OceanDesignTokens.Icon.success,
+                                        tint = AvanueTheme.colors.success,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "$commandCount commands ready",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = OceanDesignTokens.Text.secondary
+                                        color = AvanueTheme.colors.textSecondary
                                     )
                                 }
                             }
@@ -294,7 +295,7 @@ private fun CategoriesGrid(
                 onClick = { onCategorySelect(WebCommandCategory.PAGE_ELEMENTS) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = OceanDesignTokens.Icon.primary.copy(alpha = 0.15f)
+                color = AvanueTheme.colors.primary.copy(alpha = 0.15f)
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -304,13 +305,13 @@ private fun CategoriesGrid(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(OceanDesignTokens.Icon.primary.copy(alpha = 0.2f)),
+                            .background(AvanueTheme.colors.primary.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             WebCommandCategory.PAGE_ELEMENTS.icon,
                             contentDescription = null,
-                            tint = OceanDesignTokens.Icon.primary,
+                            tint = AvanueTheme.colors.iconPrimary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -323,12 +324,12 @@ private fun CategoriesGrid(
                                 text = WebCommandCategory.PAGE_ELEMENTS.title,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = OceanDesignTokens.Text.primary
+                                color = AvanueTheme.colors.textPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = OceanDesignTokens.Icon.primary
+                                shape = RoundedCornerShape(ShapeTokens.sm),
+                                color = AvanueTheme.colors.primary
                             ) {
                                 Text(
                                     text = pageCommandCount.toString(),
@@ -342,14 +343,14 @@ private fun CategoriesGrid(
                         Text(
                             text = WebCommandCategory.PAGE_ELEMENTS.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = OceanDesignTokens.Text.secondary
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
 
                     Icon(
                         Icons.Default.ChevronRight,
                         contentDescription = null,
-                        tint = OceanDesignTokens.Icon.primary
+                        tint = AvanueTheme.colors.iconPrimary
                     )
                 }
             }
@@ -388,8 +389,8 @@ private fun CategoryCard(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = OceanDesignTokens.Surface.elevated,
+        shape = RoundedCornerShape(ShapeTokens.md),
+        color = AvanueTheme.colors.surfaceElevated,
         modifier = Modifier.height(100.dp)
     ) {
         Column(
@@ -402,7 +403,7 @@ private fun CategoryCard(
             Icon(
                 category.icon,
                 contentDescription = null,
-                tint = OceanDesignTokens.Icon.primary,
+                tint = AvanueTheme.colors.iconPrimary,
                 modifier = Modifier.size(28.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -410,7 +411,7 @@ private fun CategoryCard(
                 text = category.title,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium,
-                color = OceanDesignTokens.Text.primary,
+                color = AvanueTheme.colors.textPrimary,
                 textAlign = TextAlign.Center,
                 maxLines = 1
             )
@@ -439,18 +440,18 @@ private fun PageElementsView(
                     Icons.Default.SearchOff,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = OceanDesignTokens.Icon.disabled
+                    tint = AvanueTheme.colors.iconDisabled
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "No clickable elements found",
                     style = MaterialTheme.typography.titleMedium,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
                 Text(
                     text = "Try scrolling to reveal more content",
                     style = MaterialTheme.typography.bodySmall,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -470,7 +471,7 @@ private fun PageElementsView(
                         text = type.replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = OceanDesignTokens.Text.secondary,
+                        color = AvanueTheme.colors.textSecondary,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 }
@@ -500,7 +501,7 @@ private fun StaticCommandsView(
         Text(
             text = category.description,
             style = MaterialTheme.typography.bodyMedium,
-            color = OceanDesignTokens.Text.secondary
+            color = AvanueTheme.colors.textSecondary
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -538,7 +539,7 @@ private fun SearchResults(
                     text = "Page Elements",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
             items(pageCommands.take(10)) { command ->
@@ -553,7 +554,7 @@ private fun SearchResults(
                     text = "Browser Commands",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = OceanDesignTokens.Text.secondary
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
             items(staticCommands) { command ->
@@ -570,7 +571,7 @@ private fun SearchResults(
                     Text(
                         text = "No commands found",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = OceanDesignTokens.Text.secondary
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -588,8 +589,8 @@ private fun CommandCard(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = OceanDesignTokens.Surface.elevated
+        shape = RoundedCornerShape(ShapeTokens.md),
+        color = AvanueTheme.colors.surfaceElevated
     ) {
         Row(
             modifier = Modifier
@@ -603,7 +604,7 @@ private fun CommandCard(
                         text = "\"${command.phrase}\"",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
-                        color = OceanDesignTokens.Icon.primary,
+                        color = AvanueTheme.colors.iconPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -613,7 +614,7 @@ private fun CommandCard(
                         Icon(
                             Icons.Default.Star,
                             contentDescription = "Saved",
-                            tint = OceanDesignTokens.Icon.warning,
+                            tint = AvanueTheme.colors.warning,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -622,7 +623,7 @@ private fun CommandCard(
                 Text(
                     text = command.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = OceanDesignTokens.Text.secondary,
+                    color = AvanueTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -631,7 +632,7 @@ private fun CommandCard(
             Icon(
                 Icons.Default.PlayArrow,
                 contentDescription = "Execute",
-                tint = OceanDesignTokens.Icon.secondary,
+                tint = AvanueTheme.colors.iconSecondary,
                 modifier = Modifier.size(20.dp)
             )
         }
