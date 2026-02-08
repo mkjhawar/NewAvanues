@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.foundation.state.ServiceState
 
 /**
@@ -47,11 +48,11 @@ fun PulseDot(
     pulseDurationMs: Int = 2000
 ) {
     val dotColor = when (state) {
-        is ServiceState.Running -> OceanDesignTokens.State.success     // #10B981
-        is ServiceState.Ready -> OceanDesignTokens.State.info          // #3B82F6
-        is ServiceState.Stopped -> OceanDesignTokens.Text.disabled     // #64748B
-        is ServiceState.Error -> OceanDesignTokens.State.error         // #EF4444
-        is ServiceState.Degraded -> OceanDesignTokens.State.warning    // #F59E0B
+        is ServiceState.Running -> AvanueTheme.colors.success     // #10B981
+        is ServiceState.Ready -> AvanueTheme.colors.info          // #3B82F6
+        is ServiceState.Stopped -> AvanueTheme.colors.textDisabled     // #64748B
+        is ServiceState.Error -> AvanueTheme.colors.error         // #EF4444
+        is ServiceState.Degraded -> AvanueTheme.colors.warning    // #F59E0B
     }
 
     val shouldPulse = state is ServiceState.Running ||
@@ -261,11 +262,11 @@ fun StatusBadge(
     modifier: Modifier = Modifier
 ) {
     val (label, color) = when (state) {
-        is ServiceState.Running -> "ACTIVE" to OceanDesignTokens.State.success
-        is ServiceState.Ready -> "READY" to OceanDesignTokens.State.info
-        is ServiceState.Stopped -> "OFF" to OceanDesignTokens.Text.disabled
-        is ServiceState.Error -> "ERROR" to OceanDesignTokens.State.error
-        is ServiceState.Degraded -> "DEGRADED" to OceanDesignTokens.State.warning
+        is ServiceState.Running -> "ACTIVE" to AvanueTheme.colors.success
+        is ServiceState.Ready -> "READY" to AvanueTheme.colors.info
+        is ServiceState.Stopped -> "OFF" to AvanueTheme.colors.textDisabled
+        is ServiceState.Error -> "ERROR" to AvanueTheme.colors.error
+        is ServiceState.Degraded -> "DEGRADED" to AvanueTheme.colors.warning
     }
 
     GlassChip(

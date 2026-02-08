@@ -55,6 +55,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.glass.GlassBorder
+import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * GlassSurface - Base glassmorphic surface component
@@ -79,8 +82,8 @@ fun GlassSurface(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     shape: Shape = GlassDefaults.shape,
-    color: Color = OceanTheme.surface,
-    contentColor: Color = OceanTheme.textPrimary,
+    color: Color = AvanueTheme.colors.surface,
+    contentColor: Color = AvanueTheme.colors.textPrimary,
     tonalElevation: Dp = 0.dp,
     shadowElevation: Dp = 0.dp,
     border: GlassBorder? = GlassDefaults.border,
@@ -195,8 +198,8 @@ fun GlassBubble(
         BubbleAlign.END -> GlassShapes.bubbleEnd
         BubbleAlign.CENTER -> GlassDefaults.shape
     },
-    color: Color = OceanTheme.surface,
-    contentColor: Color = OceanTheme.textPrimary,
+    color: Color = AvanueTheme.colors.surface,
+    contentColor: Color = AvanueTheme.colors.textPrimary,
     border: GlassBorder? = GlassDefaults.border,
     glassLevel: GlassLevel = GlassLevel.MEDIUM,
     content: @Composable () -> Unit
@@ -238,8 +241,8 @@ fun OceanButton(
     glass: Boolean = false,
     glassLevel: GlassLevel = GlassLevel.MEDIUM,
     colors: ButtonColors = ButtonDefaults.buttonColors(
-        containerColor = OceanTheme.primary,
-        contentColor = OceanTheme.textOnPrimary
+        containerColor = AvanueTheme.colors.primary,
+        contentColor = AvanueTheme.colors.textOnPrimary
     ),
     elevation: ButtonElevation? = ButtonDefaults.buttonElevation(),
     shape: Shape = GlassDefaults.shape,
@@ -294,8 +297,8 @@ fun GlassChip(
     glass: Boolean = false,
     glassLevel: GlassLevel = GlassLevel.LIGHT,
     colors: ChipColors = AssistChipDefaults.assistChipColors(
-        containerColor = OceanTheme.surfaceElevated,
-        labelColor = OceanTheme.textPrimary
+        containerColor = AvanueTheme.colors.surfaceElevated,
+        labelColor = AvanueTheme.colors.textPrimary
     ),
     elevation: ChipElevation? = AssistChipDefaults.assistChipElevation(),
     shape: Shape = GlassShapes.chipShape
@@ -341,8 +344,8 @@ fun GlassFloatingActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = GlassShapes.fabShape,
-    containerColor: Color = OceanTheme.primary,
-    contentColor: Color = OceanTheme.textOnPrimary,
+    containerColor: Color = AvanueTheme.colors.primary,
+    contentColor: Color = AvanueTheme.colors.textOnPrimary,
     elevation: FloatingActionButtonElevation = FloatingActionButtonDefaults.elevation(),
     glassLevel: GlassLevel = GlassLevel.MEDIUM,
     content: @Composable () -> Unit
@@ -391,7 +394,7 @@ fun GlassIconButton(
         onClick = onClick,
         modifier = if (glass) {
             modifier.glass(
-                backgroundColor = OceanTheme.surfaceElevated,
+                backgroundColor = AvanueTheme.colors.surfaceElevated,
                 glassLevel = glassLevel,
                 border = GlassDefaults.borderSubtle
             )
