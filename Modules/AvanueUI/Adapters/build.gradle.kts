@@ -44,11 +44,8 @@ kotlin {
                 // Core components (data models)
                 implementation(project(":Modules:AvanueUI:Core"))
 
-                // Foundation components (Compose implementations)
-                implementation(project(":Modules:AvanueUI:Foundation"))
-
-                // Design system
-                implementation(project(":Modules:AvanueUI:DesignSystem"))
+                // AvanueUI root (components, tokens, theme - consolidated)
+                implementation(project(":Modules:AvanueUI"))
                 implementation(project(":Modules:AvanueUI:CoreTypes"))
                 implementation(project(":Modules:AvanueUI:StateManagement"))
 

@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.augmentalis.avamagic.ui.foundation.*
+import com.augmentalis.avanueui.components.glass.*
 import com.augmentalis.avamagic.coretypes.*
 import com.augmentalis.avamagic.state.rememberMagicState
 import com.augmentalis.avamagic.core.*

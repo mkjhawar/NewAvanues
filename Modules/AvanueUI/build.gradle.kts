@@ -43,7 +43,11 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
+
+                // Foundation - ServiceState (used by PulseDot)
+                implementation(project(":Modules:Foundation"))
             }
         }
 
@@ -55,11 +59,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.avanueui"
+    namespace = "com.augmentalis.avanueui"
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 28
+        minSdk = 24
     }
 
     compileOptions {

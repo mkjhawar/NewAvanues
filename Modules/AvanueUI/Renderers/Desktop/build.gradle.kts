@@ -17,7 +17,7 @@ kotlin {
             dependencies {
                 // MagicUI Core (updated from legacy Universal paths)
                 implementation(project(":Modules:AvanueUI:Core"))
-                implementation(project(":Modules:AvanueUI:Foundation"))
+                implementation(project(":Modules:AvanueUI"))
 
                 // Compose Desktop
                 implementation(compose.desktop.currentOs)

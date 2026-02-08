@@ -137,9 +137,9 @@ include(":Modules:Rpc")                  // Root module with KMP + Wire
 // AvanueUI Core & Base Types (promoted from AvaMagic/AvaUI — 2026-02-07)
 include(":Modules:AvanueUI:Core")                       // Base types, interfaces
 include(":Modules:AvanueUI:CoreTypes")                  // Shared type definitions
-include(":Modules:AvanueUI:Foundation")                 // Foundation components
+// include(":Modules:AvanueUI:Foundation")              // REMOVED - consolidated into AvanueUI root
 include(":Modules:AvanueUI:Theme")                      // Theme system
-include(":Modules:AvanueUI:DesignSystem")               // Design tokens
+// include(":Modules:AvanueUI:DesignSystem")            // REMOVED - consolidated into AvanueUI root
 include(":Modules:AvanueUI:StateManagement")            // State management
 // include(":Modules:AvanueUI:UIConvertor")             // DISABLED (2026-02-07) — references dead types (ColorRGBA, LegacyComponent)
 
