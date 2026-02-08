@@ -39,6 +39,7 @@ import com.augmentalis.chat.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -48,7 +49,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.augmentalis.ava.core.domain.model.Message
 import com.augmentalis.ava.core.domain.model.MessageRole
-import com.avanueui.ColorTokens
 import com.avanueui.GlassIntensity
 import com.avanueui.GlassSurface
 import com.avanueui.GlassCard
@@ -58,7 +58,8 @@ import com.avanueui.OceanButton
 import com.avanueui.OceanButtonStyle
 import com.avanueui.OceanGradients
 import com.avanueui.OceanShapes
-import com.avanueui.ShapeTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.ShapeTokens
 import com.augmentalis.chat.components.ConversationSummary
 import com.augmentalis.chat.components.HistoryOverlay
 import com.augmentalis.chat.components.MessageBubble
@@ -203,7 +204,7 @@ fun ChatScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 intensity = GlassIntensity.LIGHT,
-                shape = RoundedCornerShape(ShapeTokens.Small),
+                shape = RoundedCornerShape(ShapeTokens.sm),
                 showBorder = false
             ) {
                 Row(
@@ -238,7 +239,7 @@ fun ChatScreen(
                             Icon(
                                 imageVector = Icons.Filled.School,
                                 contentDescription = "Teach AVA",
-                                tint = ColorTokens.Primary,
+                                tint = AvanueTheme.colors.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -261,7 +262,7 @@ fun ChatScreen(
                         GlassCard(
                             modifier = Modifier.padding(32.dp),
                             intensity = GlassIntensity.MEDIUM,
-                            shape = RoundedCornerShape(ShapeTokens.Large)
+                            shape = RoundedCornerShape(ShapeTokens.lg)
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -273,21 +274,21 @@ fun ChatScreen(
                                     imageVector = Icons.Filled.Chat,
                                     contentDescription = null,
                                     modifier = Modifier.size(72.dp),
-                                    tint = ColorTokens.Primary.copy(alpha = 0.8f)
+                                    tint = AvanueTheme.colors.primary.copy(alpha = 0.8f)
                                 )
                                 Spacer(modifier = Modifier.height(24.dp))
                                 // Primary message
                                 Text(
                                     text = stringResource(R.string.chat_empty_state_title),
                                     style = MaterialTheme.typography.headlineSmall,
-                                    color = ColorTokens.TextPrimary
+                                    color = AvanueTheme.colors.textPrimary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 // Secondary guidance
                                 Text(
                                     text = stringResource(R.string.chat_empty_state_subtitle),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = ColorTokens.TextSecondary
+                                    color = AvanueTheme.colors.textSecondary
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 // Example prompts in a glass chip style
@@ -303,7 +304,7 @@ fun ChatScreen(
                                         Text(
                                             text = example,
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = ColorTokens.Primary
+                                            color = AvanueTheme.colors.primary
                                         )
                                     }
                                 }
@@ -389,10 +390,10 @@ fun ChatScreen(
                                         .widthIn(max = 160.dp),
                                     intensity = GlassIntensity.LIGHT,
                                     shape = RoundedCornerShape(
-                                        topStart = ShapeTokens.Large,
-                                        topEnd = ShapeTokens.Large,
-                                        bottomStart = ShapeTokens.ExtraSmall,
-                                        bottomEnd = ShapeTokens.Large
+                                        topStart = ShapeTokens.lg,
+                                        topEnd = ShapeTokens.lg,
+                                        bottomStart = ShapeTokens.xs,
+                                        bottomEnd = ShapeTokens.lg
                                     )
                                 ) {
                                     Row(
@@ -403,13 +404,13 @@ fun ChatScreen(
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(16.dp),
                                             strokeWidth = 2.dp,
-                                            color = ColorTokens.Primary
+                                            color = AvanueTheme.colors.primary
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Text(
                                             text = stringResource(R.string.chat_typing_indicator),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = ColorTokens.TextSecondary
+                                            color = AvanueTheme.colors.textSecondary
                                         )
                                     }
                                 }
@@ -556,18 +557,18 @@ private fun MessageInputField(
                     imageVector = Icons.Filled.AutoAwesome,
                     contentDescription = "RAG Active",
                     modifier = Modifier.size(20.dp),
-                    tint = ColorTokens.Primary
+                    tint = AvanueTheme.colors.primary
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Searching Your Documents",
                         style = MaterialTheme.typography.labelMedium,
-                        color = ColorTokens.TextPrimary
+                        color = AvanueTheme.colors.textPrimary
                     )
                     Text(
                         text = "${selectedDocumentIdsValue.size} document${if (selectedDocumentIdsValue.size != 1) "s" else ""} selected",
                         style = MaterialTheme.typography.bodySmall,
-                        color = ColorTokens.TextSecondary
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -577,7 +578,7 @@ private fun MessageInputField(
         GlassSurface(
             modifier = Modifier.fillMaxWidth(),
             intensity = GlassIntensity.LIGHT,
-            shape = RoundedCornerShape(ShapeTokens.Medium), // Consistent radii all corners
+            shape = RoundedCornerShape(ShapeTokens.md), // Consistent radii all corners
             showBorder = true
         ) {
             Row(
@@ -596,7 +597,7 @@ private fun MessageInputField(
                         Icon(
                             imageVector = Icons.Filled.Mic,
                             contentDescription = "Voice Input",
-                            tint = ColorTokens.Primary,
+                            tint = AvanueTheme.colors.primary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -629,7 +630,7 @@ private fun MessageInputField(
                             } else {
                                 stringResource(R.string.chat_input_placeholder)
                             },
-                            color = ColorTokens.TextHint
+                            color = AvanueTheme.colors.textDisabled
                         )
                     },
                     enabled = enabled,
@@ -646,15 +647,15 @@ private fun MessageInputField(
                         }
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = ColorTokens.GlassUltraLight,
-                        unfocusedContainerColor = ColorTokens.GlassUltraLight.copy(alpha = 0.5f),
-                        focusedBorderColor = ColorTokens.Primary,
-                        unfocusedBorderColor = ColorTokens.Outline,
-                        focusedTextColor = ColorTokens.TextPrimary,
-                        unfocusedTextColor = ColorTokens.TextPrimary,
-                        cursorColor = ColorTokens.Primary
+                        focusedContainerColor = Color(0x0DFFFFFF),
+                        unfocusedContainerColor = Color(0x0DFFFFFF).copy(alpha = 0.5f),
+                        focusedBorderColor = AvanueTheme.colors.primary,
+                        unfocusedBorderColor = AvanueTheme.colors.border,
+                        focusedTextColor = AvanueTheme.colors.textPrimary,
+                        unfocusedTextColor = AvanueTheme.colors.textPrimary,
+                        cursorColor = AvanueTheme.colors.primary
                     ),
-                    shape = RoundedCornerShape(ShapeTokens.Medium)
+                    shape = RoundedCornerShape(ShapeTokens.md)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -669,16 +670,16 @@ private fun MessageInputField(
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp,
-                            color = ColorTokens.Primary
+                            color = AvanueTheme.colors.primary
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Filled.Send,
                             contentDescription = if (text.isNotBlank()) "Send message" else "Type a message first",
                             tint = if (text.isNotBlank()) {
-                                ColorTokens.Primary
+                                AvanueTheme.colors.primary
                             } else {
-                                ColorTokens.TextDisabled
+                                AvanueTheme.colors.textDisabled
                             }
                         )
                     }
@@ -710,7 +711,7 @@ private fun AccessibilityPromptDialog(
             Icon(
                 imageVector = Icons.Filled.AutoAwesome,
                 contentDescription = null,
-                tint = ColorTokens.Primary
+                tint = AvanueTheme.colors.primary
             )
         },
         title = {
@@ -742,8 +743,8 @@ private fun AccessibilityPromptDialog(
                 Text("Later")
             }
         },
-        containerColor = ColorTokens.SurfaceVariant,
-        shape = RoundedCornerShape(ShapeTokens.Large)
+        containerColor = AvanueTheme.colors.surfaceVariant,
+        shape = RoundedCornerShape(ShapeTokens.lg)
     )
 }
 

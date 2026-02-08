@@ -30,10 +30,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.avanueui.ColorTokens
 import com.avanueui.GlassIntensity
-import com.avanueui.ShapeTokens
-import com.avanueui.SizeTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.tokens.ShapeTokens
+import com.augmentalis.avanueui.tokens.SizeTokens
 import com.augmentalis.chat.domain.SourceCitation
 import java.text.SimpleDateFormat
 import java.util.*
@@ -100,22 +100,22 @@ fun MessageBubble(
 
     // Ocean Glass theme colors
     val backgroundColor = if (isUserMessage) {
-        ColorTokens.Primary.copy(alpha = 0.9f)  // User: Teal with slight transparency
+        AvanueTheme.colors.primary.copy(alpha = 0.9f)  // User: Teal with slight transparency
     } else {
-        ColorTokens.GlassMedium  // AVA: Glass effect (15% white)
+        Color(0x26FFFFFF)  // AVA: Glass effect (15% white)
     }
     val textColor = if (isUserMessage) {
-        ColorTokens.OnPrimary
+        AvanueTheme.colors.onPrimary
     } else {
-        ColorTokens.TextPrimary
+        AvanueTheme.colors.textPrimary
     }
 
     // Bubble shape with asymmetric corners
     val bubbleShape = RoundedCornerShape(
-        topStart = ShapeTokens.Large,
-        topEnd = ShapeTokens.Large,
-        bottomStart = if (isUserMessage) ShapeTokens.Large else ShapeTokens.ExtraSmall,
-        bottomEnd = if (isUserMessage) ShapeTokens.ExtraSmall else ShapeTokens.Large
+        topStart = ShapeTokens.lg,
+        topEnd = ShapeTokens.lg,
+        bottomStart = if (isUserMessage) ShapeTokens.lg else ShapeTokens.xs,
+        bottomEnd = if (isUserMessage) ShapeTokens.xs else ShapeTokens.lg
     )
 
     // Format timestamp to relative time
@@ -142,7 +142,7 @@ fun MessageBubble(
         ) {
             Box(
                 modifier = Modifier
-                    .widthIn(max = SizeTokens.ChatBubbleMaxWidth) // Using design token
+                    .widthIn(max = SizeTokens.chatBubbleMaxWidth) // Using design token
                     .clip(bubbleShape)
                     .background(color = backgroundColor)
                     .then(
@@ -150,7 +150,7 @@ fun MessageBubble(
                         if (!isUserMessage) {
                             Modifier.border(
                                 width = 1.dp,
-                                color = ColorTokens.OutlineVariant,
+                                color = AvanueTheme.colors.borderSubtle,
                                 shape = bubbleShape
                             )
                         } else Modifier
@@ -180,7 +180,7 @@ fun MessageBubble(
                     expanded = showContextMenu,
                     onDismissRequest = { showContextMenu = false },
                     modifier = Modifier
-                        .background(color = ColorTokens.GlassHeavy)
+                        .background(color = Color(0x33FFFFFF))
                         .semantics { contentDescription = "Message options menu" }
                 ) {
                     DropdownMenuItem(
@@ -193,12 +193,12 @@ fun MessageBubble(
                                     imageVector = Icons.Filled.School,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp),
-                                    tint = ColorTokens.Primary
+                                    tint = AvanueTheme.colors.primary
                                 )
                                 Text(
                                     text = "Teach AVA this",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = ColorTokens.TextPrimary
+                                    color = AvanueTheme.colors.textPrimary
                                 )
                             }
                         },
@@ -208,7 +208,7 @@ fun MessageBubble(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = SizeTokens.MinTouchTarget)
+                            .heightIn(min = SizeTokens.minTouchTarget)
                     )
                 }
             }
@@ -226,7 +226,7 @@ fun MessageBubble(
             Text(
                 text = relativeTime,
                 style = MaterialTheme.typography.labelSmall,
-                color = ColorTokens.TextTertiary,
+                color = AvanueTheme.colors.textTertiary,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
             )
 
@@ -313,12 +313,12 @@ private fun ConfidenceBadge(
 
     // Ocean theme color scheme based on confidence level
     val badgeColor = when (confidenceLevel) {
-        ConfidenceLevel.HIGH -> ColorTokens.Success    // SeafoamGreen
-        ConfidenceLevel.MEDIUM -> ColorTokens.Warning  // Amber
-        ConfidenceLevel.LOW -> ColorTokens.Error       // CoralRed
+        ConfidenceLevel.HIGH -> AvanueTheme.colors.success    // SeafoamGreen
+        ConfidenceLevel.MEDIUM -> AvanueTheme.colors.warning  // Amber
+        ConfidenceLevel.LOW -> AvanueTheme.colors.error       // CoralRed
     }
 
-    val contentColor = ColorTokens.OnPrimary // High contrast against all badge colors
+    val contentColor = AvanueTheme.colors.onPrimary // High contrast against all badge colors
 
     // Accessibility description
     val accessibilityText = when (confidenceLevel) {
@@ -370,9 +370,9 @@ private fun ConfidenceBadge(
                         onClick = onConfirm,
                         modifier = Modifier
                             .padding(top = 4.dp)
-                            .heightIn(min = SizeTokens.MinTouchTarget),
+                            .heightIn(min = SizeTokens.minTouchTarget),
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = ColorTokens.Primary
+                            contentColor = AvanueTheme.colors.primary
                         )
                     ) {
                         Text(
@@ -388,10 +388,10 @@ private fun ConfidenceBadge(
                         onClick = onTeachAva,
                         modifier = Modifier
                             .padding(top = 4.dp)
-                            .heightIn(min = SizeTokens.MinTouchTarget),
+                            .heightIn(min = SizeTokens.minTouchTarget),
                         colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = ColorTokens.Error.copy(alpha = 0.15f),
-                            contentColor = ColorTokens.Error
+                            containerColor = AvanueTheme.colors.error.copy(alpha = 0.15f),
+                            contentColor = AvanueTheme.colors.error
                         )
                     ) {
                         Icon(
@@ -459,8 +459,8 @@ private fun SourceCitationsSection(
     ) {
         // Collapsible header with Ocean Glass styling
         Surface(
-            shape = RoundedCornerShape(ShapeTokens.Small),
-            color = ColorTokens.GlassLight,
+            shape = RoundedCornerShape(ShapeTokens.sm),
+            color = Color(0x1AFFFFFF),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -483,12 +483,12 @@ private fun SourceCitationsSection(
                         imageVector = Icons.Filled.Description,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = ColorTokens.Primary
+                        tint = AvanueTheme.colors.primary
                     )
                     Text(
                         text = "Sources (${citations.size})",
                         style = MaterialTheme.typography.labelSmall,
-                        color = ColorTokens.TextSecondary,
+                        color = AvanueTheme.colors.textSecondary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -501,7 +501,7 @@ private fun SourceCitationsSection(
                         imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                         contentDescription = if (isExpanded) "Collapse sources" else "Expand sources",
                         modifier = Modifier.size(20.dp),
-                        tint = ColorTokens.Primary
+                        tint = AvanueTheme.colors.primary
                     )
                 }
             }
@@ -527,7 +527,7 @@ private fun SourceCitationsSection(
                             Text(
                                 text = citation.format(),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = ColorTokens.TextPrimary,
+                                color = AvanueTheme.colors.textPrimary,
                                 maxLines = 1
                             )
                         },
@@ -536,15 +536,15 @@ private fun SourceCitationsSection(
                                 imageVector = Icons.Filled.Description,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp),
-                                tint = ColorTokens.Primary
+                                tint = AvanueTheme.colors.primary
                             )
                         },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = ColorTokens.GlassMedium,
-                            labelColor = ColorTokens.TextPrimary,
-                            leadingIconContentColor = ColorTokens.Primary
+                            containerColor = Color(0x26FFFFFF),
+                            labelColor = AvanueTheme.colors.textPrimary,
+                            leadingIconContentColor = AvanueTheme.colors.primary
                         ),
-                        border = BorderStroke(1.dp, ColorTokens.OutlineVariant),
+                        border = BorderStroke(1.dp, AvanueTheme.colors.borderSubtle),
                         modifier = Modifier.semantics {
                             contentDescription = "${citation.documentTitle}${citation.pageNumber?.let { " page $it" } ?: ""}, ${citation.similarityPercent} percent similarity"
                         }

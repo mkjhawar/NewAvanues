@@ -62,6 +62,7 @@ kotlin {
             dependencies {
                 implementation(project(":Modules:AVA:core:Data"))
                 implementation(project(":Modules:AvanueUI"))
+                implementation(project(":Modules:AvanueUI:DesignSystem"))
                 implementation(libs.kotlinx.coroutines.android)
 
                 // Hilt Dependency Injection
