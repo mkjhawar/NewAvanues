@@ -2,8 +2,9 @@
  * MainActivity.kt - Main entry point for Avanues Consolidated App
  *
  * Routes to different modules based on which launcher icon was tapped:
- * - VoiceAvanue alias → voice dashboard (HomeScreen)
- * - WebAvanue alias → full browser (WebAvanue BrowserApp)
+ * - AvanuesAlias → hub dashboard (HubDashboardScreen)
+ * - VoiceAvanueAlias → voice dashboard (HomeScreen)
+ * - WebAvanueAlias → full browser (WebAvanue BrowserApp)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -31,6 +32,7 @@ import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
+import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
 import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
 import com.augmentalis.webavanue.BrowserApp
 import dagger.hilt.android.AndroidEntryPoint
@@ -75,14 +77,16 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Determines which module to launch based on the activity-alias class name.
-     * - ".VoiceAvanueAlias" or default → voice dashboard
+     * - ".AvanuesAlias" or default → hub dashboard
+     * - ".VoiceAvanueAlias" → voice dashboard
      * - ".WebAvanueAlias" → browser
      */
     private fun determineLaunchMode(intent: Intent?): AvanueMode {
-        val className = intent?.component?.className ?: return AvanueMode.VOICE
+        val className = intent?.component?.className ?: return AvanueMode.HUB
         return when {
             className.contains("WebAvanue") -> AvanueMode.BROWSER
-            else -> AvanueMode.VOICE
+            className.contains("VoiceAvanue") -> AvanueMode.VOICE
+            else -> AvanueMode.HUB
         }
     }
 }
@@ -92,6 +96,7 @@ class MainActivity : ComponentActivity() {
  * Add new modules here as they become ready.
  */
 enum class AvanueMode(val route: String, val label: String) {
+    HUB("hub", "Avanues"),
     VOICE("voice_home", "VoiceAvanue"),
     BROWSER("browser", "WebAvanue"),
     SETTINGS("settings", "Settings"),
@@ -100,13 +105,33 @@ enum class AvanueMode(val route: String, val label: String) {
 }
 
 @Composable
-fun AvanuesApp(startMode: AvanueMode = AvanueMode.VOICE) {
+fun AvanuesApp(startMode: AvanueMode = AvanueMode.HUB) {
     val navController = rememberNavController()
 
     NavHost(
         navController = navController,
         startDestination = startMode.route
     ) {
+        composable(AvanueMode.HUB.route) {
+            HubDashboardScreen(
+                onNavigateToVoice = {
+                    navController.navigate(AvanueMode.VOICE.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToBrowser = {
+                    navController.navigate(AvanueMode.BROWSER.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToSettings = {
+                    navController.navigate(AvanueMode.SETTINGS.route) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
         composable(AvanueMode.VOICE.route) {
             HomeScreen(
                 onNavigateToBrowser = { navController.navigate(AvanueMode.BROWSER.route) },

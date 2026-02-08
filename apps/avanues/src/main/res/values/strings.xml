@@ -3,7 +3,8 @@
     <string name="app_name">Avanues</string>
 
     <!-- Accessibility Service -->
-    <string name="accessibility_service_description">Avanues uses accessibility services to control your device with voice commands and provide screen reading capabilities for users with disabilities.</string>
+    <string name="accessibility_service_label">VoiceOS\u00AE</string>
+    <string name="accessibility_service_description">VoiceOS\u00AE uses accessibility services to control your device with voice commands and provide screen reading capabilities for users with disabilities.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_service">AVA Services</string>
