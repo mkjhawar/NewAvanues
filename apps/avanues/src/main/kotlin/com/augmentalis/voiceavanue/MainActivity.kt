@@ -43,6 +43,7 @@ import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
 import com.augmentalis.voiceavanue.ui.home.CommandsScreen
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
 import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
+import com.augmentalis.voiceavanue.ui.about.AboutScreen
 import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
 import com.augmentalis.webavanue.BrowserApp
 import dagger.hilt.android.AndroidEntryPoint
@@ -150,6 +151,7 @@ enum class AvanueMode(val route: String, val label: String) {
     BROWSER("browser", "WebAvanue"),
     COMMANDS("commands", "Voice Commands"),
     SETTINGS("settings", "Settings"),
+    ABOUT("about", "About Avanues"),
     DEVELOPER_CONSOLE("developer_console", "Developer Console")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
 }
@@ -176,6 +178,11 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.HUB) {
                 },
                 onNavigateToSettings = {
                     navController.navigate(AvanueMode.SETTINGS.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToAbout = {
+                    navController.navigate(AvanueMode.ABOUT.route) {
                         launchSingleTop = true
                     }
                 }
@@ -206,6 +213,15 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.HUB) {
 
         composable(AvanueMode.SETTINGS.route) {
             UnifiedSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDeveloperConsole = {
+                    navController.navigate(AvanueMode.DEVELOPER_CONSOLE.route)
+                }
+            )
+        }
+
+        composable(AvanueMode.ABOUT.route) {
+            AboutScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToDeveloperConsole = {
                     navController.navigate(AvanueMode.DEVELOPER_CONSOLE.route)

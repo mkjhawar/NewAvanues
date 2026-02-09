@@ -73,7 +73,8 @@ import com.augmentalis.avanueui.theme.AvanueTheme
 fun HubDashboardScreen(
     onNavigateToVoice: () -> Unit,
     onNavigateToBrowser: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToAbout: () -> Unit = {}
 ) {
     var showVoiceActivePopup by remember { mutableStateOf(false) }
 
@@ -98,13 +99,15 @@ fun HubDashboardScreen(
                 HubLandscape(
                     onVoiceAvanueClick = { showVoiceActivePopup = true },
                     onNavigateToBrowser = onNavigateToBrowser,
-                    onNavigateToSettings = onNavigateToSettings
+                    onNavigateToSettings = onNavigateToSettings,
+                    onNavigateToAbout = onNavigateToAbout
                 )
             } else {
                 HubPortrait(
                     onVoiceAvanueClick = { showVoiceActivePopup = true },
                     onNavigateToBrowser = onNavigateToBrowser,
-                    onNavigateToSettings = onNavigateToSettings
+                    onNavigateToSettings = onNavigateToSettings,
+                    onNavigateToAbout = onNavigateToAbout
                 )
             }
         }
@@ -159,7 +162,8 @@ fun HubDashboardScreen(
 private fun HubPortrait(
     onVoiceAvanueClick: () -> Unit,
     onNavigateToBrowser: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToAbout: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -222,7 +226,7 @@ private fun HubPortrait(
             title = "About Avanues",
             subtitle = "Version, licenses, and credits",
             icon = Icons.Default.Info,
-            onClick = onNavigateToSettings // Opens settings where About section lives
+            onClick = onNavigateToAbout
         )
 
         Spacer(modifier = Modifier.height(SpacingTokens.xl))
@@ -245,7 +249,8 @@ private fun HubPortrait(
 private fun HubLandscape(
     onVoiceAvanueClick: () -> Unit,
     onNavigateToBrowser: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToAbout: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -279,7 +284,7 @@ private fun HubLandscape(
                 title = "About",
                 subtitle = "Version and credits",
                 icon = Icons.Default.Info,
-                onClick = onNavigateToSettings
+                onClick = onNavigateToAbout
             )
         }
 
