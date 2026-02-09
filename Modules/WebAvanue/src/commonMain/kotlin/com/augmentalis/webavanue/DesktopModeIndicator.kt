@@ -60,12 +60,12 @@ fun DesktopModeIndicator(
             ) {
                 Icon(
                     imageVector = Icons.Default.Star,
-                    contentDescription = "Desktop Mode",
+                    contentDescription = "Advanced Mode",
                     tint = Color.White,
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
-                    text = "Desktop",
+                    text = "Advanced",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White
                 )
@@ -94,20 +94,16 @@ fun CompactDesktopModeIndicator(
 ) {
     Box(
         modifier = modifier
-            .size(28.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                color = if (isDesktopMode) Color(0xFF60A5FA).copy(alpha = 0.9f) else Color(0xFF6B7280).copy(alpha = 0.5f),
-                shape = RoundedCornerShape(8.dp)
-            )
+            .size(24.dp)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = if (isDesktopMode) Icons.Default.Laptop else Icons.Default.PhoneAndroid,
-            contentDescription = if (isDesktopMode) "Desktop Mode (tap for mobile)" else "Mobile Mode (tap for desktop)",
-            tint = Color.White,
-            modifier = Modifier.size(16.dp)
+        Text(
+            text = "A",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            ),
+            color = if (isDesktopMode) Color(0xFF60A5FA) else Color(0xFF9CA3AF),
         )
     }
 }

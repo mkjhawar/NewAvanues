@@ -391,7 +391,7 @@ fun AddressBar(
                                 modifier = Modifier.size(28.dp)
                             )
                             Text(
-                                text = "Desktop",
+                                text = if (isDesktopMode) "Mobile" else "Advanced",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 8.sp,
                                 color = AvanueTheme.colors.textSecondary,
@@ -594,15 +594,6 @@ fun AddressBar(
                                 )
                             }
 
-                            // Desktop mode toggle button - tap to switch mobile/desktop
-                            CompactDesktopModeIndicator(
-                                isDesktopMode = isDesktopMode,
-                                onClick = onDesktopModeToggle,
-                                modifier = Modifier
-                                    .padding(end = SpacingTokens.xs)
-                                    .alpha(if (isWebGLSite) 0.5f else 1f)
-                            )
-
                             IconButton(
                                 onClick = {
                                     dismissKeyboard()
@@ -622,10 +613,39 @@ fun AddressBar(
                     }
 
                     // Tab counter badge (Chrome-like) - Opens full TabSwitcherView
-                    CompactTabCounterBadge(
-                        tabCount = tabCount,
-                        onClick = onTabSwitcherClick
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CompactTabCounterBadge(
+                            tabCount = tabCount,
+                            onClick = onTabSwitcherClick,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Text(
+                            text = "Tabs",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 8.sp,
+                            color = AvanueTheme.colors.textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    // Desktop/Advanced mode toggle
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.alpha(if (isWebGLSite) 0.5f else 1f)
+                    ) {
+                        CompactDesktopModeIndicator(
+                            isDesktopMode = isDesktopMode,
+                            onClick = onDesktopModeToggle,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Text(
+                            text = if (isDesktopMode) "Mobile" else "Advanced",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 8.sp,
+                            color = AvanueTheme.colors.textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
 
                     // Command bar toggle button - shows/hides bottom command bar
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

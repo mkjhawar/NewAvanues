@@ -87,33 +87,24 @@ fun CompactTabCounterBadge(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Box(
         modifier = modifier
-            .width(32.dp)
-            .height(28.dp)
+            .size(24.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(6.dp),
-        color = AvanueTheme.colors.surfaceElevated,
-        border = BorderStroke(1.dp, AvanueTheme.colors.border)
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val displayCount = when {
-                tabCount <= 0 -> "0"
-                tabCount < 100 -> tabCount.toString()
-                else -> "99"
-            }
-
-            Text(
-                text = displayCount,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = if (tabCount < 10) 12.sp else 10.sp
-                ),
-                color = AvanueTheme.colors.textPrimary
-            )
+        val displayCount = when {
+            tabCount <= 0 -> "0"
+            tabCount < 100 -> tabCount.toString()
+            else -> "99"
         }
+
+        Text(
+            text = displayCount,
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = AvanueTheme.colors.textPrimary
+        )
     }
 }
