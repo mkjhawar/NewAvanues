@@ -40,6 +40,7 @@ import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
+import com.augmentalis.voiceavanue.ui.developer.DeveloperSettingsScreen
 import com.augmentalis.voiceavanue.ui.home.CommandsScreen
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
 import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
@@ -152,7 +153,8 @@ enum class AvanueMode(val route: String, val label: String) {
     COMMANDS("commands", "Voice Commands"),
     SETTINGS("settings", "Settings"),
     ABOUT("about", "About Avanues"),
-    DEVELOPER_CONSOLE("developer_console", "Developer Console")
+    DEVELOPER_CONSOLE("developer_console", "Developer Console"),
+    DEVELOPER_SETTINGS("developer_settings", "Developer Settings")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
 }
 
@@ -183,6 +185,11 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.HUB) {
                 },
                 onNavigateToAbout = {
                     navController.navigate(AvanueMode.ABOUT.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToDeveloperSettings = {
+                    navController.navigate(AvanueMode.DEVELOPER_SETTINGS.route) {
                         launchSingleTop = true
                     }
                 }
@@ -231,6 +238,12 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.HUB) {
 
         composable(AvanueMode.DEVELOPER_CONSOLE.route) {
             DeveloperConsoleScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.DEVELOPER_SETTINGS.route) {
+            DeveloperSettingsScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

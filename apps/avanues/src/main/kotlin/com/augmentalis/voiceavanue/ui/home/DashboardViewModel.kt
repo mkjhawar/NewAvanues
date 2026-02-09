@@ -78,9 +78,20 @@ data class StaticCommand(
 )
 
 /**
+ * MacroStep - A single step in a macro (sequential action chain).
+ * Each step has an action type, optional target, and delay before next step.
+ */
+data class MacroStep(
+    val actionType: CommandActionType,
+    val target: String = "",
+    val delayMs: Long = 300L
+)
+
+/**
  * CustomCommandInfo - A user-created custom voice command.
  * actionType determines what happens when the command is recognized.
  * actionTarget provides context (e.g., app package for OPEN_APP, URL for NAVIGATE).
+ * For macros (actionType=MACRO), steps contains the sequential action chain.
  */
 data class CustomCommandInfo(
     val id: String,
@@ -88,8 +99,11 @@ data class CustomCommandInfo(
     val phrases: List<String>,
     val actionType: CommandActionType = CommandActionType.CUSTOM,
     val actionTarget: String = "",
+    val steps: List<MacroStep> = emptyList(),
     val isActive: Boolean = true
-)
+) {
+    val isMacro: Boolean get() = actionType == CommandActionType.MACRO && steps.isNotEmpty()
+}
 
 /**
  * SynonymEntryInfo - A verb synonym mapping (canonical -> alternatives).
@@ -337,12 +351,14 @@ class DashboardViewModel @Inject constructor(
 
     /**
      * Adds a user-created custom voice command with action binding.
+     * For macros, actionType should be MACRO and steps should contain the action chain.
      */
     fun addCustomCommand(
         name: String,
         phrases: List<String>,
         actionType: CommandActionType = CommandActionType.CUSTOM,
-        actionTarget: String = ""
+        actionTarget: String = "",
+        steps: List<MacroStep> = emptyList()
     ) {
         if (name.isBlank() || phrases.isEmpty()) return
         val current = _commands.value
@@ -352,6 +368,7 @@ class DashboardViewModel @Inject constructor(
             phrases = phrases,
             actionType = actionType,
             actionTarget = actionTarget,
+            steps = steps,
             isActive = true
         )
         _commands.value = current.copy(

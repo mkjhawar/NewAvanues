@@ -18,6 +18,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,6 +31,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -94,7 +97,7 @@ import com.augmentalis.voiceoscore.CommandActionType
  */
 data class CommandCallbacks(
     val onToggleStaticCommand: (String) -> Unit = {},
-    val onAddCustomCommand: (String, List<String>, CommandActionType, String) -> Unit = { _, _, _, _ -> },
+    val onAddCustomCommand: (String, List<String>, CommandActionType, String, List<MacroStep>) -> Unit = { _, _, _, _, _ -> },
     val onRemoveCustomCommand: (String) -> Unit = {},
     val onToggleCustomCommand: (String) -> Unit = {},
     val onAddSynonym: (String, List<String>) -> Unit = { _, _ -> },
@@ -132,7 +135,9 @@ fun HomeScreen(
     val commandCallbacks = remember(viewModel) {
         CommandCallbacks(
             onToggleStaticCommand = viewModel::toggleCommand,
-            onAddCustomCommand = viewModel::addCustomCommand,
+            onAddCustomCommand = { name, phrases, actionType, target, steps ->
+                viewModel.addCustomCommand(name, phrases, actionType, target, steps)
+            },
             onRemoveCustomCommand = viewModel::removeCustomCommand,
             onToggleCustomCommand = viewModel::toggleCustomCommand,
             onAddSynonym = viewModel::addSynonym,
@@ -182,7 +187,9 @@ fun CommandsScreen(
     val callbacks = remember(viewModel) {
         CommandCallbacks(
             onToggleStaticCommand = viewModel::toggleCommand,
-            onAddCustomCommand = viewModel::addCustomCommand,
+            onAddCustomCommand = { name, phrases, actionType, target, steps ->
+                viewModel.addCustomCommand(name, phrases, actionType, target, steps)
+            },
             onRemoveCustomCommand = viewModel::removeCustomCommand,
             onToggleCustomCommand = viewModel::toggleCustomCommand,
             onAddSynonym = viewModel::addSynonym,
@@ -195,6 +202,7 @@ fun CommandsScreen(
             .fillMaxSize()
             .background(AvanueTheme.colors.background)
             .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(horizontal = SpacingTokens.md)
     ) {
         // Header with back button
@@ -362,16 +370,16 @@ private fun DashboardPortrait(
                 ModuleCard(module = module, onClick = onNavigateToSettings)
             }
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
             ) {
                 uiState.webAvanue?.let { module ->
-                    Box(modifier = Modifier.weight(1f)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         ModuleCard(module = module, onClick = onNavigateToBrowser)
                     }
                 }
                 uiState.voiceCursor?.let { module ->
-                    Box(modifier = Modifier.weight(1f)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         ModuleCard(module = module, onClick = onNavigateToSettings)
                     }
                 }
@@ -488,20 +496,52 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
             if (!permissions.accessibilityEnabled) {
                 PermissionErrorCard("Accessibility Service", "Find and enable VoiceOS\u00AE") {
                     try {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        Toast.makeText(context, "Find and enable VoiceOS\u00AE in the list", Toast.LENGTH_LONG).show()
+                        context.startActivity(
+                            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                        Toast.makeText(
+                            context,
+                            "Find \"VoiceOS\u00AE\" under Downloaded/Installed services and enable it",
+                            Toast.LENGTH_LONG
+                        ).show()
                     } catch (_: Exception) {
-                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    android.net.Uri.parse("package:${context.packageName}"))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } catch (_: Exception) {
+                            context.startActivity(
+                                Intent(Settings.ACTION_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
                     }
                 }
             }
             if (!permissions.overlayEnabled) {
                 PermissionErrorCard("Display Over Apps", "Required for voice cursor") {
                     try {
-                        context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                            android.net.Uri.parse("package:${context.packageName}")))
+                        context.startActivity(
+                            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                android.net.Uri.parse("package:${context.packageName}"))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
                     } catch (_: Exception) {
-                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    android.net.Uri.parse("package:${context.packageName}"))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } catch (_: Exception) {
+                            context.startActivity(
+                                Intent(Settings.ACTION_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
                     }
                 }
             }
@@ -509,15 +549,32 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
                 PermissionErrorCard("Notifications", "Required for service status alerts") {
                     try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            })
+                            context.startActivity(
+                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                            )
                         } else {
-                            context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                android.net.Uri.parse("package:${context.packageName}")))
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    android.net.Uri.parse("package:${context.packageName}"))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
                         }
                     } catch (_: Exception) {
-                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    android.net.Uri.parse("package:${context.packageName}"))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } catch (_: Exception) {
+                            context.startActivity(
+                                Intent(Settings.ACTION_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
                     }
                 }
             }
@@ -678,7 +735,11 @@ private fun StaticCommandsTab(
             verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
         ) {
             items(categories, key = { it.name }) { category ->
-                ExpandableCommandCategory(category = category, onToggleCommand = onToggleCommand)
+                ExpandableCommandCategory(
+                    category = category,
+                    onToggleCommand = onToggleCommand,
+                    onAddSynonym = onAddSynonym
+                )
             }
             if (synonymEntries.isNotEmpty()) {
                 item(key = "verb_synonyms") {
@@ -694,7 +755,11 @@ private fun StaticCommandsTab(
 }
 
 @Composable
-private fun ExpandableCommandCategory(category: CommandCategory, onToggleCommand: (String) -> Unit) {
+private fun ExpandableCommandCategory(
+    category: CommandCategory,
+    onToggleCommand: (String) -> Unit,
+    onAddSynonym: (String, List<String>) -> Unit = { _, _ -> }
+) {
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
         GlassSurface(
@@ -719,7 +784,11 @@ private fun ExpandableCommandCategory(category: CommandCategory, onToggleCommand
         if (expanded) {
             Column(Modifier.fillMaxWidth().padding(start = SpacingTokens.md), verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
                 category.commands.forEach { command ->
-                    CommandRow(command = command, onToggle = { onToggleCommand(command.id) })
+                    CommandRow(
+                        command = command,
+                        onToggle = { onToggleCommand(command.id) },
+                        onAddAlias = { alias -> onAddSynonym(command.phrase, listOf(alias)) }
+                    )
                 }
             }
         }
@@ -727,27 +796,88 @@ private fun ExpandableCommandCategory(category: CommandCategory, onToggleCommand
 }
 
 @Composable
-private fun CommandRow(command: StaticCommand, onToggle: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = command.enabled, onCheckedChange = { onToggle() },
-            colors = CheckboxDefaults.colors(checkedColor = AvanueTheme.colors.success, uncheckedColor = AvanueTheme.colors.textSecondary)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(command.phrase, style = MaterialTheme.typography.bodyMedium, color = AvanueTheme.colors.textPrimary)
-            if (command.description.isNotEmpty()) {
-                Text(command.description, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
+private fun CommandRow(
+    command: StaticCommand,
+    onToggle: () -> Unit,
+    onAddAlias: (String) -> Unit = {}
+) {
+    var showAliasField by remember { mutableStateOf(false) }
+    var aliasText by remember { mutableStateOf("") }
+
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = command.enabled, onCheckedChange = { onToggle() },
+                colors = CheckboxDefaults.colors(checkedColor = AvanueTheme.colors.success, uncheckedColor = AvanueTheme.colors.textSecondary)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(command.phrase, style = MaterialTheme.typography.bodyMedium, color = AvanueTheme.colors.textPrimary)
+                if (command.description.isNotEmpty()) {
+                    Text(command.description, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
+                }
+                if (command.synonyms.isNotEmpty()) {
+                    Text(
+                        "Also: ${command.synonyms.joinToString(", ")}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AvanueTheme.colors.textDisabled
+                    )
+                }
             }
-            if (command.synonyms.isNotEmpty()) {
-                Text(
-                    "Also: ${command.synonyms.joinToString(", ")}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AvanueTheme.colors.textDisabled
+            GlassChip(
+                onClick = { showAliasField = !showAliasField },
+                label = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(12.dp), tint = AvanueTheme.colors.primary)
+                        Text("Alias", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.primary)
+                    }
+                },
+                glass = true,
+                glassLevel = GlassLevel.LIGHT
+            )
+        }
+        AnimatedVisibility(visible = showAliasField) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 48.dp, top = SpacingTokens.xs, bottom = SpacingTokens.xs),
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = aliasText,
+                    onValueChange = { aliasText = it },
+                    label = { Text("New alias phrase") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = AvanueTheme.colors.textPrimary,
+                        unfocusedTextColor = AvanueTheme.colors.textPrimary,
+                        focusedBorderColor = AvanueTheme.colors.primary,
+                        unfocusedBorderColor = AvanueTheme.colors.textDisabled,
+                        focusedLabelColor = AvanueTheme.colors.primary,
+                        unfocusedLabelColor = AvanueTheme.colors.textSecondary,
+                        cursorColor = AvanueTheme.colors.primary
+                    )
                 )
+                TextButton(
+                    onClick = {
+                        val trimmed = aliasText.trim()
+                        if (trimmed.isNotEmpty()) {
+                            onAddAlias(trimmed)
+                            aliasText = ""
+                            showAliasField = false
+                        }
+                    }
+                ) {
+                    Text("Add", color = AvanueTheme.colors.primary)
+                }
             }
         }
     }
@@ -804,7 +934,7 @@ private fun DynamicCommandsInfoTab(dynamicCount: Int) {
 @Composable
 private fun CustomCommandsTab(
     customCommands: List<CustomCommandInfo>,
-    onAdd: (String, List<String>, CommandActionType, String) -> Unit,
+    onAdd: (String, List<String>, CommandActionType, String, List<MacroStep>) -> Unit,
     onRemove: (String) -> Unit,
     onToggle: (String) -> Unit
 ) {
@@ -845,8 +975,8 @@ private fun CustomCommandsTab(
     if (showAddDialog) {
         AddCustomCommandDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, phrases, actionType, actionTarget ->
-                onAdd(name, phrases, actionType, actionTarget)
+            onConfirm = { name, phrases, actionType, actionTarget, steps ->
+                onAdd(name, phrases, actionType, actionTarget, steps)
                 showAddDialog = false
             }
         )
@@ -889,11 +1019,15 @@ private fun CustomCommandRow(
                 )
                 Text(
                     buildString {
-                        append(command.actionType.name.lowercase().replace('_', ' '))
-                        if (command.actionTarget.isNotBlank()) append(" → ${command.actionTarget}")
+                        if (command.isMacro) {
+                            append("macro (${command.steps.size} steps)")
+                        } else {
+                            append(command.actionType.name.lowercase().replace('_', ' '))
+                            if (command.actionTarget.isNotBlank()) append(" → ${command.actionTarget}")
+                        }
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = AvanueTheme.colors.info
+                    color = if (command.isMacro) AvanueTheme.colors.warning else AvanueTheme.colors.info
                 )
             }
             Switch(
@@ -937,13 +1071,26 @@ private val actionTypeGroups = listOf(
     "Flashlight Off" to CommandActionType.FLASHLIGHT_OFF,
     "Start Dictation" to CommandActionType.DICTATION_START,
     "Show Commands" to CommandActionType.SHOW_COMMANDS,
-    "Custom" to CommandActionType.CUSTOM
+    "Custom" to CommandActionType.CUSTOM,
+    "Macro (Multi-Step)" to CommandActionType.MACRO
 )
+
+/**
+ * Action types that require a target parameter in single-action mode.
+ */
+private val targetRequiringActions = listOf(
+    CommandActionType.OPEN_APP, CommandActionType.TYPE, CommandActionType.NAVIGATE, CommandActionType.CUSTOM
+)
+
+/**
+ * Action types available for individual macro steps (excludes MACRO itself).
+ */
+private val macroStepActionTypes = actionTypeGroups.filter { it.second != CommandActionType.MACRO }
 
 @Composable
 private fun AddCustomCommandDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, List<String>, CommandActionType, String) -> Unit
+    onConfirm: (String, List<String>, CommandActionType, String, List<MacroStep>) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var phrasesText by remember { mutableStateOf("") }
@@ -951,10 +1098,12 @@ private fun AddCustomCommandDialog(
     var actionTarget by remember { mutableStateOf("") }
     var actionDropdownExpanded by remember { mutableStateOf(false) }
 
+    // Macro steps state
+    var macroSteps by remember { mutableStateOf(listOf(MacroStep(CommandActionType.CLICK))) }
+
+    val isMacroMode = selectedActionType == CommandActionType.MACRO
     val selectedLabel = actionTypeGroups.find { it.second == selectedActionType }?.first ?: "Click / Tap"
-    val needsTarget = selectedActionType in listOf(
-        CommandActionType.OPEN_APP, CommandActionType.TYPE, CommandActionType.NAVIGATE, CommandActionType.CUSTOM
-    )
+    val needsTarget = selectedActionType in targetRequiringActions
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = AvanueTheme.colors.textPrimary,
@@ -970,7 +1119,10 @@ private fun AddCustomCommandDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Custom Command", color = AvanueTheme.colors.textPrimary) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(SpacingTokens.md),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -1023,8 +1175,63 @@ private fun AddCustomCommandDialog(
                     }
                 }
 
-                // Action target (shown when action needs a target)
-                if (needsTarget) {
+                if (isMacroMode) {
+                    // Macro steps UI
+                    Text(
+                        "Steps (executed sequentially)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = AvanueTheme.colors.textSecondary
+                    )
+
+                    macroSteps.forEachIndexed { index, step ->
+                        MacroStepRow(
+                            step = step,
+                            stepNumber = index + 1,
+                            canDelete = macroSteps.size > 1,
+                            textFieldColors = textFieldColors,
+                            onUpdate = { updated ->
+                                macroSteps = macroSteps.toMutableList().also { it[index] = updated }
+                            },
+                            onDelete = {
+                                macroSteps = macroSteps.toMutableList().also { it.removeAt(index) }
+                            },
+                            onMoveUp = if (index > 0) {
+                                {
+                                    macroSteps = macroSteps.toMutableList().also {
+                                        val tmp = it[index]
+                                        it[index] = it[index - 1]
+                                        it[index - 1] = tmp
+                                    }
+                                }
+                            } else null,
+                            onMoveDown = if (index < macroSteps.lastIndex) {
+                                {
+                                    macroSteps = macroSteps.toMutableList().also {
+                                        val tmp = it[index]
+                                        it[index] = it[index + 1]
+                                        it[index + 1] = tmp
+                                    }
+                                }
+                            } else null
+                        )
+                    }
+
+                    GlassChip(
+                        onClick = { macroSteps = macroSteps + MacroStep(CommandActionType.CLICK) },
+                        label = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                            ) {
+                                Icon(Icons.Default.Add, null, modifier = Modifier.size(14.dp), tint = AvanueTheme.colors.info)
+                                Text("Add Step", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.info)
+                            }
+                        },
+                        glass = true,
+                        glassLevel = GlassLevel.LIGHT
+                    )
+                } else if (needsTarget) {
+                    // Single action target
                     OutlinedTextField(
                         value = actionTarget,
                         onValueChange = { actionTarget = it },
@@ -1050,7 +1257,11 @@ private fun AddCustomCommandDialog(
                 onClick = {
                     val phrases = phrasesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                     if (name.isNotBlank() && phrases.isNotEmpty()) {
-                        onConfirm(name, phrases, selectedActionType, actionTarget.trim())
+                        if (isMacroMode) {
+                            onConfirm(name, phrases, CommandActionType.MACRO, "", macroSteps)
+                        } else {
+                            onConfirm(name, phrases, selectedActionType, actionTarget.trim(), emptyList())
+                        }
                     }
                 }
             ) {
@@ -1064,6 +1275,150 @@ private fun AddCustomCommandDialog(
         },
         containerColor = AvanueTheme.colors.surface
     )
+}
+
+/**
+ * A single macro step row with action type picker, target field, delay slider,
+ * and ordering/delete controls.
+ */
+@Composable
+private fun MacroStepRow(
+    step: MacroStep,
+    stepNumber: Int,
+    canDelete: Boolean,
+    textFieldColors: androidx.compose.material3.TextFieldColors,
+    onUpdate: (MacroStep) -> Unit,
+    onDelete: () -> Unit,
+    onMoveUp: (() -> Unit)?,
+    onMoveDown: (() -> Unit)?
+) {
+    var stepDropdownExpanded by remember { mutableStateOf(false) }
+    val stepLabel = macroStepActionTypes.find { it.second == step.actionType }?.first ?: "Click / Tap"
+    val stepNeedsTarget = step.actionType in targetRequiringActions
+
+    GlassSurface(
+        glassLevel = GlassLevel.LIGHT,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(SpacingTokens.sm),
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+        ) {
+            // Step header with number, ordering, and delete
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Step $stepNumber",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = AvanueTheme.colors.info
+                )
+                Row {
+                    onMoveUp?.let {
+                        IconButton(onClick = it, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.KeyboardArrowUp, "Move up", tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    onMoveDown?.let {
+                        IconButton(onClick = it, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, "Move down", tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    if (canDelete) {
+                        IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, "Remove step", tint = AvanueTheme.colors.error, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
+            // Action type dropdown for this step
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = stepLabel,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Action", style = MaterialTheme.typography.labelSmall) },
+                    trailingIcon = {
+                        IconButton(onClick = { stepDropdownExpanded = !stepDropdownExpanded }, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                if (stepDropdownExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                "Select",
+                                tint = AvanueTheme.colors.textSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = textFieldColors,
+                    textStyle = MaterialTheme.typography.bodySmall
+                )
+                androidx.compose.material3.DropdownMenu(
+                    expanded = stepDropdownExpanded,
+                    onDismissRequest = { stepDropdownExpanded = false }
+                ) {
+                    macroStepActionTypes.forEach { (label, type) ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(label, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textPrimary) },
+                            onClick = {
+                                onUpdate(step.copy(actionType = type))
+                                stepDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Target field if needed
+            if (stepNeedsTarget) {
+                OutlinedTextField(
+                    value = step.target,
+                    onValueChange = { onUpdate(step.copy(target = it)) },
+                    label = {
+                        Text(
+                            when (step.actionType) {
+                                CommandActionType.OPEN_APP -> "App package"
+                                CommandActionType.TYPE -> "Text to type"
+                                CommandActionType.NAVIGATE -> "Screen or URL"
+                                else -> "Target"
+                            },
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = textFieldColors,
+                    textStyle = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            // Delay slider
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+            ) {
+                Text(
+                    "Delay:",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AvanueTheme.colors.textSecondary
+                )
+                androidx.compose.material3.Slider(
+                    value = step.delayMs.toFloat(),
+                    onValueChange = { onUpdate(step.copy(delayMs = it.toLong())) },
+                    valueRange = 0f..5000f,
+                    steps = 9,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    "${step.delayMs}ms",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AvanueTheme.colors.textSecondary
+                )
+            }
+        }
+    }
 }
 
 // ──────────────── VERB SYNONYMS (inside Static tab) ────────────────

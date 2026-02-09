@@ -254,7 +254,10 @@ enum class CommandActionType {
     // ═══════════════════════════════════════════════════════════════════
 
     /** Custom/specialized action */
-    CUSTOM;
+    CUSTOM,
+
+    /** Macro: sequential chain of actions */
+    MACRO;
 
     /**
      * Check if this is an element interaction action

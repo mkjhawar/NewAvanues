@@ -34,6 +34,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
@@ -45,9 +46,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -74,7 +79,8 @@ fun HubDashboardScreen(
     onNavigateToVoice: () -> Unit,
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToAbout: () -> Unit = {}
+    onNavigateToAbout: () -> Unit = {},
+    onNavigateToDeveloperSettings: () -> Unit = {}
 ) {
     var showVoiceActivePopup by remember { mutableStateOf(false) }
 
@@ -100,14 +106,16 @@ fun HubDashboardScreen(
                     onVoiceAvanueClick = { showVoiceActivePopup = true },
                     onNavigateToBrowser = onNavigateToBrowser,
                     onNavigateToSettings = onNavigateToSettings,
-                    onNavigateToAbout = onNavigateToAbout
+                    onNavigateToAbout = onNavigateToAbout,
+                    onNavigateToDeveloperSettings = onNavigateToDeveloperSettings
                 )
             } else {
                 HubPortrait(
                     onVoiceAvanueClick = { showVoiceActivePopup = true },
                     onNavigateToBrowser = onNavigateToBrowser,
                     onNavigateToSettings = onNavigateToSettings,
-                    onNavigateToAbout = onNavigateToAbout
+                    onNavigateToAbout = onNavigateToAbout,
+                    onNavigateToDeveloperSettings = onNavigateToDeveloperSettings
                 )
             }
         }
@@ -163,7 +171,8 @@ private fun HubPortrait(
     onVoiceAvanueClick: () -> Unit,
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToAbout: () -> Unit
+    onNavigateToAbout: () -> Unit,
+    onNavigateToDeveloperSettings: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -172,7 +181,10 @@ private fun HubPortrait(
             .verticalScroll(rememberScrollState())
     ) {
         // Header
-        HubHeader(onNavigateToSettings = onNavigateToSettings)
+        HubHeader(
+            onNavigateToSettings = onNavigateToSettings,
+            onNavigateToDeveloperSettings = onNavigateToDeveloperSettings
+        )
 
         Spacer(modifier = Modifier.height(SpacingTokens.lg))
 
@@ -250,7 +262,8 @@ private fun HubLandscape(
     onVoiceAvanueClick: () -> Unit,
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToAbout: () -> Unit
+    onNavigateToAbout: () -> Unit,
+    onNavigateToDeveloperSettings: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -263,7 +276,10 @@ private fun HubLandscape(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
         ) {
-            HubHeader(onNavigateToSettings = onNavigateToSettings)
+            HubHeader(
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToDeveloperSettings = onNavigateToDeveloperSettings
+            )
 
             Spacer(modifier = Modifier.height(SpacingTokens.sm))
 
@@ -321,7 +337,15 @@ private fun HubLandscape(
 // ──────────────────────────── SHARED COMPONENTS ────────────────────────────
 
 @Composable
-private fun HubHeader(onNavigateToSettings: () -> Unit) {
+private fun HubHeader(
+    onNavigateToSettings: () -> Unit,
+    onNavigateToDeveloperSettings: () -> Unit = {}
+) {
+    // 4-tap easter egg: tap "Avanues" title 4 times within 2 seconds to reveal dev icon
+    var tapCount by remember { mutableIntStateOf(0) }
+    var firstTapTime by remember { mutableLongStateOf(0L) }
+    var devModeActivated by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -329,7 +353,24 @@ private fun HubHeader(onNavigateToSettings: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(
+            modifier = Modifier.clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                val now = System.currentTimeMillis()
+                if (now - firstTapTime > 2000L) {
+                    tapCount = 1
+                    firstTapTime = now
+                } else {
+                    tapCount++
+                }
+                if (tapCount >= 4) {
+                    devModeActivated = true
+                    tapCount = 0
+                }
+            }
+        ) {
             Text(
                 text = "Avanues",
                 style = MaterialTheme.typography.headlineMedium,
@@ -342,13 +383,26 @@ private fun HubHeader(onNavigateToSettings: () -> Unit) {
                 color = AvanueTheme.colors.textSecondary
             )
         }
-        IconButton(onClick = onNavigateToSettings) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = AvanueTheme.colors.textSecondary,
-                modifier = Modifier.size(28.dp)
-            )
+
+        Row {
+            if (devModeActivated) {
+                IconButton(onClick = onNavigateToDeveloperSettings) {
+                    Icon(
+                        imageVector = Icons.Default.BugReport,
+                        contentDescription = "Developer Settings",
+                        tint = AvanueTheme.colors.warning,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            IconButton(onClick = onNavigateToSettings) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = AvanueTheme.colors.textSecondary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
     }
 }

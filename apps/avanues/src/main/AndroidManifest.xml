@@ -140,6 +140,16 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Command Overlay Service (numbered badges for voice selection) -->
+        <service
+            android:name=".service.CommandOverlayService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="accessibility_overlay" />
+        </service>
+
         <!-- Cursor Overlay Service -->
         <service
             android:name="com.augmentalis.voicecursor.overlay.CursorOverlayService"

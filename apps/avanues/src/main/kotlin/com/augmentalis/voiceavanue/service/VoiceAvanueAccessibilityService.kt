@@ -1,11 +1,14 @@
 /**
- * VoiceAvanueAccessibilityService.kt - Minimal app-level accessibility service
+ * VoiceAvanueAccessibilityService.kt - App-level accessibility service
  *
  * Required because:
  * 1. VoiceOSAccessibilityService is abstract (requires getActionCoordinator())
  * 2. Android manifest must declare a concrete service class in the app
  *
- * All core logic is in VoiceOSCore module - this is just the required wrapper.
+ * All core logic is in VoiceOSCore module.
+ * This wrapper adds:
+ * - CommandOverlayService lifecycle management
+ * - DynamicCommandGenerator for numbered badge overlays
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -26,10 +29,13 @@ import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ServiceConfiguration
 import com.augmentalis.voiceoscore.SpeechEngine
 import com.augmentalis.voiceoscore.createForAndroid
+import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
+import com.augmentalis.voiceavanue.data.DeveloperSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -37,7 +43,8 @@ import kotlinx.coroutines.withTimeout
 private const val TAG = "VoiceAvanueService"
 
 /**
- * Minimal accessibility service wrapper - all logic is in VoiceOSCore.
+ * Accessibility service wrapper with overlay badge support.
+ * Core command generation is in VoiceOSCore; this adds overlay display.
  */
 class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
@@ -46,8 +53,8 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var voiceOSCore: VoiceOSCore? = null
     private var actionCoordinator: ActionCoordinator? = null
     private var boundsResolver: BoundsResolver? = null
+    private var dynamicCommandGenerator: DynamicCommandGenerator? = null
 
-    // Required abstract implementation
     override fun getActionCoordinator(): ActionCoordinator {
         return actionCoordinator ?: ActionCoordinator(commandRegistry = CommandRegistry()).also {
             actionCoordinator = it
@@ -58,35 +65,51 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
     override fun onServiceReady() {
         instance = this
+
+        // Start the overlay service
+        try {
+            if (Settings.canDrawOverlays(applicationContext)) {
+                CommandOverlayService.start(applicationContext)
+                Log.i(TAG, "CommandOverlayService started")
+            } else {
+                Log.w(TAG, "Overlay permission not granted, skipping overlay service")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start CommandOverlayService", e)
+        }
+
+        // Initialize the dynamic command generator for overlay badges
+        dynamicCommandGenerator = DynamicCommandGenerator(resources)
+
         serviceScope.launch(Dispatchers.IO) {
             try {
-                // Initialize database
                 val db = VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(applicationContext))
                 db.waitForInitialization()
 
-                // Initialize BoundsResolver
                 boundsResolver = BoundsResolver(this@VoiceAvanueAccessibilityService)
 
-                // Create shared ActionCoordinator
+                // Read developer settings from DataStore
+                val devPrefs = DeveloperPreferencesRepository(applicationContext)
+                val devSettings: DeveloperSettings = devPrefs.settings.first()
+
                 val registry = CommandRegistry()
                 actionCoordinator = ActionCoordinator(commandRegistry = registry)
 
-                // Create VoiceOSCore
                 voiceOSCore = VoiceOSCore.createForAndroid(
                     service = this@VoiceAvanueAccessibilityService,
                     configuration = ServiceConfiguration(
-                        speechEngine = SpeechEngine.VIVOKA.name,
-                        voiceLanguage = "en-US",
-                        confidenceThreshold = 0.7f,
-                        autoStartListening = false,
-                        synonymsEnabled = true,
-                        debugMode = true
+                        speechEngine = devSettings.sttEngine,
+                        voiceLanguage = devSettings.voiceLanguage,
+                        confidenceThreshold = devSettings.confidenceThreshold,
+                        autoStartListening = devSettings.autoStartListening,
+                        synonymsEnabled = devSettings.synonymsEnabled,
+                        debugMode = devSettings.debugMode
                     ),
                     commandRegistry = registry
                 )
                 voiceOSCore?.initialize()
 
-                Log.i(TAG, "VoiceOSCore initialized")
+                Log.i(TAG, "VoiceOSCore initialized with dev settings: engine=${devSettings.sttEngine}, lang=${devSettings.voiceLanguage}, confidence=${devSettings.confidenceThreshold}")
             } catch (e: Exception) {
                 Log.e(TAG, "Initialization failed", e)
             }
@@ -94,11 +117,32 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     }
 
     override fun onCommandsUpdated(commands: List<QuantizedCommand>) {
-        serviceScope.launch { voiceOSCore?.updateCommands(commands.map { it.phrase }) }
+        serviceScope.launch {
+            voiceOSCore?.updateCommands(commands.map { it.phrase })
+
+            // Update overlay badges from accessibility tree
+            try {
+                val root = rootInActiveWindow ?: return@launch
+                val packageName = root.packageName?.toString() ?: return@launch
+                val isTargetApp = OverlayStateManager.TARGET_APPS.contains(packageName)
+
+                dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating overlay", e)
+            }
+        }
     }
 
     override fun onDestroy() {
         instance = null
+
+        // Stop overlay service
+        try {
+            CommandOverlayService.stop(applicationContext)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping CommandOverlayService", e)
+        }
+
         try {
             runBlocking {
                 withTimeout(3000L) {
