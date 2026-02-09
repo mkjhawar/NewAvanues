@@ -2,6 +2,10 @@ package com.augmentalis.webavanue
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -151,34 +155,72 @@ fun HistoryScreen(
                 }
 
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        groupedHistory.forEach { (date, entries) ->
-                            // Date header
-                            item(key = "header_$date") {
-                                Text(
-                                    text = formatDate(date),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(
-                                        horizontal = 16.dp,
-                                        vertical = 8.dp
-                                    )
-                                )
-                            }
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val isWide = maxWidth > 600.dp
+                        val columns = if (isWide) 2 else 1
 
-                            // History entries for this date
-                            items(entries, key = { it.id }) { entry ->
-                                HistoryItem(
-                                    entry = entry,
-                                    onClick = { onHistoryClick(entry.url) },
-                                    onDelete = { viewModel.deleteHistoryEntry(entry.id) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
+                        if (columns > 1) {
+                            // Landscape / wide: grid with 2 columns
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(columns),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                groupedHistory.forEach { (date, entries) ->
+                                    item(key = "header_$date", span = { GridItemSpan(columns) }) {
+                                        Text(
+                                            text = formatDate(date),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(
+                                                horizontal = 4.dp,
+                                                vertical = 4.dp
+                                            )
+                                        )
+                                    }
+
+                                    items(entries, key = { it.id }) { entry ->
+                                        HistoryItem(
+                                            entry = entry,
+                                            onClick = { onHistoryClick(entry.url) },
+                                            onDelete = { viewModel.deleteHistoryEntry(entry.id) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // Portrait: single column list
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(vertical = 8.dp)
+                            ) {
+                                groupedHistory.forEach { (date, entries) ->
+                                    item(key = "header_$date") {
+                                        Text(
+                                            text = formatDate(date),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(
+                                                horizontal = 16.dp,
+                                                vertical = 8.dp
+                                            )
+                                        )
+                                    }
+
+                                    items(entries, key = { it.id }) { entry ->
+                                        HistoryItem(
+                                            entry = entry,
+                                            onClick = { onHistoryClick(entry.url) },
+                                            onDelete = { viewModel.deleteHistoryEntry(entry.id) },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
