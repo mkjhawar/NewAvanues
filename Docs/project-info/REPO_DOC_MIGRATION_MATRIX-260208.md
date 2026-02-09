@@ -226,3 +226,59 @@ Use a dedicated feature changelog and a central deprecations log.
 
 - A stable canonical destination now exists for subsequent doc merges/deprecations.
 - Future consolidation work can map old docs to chapter-level destinations with clear traceability.
+
+## Execution log — 2026-02-09 (canonical manual expansion: AI + AVACode + lineage)
+
+### Batch executed
+
+- Expanded canonical manual scope to close identified gaps for:
+  - NLU/NLM/LLM architecture,
+  - AVACode architecture/status,
+  - AvanueUI lineage from AvaMagic/AvaUI.
+
+### Migration bookkeeping entries
+
+| Source context | Destination/canonical | Action | Verification |
+|---|---|---|---|
+| `Docs/MasterDocs/NLU/README.md`, `Docs/MasterDocs/LLM/README.md`, `Docs/MasterDocs/AVA/README.md`, `Modules/AI/NLU/README.md`, `Modules/AI/LLM/README.md` | `Docs/MasterDocs/NewAvanues-Developer-Manual/10-AI-Stack-NLU-NLM-LLM-Deep-Dive.md` | merged into canonical chapter | chapter created + TOC linked |
+| `Modules/AVACode/src/commonMain/kotlin/com/augmentalis/avacode/forms/FormDefinition.kt`, `Modules/AVACode/src/commonMain/kotlin/com/augmentalis/avacode/workflows/WorkflowDefinition.kt`, `Modules/AVACode/**` status map | `Docs/MasterDocs/NewAvanues-Developer-Manual/11-AVACode-Deep-Dive.md` | merged into canonical chapter | chapter created + active/disabled surfaces documented |
+| `Docs/MasterDocs/AVAMagic/Avanues-Suite-Master-Documentation-V1.md` + existing AvanueUI canonical chapter | `Docs/MasterDocs/NewAvanues-Developer-Manual/04-AvanueUI-Deep-Dive.md` (sections 4.11–4.13) | enriched canonical chapter with lineage/migration guidance | section additions present |
+| Canonical manual index | `Docs/MasterDocs/NewAvanues-Developer-Manual/README.md` | updated TOC to include Part IV + chapters 10/11 | links present |
+
+### Outcome
+
+- Canonical manual now explicitly contains requested AI stack and AVACode sections.
+- Migration traceability improved by recording source-to-chapter mapping for this expansion batch.
+
+## Execution log — 2026-02-09 (safe bulk archival wave: exact-hash backup/old-path duplicates)
+
+### Batch executed
+
+- Deterministic safe bulk archival using candidate map:
+  - `build/bulk_move_candidates_2026-02-09.csv`
+
+### Guardrail model
+
+- Candidate set generated only for exact-hash duplicate groups where:
+  - source path is backup/old-structure classified,
+  - canonical path is non-backup.
+
+### Execution evidence
+
+- Runner: `build/safe_bulk_move_runner_2026_02_09.py`
+- Summary: `build/bulk_move_execution_2026-02-09_summary.txt`
+- Log CSV: `build/bulk_move_execution_2026-02-09.csv`
+- Timestamp: `2026-02-09T14:15:15`
+- Candidate rows: **3134**
+- Moved: **3134**
+- Skipped: **0**
+- Errors: **0**
+
+### Destination
+
+- `Docs/archive/superseded-safe-bulk/2026-02-09/`
+
+### Action classification
+
+- Type: `ARCHIVE_IMPORT` (superseded exact duplicates from backup/old paths)
+- Canonical non-backup twins retained in place.

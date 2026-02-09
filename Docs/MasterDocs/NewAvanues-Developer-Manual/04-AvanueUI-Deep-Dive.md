@@ -111,3 +111,38 @@ Before shipping AvanueUI-dependent features:
 - [ ] Verified in at least two display profiles
 - [ ] Voice interaction states visually represented
 - [ ] Settings integration uses provider pattern
+
+## 4.11 Lineage: AvaMagic/AvaUI -> AvanueUI
+
+AvanueUI is the current canonical design-system module, but it evolved from earlier AvaMagic/AvaUI workstreams documented in legacy master docs.
+
+### Evolution summary
+
+| Era | Primary Label | Characteristics | Current Status |
+|---|---|---|---|
+| Early suite era | AvaMagic / AvaUI | broad suite-level language, platform vision docs, component narratives | historical context |
+| Consolidation era | AvanueUI module convergence | centralized KMP module + token/theming governance | active canonical path |
+
+### Practical interpretation for engineers
+
+1. Legacy AvaMagic/AvaUI docs remain valuable for product rationale and original design intent.
+2. Current implementation authority for engineering is `:Modules:AvanueUI`.
+3. New component work should target AvanueUI APIs/tokens and not reintroduce legacy naming patterns.
+
+## 4.12 Migration Rules from Legacy Naming
+
+| Legacy Pattern | Current Guidance |
+|---|---|
+| AvaUI/AvaMagic package references | migrate to `com.augmentalis.avanueui.*` |
+| ad-hoc or duplicated glass styles | move to shared AvanueUI glass presets/config |
+| legacy custom color constants | map to AvanueUI tokens + theme locals |
+| per-feature settings screens | use SettingsProvider contribution model |
+
+## 4.13 Governance Contract
+
+When updating AvanueUI architecture:
+
+1. Update this chapter for implementation-level truth.
+2. Add/adjust rationale in Chapter 08 (ADR Index).
+3. If developer workflow changes, update Chapter 09 runbook.
+4. If legacy mapping assumptions change, update Chapter 10 AI/stack references where UI-state contracts are impacted.

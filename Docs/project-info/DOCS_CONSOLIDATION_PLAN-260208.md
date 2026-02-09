@@ -261,3 +261,67 @@ Create a detailed, chaptered, canonical developer manual that can become the sin
 
 - Canonical manual foundation is now in place and expandable by chapter.
 - Consolidation can proceed by merging legacy docs into this canonical chapter structure.
+
+## Completed canonical-manual expansion batch — 2026-02-09 (AI stack + AVACode + AvanueUI lineage)
+
+### Objective
+
+Address identified documentation gaps requested by user feedback:
+
+- dedicated NLU/NLM/LLM coverage,
+- AvanueUI lineage from AvaMagic/AvaUI,
+- truthful AVACode status including disabled surfaces.
+
+### Changes executed
+
+1. Updated canonical TOC:
+   - `Docs/MasterDocs/NewAvanues-Developer-Manual/README.md`
+   - Added Chapter 10 and Chapter 11 entries under a new Part IV.
+2. Expanded AvanueUI chapter:
+   - `04-AvanueUI-Deep-Dive.md`
+   - Added lineage, migration rules, and governance contract sections.
+3. Added AI stack chapter:
+   - `10-AI-Stack-NLU-NLM-LLM-Deep-Dive.md`
+   - Documents NLU/NLM/LLM flow, AVA orchestration, reliability policies.
+4. Added AVACode chapter:
+   - `11-AVACode-Deep-Dive.md`
+   - Documents active forms/workflow foundations and disabled generator/CLI/template surfaces.
+
+### Outcome
+
+- Canonical developer manual now explicitly covers the AI stack and AVACode.
+- AvanueUI historical lineage is now documented inside canonical chapter set.
+- Consolidation accuracy improved by clearly distinguishing active vs staged/disabled AVACode capabilities.
+
+## Completed safe bulk archival wave — 2026-02-09 (exact-hash backup/old-path duplicates)
+
+### Objective
+
+Accelerate consolidation throughput by executing a deterministic, high-volume archival move wave for exact-hash duplicates where:
+
+- source file is in backup/old-structure paths, and
+- at least one non-backup canonical twin exists.
+
+### Inputs
+
+- Candidate list: `build/bulk_move_candidates_2026-02-09.csv`
+- Candidate rows: **3134**
+- Runner: `build/safe_bulk_move_runner_2026_02_09.py`
+
+### Execution result
+
+- Timestamp: `2026-02-09T14:15:15`
+- Moved: **3134**
+- Skipped: **0**
+- Errors: **0**
+
+### Outputs / audit artifacts
+
+- Execution log CSV: `build/bulk_move_execution_2026-02-09.csv`
+- Execution summary: `build/bulk_move_execution_2026-02-09_summary.txt`
+- Archive destination root: `Docs/archive/superseded-safe-bulk/2026-02-09/`
+
+### Outcome
+
+- High-throughput duplicate cleanup completed in one safe wave with full move traceability.
+- Canonical non-backup documents retained in-place; backup/old-path exact duplicates were relocated to archive.

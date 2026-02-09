@@ -34,6 +34,10 @@ This manual is designed as a long-lived, chaptered source of truth with expandab
 8. [Architecture Decisions and Rationale (ADR Index)](./08-Decisions-ADR-Index.md)
 9. [Developer Runbook (Build, Debug, Extend)](./09-Development-Runbook.md)
 
+### Part IV — AI and Generation Stack
+10. [AI Stack Deep Dive (NLU/NLM/LLM + AVA Orchestration)](./10-AI-Stack-NLU-NLM-LLM-Deep-Dive.md)
+11. [AVACode Deep Dive (Forms, Workflows, Generation Status)](./11-AVACode-Deep-Dive.md)
+
 ---
 
 ## How to Use This Manual
@@ -53,6 +57,7 @@ This manual is designed as a long-lived, chaptered source of truth with expandab
    - Relevant deep-dive chapter(s)
    - Chapter 8 (ADR section)
    - Chapter 9 runbook if developer workflows change
+   - Chapter 10/11 when AI orchestration or AVACode contracts change
 
 ---
 
