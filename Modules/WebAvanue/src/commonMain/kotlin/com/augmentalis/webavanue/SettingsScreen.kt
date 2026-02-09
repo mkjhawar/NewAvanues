@@ -38,7 +38,7 @@ private enum class BrowserSettingsCategory(
     GENERAL("General", Icons.Default.Settings),
     APPEARANCE("Appearance", Icons.Default.Palette),
     PRIVACY("Privacy & Security", Icons.Default.Lock),
-    DESKTOP_MODE("Desktop Mode", Icons.Default.DesktopWindows),
+    DESKTOP_MODE("Advanced Mode", Icons.Default.DesktopWindows),
     DOWNLOADS("Downloads", Icons.Default.Download),
     VOICE("Voice & Commands", Icons.Default.Mic),
     PERFORMANCE("Performance", Icons.Default.Speed),

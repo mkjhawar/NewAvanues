@@ -203,13 +203,13 @@ fun DesktopModeButton(
         ) {
             Icon(
                 imageVector = if (isDesktopMode) Icons.Default.PhoneAndroid else Icons.Default.Laptop,
-                contentDescription = if (isDesktopMode) "Exit Desktop Mode" else "Enter Desktop Mode",
+                contentDescription = if (isDesktopMode) "Exit Advanced Mode" else "Enter Advanced Mode",
                 tint = if (isDesktopMode) AvanueTheme.colors.textOnPrimary else AvanueTheme.colors.textPrimary,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (isDesktopMode) "Mobile" else "Desktop",
+                text = if (isDesktopMode) "Mobile" else "Advanced",
                 style = MaterialTheme.typography.labelSmall,
                 color = if (isDesktopMode) AvanueTheme.colors.textOnPrimary else AvanueTheme.colors.textSecondary,
                 maxLines = 1

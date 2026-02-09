@@ -348,9 +348,9 @@ private fun VerticalCommandBarContent(
             if (isHeadlessMode) {
                 CommandButton(
                     icon = if (isDesktopMode) Icons.Default.PhoneAndroid else Icons.Default.Laptop,
-                    label = if (isDesktopMode) "Mobile" else "Desktop",
+                    label = if (isDesktopMode) "Mobile" else "Advanced",
                     onClick = onDesktopModeToggle,
-                    onFocus = { onLabelChange(if (isDesktopMode) "Switch to Mobile" else "Switch to Desktop") },
+                    onFocus = { onLabelChange(if (isDesktopMode) "Switch to Mobile" else "Switch to Advanced") },
                     onBlur = { onLabelChange("") },
                     backgroundColor = if (isDesktopMode) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
                     isActive = isDesktopMode
