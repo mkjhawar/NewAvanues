@@ -160,6 +160,96 @@ enum class CommandActionType {
     CLOSE_APP,
 
     // ═══════════════════════════════════════════════════════════════════
+    // Text/Clipboard Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Select all text */
+    SELECT_ALL,
+
+    /** Copy selection to clipboard */
+    COPY,
+
+    /** Paste from clipboard */
+    PASTE,
+
+    /** Cut selection to clipboard */
+    CUT,
+
+    /** Undo last action */
+    UNDO,
+
+    /** Redo last undone action */
+    REDO,
+
+    /** Delete selected text or element */
+    DELETE,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Screen & Display Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Increase screen brightness */
+    BRIGHTNESS_UP,
+
+    /** Decrease screen brightness */
+    BRIGHTNESS_DOWN,
+
+    /** Lock screen */
+    LOCK_SCREEN,
+
+    /** Rotate screen orientation */
+    ROTATE_SCREEN,
+
+    /** Zoom in */
+    ZOOM_IN,
+
+    /** Zoom out */
+    ZOOM_OUT,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Connectivity Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Toggle WiFi on/off */
+    TOGGLE_WIFI,
+
+    /** Toggle Bluetooth on/off */
+    TOGGLE_BLUETOOTH,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Cursor Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Show voice cursor */
+    CURSOR_SHOW,
+
+    /** Hide voice cursor */
+    CURSOR_HIDE,
+
+    /** Cursor click at current position */
+    CURSOR_CLICK,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Reading/TTS Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Read screen content aloud */
+    READ_SCREEN,
+
+    /** Stop reading */
+    STOP_READING,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Input Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Show on-screen keyboard */
+    SHOW_KEYBOARD,
+
+    /** Hide on-screen keyboard */
+    HIDE_KEYBOARD,
+
+    // ═══════════════════════════════════════════════════════════════════
     // Custom
     // ═══════════════════════════════════════════════════════════════════
 
@@ -181,7 +271,30 @@ enum class CommandActionType {
         BACK, HOME, RECENT_APPS, APP_DRAWER,
         OPEN_SETTINGS, NOTIFICATIONS, CLEAR_NOTIFICATIONS,
         SCREENSHOT, FLASHLIGHT_ON, FLASHLIGHT_OFF,
+        BRIGHTNESS_UP, BRIGHTNESS_DOWN, LOCK_SCREEN, ROTATE_SCREEN,
+        TOGGLE_WIFI, TOGGLE_BLUETOOTH,
         OPEN_APP, CLOSE_APP
+    )
+
+    /**
+     * Check if this is a text/clipboard action
+     */
+    fun isTextAction(): Boolean = this in listOf(
+        SELECT_ALL, COPY, PASTE, CUT, UNDO, REDO, DELETE
+    )
+
+    /**
+     * Check if this is a cursor action
+     */
+    fun isCursorAction(): Boolean = this in listOf(
+        CURSOR_SHOW, CURSOR_HIDE, CURSOR_CLICK
+    )
+
+    /**
+     * Check if this is a reading/TTS action
+     */
+    fun isReadingAction(): Boolean = this in listOf(
+        READ_SCREEN, STOP_READING
     )
 
     /**

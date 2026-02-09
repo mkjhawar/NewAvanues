@@ -269,7 +269,7 @@ object StaticCommandRegistry {
     )
 
     // ═══════════════════════════════════════════════════════════════════
-    // Accessibility Commands
+    // Accessibility Commands (Scroll + Zoom + Element Interaction)
     // ═══════════════════════════════════════════════════════════════════
 
     val accessibilityCommands = listOf(
@@ -296,6 +296,198 @@ object StaticCommandRegistry {
             actionType = CommandActionType.SCROLL_RIGHT,
             category = CommandCategory.ACCESSIBILITY,
             description = "Scroll right"
+        ),
+        StaticCommand(
+            phrases = listOf("click", "tap", "press"),
+            actionType = CommandActionType.CLICK,
+            category = CommandCategory.ACCESSIBILITY,
+            description = "Click/tap on a named or numbered element"
+        ),
+        StaticCommand(
+            phrases = listOf("long press", "long click", "press and hold", "hold"),
+            actionType = CommandActionType.LONG_CLICK,
+            category = CommandCategory.ACCESSIBILITY,
+            description = "Long press on element"
+        ),
+        StaticCommand(
+            phrases = listOf("zoom in", "magnify", "enlarge"),
+            actionType = CommandActionType.ZOOM_IN,
+            category = CommandCategory.ACCESSIBILITY,
+            description = "Zoom in"
+        ),
+        StaticCommand(
+            phrases = listOf("zoom out", "shrink"),
+            actionType = CommandActionType.ZOOM_OUT,
+            category = CommandCategory.ACCESSIBILITY,
+            description = "Zoom out"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Text & Clipboard Commands
+    // ═══════════════════════════════════════════════════════════════════
+
+    val textCommands = listOf(
+        StaticCommand(
+            phrases = listOf("select all", "highlight all"),
+            actionType = CommandActionType.SELECT_ALL,
+            category = CommandCategory.TEXT,
+            description = "Select all text"
+        ),
+        StaticCommand(
+            phrases = listOf("copy", "copy that", "copy text"),
+            actionType = CommandActionType.COPY,
+            category = CommandCategory.TEXT,
+            description = "Copy selection to clipboard"
+        ),
+        StaticCommand(
+            phrases = listOf("paste", "paste text"),
+            actionType = CommandActionType.PASTE,
+            category = CommandCategory.TEXT,
+            description = "Paste from clipboard"
+        ),
+        StaticCommand(
+            phrases = listOf("cut", "cut text"),
+            actionType = CommandActionType.CUT,
+            category = CommandCategory.TEXT,
+            description = "Cut selection to clipboard"
+        ),
+        StaticCommand(
+            phrases = listOf("undo", "undo that", "take back"),
+            actionType = CommandActionType.UNDO,
+            category = CommandCategory.TEXT,
+            description = "Undo last action"
+        ),
+        StaticCommand(
+            phrases = listOf("redo", "redo that"),
+            actionType = CommandActionType.REDO,
+            category = CommandCategory.TEXT,
+            description = "Redo last undone action"
+        ),
+        StaticCommand(
+            phrases = listOf("delete", "delete that", "erase", "remove"),
+            actionType = CommandActionType.DELETE,
+            category = CommandCategory.TEXT,
+            description = "Delete selected text"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Screen & Display Commands
+    // ═══════════════════════════════════════════════════════════════════
+
+    val screenCommands = listOf(
+        StaticCommand(
+            phrases = listOf("brightness up", "increase brightness", "brighter"),
+            actionType = CommandActionType.BRIGHTNESS_UP,
+            category = CommandCategory.SYSTEM,
+            description = "Increase screen brightness"
+        ),
+        StaticCommand(
+            phrases = listOf("brightness down", "decrease brightness", "dimmer"),
+            actionType = CommandActionType.BRIGHTNESS_DOWN,
+            category = CommandCategory.SYSTEM,
+            description = "Decrease screen brightness"
+        ),
+        StaticCommand(
+            phrases = listOf("lock screen", "lock phone", "lock"),
+            actionType = CommandActionType.LOCK_SCREEN,
+            category = CommandCategory.SYSTEM,
+            description = "Lock the screen"
+        ),
+        StaticCommand(
+            phrases = listOf("rotate screen", "rotate", "change orientation"),
+            actionType = CommandActionType.ROTATE_SCREEN,
+            category = CommandCategory.SYSTEM,
+            description = "Toggle screen rotation"
+        ),
+        StaticCommand(
+            phrases = listOf("toggle wifi", "wifi on", "wifi off", "turn on wifi", "turn off wifi"),
+            actionType = CommandActionType.TOGGLE_WIFI,
+            category = CommandCategory.SYSTEM,
+            description = "Toggle WiFi"
+        ),
+        StaticCommand(
+            phrases = listOf("toggle bluetooth", "bluetooth on", "bluetooth off", "turn on bluetooth", "turn off bluetooth"),
+            actionType = CommandActionType.TOGGLE_BLUETOOTH,
+            category = CommandCategory.SYSTEM,
+            description = "Toggle Bluetooth"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Cursor Commands
+    // ═══════════════════════════════════════════════════════════════════
+
+    val cursorCommands = listOf(
+        StaticCommand(
+            phrases = listOf("show cursor", "cursor on", "enable cursor"),
+            actionType = CommandActionType.CURSOR_SHOW,
+            category = CommandCategory.VOICE_CONTROL,
+            description = "Show the voice cursor overlay"
+        ),
+        StaticCommand(
+            phrases = listOf("hide cursor", "cursor off", "disable cursor"),
+            actionType = CommandActionType.CURSOR_HIDE,
+            category = CommandCategory.VOICE_CONTROL,
+            description = "Hide the voice cursor overlay"
+        ),
+        StaticCommand(
+            phrases = listOf("cursor click", "click here"),
+            actionType = CommandActionType.CURSOR_CLICK,
+            category = CommandCategory.VOICE_CONTROL,
+            description = "Click at cursor position"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Reading / TTS Commands
+    // ═══════════════════════════════════════════════════════════════════
+
+    val readingCommands = listOf(
+        StaticCommand(
+            phrases = listOf("read screen", "read aloud", "read this", "read page"),
+            actionType = CommandActionType.READ_SCREEN,
+            category = CommandCategory.ACCESSIBILITY,
+            description = "Read screen content aloud"
+        ),
+        StaticCommand(
+            phrases = listOf("stop reading", "stop", "quiet", "be quiet"),
+            actionType = CommandActionType.STOP_READING,
+            category = CommandCategory.ACCESSIBILITY,
+            description = "Stop reading aloud"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Input Commands
+    // ═══════════════════════════════════════════════════════════════════
+
+    val inputCommands = listOf(
+        StaticCommand(
+            phrases = listOf("show keyboard", "open keyboard", "keyboard"),
+            actionType = CommandActionType.SHOW_KEYBOARD,
+            category = CommandCategory.INPUT,
+            description = "Show on-screen keyboard"
+        ),
+        StaticCommand(
+            phrases = listOf("hide keyboard", "close keyboard", "dismiss keyboard"),
+            actionType = CommandActionType.HIDE_KEYBOARD,
+            category = CommandCategory.INPUT,
+            description = "Hide on-screen keyboard"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
+    // App Control Commands
+    // ═══════════════════════════════════════════════════════════════════
+
+    val appControlCommands = listOf(
+        StaticCommand(
+            phrases = listOf("close app", "close this", "exit app", "quit"),
+            actionType = CommandActionType.CLOSE_APP,
+            category = CommandCategory.APP_CONTROL,
+            description = "Close the current app"
         )
     )
 
@@ -310,9 +502,15 @@ object StaticCommandRegistry {
         navigationCommands +
         mediaCommands +
         systemCommands +
+        screenCommands +
         voiceOSCommands +
+        cursorCommands +
         appCommands +
-        accessibilityCommands
+        appControlCommands +
+        accessibilityCommands +
+        textCommands +
+        readingCommands +
+        inputCommands
 
     /**
      * Get all phrase strings (for speech engine vocabulary)

@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,10 +30,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.augmentalis.avanueui.theme.AvanueThemeProvider
+import com.augmentalis.avanueui.theme.AvanueThemeVariant
 import com.augmentalis.avanueui.display.DisplayProfile
 import com.augmentalis.avanueui.display.DisplayProfileResolver
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
 import com.augmentalis.devicemanager.KmpDeviceType
+import com.augmentalis.voiceavanue.data.AvanuesSettings
+import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
@@ -41,9 +46,13 @@ import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
 import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
 import com.augmentalis.webavanue.BrowserApp
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settingsRepository: AvanuesSettingsRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -58,7 +67,16 @@ class MainActivity : ComponentActivity() {
         val displayProfile = detectDisplayProfile()
 
         setContent {
-            AvanueThemeProvider(displayProfile = displayProfile) {
+            val settings by settingsRepository.settings.collectAsState(
+                initial = AvanuesSettings()
+            )
+            val variant = AvanueThemeVariant.fromString(settings.themeVariant)
+
+            AvanueThemeProvider(
+                colors = variant.colors,
+                glass = variant.glass,
+                displayProfile = displayProfile
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

@@ -6,15 +6,24 @@
 
 package com.augmentalis.voiceavanue.ui.home
 
+import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -444,6 +453,13 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
 
 @Composable
 private fun SystemHealthBar(permissions: PermissionStatus) {
+    val context = LocalContext.current
+
+    // Microphone: runtime permission dialog (falls back to App Info if permanently denied)
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* Permission result handled by onResume re-check in DashboardViewModel */ }
+
     Column(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
@@ -465,40 +481,54 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
         } else {
             Text("PERMISSIONS REQUIRED", style = MaterialTheme.typography.labelMedium, color = AvanueTheme.colors.error)
             if (!permissions.microphoneGranted) {
-                PermissionErrorCard("Microphone", "Required for voice recognition", Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                PermissionErrorCard("Microphone", "Tap to grant microphone access") {
+                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
             }
             if (!permissions.accessibilityEnabled) {
-                PermissionErrorCard("Accessibility Service", "Required for voice control", Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                PermissionErrorCard("Accessibility Service", "Find and enable VoiceOS\u00AE") {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        Toast.makeText(context, "Find and enable VoiceOS\u00AE in the list", Toast.LENGTH_LONG).show()
+                    } catch (_: Exception) {
+                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                    }
+                }
             }
             if (!permissions.overlayEnabled) {
-                PermissionErrorCard("Display Over Apps", "Required for voice cursor", Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                PermissionErrorCard("Display Over Apps", "Required for voice cursor") {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:${context.packageName}")))
+                    } catch (_: Exception) {
+                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                    }
+                }
             }
             if (!permissions.notificationsEnabled) {
-                PermissionErrorCard(
-                    "Notifications", "Required for system alerts",
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                    else Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                )
+                PermissionErrorCard("Notifications", "Required for service status alerts") {
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            })
+                        } else {
+                            context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                android.net.Uri.parse("package:${context.packageName}")))
+                        }
+                    } catch (_: Exception) {
+                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PermissionErrorCard(title: String, description: String, action: String) {
-    val context = LocalContext.current
+private fun PermissionErrorCard(title: String, description: String, onClick: () -> Unit) {
     GlassCard(
-        onClick = {
-            val intent = Intent(action).apply {
-                when (action) {
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS ->
-                        data = android.net.Uri.parse("package:${context.packageName}")
-                    Settings.ACTION_APP_NOTIFICATION_SETTINGS ->
-                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                }
-            }
-            try { context.startActivity(intent) } catch (_: Exception) { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
-        },
+        onClick = onClick,
         glassLevel = GlassLevel.LIGHT,
         border = GlassBorder(width = 1.5.dp, color = AvanueTheme.colors.error),
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
@@ -562,7 +592,7 @@ private fun CommandsSummaryCard(commands: CommandsUiState, onClick: () -> Unit) 
                     color = AvanueTheme.colors.textSecondary
                 )
                 Text(
-                    text = "${commands.staticCount} static \u00B7 ${commands.customCount} custom \u00B7 ${commands.synonymCount} synonyms",
+                    text = "${commands.staticCount} static \u00B7 ${commands.customCount} custom \u00B7 ${commands.synonymCount} verbs",
                     style = MaterialTheme.typography.bodySmall,
                     color = AvanueTheme.colors.textPrimary
                 )
@@ -592,13 +622,15 @@ private fun CommandsSection(
             CommandTab("Static", 0, selectedTab) { selectedTab = 0 }
             CommandTab("App", 1, selectedTab) { selectedTab = 1 }
             CommandTab("+ Custom", 2, selectedTab) { selectedTab = 2 }
-            CommandTab("\u2248 Synonyms", 3, selectedTab) { selectedTab = 3 }
         }
 
         when (selectedTab) {
             0 -> StaticCommandsTab(
                 categories = commands.staticCategories,
-                onToggleCommand = callbacks.onToggleStaticCommand
+                synonymEntries = commands.synonymEntries,
+                onToggleCommand = callbacks.onToggleStaticCommand,
+                onAddSynonym = callbacks.onAddSynonym,
+                onRemoveSynonym = callbacks.onRemoveSynonym
             )
             1 -> DynamicCommandsInfoTab(dynamicCount = commands.dynamicCount)
             2 -> CustomCommandsTab(
@@ -606,11 +638,6 @@ private fun CommandsSection(
                 onAdd = callbacks.onAddCustomCommand,
                 onRemove = callbacks.onRemoveCustomCommand,
                 onToggle = callbacks.onToggleCustomCommand
-            )
-            3 -> SynonymsTab(
-                entries = commands.synonymEntries,
-                onAdd = callbacks.onAddSynonym,
-                onRemove = callbacks.onRemoveSynonym
             )
         }
     }
@@ -625,19 +652,25 @@ private fun CommandTab(label: String, index: Int, selectedTab: Int, onClick: () 
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isSelected) AvanueTheme.colors.info else AvanueTheme.colors.textSecondary
+                color = if (isSelected) AvanueTheme.colors.primary else AvanueTheme.colors.textSecondary
             )
         },
-        glass = isSelected,
-        glassLevel = if (isSelected) GlassLevel.MEDIUM else GlassLevel.LIGHT
+        glass = true,
+        glassLevel = GlassLevel.LIGHT
     )
 }
 
 // ──────────────── TAB 0: STATIC COMMANDS ────────────────
 
 @Composable
-private fun StaticCommandsTab(categories: List<CommandCategory>, onToggleCommand: (String) -> Unit) {
-    if (categories.isEmpty()) {
+private fun StaticCommandsTab(
+    categories: List<CommandCategory>,
+    synonymEntries: List<SynonymEntryInfo>,
+    onToggleCommand: (String) -> Unit,
+    onAddSynonym: (String, List<String>) -> Unit,
+    onRemoveSynonym: (String) -> Unit
+) {
+    if (categories.isEmpty() && synonymEntries.isEmpty()) {
         EmptyStateMessage("No static commands loaded")
     } else {
         LazyColumn(
@@ -646,6 +679,15 @@ private fun StaticCommandsTab(categories: List<CommandCategory>, onToggleCommand
         ) {
             items(categories, key = { it.name }) { category ->
                 ExpandableCommandCategory(category = category, onToggleCommand = onToggleCommand)
+            }
+            if (synonymEntries.isNotEmpty()) {
+                item(key = "verb_synonyms") {
+                    VerbSynonymsCategory(
+                        entries = synonymEntries,
+                        onAddSynonym = onAddSynonym,
+                        onRemoveSynonym = onRemoveSynonym
+                    )
+                }
             }
         }
     }
@@ -1024,43 +1066,79 @@ private fun AddCustomCommandDialog(
     )
 }
 
-// ──────────────── TAB 3: SYNONYMS ────────────────
+// ──────────────── VERB SYNONYMS (inside Static tab) ────────────────
 
 @Composable
-private fun SynonymsTab(
+private fun VerbSynonymsCategory(
     entries: List<SynonymEntryInfo>,
-    onAdd: (String, List<String>) -> Unit,
-    onRemove: (String) -> Unit
+    onAddSynonym: (String, List<String>) -> Unit,
+    onRemoveSynonym: (String) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
-    var synonymToDelete by remember { mutableStateOf<SynonymEntryInfo?>(null) }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)) {
-        GlassChip(
-            onClick = { showAddDialog = true },
-            label = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = AvanueTheme.colors.info)
-                    Text("Add Synonym", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.info)
-                }
-            },
-            glass = true,
-            glassLevel = GlassLevel.LIGHT
-        )
-
-        if (entries.isEmpty()) {
-            EmptyStateMessage("No synonyms configured")
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
+        GlassSurface(
+            onClick = { expanded = !expanded },
+            glassLevel = GlassLevel.LIGHT,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(SpacingTokens.md),
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(entries, key = { it.canonical }) { entry ->
-                    SynonymRow(
+                Text(
+                    "Verb synonyms",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = AvanueTheme.colors.textPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    "${entries.size}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AvanueTheme.colors.textSecondary
+                )
+                Icon(
+                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    if (expanded) "Collapse" else "Expand",
+                    tint = AvanueTheme.colors.textSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(start = SpacingTokens.md),
+                verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+            ) {
+                entries.forEach { entry ->
+                    ExpandableSynonymEntry(
                         entry = entry,
-                        onRemove = if (entry.isDefault) null else {{ synonymToDelete = entry }}
+                        onAddSynonym = onAddSynonym,
+                        onRemove = if (entry.isDefault) null else {{ onRemoveSynonym(entry.canonical) }}
                     )
                 }
+                // Add new synonym verb mapping
+                GlassChip(
+                    onClick = { showAddDialog = true },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                        ) {
+                            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = AvanueTheme.colors.primary)
+                            Text("Add Verb", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.primary)
+                        }
+                    },
+                    glass = true,
+                    glassLevel = GlassLevel.LIGHT
+                )
             }
         }
     }
@@ -1069,63 +1147,157 @@ private fun SynonymsTab(
         AddSynonymDialog(
             onDismiss = { showAddDialog = false },
             onConfirm = { canonical, synonyms ->
-                onAdd(canonical, synonyms)
+                onAddSynonym(canonical, synonyms)
                 showAddDialog = false
             }
         )
     }
-
-    synonymToDelete?.let { entry ->
-        ConfirmDeleteDialog(
-            title = "Delete Synonym",
-            message = "Delete synonym mapping for \"${entry.canonical}\"? This cannot be undone.",
-            onConfirm = {
-                onRemove(entry.canonical)
-                synonymToDelete = null
-            },
-            onDismiss = { synonymToDelete = null }
-        )
-    }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SynonymRow(entry: SynonymEntryInfo, onRemove: (() -> Unit)?) {
-    GlassSurface(
-        glassLevel = GlassLevel.LIGHT,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(SpacingTokens.md),
-            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
-            verticalAlignment = Alignment.CenterVertically
+private fun ExpandableSynonymEntry(
+    entry: SynonymEntryInfo,
+    onAddSynonym: (String, List<String>) -> Unit,
+    onRemove: (() -> Unit)?
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var showAddSynonymField by remember { mutableStateOf(false) }
+    var newSynonymText by remember { mutableStateOf("") }
+
+    Column(Modifier.fillMaxWidth()) {
+        GlassSurface(
+            onClick = { expanded = !expanded },
+            glassLevel = GlassLevel.LIGHT,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
-                ) {
-                    Text(
-                        text = entry.canonical,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = AvanueTheme.colors.info
-                    )
-                    if (entry.isDefault) {
-                        Text(
-                            text = "BUILT-IN",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = AvanueTheme.colors.textDisabled
-                        )
-                    }
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = SpacingTokens.md, vertical = SpacingTokens.sm),
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = entry.synonyms.joinToString(", "),
+                    text = entry.canonical,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AvanueTheme.colors.primary
+                )
+                if (entry.isDefault) {
+                    Text(
+                        text = "BUILT-IN",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AvanueTheme.colors.textDisabled
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "${entry.synonyms.size}",
                     style = MaterialTheme.typography.bodySmall,
                     color = AvanueTheme.colors.textSecondary
                 )
+                Icon(
+                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    if (expanded) "Collapse" else "Expand",
+                    tint = AvanueTheme.colors.textSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
-            if (onRemove != null) {
-                IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, "Remove", tint = AvanueTheme.colors.error, modifier = Modifier.size(18.dp))
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = SpacingTokens.md, top = SpacingTokens.xs, bottom = SpacingTokens.sm)
+            ) {
+                Text(
+                    "Also responds to:",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AvanueTheme.colors.textTertiary,
+                    modifier = Modifier.padding(bottom = SpacingTokens.xs)
+                )
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs),
+                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                ) {
+                    entry.synonyms.forEach { synonym ->
+                        GlassChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    text = synonym,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = AvanueTheme.colors.textSecondary
+                                )
+                            },
+                            glass = true,
+                            glassLevel = GlassLevel.LIGHT
+                        )
+                    }
+
+                    // Add synonym chip
+                    GlassChip(
+                        onClick = { showAddSynonymField = !showAddSynonymField },
+                        label = {
+                            Icon(Icons.Default.Add, "Add", modifier = Modifier.size(14.dp), tint = AvanueTheme.colors.primary)
+                        },
+                        glass = true,
+                        glassLevel = GlassLevel.LIGHT
+                    )
+
+                    // Remove verb button (only for user-created)
+                    if (onRemove != null) {
+                        GlassChip(
+                            onClick = onRemove,
+                            label = {
+                                Icon(Icons.Default.Close, "Remove", modifier = Modifier.size(14.dp), tint = AvanueTheme.colors.error)
+                            },
+                            glass = true,
+                            glassLevel = GlassLevel.LIGHT
+                        )
+                    }
+                }
+
+                // Inline add synonym field
+                AnimatedVisibility(visible = showAddSynonymField) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = SpacingTokens.sm),
+                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = newSynonymText,
+                            onValueChange = { newSynonymText = it },
+                            label = { Text("New synonym") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = AvanueTheme.colors.textPrimary,
+                                unfocusedTextColor = AvanueTheme.colors.textPrimary,
+                                focusedBorderColor = AvanueTheme.colors.primary,
+                                unfocusedBorderColor = AvanueTheme.colors.textDisabled,
+                                focusedLabelColor = AvanueTheme.colors.primary,
+                                unfocusedLabelColor = AvanueTheme.colors.textSecondary,
+                                cursorColor = AvanueTheme.colors.primary
+                            )
+                        )
+                        TextButton(
+                            onClick = {
+                                val trimmed = newSynonymText.trim()
+                                if (trimmed.isNotEmpty()) {
+                                    onAddSynonym(entry.canonical, listOf(trimmed))
+                                    newSynonymText = ""
+                                    showAddSynonymField = false
+                                }
+                            }
+                        ) {
+                            Text("Add", color = AvanueTheme.colors.primary)
+                        }
+                    }
                 }
             }
         }
@@ -1143,16 +1315,16 @@ private fun AddSynonymDialog(
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = AvanueTheme.colors.textPrimary,
         unfocusedTextColor = AvanueTheme.colors.textPrimary,
-        focusedBorderColor = AvanueTheme.colors.info,
+        focusedBorderColor = AvanueTheme.colors.primary,
         unfocusedBorderColor = AvanueTheme.colors.textDisabled,
-        focusedLabelColor = AvanueTheme.colors.info,
+        focusedLabelColor = AvanueTheme.colors.primary,
         unfocusedLabelColor = AvanueTheme.colors.textSecondary,
-        cursorColor = AvanueTheme.colors.info
+        cursorColor = AvanueTheme.colors.primary
     )
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Synonym Mapping", color = AvanueTheme.colors.textPrimary) },
+        title = { Text("Add Verb Synonym", color = AvanueTheme.colors.textPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)) {
                 OutlinedTextField(
@@ -1182,7 +1354,7 @@ private fun AddSynonymDialog(
                     }
                 }
             ) {
-                Text("Add", color = AvanueTheme.colors.info)
+                Text("Add", color = AvanueTheme.colors.primary)
             }
         },
         dismissButton = {

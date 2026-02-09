@@ -13,6 +13,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.augmentalis.avanueui.theme.AvanueThemeVariant
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -27,7 +29,8 @@ data class AvanuesSettings(
     val dwellClickDelayMs: Float = 1500f,
     val cursorSmoothing: Boolean = true,
     val voiceFeedback: Boolean = true,
-    val autoStartOnBoot: Boolean = false
+    val autoStartOnBoot: Boolean = false,
+    val themeVariant: String = AvanueThemeVariant.DEFAULT.name
 )
 
 @Singleton
@@ -41,6 +44,7 @@ class AvanuesSettingsRepository @Inject constructor(
         private val KEY_CURSOR_SMOOTHING = booleanPreferencesKey("cursor_smoothing")
         private val KEY_VOICE_FEEDBACK = booleanPreferencesKey("voice_feedback")
         private val KEY_AUTO_START_ON_BOOT = booleanPreferencesKey("auto_start_on_boot")
+        private val KEY_THEME_VARIANT = stringPreferencesKey("theme_variant")
     }
 
     val settings: Flow<AvanuesSettings> = context.avanuesDataStore.data.map { prefs ->
@@ -49,7 +53,8 @@ class AvanuesSettingsRepository @Inject constructor(
             dwellClickDelayMs = prefs[KEY_DWELL_CLICK_DELAY] ?: 1500f,
             cursorSmoothing = prefs[KEY_CURSOR_SMOOTHING] ?: true,
             voiceFeedback = prefs[KEY_VOICE_FEEDBACK] ?: true,
-            autoStartOnBoot = prefs[KEY_AUTO_START_ON_BOOT] ?: false
+            autoStartOnBoot = prefs[KEY_AUTO_START_ON_BOOT] ?: false,
+            themeVariant = prefs[KEY_THEME_VARIANT] ?: AvanueThemeVariant.DEFAULT.name
         )
     }
 
@@ -71,5 +76,9 @@ class AvanuesSettingsRepository @Inject constructor(
 
     suspend fun updateAutoStartOnBoot(enabled: Boolean) {
         context.avanuesDataStore.edit { it[KEY_AUTO_START_ON_BOOT] = enabled }
+    }
+
+    suspend fun updateThemeVariant(variant: String) {
+        context.avanuesDataStore.edit { it[KEY_THEME_VARIANT] = variant }
     }
 }

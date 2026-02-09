@@ -27,6 +27,7 @@ import com.augmentalis.foundation.state.ServiceState
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.StaticCommandRegistry
+import com.augmentalis.voiceoscore.command.SynonymRegistry
 import com.augmentalis.voiceoscore.StaticCommand as CoreStaticCommand
 import com.augmentalis.voiceoscore.CommandCategory as CoreCommandCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -212,28 +213,17 @@ class DashboardViewModel @Inject constructor(
     }
 
     /**
-     * Loads default verb synonym mappings.
+     * Loads verb synonym mappings from KMP SynonymRegistry.
      * These represent interchangeable action verbs used by the NLU engine.
      */
     private fun loadDefaultSynonyms() {
-        val entries = listOf(
-            SynonymEntryInfo("click", listOf("tap", "press", "push", "select", "hit"), isDefault = true),
-            SynonymEntryInfo("scroll up", listOf("swipe up", "go up", "page up"), isDefault = true),
-            SynonymEntryInfo("scroll down", listOf("swipe down", "go down", "page down"), isDefault = true),
-            SynonymEntryInfo("scroll left", listOf("swipe left", "go left"), isDefault = true),
-            SynonymEntryInfo("scroll right", listOf("swipe right", "go right"), isDefault = true),
-            SynonymEntryInfo("open", listOf("launch", "start", "run", "show"), isDefault = true),
-            SynonymEntryInfo("close", listOf("exit", "quit", "dismiss", "hide"), isDefault = true),
-            SynonymEntryInfo("back", listOf("go back", "return", "previous"), isDefault = true),
-            SynonymEntryInfo("home", listOf("go home", "home screen", "main screen"), isDefault = true),
-            SynonymEntryInfo("search", listOf("find", "look for", "search for"), isDefault = true),
-            SynonymEntryInfo("type", listOf("enter", "input", "write"), isDefault = true),
-            SynonymEntryInfo("delete", listOf("remove", "erase", "clear"), isDefault = true),
-            SynonymEntryInfo("copy", listOf("duplicate"), isDefault = true),
-            SynonymEntryInfo("paste", listOf("insert"), isDefault = true),
-            SynonymEntryInfo("undo", listOf("reverse", "take back"), isDefault = true),
-            SynonymEntryInfo("long press", listOf("long click", "press and hold", "hold"), isDefault = true)
-        )
+        val entries = SynonymRegistry.all().map { entry ->
+            SynonymEntryInfo(
+                canonical = entry.canonical,
+                synonyms = entry.synonyms,
+                isDefault = entry.isDefault
+            )
+        }
 
         val current = _commands.value
         _commands.value = current.copy(synonymEntries = entries)

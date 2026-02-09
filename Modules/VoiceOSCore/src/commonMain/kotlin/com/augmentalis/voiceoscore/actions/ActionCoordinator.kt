@@ -250,6 +250,40 @@ class ActionCoordinator(
             CommandActionType.OPEN_APP -> "open $target"
             CommandActionType.CLOSE_APP -> "close app"
 
+            // Text/clipboard actions
+            CommandActionType.SELECT_ALL -> "select all"
+            CommandActionType.COPY -> "copy"
+            CommandActionType.PASTE -> "paste"
+            CommandActionType.CUT -> "cut"
+            CommandActionType.UNDO -> "undo"
+            CommandActionType.REDO -> "redo"
+            CommandActionType.DELETE -> "delete"
+
+            // Screen/display actions
+            CommandActionType.BRIGHTNESS_UP -> "brightness up"
+            CommandActionType.BRIGHTNESS_DOWN -> "brightness down"
+            CommandActionType.LOCK_SCREEN -> "lock screen"
+            CommandActionType.ROTATE_SCREEN -> "rotate screen"
+            CommandActionType.ZOOM_IN -> "zoom in"
+            CommandActionType.ZOOM_OUT -> "zoom out"
+
+            // Connectivity actions
+            CommandActionType.TOGGLE_WIFI -> "toggle wifi"
+            CommandActionType.TOGGLE_BLUETOOTH -> "toggle bluetooth"
+
+            // Cursor actions
+            CommandActionType.CURSOR_SHOW -> "show cursor"
+            CommandActionType.CURSOR_HIDE -> "hide cursor"
+            CommandActionType.CURSOR_CLICK -> "cursor click"
+
+            // Reading/TTS actions
+            CommandActionType.READ_SCREEN -> "read screen"
+            CommandActionType.STOP_READING -> "stop reading"
+
+            // Input actions
+            CommandActionType.SHOW_KEYBOARD -> "show keyboard"
+            CommandActionType.HIDE_KEYBOARD -> "hide keyboard"
+
             // Default for custom/unknown
             CommandActionType.CUSTOM -> "tap $target"
         }

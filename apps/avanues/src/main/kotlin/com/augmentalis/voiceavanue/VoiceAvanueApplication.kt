@@ -17,6 +17,9 @@
 package com.augmentalis.voiceavanue
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.util.Log
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
 import com.augmentalis.voiceoscore.rpc.VoiceOSAvuRpcServer
@@ -49,7 +52,45 @@ class VoiceAvanueApplication : Application() {
         // Initialize DeviceManager for display profile detection
         DeviceCapabilityFactory.initialize(this)
 
+        // Create notification channels early so system knows we send notifications
+        createNotificationChannels()
+
         initializeModules()
+    }
+
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(NotificationManager::class.java)
+
+            val serviceChannel = NotificationChannel(
+                "voiceos_service",
+                "VoiceOS\u00AE Service",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Ongoing notification while speech recognition or voice cursor is active"
+                setShowBadge(false)
+            }
+
+            val alertsChannel = NotificationChannel(
+                "voiceos_alerts",
+                "VoiceOS\u00AE Alerts",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Alerts when speech recognition encounters errors or needs attention"
+            }
+
+            val rpcChannel = NotificationChannel(
+                "ava_rpc_service",
+                "AVA Services",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Background service notifications for inter-module communication"
+                setShowBadge(false)
+            }
+
+            manager.createNotificationChannels(listOf(serviceChannel, alertsChannel, rpcChannel))
+            Log.i(TAG, "Notification channels created")
+        }
     }
 
     private fun initializeModules() {

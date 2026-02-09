@@ -10,6 +10,7 @@
 package com.augmentalis.voiceavanue.ui.settings.providers
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
@@ -17,8 +18,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.augmentalis.avanueui.components.settings.SettingsDropdownRow
 import com.augmentalis.avanueui.components.settings.SettingsGroupCard
 import com.augmentalis.avanueui.components.settings.SettingsSwitchRow
+import com.augmentalis.avanueui.theme.AvanueThemeVariant
 import com.augmentalis.foundation.settings.SearchableSettingEntry
 import com.augmentalis.foundation.settings.SettingsSection
 import com.augmentalis.voiceavanue.data.AvanuesSettings
@@ -42,6 +45,12 @@ class SystemSettingsProvider @Inject constructor(
 
     override val searchableEntries = listOf(
         SearchableSettingEntry(
+            key = "theme_variant",
+            displayName = "Theme",
+            sectionId = "system",
+            keywords = listOf("theme", "color", "dark", "glass", "ocean", "sunset", "liquid", "appearance")
+        ),
+        SearchableSettingEntry(
             key = "auto_start_on_boot",
             displayName = "Start on Boot",
             sectionId = "system",
@@ -53,6 +62,20 @@ class SystemSettingsProvider @Inject constructor(
     override fun SectionContent(sectionId: String) {
         val settings by repository.settings.collectAsState(initial = AvanuesSettings())
         val scope = rememberCoroutineScope()
+
+        val currentVariant = AvanueThemeVariant.fromString(settings.themeVariant)
+
+        SettingsGroupCard {
+            SettingsDropdownRow(
+                title = "Theme",
+                subtitle = "App color scheme and glass style",
+                icon = Icons.Default.Palette,
+                selected = currentVariant,
+                options = AvanueThemeVariant.entries.toList(),
+                optionLabel = { it.displayName },
+                onSelected = { scope.launch { repository.updateThemeVariant(it.name) } }
+            )
+        }
 
         SettingsGroupCard {
             SettingsSwitchRow(

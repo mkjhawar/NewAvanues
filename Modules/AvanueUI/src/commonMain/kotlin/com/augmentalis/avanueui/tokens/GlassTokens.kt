@@ -8,10 +8,10 @@ import androidx.compose.ui.unit.dp
  * Theme-variable colors (overlay, tint, glow) are in [AvanueGlassScheme].
  */
 object GlassTokens {
-    // Overlay opacity per level
-    const val lightOverlay: Float = 0.10f
-    const val mediumOverlay: Float = 0.15f
-    const val heavyOverlay: Float = 0.22f
+    // Overlay opacity per level (Apple-tuned: more transparent for liquid glass)
+    const val lightOverlay: Float = 0.08f
+    const val mediumOverlay: Float = 0.12f
+    const val heavyOverlay: Float = 0.18f
 
     // Blur radius per level
     val lightBlur: Dp = 6.dp
@@ -29,7 +29,7 @@ object GlassTokens {
 
     // Shadow
     const val shadowOpacity: Float = 0.25f
-    const val glowOpacity: Float = 0.30f
+    const val glowOpacity: Float = 0.20f
     val shadowElevation: Dp = 8.dp
 
     // Border widths
