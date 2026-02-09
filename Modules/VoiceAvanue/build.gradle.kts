@@ -81,9 +81,6 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
 
-                // UUID
-                implementation(libs.uuid)
-
                 // Napier logging
                 implementation(libs.napier)
 

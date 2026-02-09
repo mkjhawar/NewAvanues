@@ -83,9 +83,6 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
 
-                // UUID
-                implementation(libs.uuid)
-
                 // Logging - Napier (KMP structured logging)
                 implementation(libs.napier)
 
@@ -106,9 +103,6 @@ kotlin {
                 implementation(libs.voyager.tab.navigator)
                 implementation(libs.voyager.transitions)
 
-                // Koin for Dependency Injection
-                implementation(libs.koin.core)
-                implementation(libs.koin.compose)
             }
         }
 
