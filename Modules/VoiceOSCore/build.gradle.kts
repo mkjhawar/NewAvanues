@@ -25,12 +25,14 @@ kotlin {
             }
         }
     }
-
-    // iOS Targets - only compiled when explicitly requested
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
-
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        // iOS Targets - only compiled when explicitly requested
+        iosX64()
+        iosArm64()
+        iosSimulatorArm64()
+    }
     // Desktop/JVM Target
     jvm("desktop") {
         compilations.all {
@@ -158,33 +160,35 @@ kotlin {
                 implementation(libs.androidx.test.espresso.core)
             }
         }
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            // iOS source sets
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+                dependencies {
+                    implementation(libs.sqldelight.native.driver)
+                    // NLU (CoreML-based)
+                    implementation(project(":Modules:AI:NLU"))
+                }
+            }
 
-        // iOS source sets
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
-            dependencies {
-                implementation(libs.sqldelight.native.driver)
-                // NLU (CoreML-based)
-                implementation(project(":Modules:AI:NLU"))
+            val iosX64Test by getting
+            val iosArm64Test by getting
+            val iosSimulatorArm64Test by getting
+            val iosTest by creating {
+                dependsOn(commonTest)
+                iosX64Test.dependsOn(this)
+                iosArm64Test.dependsOn(this)
+                iosSimulatorArm64Test.dependsOn(this)
             }
         }
-
-        val iosX64Test by getting
-        val iosArm64Test by getting
-        val iosSimulatorArm64Test by getting
-        val iosTest by creating {
-            dependsOn(commonTest)
-            iosX64Test.dependsOn(this)
-            iosArm64Test.dependsOn(this)
-            iosSimulatorArm64Test.dependsOn(this)
-        }
-
         // Desktop source sets
         val desktopMain by getting {
             dependsOn(commonMain)

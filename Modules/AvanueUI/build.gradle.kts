@@ -18,16 +18,19 @@ kotlin {
             }
         }
     }
-
-    // iOS targets - only compiled when explicitly requested
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "AvanueUI"
-            isStatic = true
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        // iOS targets - only compiled when explicitly requested
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach { iosTarget ->
+            iosTarget.binaries.framework {
+                baseName = "AvanueUI"
+                isStatic = true
+            }
         }
     }
 
@@ -59,11 +62,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.avanueui"
+    namespace = "com.avanueui"
     compileSdk = 34
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 28
     }
 
     compileOptions {

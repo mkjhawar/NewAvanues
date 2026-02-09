@@ -30,18 +30,20 @@ kotlin {
             }
         }
     }
-
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "AVU"
-            isStatic = true
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
+            it.binaries.framework {
+                baseName = "AVU"
+                isStatic = true
+            }
         }
     }
-
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -67,17 +69,19 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.android)
             }
         }
-
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+            }
         }
-
         val desktopMain by getting {
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)

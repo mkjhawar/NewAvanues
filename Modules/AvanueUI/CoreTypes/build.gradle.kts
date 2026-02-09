@@ -23,11 +23,13 @@ kotlin {
             }
         }
     }
-
+    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+    ) {
     iosX64()
     iosArm64()
     iosSimulatorArm64()
-
+}
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -46,14 +48,18 @@ kotlin {
         val androidMain by getting
         val desktopMain by getting
 
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
+        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        ) {
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+            }
         }
     }
 }
