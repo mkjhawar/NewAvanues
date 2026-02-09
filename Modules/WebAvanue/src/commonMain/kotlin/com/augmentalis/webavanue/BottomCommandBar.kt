@@ -142,13 +142,21 @@ fun BottomCommandBar(
     isLandscape: Boolean = false,
     isHeadlessMode: Boolean = false,
     onToggleHeadlessMode: () -> Unit = {},
+    commandBarOrientation: BrowserSettings.CommandBarOrientation = BrowserSettings.CommandBarOrientation.AUTO,
     modifier: Modifier = Modifier
 ) {
     var currentLevel by remember { mutableStateOf(CommandBarLevel.MAIN) }
     var currentLabel by remember { mutableStateOf("") }
 
-    // Landscape mode: vertical bar on the right side
-    if (isLandscape) {
+    // Determine effective layout based on orientation preference
+    val useVerticalLayout = when (commandBarOrientation) {
+        BrowserSettings.CommandBarOrientation.AUTO -> isLandscape
+        BrowserSettings.CommandBarOrientation.HORIZONTAL -> false
+        BrowserSettings.CommandBarOrientation.VERTICAL -> true
+    }
+
+    // Vertical layout: bar on the right side
+    if (useVerticalLayout) {
         Box(
             modifier = modifier
                 .fillMaxHeight()
@@ -239,7 +247,7 @@ fun BottomCommandBar(
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     when (currentLevel) {
@@ -385,7 +393,7 @@ private fun VerticalCommandBarInternal(
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 VerticalCommandBarContent(
@@ -689,10 +697,10 @@ private fun VerticalCommandBarContent(
                 backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
-                icon = androidx.compose.material.icons.Icons.Default.Download,
-                label = "Downloads",
+                icon = androidx.compose.material.icons.Icons.Default.Folder,
+                label = "Files",
                 onClick = onDownloads,
-                onFocus = { onLabelChange("Downloads") },
+                onFocus = { onLabelChange("Files") },
                 onBlur = { onLabelChange("") },
                 backgroundColor = AvanueTheme.colors.surfaceElevated
             )

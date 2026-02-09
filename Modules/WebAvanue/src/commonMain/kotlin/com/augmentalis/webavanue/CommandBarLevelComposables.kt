@@ -399,12 +399,12 @@ fun MenuCommandBarFlat(
         backgroundColor = AvanueTheme.colors.surfaceElevated
     )
 
-    // Downloads
+    // Files (download manager)
     CommandButton(
-        icon = Icons.Default.Download,
-        label = "Downloads",
+        icon = Icons.Default.Folder,
+        label = "Files",
         onClick = onDownloads,
-        onFocus = { onLabelChange("Downloads") },
+        onFocus = { onLabelChange("Files") },
         onBlur = { onLabelChange("") },
         backgroundColor = AvanueTheme.colors.surfaceElevated
     )

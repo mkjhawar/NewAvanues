@@ -58,6 +58,8 @@ fun HorizontalCommandBarLayout(
     onHide: () -> Unit,
     isHeadlessMode: Boolean = false,
     onToggleHeadlessMode: () -> Unit = {},
+    canGoBack: Boolean = true,
+    canGoForward: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var currentLevel by remember { mutableStateOf(CommandBarLevel.MAIN) }
@@ -125,6 +127,8 @@ fun HorizontalCommandBarLayout(
                     onLabelChange = { currentLabel = it },
                     onBack = onBack,
                     onForward = onForward,
+                    canGoBack = canGoBack,
+                    canGoForward = canGoForward,
                     onHome = onHome,
                     onRefresh = onRefresh,
                     onScrollUp = onScrollUp,
@@ -160,6 +164,8 @@ private fun HorizontalCommandBarContent(
     onLabelChange: (String) -> Unit,
     onBack: () -> Unit,
     onForward: () -> Unit,
+    canGoBack: Boolean = true,
+    canGoForward: Boolean = true,
     onHome: () -> Unit,
     onRefresh: () -> Unit,
     onScrollUp: () -> Unit,
@@ -191,7 +197,8 @@ private fun HorizontalCommandBarContent(
                 onClick = onBack,
                 onFocus = { onLabelChange("Go Back") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = AvanueTheme.colors.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated,
+                enabled = canGoBack
             )
             CommandButton(
                 icon = Icons.Default.Home,
@@ -329,7 +336,8 @@ private fun HorizontalCommandBarContent(
                 onClick = onBack,
                 onFocus = { onLabelChange("Previous Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = AvanueTheme.colors.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated,
+                enabled = canGoBack
             )
             CommandButton(
                 icon = Icons.AutoMirrored.Filled.ArrowForward,
@@ -337,7 +345,8 @@ private fun HorizontalCommandBarContent(
                 onClick = onForward,
                 onFocus = { onLabelChange("Next Page") },
                 onBlur = { onLabelChange("") },
-                backgroundColor = AvanueTheme.colors.surfaceElevated
+                backgroundColor = AvanueTheme.colors.surfaceElevated,
+                enabled = canGoForward
             )
             CommandButton(
                 icon = Icons.Default.Refresh,
@@ -402,10 +411,10 @@ private fun HorizontalCommandBarContent(
                 backgroundColor = AvanueTheme.colors.surfaceElevated
             )
             CommandButton(
-                icon = Icons.Default.FileDownload,
-                label = "Downloads",
+                icon = Icons.Default.Folder,
+                label = "Files",
                 onClick = onDownloads,
-                onFocus = { onLabelChange("Downloads") },
+                onFocus = { onLabelChange("Files") },
                 onBlur = { onLabelChange("") },
                 backgroundColor = AvanueTheme.colors.surfaceElevated
             )

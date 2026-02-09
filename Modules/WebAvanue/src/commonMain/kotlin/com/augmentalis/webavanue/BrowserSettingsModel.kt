@@ -88,6 +88,7 @@ data class BrowserSettings(
     val voiceDialogAutoCloseDelayMs: Long = 2000, // Delay before auto-closing voice dialog (ms)
     val commandBarAutoHide: Boolean = true, // Auto-hide command bar after timeout
     val commandBarAutoHideDelayMs: Long = 10000, // Delay before auto-hiding (ms) - 10 seconds
+    val commandBarOrientation: CommandBarOrientation = CommandBarOrientation.AUTO, // Command bar layout
 
     // WebXR Settings
     // REQ-XR-001: WebXR API Support
@@ -198,6 +199,16 @@ data class BrowserSettings(
     }
 
     /**
+     * Command bar orientation preference.
+     * AUTO follows device orientation, HORIZONTAL/VERTICAL force a specific layout.
+     */
+    enum class CommandBarOrientation {
+        AUTO,        // Portrait → horizontal, landscape → vertical
+        HORIZONTAL,  // Always horizontal bar at bottom
+        VERTICAL     // Always vertical bar on right side
+    }
+
+    /**
      * Calculate the appropriate scale based on mode and orientation
      */
     fun getScaleForMode(isDesktopMode: Boolean, isLandscape: Boolean): Float {
@@ -209,7 +220,7 @@ data class BrowserSettings(
     }
 
     override fun toString(): String {
-        return "BrowserSettings(theme=$theme, fontSize=$fontSize, forceZoom=$forceZoom, showImages=$showImages, useDesktopMode=$useDesktopMode, mobilePortraitScale=$mobilePortraitScale, mobileLandscapeScale=$mobileLandscapeScale, desktopModeDefaultZoom=$desktopModeDefaultZoom, desktopModeWindowWidth=$desktopModeWindowWidth, desktopModeWindowHeight=$desktopModeWindowHeight, desktopModeAutoFitZoom=$desktopModeAutoFitZoom, blockPopups=$blockPopups, blockAds=$blockAds, blockTrackers=$blockTrackers, doNotTrack=$doNotTrack, clearCacheOnExit=$clearCacheOnExit, clearHistoryOnExit=$clearHistoryOnExit, clearCookiesOnExit=$clearCookiesOnExit, enableCookies=$enableCookies, enableJavaScript=$enableJavaScript, enableWebRTC=$enableWebRTC, defaultSearchEngine=$defaultSearchEngine, searchSuggestions=$searchSuggestions, voiceSearch=$voiceSearch, homePage='$homePage', newTabPage=$newTabPage, restoreTabsOnStartup=$restoreTabsOnStartup, showRestoreDialog=$showRestoreDialog, openLinksInBackground=$openLinksInBackground, openLinksInNewTab=$openLinksInNewTab, downloadPath=$downloadPath, askDownloadLocation=$askDownloadLocation, downloadOverWiFiOnly=$downloadOverWiFiOnly, syncEnabled=$syncEnabled, syncBookmarks=$syncBookmarks, syncHistory=$syncHistory, syncPasswords=$syncPasswords, syncSettings=$syncSettings, hardwareAcceleration=$hardwareAcceleration, preloadPages=$preloadPages, dataSaver=$dataSaver, autoPlay=$autoPlay, textReflow=$textReflow, enableDatabaseEncryption=$enableDatabaseEncryption, enableSecureStorage=$enableSecureStorage, enableVoiceCommands=$enableVoiceCommands, aiSummaries=$aiSummaries, aiTranslation=$aiTranslation, readAloud=$readAloud, voiceDialogAutoClose=$voiceDialogAutoClose, voiceDialogAutoCloseDelayMs=$voiceDialogAutoCloseDelayMs, commandBarAutoHide=$commandBarAutoHide, commandBarAutoHideDelayMs=$commandBarAutoHideDelayMs, enableWebXR=$enableWebXR, enableAR=$enableAR, enableVR=$enableVR, xrPerformanceMode=$xrPerformanceMode, xrAutoPauseTimeout=$xrAutoPauseTimeout, xrShowFPSIndicator=$xrShowFPSIndicator, xrRequireWiFi=$xrRequireWiFi, readingModeTheme=$readingModeTheme, readingModeFontSize=$readingModeFontSize, readingModeLineHeight=$readingModeLineHeight, readingModeFontFamily=$readingModeFontFamily, autoDetectArticles=$autoDetectArticles)"
+        return "BrowserSettings(theme=$theme, fontSize=$fontSize, forceZoom=$forceZoom, showImages=$showImages, useDesktopMode=$useDesktopMode, mobilePortraitScale=$mobilePortraitScale, mobileLandscapeScale=$mobileLandscapeScale, desktopModeDefaultZoom=$desktopModeDefaultZoom, desktopModeWindowWidth=$desktopModeWindowWidth, desktopModeWindowHeight=$desktopModeWindowHeight, desktopModeAutoFitZoom=$desktopModeAutoFitZoom, blockPopups=$blockPopups, blockAds=$blockAds, blockTrackers=$blockTrackers, doNotTrack=$doNotTrack, clearCacheOnExit=$clearCacheOnExit, clearHistoryOnExit=$clearHistoryOnExit, clearCookiesOnExit=$clearCookiesOnExit, enableCookies=$enableCookies, enableJavaScript=$enableJavaScript, enableWebRTC=$enableWebRTC, defaultSearchEngine=$defaultSearchEngine, searchSuggestions=$searchSuggestions, voiceSearch=$voiceSearch, homePage='$homePage', newTabPage=$newTabPage, restoreTabsOnStartup=$restoreTabsOnStartup, showRestoreDialog=$showRestoreDialog, openLinksInBackground=$openLinksInBackground, openLinksInNewTab=$openLinksInNewTab, downloadPath=$downloadPath, askDownloadLocation=$askDownloadLocation, downloadOverWiFiOnly=$downloadOverWiFiOnly, syncEnabled=$syncEnabled, syncBookmarks=$syncBookmarks, syncHistory=$syncHistory, syncPasswords=$syncPasswords, syncSettings=$syncSettings, hardwareAcceleration=$hardwareAcceleration, preloadPages=$preloadPages, dataSaver=$dataSaver, autoPlay=$autoPlay, textReflow=$textReflow, enableDatabaseEncryption=$enableDatabaseEncryption, enableSecureStorage=$enableSecureStorage, enableVoiceCommands=$enableVoiceCommands, aiSummaries=$aiSummaries, aiTranslation=$aiTranslation, readAloud=$readAloud, voiceDialogAutoClose=$voiceDialogAutoClose, voiceDialogAutoCloseDelayMs=$voiceDialogAutoCloseDelayMs, commandBarAutoHide=$commandBarAutoHide, commandBarAutoHideDelayMs=$commandBarAutoHideDelayMs, commandBarOrientation=$commandBarOrientation, enableWebXR=$enableWebXR, enableAR=$enableAR, enableVR=$enableVR, xrPerformanceMode=$xrPerformanceMode, xrAutoPauseTimeout=$xrAutoPauseTimeout, xrShowFPSIndicator=$xrShowFPSIndicator, xrRequireWiFi=$xrRequireWiFi, readingModeTheme=$readingModeTheme, readingModeFontSize=$readingModeFontSize, readingModeLineHeight=$readingModeLineHeight, readingModeFontFamily=$readingModeFontFamily, autoDetectArticles=$autoDetectArticles)"
     }
 
     companion object {

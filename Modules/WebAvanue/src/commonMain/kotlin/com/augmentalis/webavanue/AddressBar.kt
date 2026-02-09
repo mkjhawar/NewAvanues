@@ -3,6 +3,7 @@ package com.augmentalis.webavanue
 import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -212,10 +213,23 @@ fun AddressBar(
                         )
                 ) {
                     // Top Row: URL input field - takes full width
+                    // Long-press selects entire URL for easy editing
+                    @OptIn(ExperimentalFoundationApi::class)
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(36.dp),
+                            .height(36.dp)
+                            .combinedClickable(
+                                onClick = { focusRequester.requestFocus() },
+                                onLongClick = {
+                                    focusRequester.requestFocus()
+                                    if (textFieldValue.text.isNotEmpty()) {
+                                        textFieldValue = textFieldValue.copy(
+                                            selection = TextRange(0, textFieldValue.text.length)
+                                        )
+                                    }
+                                }
+                            ),
                         color = AvanueTheme.colors.surfaceInput,
                         shape = RoundedCornerShape(ShapeTokens.sm)
                     ) {
@@ -226,10 +240,10 @@ fun AddressBar(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
                         ) {
-                            // Bookmark button - smaller for portrait
+                            // Bookmark button
                             Surface(
                                 modifier = Modifier
-                                    .size(24.dp)
+                                    .size(28.dp)
                                     .clip(RoundedCornerShape(ShapeTokens.xs))
                                     .clickable { onAddFavorite() },
                                 shape = RoundedCornerShape(ShapeTokens.xs),
@@ -243,7 +257,7 @@ fun AddressBar(
                                         imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                         contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                                         tint = if (isFavorite) IconVariant.Warning.toColor() else IconVariant.Secondary.toColor(),
-                                        modifier = Modifier.size(14.dp)
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
@@ -294,7 +308,7 @@ fun AddressBar(
                             // History button - tap to open history
                             Box(
                                 modifier = Modifier
-                                    .size(24.dp)
+                                    .size(28.dp)
                                     .clip(RoundedCornerShape(ShapeTokens.xs))
                                     .clickable(onClick = onHistoryClick),
                                 contentAlignment = Alignment.Center
@@ -303,24 +317,24 @@ fun AddressBar(
                                     imageVector = Icons.Default.History,
                                     contentDescription = "History",
                                     tint = IconVariant.Secondary.toColor(),
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
 
-                            // Go button - smaller for portrait
+                            // Go button
                             IconButton(
                                 onClick = {
                                     dismissKeyboard()
                                     onGo()
                                 },
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(28.dp),
                                 enabled = true
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Go (Voice: go)",
                                     tint = IconVariant.Secondary.toColor(),
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -402,8 +416,8 @@ fun AddressBar(
                         }
 
                         LabeledNavButton(
-                            icon = Icons.Default.RecordVoiceOver,
-                            label = "Cmds",
+                            icon = Icons.Default.GraphicEq,
+                            label = "Voice",
                             onClick = onCommandBarToggle,
                             tint = IconVariant.Primary.toColor()
                         )
@@ -472,10 +486,23 @@ fun AddressBar(
                     }
 
                     // URL input field - takes remaining space
+                    // Long-press selects entire URL for easy editing
+                    @OptIn(ExperimentalFoundationApi::class)
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp),
+                            .height(40.dp)
+                            .combinedClickable(
+                                onClick = { focusRequester.requestFocus() },
+                                onLongClick = {
+                                    focusRequester.requestFocus()
+                                    if (textFieldValue.text.isNotEmpty()) {
+                                        textFieldValue = textFieldValue.copy(
+                                            selection = TextRange(0, textFieldValue.text.length)
+                                        )
+                                    }
+                                }
+                            ),
                         color = AvanueTheme.colors.surfaceInput,
                         shape = RoundedCornerShape(ShapeTokens.sm)
                     ) {
@@ -489,7 +516,7 @@ fun AddressBar(
                             // Bookmark button - tap to add/remove from favorites
                             Surface(
                                 modifier = Modifier
-                                    .size(28.dp)
+                                    .size(32.dp)
                                     .clip(RoundedCornerShape(ShapeTokens.sm))
                                     .clickable { onAddFavorite() },
                                 shape = RoundedCornerShape(ShapeTokens.sm),
@@ -503,7 +530,7 @@ fun AddressBar(
                                         imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                         contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                                         tint = if (isFavorite) IconVariant.Warning.toColor() else IconVariant.Secondary.toColor(),
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
                             }
@@ -563,7 +590,7 @@ fun AddressBar(
                                     imageVector = Icons.Default.History,
                                     contentDescription = "History",
                                     tint = IconVariant.Secondary.toColor(),
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
 
@@ -588,7 +615,7 @@ fun AddressBar(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Go (Voice: go)",
                                     tint = IconVariant.Secondary.toColor(),
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
@@ -601,30 +628,48 @@ fun AddressBar(
                     )
 
                     // Command bar toggle button - shows/hides bottom command bar
-                    IconButton(
-                        onClick = onCommandBarToggle,
-                        modifier = Modifier.size(36.dp),
-                        enabled = true
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.RecordVoiceOver,
-                            contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
-                            tint = IconVariant.Primary.toColor(),
-                            modifier = Modifier
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(
+                            onClick = onCommandBarToggle,
+                            modifier = Modifier.size(36.dp),
+                            enabled = true
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.GraphicEq,
+                                contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
+                                tint = IconVariant.Primary.toColor(),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Text(
+                            text = "Voice",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 8.sp,
+                            color = AvanueTheme.colors.textSecondary,
+                            textAlign = TextAlign.Center
                         )
                     }
 
                     // Voice/Mic button - tap to start listening
-                    IconButton(
-                        onClick = { if (!isListening) onStartListening() },
-                        modifier = Modifier.size(36.dp),
-                        enabled = true
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = if (isListening) "Listening for command..." else "Tap to speak command",
-                            tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor(),
-                            modifier = Modifier
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconButton(
+                            onClick = { if (!isListening) onStartListening() },
+                            modifier = Modifier.size(36.dp),
+                            enabled = true
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = if (isListening) "Listening for command..." else "Tap to speak command",
+                                tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor(),
+                                modifier = Modifier
+                            )
+                        }
+                        Text(
+                            text = "Mic",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 8.sp,
+                            color = AvanueTheme.colors.textSecondary,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -653,7 +698,7 @@ private fun LabeledNavButton(
             imageVector = icon,
             contentDescription = label,
             tint = tint,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(24.dp)
         )
         Text(
             text = label,

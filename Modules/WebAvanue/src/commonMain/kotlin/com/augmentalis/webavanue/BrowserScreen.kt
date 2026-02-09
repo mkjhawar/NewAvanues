@@ -597,11 +597,9 @@ fun BrowserScreen(
                     onExitBrowser = onExitBrowser,
                     isListening = isListening,
                     onStartListening = {
-                        // Start voice recognition - for now just show indicator
+                        // Start voice recognition - visual feedback only, no command bar toggle
                         // Actual voice recognition will be triggered from Android Activity
                         isListening = true
-                        // Show command bar briefly when listening starts
-                        showCommandBarBriefly()
                         // Auto-stop after 5 seconds (demo timeout)
                         scope.launch {
                             kotlinx.coroutines.delay(5000L)
@@ -797,6 +795,8 @@ fun BrowserScreen(
                         onHide = { isCommandBarVisible = false },
                         isHeadlessMode = isHeadlessMode,
                         onToggleHeadlessMode = { isHeadlessMode = !isHeadlessMode },
+                        canGoBack = activeTab?.canGoBack ?: false,
+                        canGoForward = activeTab?.canGoForward ?: false,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp, vertical = 8.dp)

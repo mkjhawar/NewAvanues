@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.theme.AvanueTheme
@@ -42,15 +43,17 @@ fun CommandButton(
     onBlur: () -> Unit,
     backgroundColor: Color = AvanueTheme.colors.surfaceElevated,
     isActive: Boolean = false,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    // FIX: Reduced button size from 48dp to 46dp to fit 6 buttons in portrait without scrolling
-    // 6 buttons × 46dp + 5 gaps × 4dp + 2 padding × 10dp = 276 + 20 + 20 = 316dp (fits 360dp screens)
+    // Button size: 50dp with 8dp spacing = 6×50 + 5×8 + 2×10 = 360dp (fits 360dp screens)
+    val disabledAlpha = if (enabled) 1f else 0.38f
     Surface(
-        onClick = onClick,
+        onClick = { if (enabled) onClick() },
         modifier = modifier
-            .width(46.dp)
-            .height(46.dp),
+            .width(50.dp)
+            .height(50.dp)
+            .graphicsLayer { alpha = disabledAlpha },
         shape = RoundedCornerShape(ShapeTokens.sm),
         color = if (isActive) AvanueTheme.colors.primary else backgroundColor,
         border = BorderStroke(1.dp, AvanueTheme.colors.border),
@@ -67,7 +70,7 @@ fun CommandButton(
                 imageVector = icon,
                 contentDescription = label,
                 tint = if (isActive) IconVariant.OnPrimary.toColor() else IconVariant.Primary.toColor(),
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(22.dp)
             )
             Spacer(modifier = Modifier.height(1.dp))
             Text(
