@@ -22,6 +22,7 @@ import android.app.NotificationManager
 import android.os.Build
 import android.util.Log
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
+import com.augmentalis.voiceoscore.VivokaEngineFactory
 import com.augmentalis.voiceoscore.rpc.VoiceOSAvuRpcServer
 import com.augmentalis.voiceoscore.rpc.VoiceOSServerConfig
 import com.augmentalis.webavanue.rpc.WebAvanueJsonRpcServer
@@ -96,6 +97,9 @@ class VoiceAvanueApplication : Application() {
     private fun initializeModules() {
         applicationScope.launch(Dispatchers.IO) {
             try {
+                // Initialize Vivoka Engine Factory
+                VivokaEngineFactory.initialize(this@VoiceAvanueApplication)
+
                 // Initialize logging
                 initializeLogging()
 

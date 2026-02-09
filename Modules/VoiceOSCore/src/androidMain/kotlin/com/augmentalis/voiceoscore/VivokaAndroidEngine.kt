@@ -20,11 +20,15 @@ import com.augmentalis.speechrecognition.SpeechMode as SRSpeechMode
 import com.augmentalis.speechrecognition.RecognitionResult
 import com.augmentalis.speechrecognition.vivoka.VivokaEngine
 import com.augmentalis.speechrecognition.vivoka.VivokaPathResolver
+import com.augmentalis.speechrecognition.vivoka.model.VsdkHandlerUtils
+import com.vivoka.vsdk.Constants
+import com.vivoka.vsdk.util.AssetsExtractor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -204,13 +208,16 @@ class VivokaAndroidEngine(
             // Check model status first
             val status = checkModelStatus()
             if (status is VivokaModelStatus.Missing) {
-                _state.value = EngineState.Error(
-                    message = "Vivoka models not found. Please place VSDK files at: ${status.expectedPath}",
-                    recoverable = true
-                )
-                return Result.failure(
-                    IllegalStateException("Models missing at: ${status.expectedPath}")
-                )
+                val extract = initializeEnglishModels()
+                if (!extract){
+                    _state.value = EngineState.Error(
+                        message = "Vivoka models not found. Please place VSDK files at: ${status.expectedPath}",
+                        recoverable = true
+                    )
+                    return Result.failure(
+                        IllegalStateException("Models missing at: ${status.expectedPath}")
+                    )
+                }
             }
 
             // Create and initialize VivokaEngine from SpeechRecognition library
@@ -257,6 +264,23 @@ class VivokaAndroidEngine(
                 recoverable = false
             )
             Result.failure(e)
+        }
+    }
+
+    private suspend fun initializeEnglishModels(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val assetsPath = "${context.filesDir.absolutePath}${Constants.vsdkPath}"
+                val vsdkHandlerUtils = VsdkHandlerUtils(assetsPath)
+
+                if (!vsdkHandlerUtils.checkVivokaFilesExist()) {
+                    AssetsExtractor.extract(context, "vsdk", assetsPath)
+                }
+                true
+            } catch (e: com.vivoka.vsdk.Exception) {
+                e.printStackTrace()
+                false
+            }
         }
     }
 

@@ -13,24 +13,27 @@ package com.augmentalis.speechrecognition.vivoka
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import com.augmentalis.speechrecognition.SpeechConfig
-import com.augmentalis.speechrecognition.SpeechError
-import com.augmentalis.speechrecognition.SpeechMode
+import com.augmentalis.speechrecognition.ErrorRecoveryManager
 import com.augmentalis.speechrecognition.OnSpeechErrorListener
 import com.augmentalis.speechrecognition.OnSpeechResultListener
 import com.augmentalis.speechrecognition.RecognitionResult
-import com.augmentalis.speechrecognition.ErrorRecoveryManager
 import com.augmentalis.speechrecognition.SdkInitializationManager
+import com.augmentalis.speechrecognition.SpeechConfig
+import com.augmentalis.speechrecognition.SpeechError
+import com.augmentalis.speechrecognition.SpeechMode
 import com.augmentalis.speechrecognition.UniversalInitializationManager
 import com.augmentalis.speechrecognition.VoiceStateManager
 import com.augmentalis.speechrecognition.vivoka.model.FileStatus
 import com.augmentalis.speechrecognition.vivoka.model.FirebaseRemoteConfigRepository
 import com.augmentalis.speechrecognition.vivoka.model.VivokaLanguageRepository
+import com.augmentalis.speechrecognition.vivoka.model.VsdkHandlerUtils
 import com.google.firebase.FirebaseApp
+import com.vivoka.vsdk.Constants
 import com.vivoka.vsdk.Exception
 import com.vivoka.vsdk.asr.csdk.recognizer.IRecognizerListener
 import com.vivoka.vsdk.asr.csdk.recognizer.Recognizer
 import com.vivoka.vsdk.asr.recognizer.RecognizerResultType
+import com.vivoka.vsdk.util.AssetsExtractor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,6 +42,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -110,6 +114,9 @@ class VivokaEngine(
 
         try {
             // PHASE 1: Language Model Preparation
+            //initialize English Models
+            initializeEnglishModels()
+
             // No retry logic, can take arbitrary time
             Log.d(TAG, "VIVOKA_INIT Phase 1: Preparing language models")
             val phase1StartTime = System.currentTimeMillis()
@@ -155,7 +162,10 @@ class VivokaEngine(
             return when {
                 result.success && result.state == UniversalInitializationManager.InitializationState.INITIALIZED -> {
                     val totalDuration = phase1Duration + phase2Duration
-                    Log.i(TAG, "VIVOKA_INIT Total initialization: ${totalDuration}ms (Phase1: ${phase1Duration}ms, Phase2: ${phase2Duration}ms)")
+                    Log.i(
+                        TAG,
+                        "VIVOKA_INIT Total initialization: ${totalDuration}ms (Phase1: ${phase1Duration}ms, Phase2: ${phase2Duration}ms)"
+                    )
                     true
                 }
 
@@ -246,6 +256,23 @@ class VivokaEngine(
         }
     }
 
+    private suspend fun initializeEnglishModels(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val assetsPath = "${context.filesDir.absolutePath}${Constants.vsdkPath}"
+                val vsdkHandlerUtils = VsdkHandlerUtils(assetsPath)
+
+                if (!vsdkHandlerUtils.checkVivokaFilesExist()) {
+                    AssetsExtractor.extract(context, "vsdk", assetsPath)
+                }
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+
     /**
      * Download and merge language model configuration
      * Uses BLOCKING download pattern from Avenue4
@@ -317,7 +344,8 @@ class VivokaEngine(
                     }
 
                     is FileStatus.Error -> {
-                        val errorType = if (status.error == com.augmentalis.speechrecognition.vivoka.model.FileError.REMOTE) "network" else "file"
+                        val errorType =
+                            if (status.error == com.augmentalis.speechrecognition.vivoka.model.FileError.REMOTE) "network" else "file"
                         Log.e(TAG, "VIVOKA_DOWNLOAD Download error: $errorType error")
                         voiceStateManager.downloadingModels(false)
 
@@ -775,10 +803,12 @@ class VivokaEngine(
         performance.recordRecognition(System.currentTimeMillis(), null, 0f, false)
 
         // CRITICAL FIX: Notify error listener (matching LegacyAvenue functionality)
-        errorListener?.invoke(SpeechError(
-            code = codeString?.toIntOrNull() ?: 500,
-            message = "Vivoka SDK error [$codeString]: $message"
-        ))
+        errorListener?.invoke(
+            SpeechError(
+                code = codeString?.toIntOrNull() ?: 500,
+                message = "Vivoka SDK error [$codeString]: $message"
+            )
+        )
 
         // Handle error with error recovery manager
         coroutineScope.launch {

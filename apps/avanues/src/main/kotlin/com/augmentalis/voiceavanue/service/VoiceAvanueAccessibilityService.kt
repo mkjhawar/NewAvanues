@@ -75,7 +75,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 voiceOSCore = VoiceOSCore.createForAndroid(
                     service = this@VoiceAvanueAccessibilityService,
                     configuration = ServiceConfiguration(
-                        speechEngine = SpeechEngine.ANDROID_STT.name,
+                        speechEngine = SpeechEngine.VIVOKA.name,
                         voiceLanguage = "en-US",
                         confidenceThreshold = 0.7f,
                         autoStartListening = false,
