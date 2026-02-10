@@ -50,7 +50,8 @@ object AccessibilityNodeAdapter {
         listIndex: Int = -1,
         isInDynamicContainer: Boolean = false,
         containerType: String = "",
-        containerResourceId: String = ""
+        containerResourceId: String = "",
+        isParentClickable: Boolean = false
     ): ElementInfo {
         val rect = Rect()
         node.getBoundsInScreen(rect)
@@ -80,6 +81,7 @@ object AccessibilityNodeAdapter {
             isLongClickable = node.isLongClickable,
             isScrollable = node.isScrollable,
             isEnabled = node.isEnabled,
+            isParentClickable = isParentClickable,
             packageName = packageName,
             avid = avid,
             node = node,

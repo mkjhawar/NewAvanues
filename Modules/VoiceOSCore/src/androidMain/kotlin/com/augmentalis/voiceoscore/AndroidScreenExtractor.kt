@@ -83,7 +83,8 @@ class AndroidScreenExtractor {
         listIndex: Int,
         isInDynamicContainer: Boolean,
         containerType: String,
-        containerResourceId: String = ""
+        containerResourceId: String = "",
+        isParentClickable: Boolean = false
     ) {
         // Depth limit to prevent stack overflow
         if (depth > MAX_DEPTH) {
@@ -101,7 +102,7 @@ class AndroidScreenExtractor {
         node.getBoundsInScreen(rect)
         if (rect.width() < MIN_ELEMENT_SIZE || rect.height() < MIN_ELEMENT_SIZE) {
             // Still traverse children - parent might be small but children visible
-            traverseChildren(node, elements, depth, listIndex, isInDynamicContainer, containerType, containerResourceId)
+            traverseChildren(node, elements, depth, listIndex, isInDynamicContainer, containerType, containerResourceId, isParentClickable)
             return
         }
 
@@ -125,7 +126,8 @@ class AndroidScreenExtractor {
             listIndex = listIndex,
             isInDynamicContainer = effectiveInDynamic,
             containerType = effectiveContainerType,
-            containerResourceId = effectiveContainerResourceId
+            containerResourceId = effectiveContainerResourceId,
+            isParentClickable = isParentClickable
         )
 
         // Add to list if it has useful content for voice commands
@@ -133,8 +135,10 @@ class AndroidScreenExtractor {
             elements.add(elementInfo)
         }
 
-        // Traverse children
-        traverseChildren(node, elements, depth, listIndex, effectiveInDynamic, effectiveContainerType, effectiveContainerResourceId)
+        // Traverse children — propagate clickability so text-only children
+        // of clickable parents are treated as actionable for command generation
+        val effectiveParentClickable = isParentClickable || node.isClickable
+        traverseChildren(node, elements, depth, listIndex, effectiveInDynamic, effectiveContainerType, effectiveContainerResourceId, effectiveParentClickable)
     }
 
     /**
@@ -152,7 +156,8 @@ class AndroidScreenExtractor {
         currentListIndex: Int,
         isInDynamicContainer: Boolean,
         containerType: String,
-        containerResourceId: String = ""
+        containerResourceId: String = "",
+        isParentClickable: Boolean = false
     ) {
         val childCount = node.childCount
 
@@ -195,7 +200,8 @@ class AndroidScreenExtractor {
                         listIndex = childListIndex,
                         isInDynamicContainer = isInDynamicContainer || isThisNodeDynamicContainer,
                         containerType = if (isThisNodeDynamicContainer) nodeClassName else containerType,
-                        containerResourceId = childContainerResourceId
+                        containerResourceId = childContainerResourceId,
+                        isParentClickable = isParentClickable
                     )
                 } finally {
                     // Recycle child node to prevent memory leaks

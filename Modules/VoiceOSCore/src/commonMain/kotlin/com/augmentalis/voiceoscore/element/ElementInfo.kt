@@ -142,7 +142,7 @@ data class ElementInfo(
      * Check if this element is actionable (clickable or scrollable)
      */
     val isActionable: Boolean
-        get() = isClickable || isScrollable || isLongClickable
+        get() = isClickable || isScrollable || isLongClickable || isParentClickable
 
     fun canPerformAction(): Boolean {
         return isClickable || isEditable || isSelected || isCheckable || isLongClickable || isContextClickable
