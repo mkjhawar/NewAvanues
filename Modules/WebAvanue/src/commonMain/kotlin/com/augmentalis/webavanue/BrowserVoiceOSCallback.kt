@@ -1,7 +1,9 @@
 package com.augmentalis.webavanue
 
 import com.augmentalis.database.dto.ScrapedWebCommandDTO
+import com.augmentalis.database.dto.ScrapedWebsiteDTO
 import com.augmentalis.database.repositories.IScrapedWebCommandRepository
+import com.augmentalis.database.repositories.IScrapedWebsiteRepository
 import com.augmentalis.database.repositories.IWebAppWhitelistRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +29,8 @@ import kotlinx.coroutines.launch
  */
 class BrowserVoiceOSCallback(
     private val webCommandRepository: IScrapedWebCommandRepository? = null,
-    private val whitelistRepository: IWebAppWhitelistRepository? = null
+    private val whitelistRepository: IWebAppWhitelistRepository? = null,
+    private val scrapedWebsiteRepository: IScrapedWebsiteRepository? = null
 ) : VoiceOSWebCallback {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -75,6 +78,10 @@ class BrowserVoiceOSCallback(
     // Voice command generator for matching spoken phrases to elements
     private val commandGenerator = VoiceCommandGenerator()
 
+    // Scrape cooldown: prevents redundant command regeneration from rapid DOM mutations.
+    // If last scrape was < SCRAPE_COOLDOWN_MS ago AND structure hash matches, skip processing.
+    private var lastScrapeTimestamp: Long = 0L
+
     // ===== Session Cache (Phase 2: DOM Scraping Persistence) =====
 
     /**
@@ -110,6 +117,22 @@ class BrowserVoiceOSCallback(
     private val sessionCache = mutableMapOf<String, CachedPage>()
 
     override fun onDOMScraped(result: DOMScrapeResult) {
+        val now = System.currentTimeMillis()
+        val urlHash = computeUrlHash(result.url)
+
+        // Cooldown + hash guard: if last scrape was < 2 seconds ago AND
+        // the structure hash matches what's in session cache, skip processing.
+        // Prevents redundant command regeneration from rapid DOM mutations,
+        // zoom changes, or SPA micro-updates that don't affect interactive elements.
+        if (now - lastScrapeTimestamp < SCRAPE_COOLDOWN_MS) {
+            val cached = sessionCache[urlHash]
+            if (cached != null && cached.structureHash == result.structureHash) {
+                println("VoiceOS: Scrape skipped — cooldown + matching structure hash for ${result.url}")
+                return
+            }
+        }
+        lastScrapeTimestamp = now
+
         _currentScrapeResult.value = result
 
         // Clear previous commands and add new elements
@@ -141,7 +164,6 @@ class BrowserVoiceOSCallback(
 
         // Update session cache — next visit to this URL will restore instantly.
         // Cap element storage to limit memory: 200 elements × ~500 bytes × 5 pages ≈ 500KB.
-        val urlHash = computeUrlHash(result.url)
         val cachedElements = if (result.elements.size > MAX_CACHED_ELEMENTS_PER_PAGE) {
             result.elements.take(MAX_CACHED_ELEMENTS_PER_PAGE)
         } else {
@@ -160,9 +182,11 @@ class BrowserVoiceOSCallback(
         )
         evictSessionCacheIfNeeded()
 
-        // Persist commands if domain is whitelisted
-        if (_isWhitelistedDomain.value && webCommandRepository != null) {
+        // Persist to database: website metadata (all pages) + commands (all pages, TTL-evicted).
+        // Whitelisted domains are never TTL-evicted; other pages expire after 7 days.
+        if (webCommandRepository != null) {
             scope.launch {
+                persistWebsiteToDb(result, urlHash, count)
                 persistCommands(result)
             }
         }
@@ -229,7 +253,7 @@ class BrowserVoiceOSCallback(
             return
         }
 
-        // Session cache MISS: normal flow — clear and wait for scrape
+        // Session cache MISS: check Tier 2 DB cache before falling through to fresh scrape.
         _currentScrapeResult.value = null
         commandGenerator.clear()
         _commandCount.value = 0
@@ -238,8 +262,17 @@ class BrowserVoiceOSCallback(
         _scrapingState.value = DOMScrapingState.Scanning()
         _voiceStatus.value = VoiceCommandStatus.Scanning
 
-        // Check if domain is whitelisted
+        // Tier 2: DB cache lookup + whitelist check in parallel
         scope.launch {
+            val dbHit = checkDatabaseCache(urlHash, url, domain)
+            if (dbHit) {
+                // Auto-clear the "from cache" indicator after a short delay
+                delay(3000)
+                if (_scrapingState.value is DOMScrapingState.Complete) {
+                    _scrapingState.value = DOMScrapingState.Idle
+                }
+            }
+            // Always check whitelist (doesn't affect cached commands)
             checkWhitelistAndLoadCommands(domain, url)
         }
 
@@ -346,7 +379,7 @@ class BrowserVoiceOSCallback(
      * Persist commands to database for whitelisted domain.
      */
     private suspend fun persistCommands(result: DOMScrapeResult) {
-        if (webCommandRepository == null || whitelistRepository == null) return
+        if (webCommandRepository == null) return
 
         val domain = _currentDomain.value
         val url = result.url
@@ -380,9 +413,92 @@ class BrowserVoiceOSCallback(
 
         if (commands.isNotEmpty()) {
             webCommandRepository.insertBatch(commands)
-            whitelistRepository.updateCommandCount(domain, commands.size, now)
+            // Update whitelist stats only for whitelisted domains
+            if (_isWhitelistedDomain.value && whitelistRepository != null) {
+                whitelistRepository.updateCommandCount(domain, commands.size, now)
+            }
             println("VoiceOS: Persisted ${commands.size} commands for $domain")
         }
+    }
+
+    /**
+     * Persist or update website metadata in the database (Tier 2 cache).
+     * Compares structure hash to detect whether the DOM has changed since last scrape.
+     * - Same hash → just update access metadata (timestamp + counter)
+     * - Different hash → update structure hash + timestamp (triggers re-scrape on stale check)
+     * - New page → insert full record
+     */
+    private suspend fun persistWebsiteToDb(result: DOMScrapeResult, urlHash: String, commandCount: Int) {
+        val repo = scrapedWebsiteRepository ?: return
+        val now = System.currentTimeMillis()
+        val existing = repo.getByUrlHash(urlHash)
+
+        if (existing != null) {
+            if (existing.structureHash == result.structureHash) {
+                // Structure unchanged — just bump access metadata
+                repo.updateAccessMetadata(urlHash, now, existing.accessCount + 1)
+            } else {
+                // Structure changed — update hash so DB reflects current state
+                repo.updateStructureHash(urlHash, result.structureHash, now)
+                println("VoiceOS: DB structure hash updated for ${result.url}")
+            }
+        } else {
+            // New page — insert full record
+            repo.insert(
+                ScrapedWebsiteDTO(
+                    urlHash = urlHash,
+                    url = result.url,
+                    domain = _currentDomain.value,
+                    title = result.title,
+                    structureHash = result.structureHash,
+                    scrapedAt = now,
+                    lastAccessedAt = now,
+                    accessCount = 1
+                )
+            )
+            println("VoiceOS: DB website record created for ${result.url}")
+        }
+    }
+
+    /**
+     * Check the database cache (Tier 2) for saved commands when session cache misses.
+     *
+     * Loads ScrapedWebCommands from the DB and emits their phrases directly to the
+     * speech grammar — providing instant voice commands before the JS DOM scrape completes.
+     * The fresh scrape (200-500ms) will then overwrite with current-DOM commands.
+     *
+     * Returns true if DB cache was hit and commands were restored.
+     */
+    private suspend fun checkDatabaseCache(urlHash: String, url: String, domain: String): Boolean {
+        val websiteRepo = scrapedWebsiteRepository ?: return false
+        val commandRepo = webCommandRepository ?: return false
+
+        val website = websiteRepo.getByUrlHash(urlHash) ?: return false
+        if (website.isStale) return false
+
+        val savedCommands = commandRepo.getByDomainAndUrl(domain, url)
+        if (savedCommands.isEmpty()) return false
+
+        // Restore phrases from DB — these are interim until the fresh scrape arrives
+        val phrases = savedCommands.map { it.commandText }
+        websiteRepo.updateAccessMetadata(urlHash, System.currentTimeMillis(), website.accessCount + 1)
+
+        _commandCount.value = savedCommands.size
+        _activeWebPhrases.value = phrases
+
+        _scrapingState.value = DOMScrapingState.Complete(
+            elementCount = savedCommands.size,
+            commandCount = savedCommands.size,
+            isWhitelisted = _isWhitelistedDomain.value,
+            fromCache = true
+        )
+        _voiceStatus.value = VoiceCommandStatus.Ready(
+            commandCount = savedCommands.size,
+            isWhitelisted = _isWhitelistedDomain.value
+        )
+
+        println("VoiceOS: DB cache HIT for $url (${savedCommands.size} commands)")
+        return true
     }
 
     // ===== Session Cache Control =====
@@ -398,7 +514,13 @@ class BrowserVoiceOSCallback(
         if (url.isNotBlank()) {
             val urlHash = computeUrlHash(url)
             sessionCache.remove(urlHash)
-            println("VoiceOS: Session cache invalidated for $url")
+            // Also mark as stale in DB so Tier 2 cache forces a rescrape
+            scrapedWebsiteRepository?.let { repo ->
+                scope.launch {
+                    repo.markAsStale(urlHash)
+                }
+            }
+            println("VoiceOS: Cache invalidated (session + DB) for $url")
         }
     }
 
@@ -653,6 +775,10 @@ class BrowserVoiceOSCallback(
         /** Maximum DOM elements stored per cached page to bound memory usage. */
         private const val MAX_CACHED_ELEMENTS_PER_PAGE = 200
 
+        /** Minimum interval between full scrape processing (ms).
+         *  Prevents redundant command regeneration from rapid DOM mutations. */
+        private const val SCRAPE_COOLDOWN_MS = 2000L
+
         /**
          * Active web voice command phrases for the current page.
          *
@@ -686,12 +812,17 @@ class BrowserVoiceOSCallback(
 
         /**
          * Create a callback with persistence support.
+         *
+         * @param webCommandRepository Repository for web command CRUD
+         * @param whitelistRepository Repository for whitelist checking
+         * @param scrapedWebsiteRepository Optional repository for Tier 2 DB website cache
          */
         fun createWithPersistence(
             webCommandRepository: IScrapedWebCommandRepository,
-            whitelistRepository: IWebAppWhitelistRepository
+            whitelistRepository: IWebAppWhitelistRepository,
+            scrapedWebsiteRepository: IScrapedWebsiteRepository? = null
         ): BrowserVoiceOSCallback {
-            return BrowserVoiceOSCallback(webCommandRepository, whitelistRepository)
+            return BrowserVoiceOSCallback(webCommandRepository, whitelistRepository, scrapedWebsiteRepository)
         }
     }
 }
