@@ -492,6 +492,19 @@ object StaticCommandRegistry {
     )
 
     // ═══════════════════════════════════════════════════════════════════
+    // Browser Commands
+    // ═══════════════════════════════════════════════════════════════════
+
+    val browserCommands = listOf(
+        StaticCommand(
+            phrases = listOf("retrain page", "rescan page", "rescan"),
+            actionType = CommandActionType.RETRAIN_PAGE,
+            category = CommandCategory.BROWSER,
+            description = "Force re-scrape current web page and regenerate voice commands"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
     // Registry Access Methods
     // ═══════════════════════════════════════════════════════════════════
 
@@ -510,7 +523,8 @@ object StaticCommandRegistry {
         accessibilityCommands +
         textCommands +
         readingCommands +
-        inputCommands
+        inputCommands +
+        browserCommands
 
     /**
      * Get all phrase strings (for speech engine vocabulary)

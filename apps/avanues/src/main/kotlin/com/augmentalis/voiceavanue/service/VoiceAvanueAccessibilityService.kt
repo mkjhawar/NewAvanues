@@ -176,6 +176,11 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                             }
                             startActivity(intent)
                         }
+                        "RETRAIN_PAGE" -> {
+                            // Invalidate caches + trigger fresh DOM scrape via static signal
+                            BrowserVoiceOSCallback.requestRetrain()
+                            Log.i(TAG, "Retrain page requested via voice command")
+                        }
                     }
                 }
 

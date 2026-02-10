@@ -253,6 +253,13 @@ enum class CommandActionType {
     // Custom
     // ═══════════════════════════════════════════════════════════════════
 
+    // ═══════════════════════════════════════════════════════════════════
+    // Browser Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Force re-scrape of current web page (invalidate cache + rescrape DOM) */
+    RETRAIN_PAGE,
+
     /** Custom/specialized action */
     CUSTOM,
 

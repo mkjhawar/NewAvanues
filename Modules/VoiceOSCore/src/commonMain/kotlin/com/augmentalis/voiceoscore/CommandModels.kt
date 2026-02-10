@@ -489,7 +489,10 @@ enum class CommandCategory {
     VOICE_CONTROL,
 
     /** App launch commands (open app, switch app, etc.) */
-    APP_LAUNCH
+    APP_LAUNCH,
+
+    /** Browser-specific commands (retrain page, web navigation, etc.) */
+    BROWSER
 }
 
 /**

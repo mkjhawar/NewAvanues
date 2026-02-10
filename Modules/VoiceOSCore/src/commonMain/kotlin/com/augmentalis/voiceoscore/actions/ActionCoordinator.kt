@@ -284,6 +284,9 @@ class ActionCoordinator(
             CommandActionType.SHOW_KEYBOARD -> "show keyboard"
             CommandActionType.HIDE_KEYBOARD -> "hide keyboard"
 
+            // Browser actions
+            CommandActionType.RETRAIN_PAGE -> "retrain page"
+
             // Default for custom/unknown
             CommandActionType.CUSTOM -> "tap $target"
             // TODO: Need to implement later

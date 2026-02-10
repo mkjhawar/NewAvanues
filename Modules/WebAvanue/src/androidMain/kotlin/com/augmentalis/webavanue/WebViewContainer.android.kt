@@ -914,6 +914,25 @@ actual fun WebViewContainer(
                 controller?.setDesktopMode(isDesktopMode)
             }
         }
+
+        // VoiceOS: Observe "retrain page" / "rescan page" voice command signal.
+        // Invalidates caches and triggers a fresh DOM scrape.
+        LaunchedEffect(voiceOSCallback, voiceOSBridge) {
+            if (voiceOSCallback != null && voiceOSBridge != null) {
+                BrowserVoiceOSCallback.retrainRequested.collect {
+                    try {
+                        (voiceOSCallback as? BrowserVoiceOSCallback)?.invalidateCurrentPage()
+                        val result = voiceOSBridge?.scrapeDom()
+                        if (result != null) {
+                            voiceOSCallback.onDOMScraped(result)
+                            Log.i("VoiceOS", "Page retrained: ${result.elementCount} elements rescraped")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("VoiceOS", "Retrain page failed", e)
+                    }
+                }
+            }
+        }
     } // End of key(tabId) block
 }
 

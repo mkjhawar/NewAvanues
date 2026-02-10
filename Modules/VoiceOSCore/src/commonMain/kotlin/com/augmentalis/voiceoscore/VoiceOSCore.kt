@@ -236,13 +236,21 @@ class VoiceOSCore private constructor(
      * @return HandlerResult from execution
      */
     suspend fun processCommand(text: String, confidence: Float = 1.0f): HandlerResult {
-        // Hidden system command intercept
+        // System command intercepts (before handler chain)
         val normalizedInput = text.lowercase().trim()
         if (normalizedInput == "developer mode 5x" ||
             normalizedInput == "developer mode five x" ||
             normalizedInput == "developer mode 5 x") {
             onSystemAction?.invoke("OPEN_DEVELOPER_SETTINGS")
             return HandlerResult.success("Opening developer settings")
+        }
+
+        // Browser: retrain/rescan page — invalidate cache + force fresh DOM scrape
+        if (normalizedInput == "retrain page" ||
+            normalizedInput == "rescan page" ||
+            normalizedInput == "rescan") {
+            onSystemAction?.invoke("RETRAIN_PAGE")
+            return HandlerResult.success("Retraining page voice commands")
         }
 
         if (!stateManager.canProcessCommands()) {
