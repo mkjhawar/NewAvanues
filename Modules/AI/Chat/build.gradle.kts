@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt) apply false  // Only applied to Android
 }
 
@@ -156,10 +157,6 @@ android {
         compose = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
-    }
-
     packaging {
         resources {
             excludes += setOf(
@@ -175,10 +172,10 @@ android {
 
 // Apply Hilt plugin only to Android source set
 apply(plugin = "com.google.dagger.hilt.android")
-apply(plugin = "kotlin-kapt")
+apply(plugin = "com.google.devtools.ksp")
 
 dependencies {
     // Hilt compiler (Android-only)
-    "kapt"(libs.hilt.compiler)
-    "kaptAndroidTest"("com.google.dagger:hilt-compiler:2.48.1")
+    "ksp"(libs.hilt.compiler)
+    "kspAndroidTest"("com.google.dagger:hilt-compiler:2.48.1")
 }

@@ -1,6 +1,7 @@
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
+    alias(libs.plugins.kotlin.compose)
 }
 
 kotlin {
@@ -8,10 +9,6 @@ kotlin {
         compilations.all {
             kotlinOptions {
                 jvmTarget = "17"
-                freeCompilerArgs += listOf(
-                    "-P",
-                    "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.24"
-                )
             }
         }
     }
@@ -75,9 +72,5 @@ android {
 
     buildFeatures {
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
 }

@@ -1,6 +1,6 @@
 [versions]
 # Kotlin
-kotlin = "1.9.24"  # 1.9.25 not supported by Compose 1.6.11
+kotlin = "2.1.0"
 kotlinx-coroutines = "1.8.1"  # Updated from 1.7.3 for VoiceOS compatibility
 kotlinx-atomicfu = "0.23.2"  # Atomic operations for KMP
 kotlinx-serialization = "1.6.0"
@@ -8,10 +8,9 @@ kotlinx-datetime = "0.5.0"
 onnxruntime = "1.17.0"  # ONNX Runtime for NLU inference
 
 # Compose
-compose = "1.6.11"  # JetBrains Compose Multiplatform - requires Kotlin 1.9.24
+compose = "1.7.3"  # JetBrains Compose Multiplatform - requires Kotlin 2.1.0
 compose-ui = "1.5.4"
 compose-bom = "2024.06.00"  # Unified BOM version
-compose-compiler = "1.5.14"  # AndroidX Compose Compiler - compatible with Kotlin 1.9.24
 
 # Android
 android-gradle = "8.2.0"
@@ -46,8 +45,8 @@ sqlcipher = "4.5.4"
 # Dependency Injection
 koin = "3.5.3"
 koin-compose = "1.1.2"
-hilt = "2.51.1"  # Updated from 2.48 for VoiceOSCore compatibility
-ksp = "1.9.24-1.0.20"
+hilt = "2.54"  # Updated for Kotlin 2.1.0 K2 metadata compatibility
+ksp = "2.1.0-1.0.29"
 
 # Navigation
 voyager = "1.0.0"
@@ -268,7 +267,7 @@ testing-compose = [
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-# kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }  # Only for Kotlin 2.0+
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "android-gradle" }
 android-library = { id = "com.android.library", version.ref = "android-gradle" }
 compose = { id = "org.jetbrains.compose", version.ref = "compose" }

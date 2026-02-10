@@ -1,6 +1,7 @@
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
+    alias(libs.plugins.kotlin.compose)
     id("org.jetbrains.compose")
 }
 
@@ -10,11 +11,6 @@ version = "1.0.0"
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
-}
-
-// Configure compose compiler - explicitly set version compatible with Kotlin 1.9.25
-compose {
-    kotlinCompilerPlugin.set("androidx.compose.compiler:compiler:1.5.14")
 }
 
 kotlin {
@@ -112,9 +108,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         freeCompilerArgs += listOf(
             "-opt-in=kotlin.RequiresOptIn",
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
-            "-opt-in=kotlinx.coroutines.FlowPreview",
-            "-P",
-            "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.25"
+            "-opt-in=kotlinx.coroutines.FlowPreview"
         )
     }
 }

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -101,12 +102,8 @@ android {
     buildFeatures {
         compose = true
     }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
-    }
 }
 
-// Note: Hilt kapt processor needs to be applied in the Android app module
+// Note: Hilt KSP processor needs to be applied in the Android app module
 // that consumes this library, not in the KMP library itself.
 // See: https://dagger.dev/hilt/gradle-setup.html#kmp

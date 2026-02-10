@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose)
-    // alias(libs.plugins.kotlin.compose)  // Only for Kotlin 2.0+
     // alias(libs.plugins.sentry)  // Not defined in version catalog
 }
 
@@ -61,10 +61,6 @@ android {
 
     buildFeatures {
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
     }
 
     packaging {

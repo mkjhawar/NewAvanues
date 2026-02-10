@@ -14,6 +14,7 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
     id("kotlin-parcelize")
 }
 
@@ -169,9 +170,5 @@ android {
     buildFeatures {
         compose = true
         aidl = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
     }
 }

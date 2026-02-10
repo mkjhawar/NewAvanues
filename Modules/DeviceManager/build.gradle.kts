@@ -6,6 +6,7 @@ plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
     id("com.android.library")
+    alias(libs.plugins.kotlin.compose)
 }
 
 kotlin {
@@ -249,10 +250,6 @@ android {
     buildFeatures {
         dataBinding = true
         compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
     }
 }
 
