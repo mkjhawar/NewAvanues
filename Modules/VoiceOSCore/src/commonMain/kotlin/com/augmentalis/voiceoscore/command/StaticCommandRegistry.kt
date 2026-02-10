@@ -54,6 +54,30 @@ object StaticCommandRegistry {
             actionType = CommandActionType.APP_DRAWER,
             category = CommandCategory.NAVIGATION,
             description = "Open app drawer"
+        ),
+        StaticCommand(
+            phrases = listOf("scroll down", "page down"),
+            actionType = CommandActionType.SCROLL_DOWN,
+            category = CommandCategory.NAVIGATION,
+            description = "Scroll down"
+        ),
+        StaticCommand(
+            phrases = listOf("scroll up", "page up"),
+            actionType = CommandActionType.SCROLL_UP,
+            category = CommandCategory.NAVIGATION,
+            description = "Scroll up"
+        ),
+        StaticCommand(
+            phrases = listOf("scroll left"),
+            actionType = CommandActionType.SCROLL_LEFT,
+            category = CommandCategory.NAVIGATION,
+            description = "Scroll left"
+        ),
+        StaticCommand(
+            phrases = listOf("scroll right"),
+            actionType = CommandActionType.SCROLL_RIGHT,
+            category = CommandCategory.NAVIGATION,
+            description = "Scroll right"
         )
     )
 
@@ -269,34 +293,10 @@ object StaticCommandRegistry {
     )
 
     // ═══════════════════════════════════════════════════════════════════
-    // Accessibility Commands (Scroll + Zoom + Element Interaction)
+    // Accessibility Commands (Zoom + Element Interaction)
     // ═══════════════════════════════════════════════════════════════════
 
     val accessibilityCommands = listOf(
-        StaticCommand(
-            phrases = listOf("scroll down", "page down"),
-            actionType = CommandActionType.SCROLL_DOWN,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Scroll down"
-        ),
-        StaticCommand(
-            phrases = listOf("scroll up", "page up"),
-            actionType = CommandActionType.SCROLL_UP,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Scroll up"
-        ),
-        StaticCommand(
-            phrases = listOf("scroll left"),
-            actionType = CommandActionType.SCROLL_LEFT,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Scroll left"
-        ),
-        StaticCommand(
-            phrases = listOf("scroll right"),
-            actionType = CommandActionType.SCROLL_RIGHT,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Scroll right"
-        ),
         StaticCommand(
             phrases = listOf("click", "tap", "press"),
             actionType = CommandActionType.CLICK,

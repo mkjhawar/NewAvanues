@@ -74,7 +74,8 @@ data class StaticCommand(
     val phrase: String,
     val enabled: Boolean = true,
     val synonyms: List<String> = emptyList(),
-    val description: String = ""
+    val description: String = "",
+    val actionType: CommandActionType = CommandActionType.CUSTOM
 )
 
 /**
@@ -216,7 +217,8 @@ class DashboardViewModel @Inject constructor(
                         phrase = cmd.primaryPhrase,
                         enabled = true,
                         synonyms = cmd.phrases.drop(1),
-                        description = cmd.description
+                        description = cmd.description,
+                        actionType = cmd.actionType
                     )
                 }
             )

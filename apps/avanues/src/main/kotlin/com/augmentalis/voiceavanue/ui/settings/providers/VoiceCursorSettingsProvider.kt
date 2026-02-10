@@ -169,7 +169,7 @@ class VoiceCursorSettingsProvider @Inject constructor(
         val currentColor = if (useThemeColor) {
             themeAccent.accent
         } else {
-            Color(settings.cursorAccentOverride!!.toULong())
+            Color(settings.cursorAccentOverride!!.toInt())
         }
 
         SettingsGroupCard {

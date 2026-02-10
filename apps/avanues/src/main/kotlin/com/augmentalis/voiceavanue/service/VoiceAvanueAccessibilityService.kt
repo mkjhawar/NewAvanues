@@ -247,7 +247,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         // Restore custom accent override from persisted value
                         val accentOverride = settings.cursorAccentOverride
                         if (accentOverride != null) {
-                            val color = androidx.compose.ui.graphics.Color(accentOverride.toULong())
+                            val color = androidx.compose.ui.graphics.Color(accentOverride.toInt())
                             AvanueModuleAccents.setOverride(
                                 "voicecursor",
                                 ModuleAccent(

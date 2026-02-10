@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -82,9 +81,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -426,7 +430,16 @@ private fun DashboardHeader(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "VoiceOS\u00AE Avanues",
+                text = buildAnnotatedString {
+                    append("VoiceOS")
+                    withStyle(SpanStyle(
+                        baselineShift = BaselineShift.Superscript,
+                        fontSize = 12.sp
+                    )) {
+                        append("\u00AE")
+                    }
+                    append(" Avanues")
+                },
                 style = MaterialTheme.typography.headlineSmall,
                 color = AvanueTheme.colors.textPrimary,
                 fontWeight = FontWeight.SemiBold
@@ -525,7 +538,7 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
 
     AvanueCard(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+        modifier = Modifier.fillMaxWidth().fillMaxHeight().heightIn(min = 56.dp)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val isCompact = maxWidth < 200.dp
@@ -565,7 +578,7 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -575,13 +588,15 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
                             color = AvanueTheme.colors.textPrimary.copy(alpha = contentAlpha),
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                         Text(
                             text = statusText,
                             style = MaterialTheme.typography.labelSmall,
                             color = statusColor,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
                         )
                     }
                     Text(
@@ -1026,86 +1041,207 @@ private fun ExpandableCommandCategory(
     }
 }
 
+/**
+ * Formats a CommandActionType into a readable function label.
+ * e.g. SCROLL_DOWN -> "Scroll Down", MEDIA_PLAY -> "Media Play"
+ */
+private fun formatActionType(actionType: CommandActionType): String {
+    return actionType.name.lowercase()
+        .replace('_', ' ')
+        .split(' ')
+        .joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CommandRow(
     command: StaticCommand,
     onToggle: () -> Unit,
     onAddAlias: (String) -> Unit = {}
 ) {
+    var expanded by remember { mutableStateOf(false) }
     var showAliasField by remember { mutableStateOf(false) }
     var aliasText by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
-            verticalAlignment = Alignment.CenterVertically
+        // Collapsed row: checkbox + primary phrase + action badge + expand chevron
+        AvanueSurface(
+            onClick = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
         ) {
-            Checkbox(
-                checked = command.enabled, onCheckedChange = { onToggle() },
-                colors = CheckboxDefaults.colors(checkedColor = AvanueTheme.colors.success, uncheckedColor = AvanueTheme.colors.textSecondary)
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(command.phrase, style = MaterialTheme.typography.bodyMedium, color = AvanueTheme.colors.textPrimary)
-                if (command.description.isNotEmpty()) {
-                    Text(command.description, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
-                }
-                if (command.synonyms.isNotEmpty()) {
-                    Text(
-                        "Also: ${command.synonyms.joinToString(", ")}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AvanueTheme.colors.textDisabled
-                    )
-                }
-            }
-            AvanueChip(
-                onClick = { showAliasField = !showAliasField },
-                label = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
-                    ) {
-                        Icon(Icons.Default.Add, null, modifier = Modifier.size(12.dp), tint = AvanueTheme.colors.primary)
-                        Text("Alias", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.primary)
-                    }
-                }
-            )
-        }
-        AnimatedVisibility(visible = showAliasField) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 48.dp, top = SpacingTokens.xs, bottom = SpacingTokens.xs),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = SpacingTokens.sm, vertical = SpacingTokens.xs),
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
-                    value = aliasText,
-                    onValueChange = { aliasText = it },
-                    label = { Text("New alias phrase") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = AvanueTheme.colors.textPrimary,
-                        unfocusedTextColor = AvanueTheme.colors.textPrimary,
-                        focusedBorderColor = AvanueTheme.colors.primary,
-                        unfocusedBorderColor = AvanueTheme.colors.textDisabled,
-                        focusedLabelColor = AvanueTheme.colors.primary,
-                        unfocusedLabelColor = AvanueTheme.colors.textSecondary,
-                        cursorColor = AvanueTheme.colors.primary
-                    )
+                Checkbox(
+                    checked = command.enabled, onCheckedChange = { onToggle() },
+                    colors = CheckboxDefaults.colors(checkedColor = AvanueTheme.colors.success, uncheckedColor = AvanueTheme.colors.textSecondary)
                 )
-                TextButton(
-                    onClick = {
-                        val trimmed = aliasText.trim()
-                        if (trimmed.isNotEmpty()) {
-                            onAddAlias(trimmed)
-                            aliasText = ""
-                            showAliasField = false
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "\"${command.phrase}\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AvanueTheme.colors.textPrimary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = formatActionType(command.actionType),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AvanueTheme.colors.info
+                        )
+                    }
+                    if (command.description.isNotEmpty()) {
+                        Text(command.description, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
+                    }
+                }
+                if (command.synonyms.isNotEmpty()) {
+                    Text(
+                        text = "+${command.synonyms.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AvanueTheme.colors.textTertiary
+                    )
+                }
+                Icon(
+                    if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    if (expanded) "Collapse" else "Expand",
+                    tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        // Expanded detail: synonyms as chips + add alias
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 48.dp, top = SpacingTokens.xs, bottom = SpacingTokens.sm),
+                verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
+            ) {
+                // Primary phrase label
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Primary:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AvanueTheme.colors.textTertiary
+                    )
+                    AvanueChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                text = command.phrase,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AvanueTheme.colors.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    )
+                }
+
+                // Synonyms (alternate trigger phrases)
+                if (command.synonyms.isNotEmpty()) {
+                    Text(
+                        text = "Synonyms:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AvanueTheme.colors.textTertiary
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs),
+                        verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                    ) {
+                        command.synonyms.forEach { synonym ->
+                            AvanueChip(
+                                onClick = {},
+                                label = {
+                                    Text(
+                                        text = synonym,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = AvanueTheme.colors.textSecondary
+                                    )
+                                }
+                            )
                         }
                     }
+                }
+
+                // Function (action type)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Add", color = AvanueTheme.colors.primary)
+                    Text(
+                        text = "Function:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AvanueTheme.colors.textTertiary
+                    )
+                    Text(
+                        text = formatActionType(command.actionType),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AvanueTheme.colors.info,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // Add alias chip + inline field
+                AvanueChip(
+                    onClick = { showAliasField = !showAliasField },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                        ) {
+                            Icon(Icons.Default.Add, null, modifier = Modifier.size(12.dp), tint = AvanueTheme.colors.primary)
+                            Text("Add Alias", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.primary)
+                        }
+                    }
+                )
+
+                AnimatedVisibility(visible = showAliasField) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = aliasText,
+                            onValueChange = { aliasText = it },
+                            label = { Text("New alias phrase") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = AvanueTheme.colors.textPrimary,
+                                unfocusedTextColor = AvanueTheme.colors.textPrimary,
+                                focusedBorderColor = AvanueTheme.colors.primary,
+                                unfocusedBorderColor = AvanueTheme.colors.textDisabled,
+                                focusedLabelColor = AvanueTheme.colors.primary,
+                                unfocusedLabelColor = AvanueTheme.colors.textSecondary,
+                                cursorColor = AvanueTheme.colors.primary
+                            )
+                        )
+                        TextButton(
+                            onClick = {
+                                val trimmed = aliasText.trim()
+                                if (trimmed.isNotEmpty()) {
+                                    onAddAlias(trimmed)
+                                    aliasText = ""
+                                    showAliasField = false
+                                }
+                            }
+                        ) {
+                            Text("Add", color = AvanueTheme.colors.primary)
+                        }
+                    }
                 }
             }
         }
