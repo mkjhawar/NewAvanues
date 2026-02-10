@@ -108,7 +108,7 @@ enum class FilterStrength {
 @Serializable
 data class CursorConfig(
     val type: CursorType = CursorType.Normal,
-    val color: Long = 0xFF007AFF, // ARVision systemBlue
+    val color: Long = 0xFF007AFF, // ARVision systemBlue (cursor fill ARGB)
     val size: Int = 48, // ARVision standard touch target
     val handCursorSize: Int = 48,
     val speed: Int = 8,
@@ -116,6 +116,14 @@ data class CursorConfig(
     val cornerRadius: Float = 20.0f,
     val glassOpacity: Float = 0.8f,
     val showCoordinates: Boolean = false,
+
+    // Appearance — overlay rendering (defaults match original hardcoded values)
+    val borderColor: Long = 0xFFFFFFFF,      // Cursor border (was hardcoded White)
+    val dwellRingColor: Long = 0xFF007AFF,   // Dwell progress ring
+    val cursorAlpha: Int = 200,              // Fill opacity 0-255
+    val borderStrokeWidth: Float = 3f,       // Border width
+    val dwellRingStrokeWidth: Float = 4f,    // Dwell ring width
+    val cursorRadius: Float = 12f,           // Cursor dot radius
 
     // Dwell click settings
     val dwellClickEnabled: Boolean = true,

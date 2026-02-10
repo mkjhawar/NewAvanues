@@ -31,6 +31,7 @@ import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
+import com.augmentalis.avanueui.theme.AvanueModuleAccents
 import com.augmentalis.voicecursor.core.ClickDispatcher
 import com.augmentalis.voicecursor.core.CursorAction
 import com.augmentalis.voicecursor.core.CursorConfig
@@ -88,13 +89,7 @@ class CursorOverlayService : Service() {
         val screenWidth = displayMetrics.widthPixels.toFloat()
         val screenHeight = displayMetrics.heightPixels.toFloat()
 
-        val config = CursorConfig(
-            dwellClickEnabled = true,
-            dwellClickDelayMs = 1500L,
-            jitterFilterEnabled = true,
-            filterStrength = FilterStrength.Medium,
-            size = 48
-        )
+        val config = buildConfigFromAccent()
 
         cursorController = CursorController(config).apply {
             initialize(screenWidth, screenHeight)
@@ -116,6 +111,20 @@ class CursorOverlayService : Service() {
         Log.i(TAG, "CursorController initialized (${screenWidth}x${screenHeight})")
     }
 
+    /**
+     * Build a CursorConfig with colors from AvanueModuleAccents.
+     * Called at init and whenever config is rebuilt from settings.
+     */
+    private fun buildConfigFromAccent(base: CursorConfig = CursorConfig()): CursorConfig {
+        val accentArgb = AvanueModuleAccents.getAccentArgb("voicecursor").toLong() and 0xFFFFFFFFL
+        val onAccentArgb = AvanueModuleAccents.getOnAccentArgb("voicecursor").toLong() and 0xFFFFFFFFL
+        return base.copy(
+            color = accentArgb,
+            borderColor = onAccentArgb,
+            dwellRingColor = accentArgb
+        )
+    }
+
     private fun createOverlayWindow() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
@@ -129,7 +138,11 @@ class CursorOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         )
 
-        overlayView = CursorOverlayView(this)
+        overlayView = CursorOverlayView(this).also { view ->
+            cursorController?.let { controller ->
+                view.applyConfig(controller.getConfig())
+            }
+        }
         windowManager?.addView(overlayView, layoutParams)
 
         Log.i(TAG, "Overlay window created")
@@ -169,9 +182,11 @@ class CursorOverlayService : Service() {
 
     /**
      * Update cursor configuration from settings.
+     * Propagates color/size config to both the controller and overlay view.
      */
     fun updateConfig(config: CursorConfig) {
         cursorController?.updateConfig(config)
+        overlayView?.applyConfig(config)
     }
 
     /**
@@ -188,6 +203,18 @@ class CursorOverlayService : Service() {
      */
     fun setLaunchIntent(intent: PendingIntent) {
         launchIntent = intent
+    }
+
+    /**
+     * Perform a click at the current cursor position.
+     * Used by voice command handlers to dispatch "cursor click" / "click here".
+     * @return true if click was dispatched, false if cursor not visible or dispatcher not set
+     */
+    fun performClickAtCurrentPosition(): Boolean {
+        val state = cursorController?.state?.value ?: return false
+        if (!state.isVisible) return false
+        performClick(state.position.x.toInt(), state.position.y.toInt())
+        return true
     }
 
     private fun performClick(x: Int, y: Int) {
@@ -266,33 +293,55 @@ class CursorOverlayService : Service() {
 /**
  * Custom View that renders the cursor dot and dwell progress ring.
  * Uses Canvas for efficient drawing — no Compose overhead for this always-on overlay.
+ *
+ * All visual properties (colors, sizes, strokes) are driven by CursorConfig
+ * via [applyConfig]. No hardcoded colors — everything comes from the config,
+ * which in turn reads from AvanueModuleAccents for theme integration.
  */
-private class CursorOverlayView(context: Context) : View(context) {
+internal class CursorOverlayView(context: Context) : View(context) {
 
     private var cursorX = 0f
     private var cursorY = 0f
     private var isVisible = false
     private var isDwelling = false
     private var dwellProgress = 0f
-    private val cursorRadius = 12f
+    private var cursorRadius = 12f
 
     private val cursorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#007AFF")
         style = Paint.Style.FILL
-        alpha = 200
     }
 
     private val cursorBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
         style = Paint.Style.STROKE
-        strokeWidth = 3f
     }
 
     private val dwellPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#007AFF")
         style = Paint.Style.STROKE
-        strokeWidth = 4f
         strokeCap = Paint.Cap.ROUND
+    }
+
+    init {
+        // Apply defaults matching CursorConfig defaults
+        applyConfig(CursorConfig())
+    }
+
+    /**
+     * Apply all visual properties from the cursor config.
+     * Safe to call from any thread (posts invalidate).
+     */
+    fun applyConfig(config: CursorConfig) {
+        cursorRadius = config.cursorRadius
+
+        cursorPaint.color = config.color.toInt()
+        cursorPaint.alpha = config.cursorAlpha
+
+        cursorBorderPaint.color = config.borderColor.toInt()
+        cursorBorderPaint.strokeWidth = config.borderStrokeWidth
+
+        dwellPaint.color = config.dwellRingColor.toInt()
+        dwellPaint.strokeWidth = config.dwellRingStrokeWidth
+
+        postInvalidate()
     }
 
     fun updateCursorState(state: CursorState) {

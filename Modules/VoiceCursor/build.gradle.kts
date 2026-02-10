@@ -62,6 +62,9 @@ kotlin {
                 // Android-specific
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.kotlinx.coroutines.android)
+
+                // AvanueUI — for AvanueModuleAccents (theme-aware cursor colors)
+                implementation(project(":Modules:AvanueUI"))
             }
         }
 
