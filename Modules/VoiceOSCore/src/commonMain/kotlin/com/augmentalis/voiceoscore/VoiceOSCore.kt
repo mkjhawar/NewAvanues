@@ -335,9 +335,14 @@ class VoiceOSCore private constructor(
             IllegalStateException("No speech engine configured")
         )
         // Merge + de-dupe correctly (set of Strings)
+        // MUST include static phrases — speech engine grammar is REPLACED on each call,
+        // so omitting them would remove recognition of "scroll down", "back", etc.
+        val staticPhrases = staticCommandPersistence?.getAllPhrases()
+            ?: StaticCommandRegistry.allPhrases()
         val newCommands: Set<String> = buildSet {
             addAll(commands)
             addAll(appHandlerPhrases)
+            addAll(staticPhrases)
         }
 
         println("[VoiceOSCore] allRegisteredCommands = ${allRegisteredCommands.size} , newCommands = ${newCommands.size}")
