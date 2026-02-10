@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +50,7 @@ fun DownloadItem(
             enabled = download.status == DownloadStatus.COMPLETED
         ) { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Column(
@@ -74,9 +75,9 @@ fun DownloadItem(
                     },
                     contentDescription = null,
                     tint = when (download.status) {
-                        DownloadStatus.COMPLETED -> MaterialTheme.colorScheme.primary
-                        DownloadStatus.FAILED, DownloadStatus.CANCELLED -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        DownloadStatus.COMPLETED -> AvanueTheme.colors.primary
+                        DownloadStatus.FAILED, DownloadStatus.CANCELLED -> AvanueTheme.colors.error
+                        else -> AvanueTheme.colors.textSecondary
                     },
                     modifier = Modifier.size(24.dp)
                 )
@@ -103,7 +104,7 @@ fun DownloadItem(
                             append(" • ${formatStatus(download.status)}")
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
 
@@ -116,7 +117,7 @@ fun DownloadItem(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Cancel",
-                                    tint = MaterialTheme.colorScheme.error
+                                    tint = AvanueTheme.colors.error
                                 )
                             }
                         }
@@ -127,7 +128,7 @@ fun DownloadItem(
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Retry",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = AvanueTheme.colors.primary
                                 )
                             }
 
@@ -136,7 +137,7 @@ fun DownloadItem(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = AvanueTheme.colors.textSecondary
                                 )
                             }
                         }
@@ -147,7 +148,7 @@ fun DownloadItem(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = AvanueTheme.colors.textSecondary
                                 )
                             }
                         }
@@ -158,7 +159,7 @@ fun DownloadItem(
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Retry",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = AvanueTheme.colors.primary
                                 )
                             }
 
@@ -167,7 +168,7 @@ fun DownloadItem(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = AvanueTheme.colors.textSecondary
                                 )
                             }
                         }
@@ -205,14 +206,14 @@ fun DownloadItem(
                     Text(
                         text = formatSpeed(download.downloadSpeed),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = AvanueTheme.colors.primary
                     )
 
                     // Progress percentage
                     Text(
                         text = "${(progress * 100).toInt()}%",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
 
                     // ETA
@@ -220,7 +221,7 @@ fun DownloadItem(
                         Text(
                             text = "${formatETA(download.estimatedTimeRemaining)} remaining",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -233,7 +234,7 @@ fun DownloadItem(
                 Text(
                     text = "Download failed",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    color = AvanueTheme.colors.error
                 )
             }
         }
@@ -261,7 +262,7 @@ fun DownloadItem(
                         showDeleteConfirmation = false
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = AvanueTheme.colors.error)
                 }
             },
             dismissButton = {

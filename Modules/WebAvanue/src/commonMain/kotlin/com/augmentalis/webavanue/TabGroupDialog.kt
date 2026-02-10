@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,8 +82,8 @@ fun TabGroupDialog(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedBorderColor = AvanueTheme.colors.primary,
+                        unfocusedBorderColor = AvanueTheme.colors.border,
                         focusedPlaceholderColor = Color.White.copy(alpha = 0.5f),
                         unfocusedPlaceholderColor = Color.White.copy(alpha = 0.5f)
                     )
@@ -120,7 +121,7 @@ fun TabGroupDialog(
                 },
                 enabled = title.isNotBlank()
             ) {
-                Text("Save", color = MaterialTheme.colorScheme.primary)
+                Text("Save", color = AvanueTheme.colors.primary)
             }
         },
         dismissButton = {
@@ -128,7 +129,7 @@ fun TabGroupDialog(
                 Text("Cancel", color = Color.White.copy(alpha = 0.7f))
             }
         },
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = AvanueTheme.colors.surface,
         modifier = modifier
     )
 }

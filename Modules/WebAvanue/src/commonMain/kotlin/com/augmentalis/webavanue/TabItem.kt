@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,7 +53,7 @@ fun TabItem(
             .height(36.dp)
             .glassTab(isActive = isActive)
             .background(
-                color = if (isActive) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+                color = if (isActive) AvanueTheme.colors.surfaceVariant else AvanueTheme.colors.surface
             )
             .combinedClickable(
                 onClick = onClick,
@@ -92,7 +93,7 @@ fun TabItem(
                     CircularProgressIndicator(
                         modifier = Modifier.size(14.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = AvanueTheme.colors.primary
                     )
                 }
 
@@ -141,7 +142,7 @@ fun TabItem(
             .height(36.dp)
             .glassTab(isActive = isActive)
             .background(
-                color = if (isActive) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+                color = if (isActive) AvanueTheme.colors.surfaceVariant else AvanueTheme.colors.surface
             )
             .clickable { onClick() }
     ) {
@@ -177,7 +178,7 @@ fun TabItem(
                     CircularProgressIndicator(
                         modifier = Modifier.size(14.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = AvanueTheme.colors.primary
                     )
                 }
 

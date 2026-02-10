@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,8 +99,8 @@ fun AskDownloadLocationDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    border = BorderStroke(1.dp, AvanueTheme.colors.border),
+                    color = AvanueTheme.colors.surfaceVariant.copy(alpha = 0.5f)
                 ) {
                     Row(
                         modifier = Modifier
@@ -117,12 +118,12 @@ fun AskDownloadLocationDialog(
                             Icon(
                                 imageVector = Icons.Default.Folder,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = AvanueTheme.colors.primary
                             )
                             Text(
                                 text = displayPath,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = AvanueTheme.colors.textSecondary
                             )
                         }
 
@@ -133,7 +134,7 @@ fun AskDownloadLocationDialog(
                             Icon(
                                 imageVector = Icons.Default.FolderOpen,
                                 contentDescription = "Change location",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = AvanueTheme.colors.primary
                             )
                         }
                     }
@@ -152,7 +153,7 @@ fun AskDownloadLocationDialog(
                     Text(
                         text = "Always use this location",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = AvanueTheme.colors.textPrimary
                     )
                 }
 
@@ -161,7 +162,7 @@ fun AskDownloadLocationDialog(
                     Text(
                         text = "This location will be saved to settings and used for all future downloads.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }

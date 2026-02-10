@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,7 +74,7 @@ fun SslErrorDialog(
                     text = sslErrorInfo.primaryError,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.error
+                    color = AvanueTheme.colors.error
                 )
 
                 // Recommended action
@@ -86,7 +87,7 @@ fun SslErrorDialog(
                 Text(
                     text = "URL: ${sslErrorInfo.url}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 // Additional errors (if any)
@@ -131,7 +132,7 @@ fun SslErrorDialog(
                 // Warning callout
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
+                        containerColor = AvanueTheme.colors.errorContainer
                     ),
                     modifier = Modifier.padding(top = 8.dp)
                 ) {
@@ -147,7 +148,7 @@ fun SslErrorDialog(
             TextButton(
                 onClick = onGoBack,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
+                    contentColor = AvanueTheme.colors.primary
                 )
             ) {
                 Text("Go Back")
@@ -157,7 +158,7 @@ fun SslErrorDialog(
             TextButton(
                 onClick = onProceedAnyway,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
+                    contentColor = AvanueTheme.colors.error
                 )
             ) {
                 Text("Proceed Anyway")
@@ -211,7 +212,7 @@ fun PermissionRequestDialog(
                     text = permissionRequest.domain,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = AvanueTheme.colors.primary
                 )
 
                 // Permission request message
@@ -228,7 +229,7 @@ fun PermissionRequestDialog(
                 // Explanation
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = AvanueTheme.colors.surfaceVariant
                     )
                 ) {
                     Text(
@@ -449,7 +450,7 @@ fun HttpAuthenticationDialog(
                     text = authRequest.host,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = AvanueTheme.colors.primary
                 )
 
                 Text(
@@ -460,7 +461,7 @@ fun HttpAuthenticationDialog(
                 if (authRequest.realm.isNotBlank()) {
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = AvanueTheme.colors.surfaceVariant
                         )
                     ) {
                         Text(
@@ -498,7 +499,7 @@ fun HttpAuthenticationDialog(
                     Text(
                         text = "Authentication scheme: ${authRequest.scheme}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }

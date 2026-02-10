@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -148,7 +149,7 @@ fun BookmarkListScreen(
                         Text(
                             text = error ?: "Unknown error",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
+                            color = AvanueTheme.colors.error
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -260,7 +261,7 @@ fun EmptyBookmarksState(
         Text(
             text = "Save your favorite pages for quick access",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         Button(onClick = onAddBookmark) {

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +110,7 @@ fun TabGroupAssignmentDialog(
                                 onCreateNewGroup()
                                 onDismiss()
                             },
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        color = AvanueTheme.colors.primary.copy(alpha = 0.2f)
                     ) {
                         Row(
                             modifier = Modifier
@@ -121,13 +122,13 @@ fun TabGroupAssignmentDialog(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = AvanueTheme.colors.primary,
                                 modifier = Modifier.size(24.dp)
                             )
                             Text(
                                 text = "Create New Group",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.primary
+                                color = AvanueTheme.colors.primary
                             )
                         }
                     }
@@ -140,7 +141,7 @@ fun TabGroupAssignmentDialog(
                 Text("Cancel", color = Color.White.copy(alpha = 0.7f))
             }
         },
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = AvanueTheme.colors.surface,
         modifier = modifier
     )
 }
@@ -162,9 +163,9 @@ private fun GroupOption(
             .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() },
         color = if (isSelected) {
-            MaterialTheme.colorScheme.surfaceVariant
+            AvanueTheme.colors.surfaceVariant
         } else {
-            MaterialTheme.colorScheme.surface
+            AvanueTheme.colors.surface
         }
     ) {
         Row(
@@ -207,7 +208,7 @@ private fun GroupOption(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = AvanueTheme.colors.primary,
                     modifier = Modifier.size(24.dp)
                 )
             }

@@ -2,6 +2,7 @@ package com.augmentalis.webavanue
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -52,7 +53,7 @@ fun ScreenshotTypeDialog(
                         Text(
                             "Capture only what's currently visible on screen",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -75,7 +76,7 @@ fun ScreenshotTypeDialog(
                         Text(
                             "Capture entire webpage by scrolling and stitching",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -128,7 +129,7 @@ fun ScreenshotProgressDialog(
                 Text(
                     message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         },
@@ -173,7 +174,7 @@ fun ScreenshotPreviewDialog(
                     Text(
                         it,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 } ?: Text(
                     "Screenshot captured in memory",

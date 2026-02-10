@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -198,14 +199,14 @@ private fun SettingsCard(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    tint = if (enabled) AvanueTheme.colors.primary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
                 )
 
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    color = if (enabled) AvanueTheme.colors.textPrimary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
                 )
             }
 
@@ -243,7 +244,7 @@ private fun SwitchSettingItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                tint = if (enabled) AvanueTheme.colors.textSecondary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f),
                 modifier = Modifier.size(24.dp)
             )
 
@@ -251,13 +252,13 @@ private fun SwitchSettingItem(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    color = if (enabled) AvanueTheme.colors.textPrimary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
                 )
 
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    color = if (enabled) AvanueTheme.colors.textSecondary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
                 )
             }
         }
@@ -292,7 +293,7 @@ private fun SelectionSettingItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            tint = if (enabled) AvanueTheme.colors.textSecondary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f),
             modifier = Modifier.size(24.dp)
         )
 
@@ -300,13 +301,13 @@ private fun SelectionSettingItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                color = if (enabled) AvanueTheme.colors.textPrimary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
             )
 
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                color = if (enabled) AvanueTheme.colors.textSecondary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -366,7 +367,7 @@ private fun SliderSettingItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            tint = if (enabled) AvanueTheme.colors.textSecondary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f),
             modifier = Modifier.size(24.dp)
         )
 
@@ -374,13 +375,13 @@ private fun SliderSettingItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                color = if (enabled) AvanueTheme.colors.textPrimary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
             )
 
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                color = if (enabled) AvanueTheme.colors.textSecondary else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -400,7 +401,7 @@ private fun SliderSettingItem(
 private fun InfoCard(enabled: Boolean) {
     Surface(
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (enabled) 1f else 0.38f),
+        color = AvanueTheme.colors.primaryContainer.copy(alpha = if (enabled) 1f else 0.38f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -410,7 +411,7 @@ private fun InfoCard(enabled: Boolean) {
             Icon(
                 imageVector = Icons.Default.Info,
                 contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                tint = if (enabled) AvanueTheme.colors.onPrimaryContainer else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
             )
 
             Column {
@@ -418,7 +419,7 @@ private fun InfoCard(enabled: Boolean) {
                     text = "About WebXR",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    color = if (enabled) AvanueTheme.colors.onPrimaryContainer else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -427,7 +428,7 @@ private fun InfoCard(enabled: Boolean) {
                     text = "WebXR allows websites to create immersive AR and VR experiences directly in the browser. " +
                             "Your privacy is protected - camera and sensor data stays on your device.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    color = if (enabled) AvanueTheme.colors.onPrimaryContainer else AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
                 )
             }
         }

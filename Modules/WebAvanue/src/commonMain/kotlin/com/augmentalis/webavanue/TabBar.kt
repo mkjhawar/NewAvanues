@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,7 +66,7 @@ fun TabBar(
         modifier = modifier
             .fillMaxWidth()
             .glassBar()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(AvanueTheme.colors.surface)
     ) {
         Row(
             modifier = Modifier
@@ -133,7 +134,7 @@ fun TabBar(
         modifier = modifier
             .fillMaxWidth()
             .glassBar()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(AvanueTheme.colors.surface)
     ) {
         Row(
             modifier = Modifier

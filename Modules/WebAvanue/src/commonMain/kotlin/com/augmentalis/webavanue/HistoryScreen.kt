@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -137,7 +138,7 @@ fun HistoryScreen(
                         Text(
                             text = error ?: "Unknown error",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
+                            color = AvanueTheme.colors.error
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -173,7 +174,7 @@ fun HistoryScreen(
                                         Text(
                                             text = formatDate(date),
                                             style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = AvanueTheme.colors.primary,
                                             modifier = Modifier.padding(
                                                 horizontal = 4.dp,
                                                 vertical = 4.dp
@@ -202,7 +203,7 @@ fun HistoryScreen(
                                         Text(
                                             text = formatDate(date),
                                             style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = AvanueTheme.colors.primary,
                                             modifier = Modifier.padding(
                                                 horizontal = 16.dp,
                                                 vertical = 8.dp
@@ -277,7 +278,7 @@ fun EmptyHistoryState(
         Text(
             text = "Your visited pages will appear here",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -335,7 +336,7 @@ fun ClearHistoryDialog(
                 ) {
                     Text(
                         "Clear all history",
-                        color = MaterialTheme.colorScheme.error,
+                        color = AvanueTheme.colors.error,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

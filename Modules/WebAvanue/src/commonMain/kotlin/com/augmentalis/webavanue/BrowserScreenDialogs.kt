@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -117,7 +118,7 @@ fun AddPageDialog(
                 singleLine = true,
                 isError = validationError != null,
                 supportingText = validationError?.let { error ->
-                    { Text(error, color = MaterialTheme.colorScheme.error) }
+                    { Text(error, color = AvanueTheme.colors.error) }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { validateAndConfirm() }),
@@ -158,7 +159,7 @@ fun WebViewPlaceholder(
             Text(
                 text = if (url.isBlank()) "Enter a URL to browse" else url,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -166,7 +167,7 @@ fun WebViewPlaceholder(
             Text(
                 text = "WebView will be integrated here",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                color = AvanueTheme.colors.textSecondary.copy(alpha = 0.6f)
             )
         }
     }
@@ -199,7 +200,7 @@ fun EmptyBrowserState(
             Text(
                 text = "Create a new tab to start browsing",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
 
             Button(onClick = onNewTab) {

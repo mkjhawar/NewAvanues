@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +46,7 @@ fun BookmarkItem(
     Card(
         modifier = modifier.clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Row(
@@ -58,7 +59,7 @@ fun BookmarkItem(
             Icon(
                 imageVector = Icons.Default.Star,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = AvanueTheme.colors.primary,
                 modifier = Modifier.size(24.dp)
             )
 
@@ -80,7 +81,7 @@ fun BookmarkItem(
                 Text(
                     text = bookmark.url,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = AvanueTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -96,14 +97,14 @@ fun BookmarkItem(
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
+                            tint = AvanueTheme.colors.tertiary,
                             modifier = Modifier.size(14.dp)
                         )
 
                         Text(
                             text = name,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary
+                            color = AvanueTheme.colors.tertiary
                         )
                     }
                 }
@@ -117,7 +118,7 @@ fun BookmarkItem(
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = AvanueTheme.colors.textSecondary
                     )
                 }
 
@@ -125,7 +126,7 @@ fun BookmarkItem(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = AvanueTheme.colors.error
                     )
                 }
             }
@@ -147,7 +148,7 @@ fun BookmarkItem(
                         showDeleteConfirmation = false
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = AvanueTheme.colors.error)
                 }
             },
             dismissButton = {
@@ -177,7 +178,7 @@ fun BookmarkItem(
     Card(
         modifier = modifier.clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Row(
@@ -189,7 +190,7 @@ fun BookmarkItem(
             Icon(
                 imageVector = Icons.Default.Star,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = AvanueTheme.colors.primary,
                 modifier = Modifier.size(24.dp)
             )
 
@@ -208,7 +209,7 @@ fun BookmarkItem(
                 Text(
                     text = url,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = AvanueTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -223,14 +224,14 @@ fun BookmarkItem(
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
+                            tint = AvanueTheme.colors.tertiary,
                             modifier = Modifier.size(14.dp)
                         )
 
                         Text(
                             text = it,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary
+                            color = AvanueTheme.colors.tertiary
                         )
                     }
                 }
@@ -248,7 +249,7 @@ fun BookmarkItem(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = AvanueTheme.colors.error
                     )
                 }
             }
@@ -267,7 +268,7 @@ fun BookmarkItem(
                         showDeleteConfirmation = false
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = AvanueTheme.colors.error)
                 }
             },
             dismissButton = {

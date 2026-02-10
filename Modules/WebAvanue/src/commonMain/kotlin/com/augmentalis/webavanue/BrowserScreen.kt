@@ -1426,9 +1426,9 @@ fun BrowserScreen(
         ) { data ->
             androidx.compose.material3.Snackbar(
                 snackbarData = data,
-                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer,
-                actionColor = androidx.compose.material3.MaterialTheme.colorScheme.error
+                containerColor = AvanueTheme.colors.errorContainer,
+                contentColor = AvanueTheme.colors.onErrorContainer,
+                actionColor = AvanueTheme.colors.error
             )
         }
 

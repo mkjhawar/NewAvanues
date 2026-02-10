@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -132,7 +133,7 @@ fun XRCriticalWarningDialog(
         Surface(
             modifier = modifier,
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = AvanueTheme.colors.surface,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -155,14 +156,14 @@ fun XRCriticalWarningDialog(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error
+                    color = AvanueTheme.colors.error
                 )
 
                 // Message
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -172,7 +173,7 @@ fun XRCriticalWarningDialog(
                     onClick = onAction,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
+                        containerColor = AvanueTheme.colors.error
                     )
                 ) {
                     Text(actionText)

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +39,7 @@ fun SwitchSettingItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -82,7 +83,7 @@ fun SliderSettingItem(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -132,21 +133,21 @@ fun NavigationSettingItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
             if (currentValue != null) {
                 Text(
                     text = currentValue,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = AvanueTheme.colors.primary
                 )
             }
         }
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = "Navigate",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -182,7 +183,7 @@ fun DropdownSettingItem(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -190,7 +191,7 @@ fun DropdownSettingItem(
             Text(
                 text = options.getOrElse(selectedIndex) { "" },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = AvanueTheme.colors.primary
             )
             DropdownMenu(
                 expanded = expanded,
@@ -208,7 +209,7 @@ fun DropdownSettingItem(
                                 Icon(
                                     imageVector = Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = AvanueTheme.colors.primary
                                 )
                             }
                         } else null
@@ -230,7 +231,7 @@ fun ARXRSettingCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Column(

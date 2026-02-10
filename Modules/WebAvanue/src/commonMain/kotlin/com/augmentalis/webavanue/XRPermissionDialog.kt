@@ -5,6 +5,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +33,7 @@ fun XRPermissionDialog(
         Surface(
             modifier = modifier,
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = AvanueTheme.colors.surface,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -70,7 +71,7 @@ fun XRPermissionDialog(
                     text = getDialogExplanation(sessionMode, permissionType),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 // Features list
@@ -85,7 +86,7 @@ fun XRPermissionDialog(
                 // Privacy note
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    color = AvanueTheme.colors.primaryContainer.copy(alpha = 0.3f)
                 ) {
                     Row(
                         modifier = Modifier
@@ -97,14 +98,14 @@ fun XRPermissionDialog(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = "Privacy",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = AvanueTheme.colors.primary,
                             modifier = Modifier.size(20.dp)
                         )
 
                         Text(
                             text = "Your privacy is protected. Data stays on your device.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -150,7 +151,7 @@ fun XRPermissionDeniedDialog(
         Surface(
             modifier = modifier,
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = AvanueTheme.colors.surface,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -164,7 +165,7 @@ fun XRPermissionDeniedDialog(
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = AvanueTheme.colors.error,
                     modifier = Modifier.size(64.dp)
                 )
 
@@ -187,7 +188,7 @@ fun XRPermissionDeniedDialog(
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 // Steps to enable (if permanent)
@@ -211,7 +212,7 @@ fun XRPermissionDeniedDialog(
                             Text(
                                 text = step,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = AvanueTheme.colors.textSecondary
                             )
                         }
                     }

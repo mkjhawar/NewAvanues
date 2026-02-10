@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,7 +105,7 @@ fun SitePermissionsScreen(
                         Text(
                             text = error ?: "Unknown error",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
+                            color = AvanueTheme.colors.error
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -144,7 +145,7 @@ fun SitePermissionsScreen(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = AvanueTheme.colors.textSecondary
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -152,7 +153,7 @@ fun SitePermissionsScreen(
                         Text(
                             text = "No site permissions",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -160,7 +161,7 @@ fun SitePermissionsScreen(
                         Text(
                             text = "Permissions you grant to websites will appear here",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -218,7 +219,7 @@ fun SitePermissionsScreen(
                             }
                         },
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
+                            contentColor = AvanueTheme.colors.error
                         )
                     ) {
                         Text("Clear")
@@ -260,14 +261,14 @@ fun SitePermissionItem(
                 text = domain,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
+                color = AvanueTheme.colors.primary
             )
 
             IconButton(onClick = onDeleteAllPermissions) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete all permissions",
-                    tint = MaterialTheme.colorScheme.error
+                    tint = AvanueTheme.colors.error
                 )
             }
         }
@@ -316,9 +317,9 @@ fun PermissionRow(
                 },
                 contentDescription = null,
                 tint = if (granted) {
-                    MaterialTheme.colorScheme.primary
+                    AvanueTheme.colors.primary
                 } else {
-                    MaterialTheme.colorScheme.error
+                    AvanueTheme.colors.error
                 }
             )
 
@@ -331,9 +332,9 @@ fun PermissionRow(
                 text = if (granted) "Allowed" else "Denied",
                 style = MaterialTheme.typography.bodySmall,
                 color = if (granted) {
-                    MaterialTheme.colorScheme.primary
+                    AvanueTheme.colors.primary
                 } else {
-                    MaterialTheme.colorScheme.error
+                    AvanueTheme.colors.error
                 }
             )
         }
@@ -342,7 +343,7 @@ fun PermissionRow(
             Icon(
                 imageVector = Icons.Default.Clear,
                 contentDescription = "Remove permission",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = AvanueTheme.colors.textSecondary
             )
         }
     }

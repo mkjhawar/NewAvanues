@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +43,7 @@ fun HistoryItem(
     Card(
         modifier = modifier.clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Row(
@@ -55,7 +56,7 @@ fun HistoryItem(
             Icon(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.size(18.dp)
             )
 
@@ -78,7 +79,7 @@ fun HistoryItem(
                     Text(
                         text = entry.url,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AvanueTheme.colors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -89,7 +90,7 @@ fun HistoryItem(
                     Text(
                         text = formatVisitTime(entry.visitedAt),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -102,7 +103,7 @@ fun HistoryItem(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = AvanueTheme.colors.textSecondary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -124,7 +125,7 @@ fun HistoryItem(
                         showDeleteConfirmation = false
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = AvanueTheme.colors.error)
                 }
             },
             dismissButton = {
