@@ -8,6 +8,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -58,6 +59,16 @@ fun AvanueThemeProvider(
         fontScale = currentDensity.fontScale * displayProfile.fontScale
     )
 
+    // Keep static AvanueModuleAccents in sync so non-Compose consumers
+    // (Canvas overlay, services) always get the current theme colors.
+    SideEffect {
+        AvanueModuleAccents.setGlobalColors(
+            accent = colors.primary,
+            onAccent = colors.onPrimary,
+            accentMuted = colors.primaryLight
+        )
+    }
+
     CompositionLocalProvider(
         LocalAvanueColors provides colors,
         LocalAvanueGlass provides glass,
@@ -97,6 +108,22 @@ object AvanueTheme {
 
     val materialMode: MaterialMode
         @Composable get() = LocalMaterialMode.current
+
+    /**
+     * Get resolved accent colors for a module.
+     * Returns custom override if set, otherwise derives from current theme.
+     */
+    @Composable
+    fun moduleAccent(moduleId: String): ModuleAccent {
+        val colors = LocalAvanueColors.current
+        val override = AvanueModuleAccents.get(moduleId)
+        return if (override.isCustom) override else ModuleAccent(
+            accent = colors.primary,
+            onAccent = colors.onPrimary,
+            accentMuted = colors.primaryLight,
+            isCustom = false
+        )
+    }
 }
 
 // ===== Material3 Integration =====

@@ -14,13 +14,22 @@
 
 package com.augmentalis.avanueui.components.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -35,6 +44,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +52,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
@@ -343,5 +355,152 @@ fun SettingsGroupCard(
         )
     ) {
         Column(content = content)
+    }
+}
+
+/**
+ * Curated accent color presets matching the SpatialVoice aesthetic.
+ */
+val defaultAccentPresets: List<Color> = listOf(
+    Color(0xFF007AFF), // System Blue (default)
+    Color(0xFF5856D6), // Indigo
+    Color(0xFFAF52DE), // Purple
+    Color(0xFFFF2D55), // Pink
+    Color(0xFFFF3B30), // Red
+    Color(0xFFFF9500), // Orange
+    Color(0xFF34C759), // Green
+    Color(0xFF00C7BE), // Teal
+    Color(0xFF5AC8FA), // Light Blue
+    Color(0xFFFFCC00), // Yellow
+)
+
+/**
+ * A settings row showing a color swatch that opens a preset color picker dialog.
+ *
+ * Used for module accent color customization. Shows the current color as a
+ * filled circle; tapping opens a dialog with curated preset colors.
+ *
+ * @param title Primary text
+ * @param subtitle Secondary description text (optional)
+ * @param icon Leading icon (optional)
+ * @param color Current selected color
+ * @param useThemeColor Whether "Use Theme" is selected (no custom override)
+ * @param onColorSelected Called when a preset color is picked (isCustom = true)
+ * @param onUseTheme Called when user selects "Use Theme Color"
+ * @param presetColors Available preset colors to choose from
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SettingsColorRow(
+    title: String,
+    subtitle: String = "",
+    icon: ImageVector? = null,
+    color: Color,
+    useThemeColor: Boolean = false,
+    onColorSelected: (Color) -> Unit,
+    onUseTheme: () -> Unit,
+    presetColors: List<Color> = defaultAccentPresets,
+    modifier: Modifier = Modifier
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = if (subtitle.isNotEmpty()) {
+            {
+                Text(
+                    text = if (useThemeColor) "Using theme color" else subtitle,
+                    color = AvanueTheme.colors.textSecondary
+                )
+            }
+        } else null,
+        leadingContent = if (icon != null) {
+            {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = AvanueTheme.colors.textSecondary
+                )
+            }
+        } else null,
+        trailingContent = {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(color)
+                    .border(2.dp, AvanueTheme.colors.border, CircleShape)
+                    .clickable { showDialog = true }
+            )
+        },
+        modifier = modifier.clickable { showDialog = true }
+    )
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Choose Accent Color") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // "Use Theme" option
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                onUseTheme()
+                                showDialog = false
+                            }
+                            .padding(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(AvanueTheme.colors.primary)
+                                .then(
+                                    if (useThemeColor) Modifier.border(3.dp, AvanueTheme.colors.textPrimary, CircleShape)
+                                    else Modifier
+                                )
+                        )
+                        Text(
+                            text = "Use Theme Color",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+
+                    // Preset colors grid
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        presetColors.forEach { preset ->
+                            val isSelected = !useThemeColor && color == preset
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(preset)
+                                    .then(
+                                        if (isSelected) Modifier.border(3.dp, AvanueTheme.colors.textPrimary, CircleShape)
+                                        else Modifier.border(1.dp, AvanueTheme.colors.borderSubtle, CircleShape)
+                                    )
+                                    .clickable {
+                                        onColorSelected(preset)
+                                        showDialog = false
+                                    }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
