@@ -286,22 +286,22 @@ class DashboardViewModel @Inject constructor(
             _modules.value = listOf(
                 ModuleStatus(
                     moduleId = "voiceavanue",
-                    displayName = "VoiceAvanue",
-                    description = "Voice command recognition and accessibility service",
+                    displayName = "VoiceTouch\u2122",
+                    description = "powered by VoiceOS\u00AE",
                     state = voiceAvanueState,
                     metadata = (voiceAvanueState as? ServiceState.Running)?.metadata ?: emptyMap()
                 ),
                 ModuleStatus(
                     moduleId = "webavanue",
                     displayName = "WebAvanue",
-                    description = "Voice-controlled web browser",
+                    description = "Voice-enabled web browser",
                     state = webAvanueState,
                     metadata = webAvanueState.metadata
                 ),
                 ModuleStatus(
                     moduleId = "voicecursor",
-                    displayName = "VoiceCursor",
-                    description = "Hands-free cursor control with voice and head tracking",
+                    displayName = "CursorAvanue",
+                    description = "VoiceCursor \u2013 Handsfree cursor control",
                     state = voiceCursorState,
                     metadata = (voiceCursorState as? ServiceState.Ready)?.metadata ?: emptyMap()
                 )

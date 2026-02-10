@@ -72,7 +72,7 @@ private enum class AboutItem(
     val icon: ImageVector
 ) {
     VERSION("Version", Icons.Default.Info),
-    BUILD("Build Type", Icons.Default.Code),
+    BUILD("Version & Changelog", Icons.Default.Code),
     LICENSES("Open Source Licenses", Icons.Default.Description),
     PRIVACY("Privacy Policy", Icons.Default.PrivacyTip),
     TERMS("Terms of Service", Icons.Default.Gavel),
@@ -81,11 +81,11 @@ private enum class AboutItem(
 
 private fun aboutItemSubtitle(item: AboutItem): String = when (item) {
     AboutItem.VERSION -> BuildConfig.VERSION_NAME
-    AboutItem.BUILD -> BuildConfig.BUILD_TYPE.replaceFirstChar { it.uppercase() }
+    AboutItem.BUILD -> "What's new in this release"
     AboutItem.LICENSES -> "${OssLicenseRegistry.totalLibraries} libraries"
     AboutItem.PRIVACY -> "How we handle your data"
     AboutItem.TERMS -> "Usage terms and conditions"
-    AboutItem.CREDITS -> "Made by Intelligent Devices LLC"
+    AboutItem.CREDITS -> "\u00A9 2018-2024 Intelligent Devices LLC"
 }
 
 /**
@@ -116,7 +116,7 @@ fun AboutScreen(
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
     GroupedListDetailScaffold(
-        title = "About Avanues",
+        title = "VoiceOS\u00AE Avanues",
         sections = sections,
         itemKey = { it.name },
         onNavigateBack = onNavigateBack,
@@ -136,14 +136,14 @@ fun AboutScreen(
                         lastTapTime = now
 
                         when {
-                            versionTapCount >= 7 -> {
+                            versionTapCount >= 3 -> {
                                 versionTapCount = 0
                                 onNavigateToDeveloperConsole()
                             }
-                            versionTapCount >= 4 -> {
+                            versionTapCount >= 2 -> {
                                 Toast.makeText(
                                     context,
-                                    "${7 - versionTapCount} taps to developer console",
+                                    "${3 - versionTapCount} tap(s) to developer mode",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -191,6 +191,18 @@ private fun AboutDetailContent(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                Text(
+                    text = "Version ${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AvanueTheme.colors.textPrimary
+                )
+                Text(
+                    text = "Changelog will be loaded from AVU format files in a future update.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AvanueTheme.colors.textSecondary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 InfoRow("Build Type", BuildConfig.BUILD_TYPE)
                 InfoRow("Debug", BuildConfig.DEBUG.toString())
             }
@@ -260,33 +272,26 @@ private fun AboutDetailContent(
                     color = AvanueTheme.colors.textPrimary
                 )
                 Text(
-                    text = "Avanues Accessibility Ecosystem",
+                    text = "VoiceOS\u00AE Avanues EcoSystem",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = AvanueTheme.colors.textPrimary
                 )
                 Text(
-                    text = "Created by Manoj Jhawar & Aman Jhawar",
+                    text = "Imagined, Designed & Written by: Manoj Jhawar with Aman Jhawar",
                     style = MaterialTheme.typography.bodyLarge,
                     color = AvanueTheme.colors.textSecondary
                 )
                 Text(
-                    text = "Intelligent Devices LLC",
+                    text = "\u00A9 2018-2024 Intelligent Devices LLC and Augmentalis Inc.",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = AvanueTheme.colors.primary
                 )
                 Text(
-                    text = "Built with Kotlin Multiplatform, Jetpack Compose, and love.",
+                    text = "Designed and Created in California with Love.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = AvanueTheme.colors.textSecondary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Special thanks to the open source community. " +
-                        "See \"Open Source Licenses\" for the full list of libraries used.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AvanueTheme.colors.textDisabled
                 )
             }
         }

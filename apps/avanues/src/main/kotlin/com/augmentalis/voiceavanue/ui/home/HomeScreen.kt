@@ -428,7 +428,7 @@ private fun DashboardHeader(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "VoiceAvanue",
+                text = "VoiceOS\u00AE Avanues",
                 style = MaterialTheme.typography.headlineSmall,
                 color = AvanueTheme.colors.textPrimary,
                 fontWeight = FontWeight.SemiBold
@@ -477,7 +477,7 @@ private fun SectionLabel(text: String) {
 // ──────────────────────────── MODULE CARD ────────────────────────────
 
 /**
- * Returns the status border color: green=running, blue=ready, orange=degraded, red=error, gray=stopped.
+ * Returns the status border color: green=running, blue=ready, orange=degraded, red=error, red=stopped.
  */
 @Composable
 private fun statusBorderColor(state: ServiceState): androidx.compose.ui.graphics.Color {
@@ -486,7 +486,21 @@ private fun statusBorderColor(state: ServiceState): androidx.compose.ui.graphics
         is ServiceState.Ready -> AvanueTheme.colors.info
         is ServiceState.Degraded -> AvanueTheme.colors.warning
         is ServiceState.Error -> AvanueTheme.colors.error
-        is ServiceState.Stopped -> AvanueTheme.colors.textDisabled
+        is ServiceState.Stopped -> AvanueTheme.colors.error
+    }
+}
+
+/**
+ * Returns a human-readable status label and color for a ServiceState.
+ */
+@Composable
+private fun statusLabel(state: ServiceState): Pair<String, androidx.compose.ui.graphics.Color> {
+    return when (state) {
+        is ServiceState.Running -> "ON" to AvanueTheme.colors.success
+        is ServiceState.Ready -> "READY" to AvanueTheme.colors.info
+        is ServiceState.Degraded -> "DEGRADED" to AvanueTheme.colors.warning
+        is ServiceState.Error -> "ERROR" to AvanueTheme.colors.error
+        is ServiceState.Stopped -> "OFF" to AvanueTheme.colors.error
     }
 }
 
@@ -507,11 +521,14 @@ private fun moduleIcon(moduleId: String): ImageVector {
 private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
     val borderColor = statusBorderColor(module.state)
     val icon = moduleIcon(module.moduleId)
+    val (statusText, statusColor) = statusLabel(module.state)
+    val isStopped = module.state is ServiceState.Stopped
+    val contentAlpha = if (isStopped) 0.6f else 1f
 
     GlassCard(
         onClick = onClick,
-        glassLevel = GlassLevel.MEDIUM,
-        border = GlassBorder(width = 1.5.dp, color = borderColor),
+        glassLevel = if (isStopped) GlassLevel.LIGHT else GlassLevel.MEDIUM,
+        border = GlassBorder(width = if (isStopped) 2.dp else 1.5.dp, color = borderColor),
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -535,7 +552,7 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = borderColor,
+                            tint = borderColor.copy(alpha = contentAlpha),
                             modifier = Modifier.size(if (isCompact) 18.dp else 22.dp)
                         )
                     }
@@ -551,19 +568,30 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Text(
-                        text = module.displayName,
-                        style = if (isCompact) MaterialTheme.typography.labelLarge
-                               else MaterialTheme.typography.titleSmall,
-                        color = AvanueTheme.colors.textPrimary,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = module.displayName,
+                            style = if (isCompact) MaterialTheme.typography.labelLarge
+                                   else MaterialTheme.typography.titleSmall,
+                            color = AvanueTheme.colors.textPrimary.copy(alpha = contentAlpha),
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = statusColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                     Text(
                         text = module.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = AvanueTheme.colors.textSecondary,
+                        color = AvanueTheme.colors.textSecondary.copy(alpha = contentAlpha),
                         maxLines = if (isCompact) 1 else 2,
                         overflow = TextOverflow.Ellipsis
                     )

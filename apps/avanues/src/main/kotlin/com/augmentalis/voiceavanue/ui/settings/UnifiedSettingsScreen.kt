@@ -18,25 +18,31 @@
 
 package com.augmentalis.voiceavanue.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
@@ -58,14 +64,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetection
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassDetection
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassType
-import com.augmentalis.avanueui.components.settings.SettingsGroupCard
+import com.augmentalis.avanueui.components.glass.GlassCard
+import com.augmentalis.avanueui.glass.GlassBorder
+import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.tokens.SpacingTokens
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Display mode for the settings screen, detected at entry from DeviceManager.
@@ -199,7 +212,7 @@ private fun StandardSettingsScreen(
                     Text(
                         text = "Select a module",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -225,26 +238,52 @@ private fun SettingsModuleList(
 ) {
     val context = LocalContext.current
 
+    val backgroundGradient = Brush.verticalGradient(
+        colors = listOf(
+            AvanueTheme.colors.background,
+            AvanueTheme.colors.surface.copy(alpha = 0.6f),
+            AvanueTheme.colors.background
+        )
+    )
+
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = {
+                    Text(
+                        "Settings",
+                        color = AvanueTheme.colors.textPrimary
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = AvanueTheme.colors.textPrimary
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = onSearchToggle) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = AvanueTheme.colors.textSecondary
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .background(backgroundGradient)
                 .padding(padding)
         ) {
             // Search bar (collapsible)
@@ -253,11 +292,21 @@ private fun SettingsModuleList(
                     TextField(
                         value = searchQuery,
                         onValueChange = onSearchQueryChanged,
-                        placeholder = { Text("Search settings...") },
+                        placeholder = {
+                            Text(
+                                "Search settings...",
+                                color = AvanueTheme.colors.textDisabled
+                            )
+                        },
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
                             unfocusedContainerColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent
+                            focusedContainerColor = Color.Transparent,
+                            focusedTextColor = AvanueTheme.colors.textPrimary,
+                            unfocusedTextColor = AvanueTheme.colors.textPrimary,
+                            cursorColor = AvanueTheme.colors.primary,
+                            focusedIndicatorColor = AvanueTheme.colors.primary,
+                            unfocusedIndicatorColor = AvanueTheme.colors.textDisabled
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -280,7 +329,7 @@ private fun SettingsModuleList(
             }
 
             item {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(SpacingTokens.sm))
             }
 
             // Group 1: Core settings (Permissions, VoiceCursor, Voice Control)
@@ -289,16 +338,29 @@ private fun SettingsModuleList(
             }
             if (coreProviders.isNotEmpty()) {
                 item {
-                    SettingsGroupCard {
-                        coreProviders.forEach { provider ->
-                            ModuleListItem(
-                                provider = provider,
-                                onClick = { onModuleSelected(provider.moduleId) }
-                            )
-                        }
+                    Text(
+                        text = "CORE",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = AvanueTheme.colors.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(
+                            horizontal = SpacingTokens.md,
+                            vertical = SpacingTokens.xs
+                        )
+                    )
+                }
+                coreProviders.forEach { provider ->
+                    item(key = "core_${provider.moduleId}") {
+                        ModuleListItem(
+                            provider = provider,
+                            accentColor = moduleAccentColor(provider.moduleId),
+                            onClick = { onModuleSelected(provider.moduleId) }
+                        )
                     }
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(SpacingTokens.md)) }
 
             // Group 2: WebAvanue
             val browserProviders = filteredProviders.filter {
@@ -306,16 +368,29 @@ private fun SettingsModuleList(
             }
             if (browserProviders.isNotEmpty()) {
                 item {
-                    SettingsGroupCard {
-                        browserProviders.forEach { provider ->
-                            ModuleListItem(
-                                provider = provider,
-                                onClick = { onModuleSelected(provider.moduleId) }
-                            )
-                        }
+                    Text(
+                        text = "BROWSER",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = AvanueTheme.colors.info,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(
+                            horizontal = SpacingTokens.md,
+                            vertical = SpacingTokens.xs
+                        )
+                    )
+                }
+                browserProviders.forEach { provider ->
+                    item(key = "browser_${provider.moduleId}") {
+                        ModuleListItem(
+                            provider = provider,
+                            accentColor = moduleAccentColor(provider.moduleId),
+                            onClick = { onModuleSelected(provider.moduleId) }
+                        )
                     }
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(SpacingTokens.md)) }
 
             // Group 3: System
             val systemProviders = filteredProviders.filter {
@@ -323,41 +398,103 @@ private fun SettingsModuleList(
             }
             if (systemProviders.isNotEmpty()) {
                 item {
-                    SettingsGroupCard {
-                        systemProviders.forEach { provider ->
-                            ModuleListItem(
-                                provider = provider,
-                                onClick = { onModuleSelected(provider.moduleId) }
-                            )
-                        }
+                    Text(
+                        text = "SYSTEM",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = AvanueTheme.colors.warning,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(
+                            horizontal = SpacingTokens.md,
+                            vertical = SpacingTokens.xs
+                        )
+                    )
+                }
+                systemProviders.forEach { provider ->
+                    item(key = "system_${provider.moduleId}") {
+                        ModuleListItem(
+                            provider = provider,
+                            accentColor = moduleAccentColor(provider.moduleId),
+                            onClick = { onModuleSelected(provider.moduleId) }
+                        )
                     }
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item { Spacer(modifier = Modifier.height(SpacingTokens.lg)) }
         }
+    }
+}
+
+/**
+ * Returns an accent color for each settings module, giving visual identity.
+ */
+@Composable
+private fun moduleAccentColor(moduleId: String): Color {
+    return when (moduleId) {
+        "permissions" -> AvanueTheme.colors.warning
+        "voicecursor" -> AvanueTheme.colors.success
+        "voicecontrol" -> AvanueTheme.colors.primary
+        "webavanue" -> AvanueTheme.colors.info
+        "system" -> AvanueTheme.colors.textSecondary
+        else -> AvanueTheme.colors.primary
     }
 }
 
 @Composable
 private fun ModuleListItem(
     provider: ComposableSettingsProvider,
+    accentColor: Color,
     onClick: () -> Unit
 ) {
-    ListItem(
-        headlineContent = { Text(provider.displayName) },
-        leadingContent = {
-            Icon(
-                imageVector = provider.ModuleIcon(),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+    GlassCard(
+        onClick = onClick,
+        glassLevel = GlassLevel.LIGHT,
+        border = GlassBorder(width = 1.dp, color = accentColor.copy(alpha = 0.3f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SpacingTokens.md, vertical = SpacingTokens.xs)
+            .heightIn(min = 64.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = SpacingTokens.md, vertical = SpacingTokens.sm),
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Accent icon in colored circle
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(accentColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = provider.ModuleIcon(),
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            // Name
+            Text(
+                text = provider.displayName,
+                style = MaterialTheme.typography.bodyLarge,
+                color = AvanueTheme.colors.textPrimary,
+                modifier = Modifier.weight(1f)
             )
-        },
-        colors = ListItemDefaults.colors(
-            containerColor = Color.Transparent
-        ),
-        modifier = Modifier.clickable(onClick = onClick)
-    )
+
+            // Forward arrow
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Open ${provider.displayName}",
+                tint = AvanueTheme.colors.textDisabled,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
 }
 
 // =============================================================================
@@ -373,16 +510,26 @@ private fun SettingsDetailPane(
     val sections = provider.sections.sortedBy { it.sortOrder }
 
     Scaffold(
+        containerColor = AvanueTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text(provider.displayName) },
+                title = {
+                    Text(
+                        provider.displayName,
+                        color = AvanueTheme.colors.textPrimary
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = AvanueTheme.colors.textPrimary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = AvanueTheme.colors.surface
                 )
             )
         }
