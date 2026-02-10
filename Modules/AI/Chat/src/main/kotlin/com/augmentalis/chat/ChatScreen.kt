@@ -49,11 +49,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.augmentalis.ava.core.domain.model.Message
 import com.augmentalis.ava.core.domain.model.MessageRole
-import com.augmentalis.avanueui.components.glass.GlassCard
-import com.augmentalis.avanueui.components.glass.GlassIndicator
-import com.augmentalis.avanueui.components.glass.GlassSurface
-import com.augmentalis.avanueui.components.glass.OceanButton
-import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.components.AvanueButton
+import com.augmentalis.avanueui.components.AvanueCard
+import com.augmentalis.avanueui.components.AvanueSurface
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.ShapeTokens
 import com.augmentalis.chat.components.ConversationSummary
@@ -195,13 +193,11 @@ fun ChatScreen(
         ) {
             // Compact Status Header - Ocean Glass UI v2.2
             // Shows AVA/AI status in a minimal glass bar at top
-            GlassSurface(
+            AvanueSurface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp),
-                glassLevel = GlassLevel.LIGHT,
-                shape = RoundedCornerShape(ShapeTokens.sm),
-                border = null
+                shape = RoundedCornerShape(ShapeTokens.sm)
             ) {
                 Row(
                     modifier = Modifier
@@ -255,9 +251,8 @@ fun ChatScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        GlassCard(
+                        AvanueCard(
                             modifier = Modifier.padding(32.dp),
-                            glassLevel = GlassLevel.MEDIUM,
                             shape = RoundedCornerShape(ShapeTokens.lg)
                         ) {
                             Column(
@@ -380,11 +375,10 @@ fun ChatScreen(
                         // Shows below messages instead of overlapping them
                         if (isLoading) {
                             item(key = "typing_indicator") {
-                                GlassSurface(
+                                AvanueSurface(
                                     modifier = Modifier
                                         .padding(horizontal = 16.dp, vertical = 8.dp)
                                         .widthIn(max = 160.dp),
-                                    glassLevel = GlassLevel.LIGHT,
                                     shape = RoundedCornerShape(
                                         topStart = ShapeTokens.lg,
                                         topEnd = ShapeTokens.lg,
@@ -545,9 +539,8 @@ private fun MessageInputField(
         // RAG Active Indicator - Ocean Glass Design
         // Shows when RAG is enabled and documents are selected
         if (isRAGActive) {
-            GlassIndicator(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                glassLevel = GlassLevel.MEDIUM
+            AvanueSurface(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Filled.AutoAwesome,
@@ -571,9 +564,8 @@ private fun MessageInputField(
         }
 
         // Input area with Ocean Glass styling - consistent radii on all corners
-        GlassSurface(
+        AvanueSurface(
             modifier = Modifier.fillMaxWidth(),
-            glassLevel = GlassLevel.LIGHT,
             shape = RoundedCornerShape(ShapeTokens.md) // Consistent radii all corners
         ) {
             Row(
@@ -723,7 +715,7 @@ private fun AccessibilityPromptDialog(
             )
         },
         confirmButton = {
-            OceanButton(onClick = onOpenSettings) {
+            AvanueButton(onClick = onOpenSettings) {
                 Text("Open Settings")
             }
         },

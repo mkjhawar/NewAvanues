@@ -31,8 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.augmentalis.avanueui.components.glass.GlassCard
-import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.components.AvanueCard
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceavanue.BuildConfig
 import androidx.datastore.preferences.core.edit
@@ -486,9 +485,8 @@ private fun ConsoleSection(
     action: @Composable (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        glassLevel = GlassLevel.LIGHT
+    AvanueCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier

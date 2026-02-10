@@ -90,11 +90,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.augmentalis.avanueui.components.glass.GlassCard
-import com.augmentalis.avanueui.components.glass.GlassChip
-import com.augmentalis.avanueui.components.glass.GlassSurface
-import com.augmentalis.avanueui.glass.GlassBorder
-import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.components.AvanueCard
+import com.augmentalis.avanueui.components.AvanueChip
+import com.augmentalis.avanueui.components.AvanueSurface
 import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.foundation.state.LastHeardCommand
@@ -525,10 +523,8 @@ private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
     val isStopped = module.state is ServiceState.Stopped
     val contentAlpha = if (isStopped) 0.6f else 1f
 
-    GlassCard(
+    AvanueCard(
         onClick = onClick,
-        glassLevel = if (isStopped) GlassLevel.LIGHT else GlassLevel.MEDIUM,
-        border = GlassBorder(width = if (isStopped) 2.dp else 1.5.dp, color = borderColor),
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -633,9 +629,7 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
         verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
     ) {
         if (permissions.allGranted) {
-            GlassCard(
-                glassLevel = GlassLevel.LIGHT,
-                border = GlassBorder(width = 1.dp, color = AvanueTheme.colors.success.copy(alpha = 0.3f)),
+            AvanueCard(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
             ) {
                 Row(
@@ -770,10 +764,8 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
 
 @Composable
 private fun PermissionErrorCard(title: String, description: String, onClick: () -> Unit) {
-    GlassCard(
+    AvanueCard(
         onClick = onClick,
-        glassLevel = GlassLevel.LIGHT,
-        border = GlassBorder(width = 1.5.dp, color = AvanueTheme.colors.error),
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
     ) {
         Row(
@@ -814,9 +806,7 @@ private fun PermissionErrorCard(title: String, description: String, onClick: () 
 @Composable
 private fun LastHeardCard(command: LastHeardCommand) {
     val timeAgo = remember(command.timestampMs) { formatTimeAgo(command.timestampMs) }
-    GlassCard(
-        glassLevel = GlassLevel.MEDIUM,
-        border = GlassBorder(width = 1.dp, color = AvanueTheme.colors.primary.copy(alpha = 0.3f)),
+    AvanueCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -866,10 +856,8 @@ private fun LastHeardCard(command: LastHeardCommand) {
  */
 @Composable
 private fun CommandsSummaryCard(commands: CommandsUiState, onClick: () -> Unit) {
-    GlassCard(
+    AvanueCard(
         onClick = onClick,
-        glassLevel = GlassLevel.MEDIUM,
-        border = GlassBorder(width = 1.dp, color = AvanueTheme.colors.info.copy(alpha = 0.3f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -949,7 +937,7 @@ private fun CommandsSection(
 @Composable
 private fun CommandTab(label: String, index: Int, selectedTab: Int, onClick: () -> Unit) {
     val isSelected = index == selectedTab
-    GlassChip(
+    AvanueChip(
         onClick = onClick,
         label = {
             Text(
@@ -957,9 +945,7 @@ private fun CommandTab(label: String, index: Int, selectedTab: Int, onClick: () 
                 style = MaterialTheme.typography.labelSmall,
                 color = if (isSelected) AvanueTheme.colors.primary else AvanueTheme.colors.textSecondary
             )
-        },
-        glass = true,
-        glassLevel = GlassLevel.LIGHT
+        }
     )
 }
 
@@ -1008,9 +994,8 @@ private fun ExpandableCommandCategory(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
-        GlassSurface(
+        AvanueSurface(
             onClick = { expanded = !expanded },
-            glassLevel = GlassLevel.LIGHT,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
         ) {
             Row(
@@ -1073,7 +1058,7 @@ private fun CommandRow(
                     )
                 }
             }
-            GlassChip(
+            AvanueChip(
                 onClick = { showAliasField = !showAliasField },
                 label = {
                     Row(
@@ -1083,9 +1068,7 @@ private fun CommandRow(
                         Icon(Icons.Default.Add, null, modifier = Modifier.size(12.dp), tint = AvanueTheme.colors.primary)
                         Text("Alias", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.primary)
                     }
-                },
-                glass = true,
-                glassLevel = GlassLevel.LIGHT
+                }
             )
         }
         AnimatedVisibility(visible = showAliasField) {
@@ -1157,8 +1140,7 @@ private fun DynamicCommandsInfoTab(dynamicCount: Int) {
             textAlign = TextAlign.Center
         )
         if (dynamicCount > 0) {
-            GlassSurface(
-                glassLevel = GlassLevel.LIGHT,
+            AvanueSurface(
                 modifier = Modifier.heightIn(min = 48.dp)
             ) {
                 Text(
@@ -1188,16 +1170,14 @@ private fun CustomCommandsTab(
     var commandToDelete by remember { mutableStateOf<CustomCommandInfo?>(null) }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)) {
-        GlassChip(
+        AvanueChip(
             onClick = { showAddDialog = true },
             label = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = AvanueTheme.colors.info)
                     Text("Add Command", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.info)
                 }
-            },
-            glass = true,
-            glassLevel = GlassLevel.LIGHT
+            }
         )
 
         if (customCommands.isEmpty()) {
@@ -1247,8 +1227,7 @@ private fun CustomCommandRow(
     onToggle: () -> Unit,
     onRemove: () -> Unit
 ) {
-    GlassSurface(
-        glassLevel = GlassLevel.LIGHT,
+    AvanueSurface(
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
     ) {
         Row(
@@ -1462,7 +1441,7 @@ private fun AddCustomCommandDialog(
                         )
                     }
 
-                    GlassChip(
+                    AvanueChip(
                         onClick = { macroSteps = macroSteps + MacroStep(CommandActionType.CLICK) },
                         label = {
                             Row(
@@ -1473,8 +1452,6 @@ private fun AddCustomCommandDialog(
                                 Text("Add Step", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.info)
                             }
                         },
-                        glass = true,
-                        glassLevel = GlassLevel.LIGHT
                     )
                 } else if (needsTarget) {
                     // Single action target
@@ -1542,8 +1519,7 @@ private fun MacroStepRow(
     val stepLabel = macroStepActionTypes.find { it.second == step.actionType }?.first ?: "Click / Tap"
     val stepNeedsTarget = step.actionType in targetRequiringActions
 
-    GlassSurface(
-        glassLevel = GlassLevel.LIGHT,
+    AvanueSurface(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -1679,9 +1655,8 @@ private fun VerbSynonymsCategory(
     var showAddDialog by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
-        GlassSurface(
+        AvanueSurface(
             onClick = { expanded = !expanded },
-            glassLevel = GlassLevel.LIGHT,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
         ) {
             Row(
@@ -1726,7 +1701,7 @@ private fun VerbSynonymsCategory(
                     )
                 }
                 // Add new synonym verb mapping
-                GlassChip(
+                AvanueChip(
                     onClick = { showAddDialog = true },
                     label = {
                         Row(
@@ -1737,8 +1712,6 @@ private fun VerbSynonymsCategory(
                             Text("Add Verb", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.primary)
                         }
                     },
-                    glass = true,
-                    glassLevel = GlassLevel.LIGHT
                 )
             }
         }
@@ -1767,9 +1740,8 @@ private fun ExpandableSynonymEntry(
     var newSynonymText by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxWidth()) {
-        GlassSurface(
+        AvanueSurface(
             onClick = { expanded = !expanded },
-            glassLevel = GlassLevel.LIGHT,
             modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp)
         ) {
             Row(
@@ -1826,7 +1798,7 @@ private fun ExpandableSynonymEntry(
                     verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
                 ) {
                     entry.synonyms.forEach { synonym ->
-                        GlassChip(
+                        AvanueChip(
                             onClick = {},
                             label = {
                                 Text(
@@ -1834,31 +1806,25 @@ private fun ExpandableSynonymEntry(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = AvanueTheme.colors.textSecondary
                                 )
-                            },
-                            glass = true,
-                            glassLevel = GlassLevel.LIGHT
+                            }
                         )
                     }
 
                     // Add synonym chip
-                    GlassChip(
+                    AvanueChip(
                         onClick = { showAddSynonymField = !showAddSynonymField },
                         label = {
                             Icon(Icons.Default.Add, "Add", modifier = Modifier.size(14.dp), tint = AvanueTheme.colors.primary)
                         },
-                        glass = true,
-                        glassLevel = GlassLevel.LIGHT
                     )
 
                     // Remove verb button (only for user-created)
                     if (onRemove != null) {
-                        GlassChip(
+                        AvanueChip(
                             onClick = onRemove,
                             label = {
                                 Icon(Icons.Default.Close, "Remove", modifier = Modifier.size(14.dp), tint = AvanueTheme.colors.error)
-                            },
-                            glass = true,
-                            glassLevel = GlassLevel.LIGHT
+                            }
                         )
                     }
                 }

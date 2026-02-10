@@ -39,6 +39,13 @@ import com.augmentalis.avanueui.water.waterEffect
  * @param border Optional gradient border
  * @param content Composable content
  */
+@Deprecated(
+    message = "Use AvanueSurface instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueSurface(onClick = onClick, modifier = modifier, shape = shape, content = content)",
+        "com.augmentalis.avanueui.components.AvanueSurface"
+    )
+)
 @Composable
 fun WaterSurface(
     onClick: (() -> Unit)? = null,

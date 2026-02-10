@@ -77,9 +77,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetection
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassDetection
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassType
-import com.augmentalis.avanueui.components.glass.GlassCard
-import com.augmentalis.avanueui.glass.GlassBorder
-import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.components.AvanueCard
 import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.avanueui.theme.AvanueTheme
 
@@ -493,10 +491,8 @@ private fun ModuleListItem(
     accentColor: Color,
     onClick: () -> Unit
 ) {
-    GlassCard(
+    AvanueCard(
         onClick = onClick,
-        glassLevel = GlassLevel.LIGHT,
-        border = GlassBorder(width = 1.dp, color = accentColor.copy(alpha = 0.3f)),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = SpacingTokens.md, vertical = SpacingTokens.xs)

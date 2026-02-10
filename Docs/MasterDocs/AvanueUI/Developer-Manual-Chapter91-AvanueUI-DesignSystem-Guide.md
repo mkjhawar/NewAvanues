@@ -528,21 +528,38 @@ These packages no longer exist:
 
 ## 9. Quick Reference
 
+> **NOTE:** As of Phase 2 (Chapter 92), prefer **unified components** (`AvanueCard`, `AvanueSurface`, etc.) over the Glass* components below. The Glass* components are now `@Deprecated` — they still work but the unified API is the recommended path forward. See Chapter 92 for full details.
+
 ```
 DEPENDENCY:  implementation(project(":Modules:AvanueUI"))
 
 TOKENS:      SpacingTokens.md (16dp)  ShapeTokens.lg (16dp)  SizeTokens.iconMd (24dp)
 THEME:       AvanueTheme.colors.primary  AvanueTheme.glass.overlayColor
+             AvanueTheme.materialMode (NEW — GLASS/WATER/PLAIN)
 DISPLAY:     AvanueTheme.displayProfile  DisplayUtils.isGlass
 GLASS:       GlassLevel.LIGHT/MEDIUM/HEAVY  Modifier.glass(...)
-COMPONENTS:  GlassSurface  GlassCard  OceanButton  GlassChip  PulseDot
+WATER:       WaterLevel.REGULAR/CLEAR/IDENTITY  Modifier.waterEffect(...)
+
+UNIFIED COMPONENTS (Phase 2 — preferred):
+  AvanueSurface  AvanueCard  AvanueButton  AvanueChip
+  AvanueBubble   AvanueFAB   AvanueIconButton
+
+LEGACY COMPONENTS (deprecated — use unified instead):
+  GlassSurface  GlassCard  OceanButton  GlassChip
+  WaterSurface  WaterCard  WaterButton
+
+STILL CURRENT (not deprecated):
+  PulseDot  StatusBadge  WaterNavigationBar
 
 PACKAGES:
+  unified  → com.augmentalis.avanueui.components.*             (NEW primary)
   tokens   → com.augmentalis.avanueui.tokens.*
   theme    → com.augmentalis.avanueui.theme.*
   display  → com.augmentalis.avanueui.display.*
   glass    → com.augmentalis.avanueui.glass.* (types)
-             com.augmentalis.avanueui.components.glass.* (components)
+             com.augmentalis.avanueui.components.glass.* (deprecated components)
+  water    → com.augmentalis.avanueui.water.* (types + effects)
+             com.augmentalis.avanueui.components.water.* (deprecated components)
   settings → com.augmentalis.avanueui.components.settings.*
 ```
 

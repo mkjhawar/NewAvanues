@@ -44,6 +44,13 @@ import com.augmentalis.avanueui.water.waterEffect
  * @param border Optional gradient border
  * @param content Card content (ColumnScope)
  */
+@Deprecated(
+    message = "Use AvanueCard instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueCard(onClick = onClick, modifier = modifier, shape = shape, content = content)",
+        "com.augmentalis.avanueui.components.AvanueCard"
+    )
+)
 @Composable
 fun WaterCard(
     onClick: (() -> Unit)? = null,

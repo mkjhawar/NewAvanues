@@ -49,6 +49,13 @@ import com.augmentalis.avanueui.water.waterEffect
  * @param contentPadding Padding inside the button
  * @param content Button content (RowScope)
  */
+@Deprecated(
+    message = "Use AvanueButton instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueButton(onClick = onClick, modifier = modifier, enabled = enabled, shape = shape, content = content)",
+        "com.augmentalis.avanueui.components.AvanueButton"
+    )
+)
 @Composable
 fun WaterButton(
     onClick: () -> Unit,

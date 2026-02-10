@@ -52,9 +52,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.augmentalis.avanueui.components.glass.GlassCard
-import com.augmentalis.avanueui.components.glass.GlassSurface
-import com.augmentalis.avanueui.glass.GlassLevel
+import com.augmentalis.avanueui.components.AvanueCard
+import com.augmentalis.avanueui.components.AvanueSurface
 import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.avanueui.theme.AvanueTheme
 
@@ -349,9 +348,8 @@ private fun AppCard(
     accentColor: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit
 ) {
-    GlassCard(
+    AvanueCard(
         onClick = onClick,
-        glassLevel = GlassLevel.MEDIUM,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 96.dp)
@@ -364,8 +362,7 @@ private fun AppCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Icon container
-            GlassSurface(
-                glassLevel = GlassLevel.LIGHT,
+            AvanueSurface(
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(
@@ -417,9 +414,8 @@ private fun EcosystemItem(
     icon: ImageVector,
     onClick: () -> Unit
 ) {
-    GlassCard(
+    AvanueCard(
         onClick = onClick,
-        glassLevel = GlassLevel.LIGHT,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
