@@ -123,6 +123,14 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 )
                 voiceOSCore?.initialize()
 
+                // Force screen refresh so dynamic commands register on VoiceOSCore's
+                // coordinator. Before init, commands were registered on a fallback
+                // coordinator with a different CommandRegistry. The screen hash cache
+                // prevents re-scanning the same screen, so we must clear it explicitly.
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    refreshScreen()
+                }
+
                 // Bridge: Collect speech recognition results → route to command execution
                 // Without this, Vivoka emits recognized commands but nobody processes them
                 val confidenceThreshold = devSettings.confidenceThreshold
