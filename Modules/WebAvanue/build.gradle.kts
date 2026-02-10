@@ -79,6 +79,9 @@ kotlin {
                 // AVID for unified identifier generation
                 implementation(project(":Modules:AVID"))
 
+                // VoiceOSCore - IWebCommandExecutor interface, WebAction types, QuantizedCommand
+                implementation(project(":Modules:VoiceOSCore"))
+
                 // Kotlin
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)

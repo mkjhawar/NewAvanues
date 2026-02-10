@@ -5,6 +5,8 @@ import com.augmentalis.database.dto.ScrapedWebsiteDTO
 import com.augmentalis.database.repositories.IScrapedWebCommandRepository
 import com.augmentalis.database.repositories.IScrapedWebsiteRepository
 import com.augmentalis.database.repositories.IWebAppWhitelistRepository
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.QuantizedCommand
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -80,6 +82,10 @@ class BrowserVoiceOSCallback(
 
     // Voice command generator for matching spoken phrases to elements
     private val commandGenerator = VoiceCommandGenerator()
+
+    // JavaScript executor for web command execution (set by platform layer)
+    @Volatile
+    private var jsExecutor: IJavaScriptExecutor? = null
 
     // Scrape cooldown: prevents redundant command regeneration from rapid DOM mutations.
     // If last scrape was < SCRAPE_COOLDOWN_MS ago AND structure hash matches, skip processing.
@@ -319,8 +325,31 @@ class BrowserVoiceOSCallback(
             )
         }
 
-        // TODO: Execute the command via JavaScript injection
-        val success = true
+        // Execute the command via JavaScript injection
+        val executor = jsExecutor
+        val success = if (executor != null) {
+            val script = when (command.action) {
+                VoiceCommandGenerator.CommandAction.CLICK ->
+                    DOMScraperBridge.clickBySelectorScript(command.selector)
+                VoiceCommandGenerator.CommandAction.FOCUS ->
+                    DOMScraperBridge.focusBySelectorScript(command.selector)
+                VoiceCommandGenerator.CommandAction.INPUT ->
+                    DOMScraperBridge.inputTextBySelectorScript(command.selector, "")
+                VoiceCommandGenerator.CommandAction.SCROLL_TO ->
+                    DOMScraperBridge.scrollToBySelectorScript(command.selector)
+                VoiceCommandGenerator.CommandAction.TOGGLE ->
+                    DOMScraperBridge.toggleCheckboxScript(command.selector)
+                VoiceCommandGenerator.CommandAction.SELECT ->
+                    DOMScraperBridge.selectDropdownScript(command.selector, "")
+            }
+
+            val result = executor.evaluateJavaScript(script)
+            result?.contains("\"success\":true") == true ||
+                result?.contains("\"success\": true") == true
+        } else {
+            println("VoiceOS: No JS executor available, command not executed")
+            false
+        }
 
         // Update execution result for UI feedback
         _lastExecutionResult.value = if (success) {
@@ -756,6 +785,69 @@ class BrowserVoiceOSCallback(
             .map { it.fullText }
     }
 
+    // ===== JavaScript Executor + QuantizedCommand Bridge =====
+
+    /**
+     * Set the platform-specific JavaScript executor.
+     * Called when the WebView bridge is created.
+     */
+    fun setJavaScriptExecutor(executor: IJavaScriptExecutor?) {
+        jsExecutor = executor
+    }
+
+    /**
+     * Evaluate JavaScript code using the current JS executor.
+     * Returns null if no executor is available.
+     */
+    suspend fun evaluateJavaScript(script: String): String? {
+        return jsExecutor?.evaluateJavaScript(script)
+    }
+
+    /**
+     * Convert current web voice commands to QuantizedCommands for the CommandRegistry.
+     *
+     * This provides the dual-path: phrases in speech grammar AND QuantizedCommands
+     * in the CommandRegistry, so ActionCoordinator can route recognized web phrases
+     * to the WebCommandHandler.
+     *
+     * @return List of QuantizedCommands with web-specific metadata
+     */
+    fun getWebCommandsAsQuantized(): List<QuantizedCommand> {
+        val domain = _currentDomain.value
+        return commandGenerator.getAllCommands().map { cmd ->
+            QuantizedCommand(
+                avid = "web__${domain}__${cmd.vosId}",
+                phrase = cmd.fullText,
+                actionType = mapWebActionToCommandActionType(cmd.action),
+                targetAvid = cmd.vosId,
+                confidence = 1.0f,
+                metadata = mapOf(
+                    "source" to "web",
+                    "selector" to cmd.selector,
+                    "xpath" to cmd.xpath,
+                    "vosId" to cmd.vosId,
+                    "elementType" to cmd.elementType,
+                    "domain" to domain,
+                    "packageName" to "com.augmentalis.avanues"
+                )
+            )
+        }
+    }
+
+    /**
+     * Map WebVoiceCommand.CommandAction to CommandActionType.
+     */
+    private fun mapWebActionToCommandActionType(action: VoiceCommandGenerator.CommandAction): CommandActionType {
+        return when (action) {
+            VoiceCommandGenerator.CommandAction.CLICK -> CommandActionType.CLICK
+            VoiceCommandGenerator.CommandAction.FOCUS -> CommandActionType.FOCUS
+            VoiceCommandGenerator.CommandAction.INPUT -> CommandActionType.TYPE
+            VoiceCommandGenerator.CommandAction.SCROLL_TO -> CommandActionType.SCROLL
+            VoiceCommandGenerator.CommandAction.TOGGLE -> CommandActionType.CLICK
+            VoiceCommandGenerator.CommandAction.SELECT -> CommandActionType.CLICK
+        }
+    }
+
     /**
      * Get commands as display objects for UI.
      */
@@ -772,6 +864,18 @@ class BrowserVoiceOSCallback(
     }
 
     companion object {
+        /**
+         * Active callback instance for the current browser session.
+         * Used by VoiceAvanueAccessibilityService to access web commands.
+         */
+        @Volatile
+        private var _activeInstance: BrowserVoiceOSCallback? = null
+        val activeInstance: BrowserVoiceOSCallback? get() = _activeInstance
+
+        fun setActiveInstance(instance: BrowserVoiceOSCallback?) {
+            _activeInstance = instance
+        }
+
         /** Maximum pages held in session-level LRU cache. */
         private const val MAX_SESSION_CACHE_SIZE = 5
 
