@@ -77,6 +77,13 @@ import com.augmentalis.avanueui.theme.AvanueTheme
  * @param glassLevel Glass effect strength (LIGHT, MEDIUM, HEAVY)
  * @param content Composable content
  */
+@Deprecated(
+    message = "Use AvanueSurface instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueSurface(onClick = onClick, modifier = modifier, shape = shape, content = content)",
+        "com.augmentalis.avanueui.components.AvanueSurface"
+    )
+)
 @Composable
 fun GlassSurface(
     onClick: (() -> Unit)? = null,
@@ -138,6 +145,13 @@ fun GlassSurface(
  * @param glassLevel Glass effect strength
  * @param content Composable content
  */
+@Deprecated(
+    message = "Use AvanueCard instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueCard(onClick = onClick, modifier = modifier, shape = shape, content = content)",
+        "com.augmentalis.avanueui.components.AvanueCard"
+    )
+)
 @Composable
 fun GlassCard(
     onClick: (() -> Unit)? = null,
@@ -203,6 +217,13 @@ fun GlassCard(
  * @param glassLevel Glass effect strength
  * @param content Composable content
  */
+@Deprecated(
+    message = "Use AvanueBubble instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueBubble(modifier = modifier, align = align, shape = shape, content = content)",
+        "com.augmentalis.avanueui.components.AvanueBubble"
+    )
+)
 @Composable
 fun GlassBubble(
     modifier: Modifier = Modifier,
@@ -248,6 +269,13 @@ fun GlassBubble(
  * @param contentPadding Button content padding
  * @param content Button content
  */
+@Deprecated(
+    message = "Use AvanueButton instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueButton(onClick = onClick, modifier = modifier, enabled = enabled, shape = shape, content = content)",
+        "com.augmentalis.avanueui.components.AvanueButton"
+    )
+)
 @Composable
 fun OceanButton(
     onClick: () -> Unit,
@@ -302,6 +330,13 @@ fun OceanButton(
  * @param elevation Chip elevation
  * @param shape Chip shape
  */
+@Deprecated(
+    message = "Use AvanueChip instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueChip(onClick = onClick, label = label, modifier = modifier, enabled = enabled, leadingIcon = leadingIcon, trailingIcon = trailingIcon)",
+        "com.augmentalis.avanueui.components.AvanueChip"
+    )
+)
 @Composable
 fun GlassChip(
     onClick: () -> Unit,
@@ -356,6 +391,13 @@ fun GlassChip(
  * @param glassLevel Glass effect strength
  * @param content FAB content (icon)
  */
+@Deprecated(
+    message = "Use AvanueFAB instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueFAB(onClick = onClick, modifier = modifier, shape = shape, content = content)",
+        "com.augmentalis.avanueui.components.AvanueFAB"
+    )
+)
 @Composable
 fun GlassFloatingActionButton(
     onClick: () -> Unit,
@@ -397,6 +439,13 @@ fun GlassFloatingActionButton(
  * @param colors Icon button colors
  * @param content Button content (icon)
  */
+@Deprecated(
+    message = "Use AvanueIconButton instead. Theme controls glass/water/plain rendering.",
+    replaceWith = ReplaceWith(
+        "AvanueIconButton(onClick = onClick, modifier = modifier, enabled = enabled, content = content)",
+        "com.augmentalis.avanueui.components.AvanueIconButton"
+    )
+)
 @Composable
 fun GlassIconButton(
     onClick: () -> Unit,
@@ -433,6 +482,14 @@ fun GlassIconButton(
  * @param glassLevel Glass effect strength
  * @param content Indicator content (Row scope)
  */
+@Deprecated(
+    message = "Use AvanueSurface instead. GlassIndicator is a thin wrapper over GlassSurface.",
+    replaceWith = ReplaceWith(
+        "AvanueSurface(modifier = modifier, content = { Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), content = content) })",
+        "com.augmentalis.avanueui.components.AvanueSurface"
+    )
+)
+@Suppress("DEPRECATION")
 @Composable
 fun GlassIndicator(
     modifier: Modifier = Modifier,

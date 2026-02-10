@@ -19,7 +19,9 @@ import com.augmentalis.avanueui.tokens.TypographyTokens
 
 val LocalAvanueColors = staticCompositionLocalOf<AvanueColorScheme> { OceanColors }
 val LocalAvanueGlass = staticCompositionLocalOf<AvanueGlassScheme> { OceanGlass }
+val LocalAvanueWater = staticCompositionLocalOf<AvanueWaterScheme> { OceanWater }
 val LocalDisplayProfile = staticCompositionLocalOf { DisplayProfile.PHONE }
+val LocalMaterialMode = staticCompositionLocalOf { MaterialMode.GLASS }
 
 /**
  * Unified theme provider for the Avanues ecosystem.
@@ -45,7 +47,9 @@ val LocalDisplayProfile = staticCompositionLocalOf { DisplayProfile.PHONE }
 fun AvanueThemeProvider(
     colors: AvanueColorScheme = OceanColors,
     glass: AvanueGlassScheme = OceanGlass,
+    water: AvanueWaterScheme = OceanWater,
     displayProfile: DisplayProfile = DisplayProfile.PHONE,
+    materialMode: MaterialMode = MaterialMode.GLASS,
     content: @Composable () -> Unit
 ) {
     val currentDensity = LocalDensity.current
@@ -57,7 +61,9 @@ fun AvanueThemeProvider(
     CompositionLocalProvider(
         LocalAvanueColors provides colors,
         LocalAvanueGlass provides glass,
+        LocalAvanueWater provides water,
         LocalDisplayProfile provides displayProfile,
+        LocalMaterialMode provides materialMode,
         LocalDensity provides scaledDensity,
     ) {
         MaterialTheme(
@@ -83,8 +89,14 @@ object AvanueTheme {
     val glass: AvanueGlassScheme
         @Composable get() = LocalAvanueGlass.current
 
+    val water: AvanueWaterScheme
+        @Composable get() = LocalAvanueWater.current
+
     val displayProfile: DisplayProfile
         @Composable get() = LocalDisplayProfile.current
+
+    val materialMode: MaterialMode
+        @Composable get() = LocalMaterialMode.current
 }
 
 // ===== Material3 Integration =====

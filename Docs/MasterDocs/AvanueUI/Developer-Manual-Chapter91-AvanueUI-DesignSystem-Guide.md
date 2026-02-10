@@ -6,9 +6,14 @@
 
 ## Overview
 
-AvanueUI is the unified design system for the Avanues ecosystem. As of v3.1, all design tokens, themes, display profiles, glass components, and settings UI are consolidated into a single Gradle module: `:Modules:AvanueUI`.
+AvanueUI is the unified design system for the Avanues ecosystem. As of v4.0, all design tokens, themes, display profiles, glass/water components, and settings UI are consolidated into a single Gradle module: `:Modules:AvanueUI`.
 
-This chapter covers everything you need to build UIs with AvanueUI — from adding the dependency to creating custom themes and glass effects.
+This chapter covers everything you need to build UIs with AvanueUI — from adding the dependency to creating custom themes and glass/water effects.
+
+> **See also:**
+> - **Chapter 92** — Phase 2 Unified Component Architecture (MaterialMode, unified components)
+> - **AvanueUI-Component-Reference-260210-V1.md** — Standalone API reference for developers/AI
+> - **AvanueUI-Adoption-Guide-260210-V1.md** — Cross-project migration guide (SmartFin, AvanueCentral, NewAvanues)
 
 ---
 
@@ -528,21 +533,38 @@ These packages no longer exist:
 
 ## 9. Quick Reference
 
+> **NOTE:** As of Phase 2 (Chapter 92), prefer **unified components** (`AvanueCard`, `AvanueSurface`, etc.) over the Glass* components below. The Glass* components are now `@Deprecated` — they still work but the unified API is the recommended path forward. See Chapter 92 for full details.
+
 ```
 DEPENDENCY:  implementation(project(":Modules:AvanueUI"))
 
 TOKENS:      SpacingTokens.md (16dp)  ShapeTokens.lg (16dp)  SizeTokens.iconMd (24dp)
 THEME:       AvanueTheme.colors.primary  AvanueTheme.glass.overlayColor
+             AvanueTheme.materialMode (NEW — GLASS/WATER/PLAIN)
 DISPLAY:     AvanueTheme.displayProfile  DisplayUtils.isGlass
 GLASS:       GlassLevel.LIGHT/MEDIUM/HEAVY  Modifier.glass(...)
-COMPONENTS:  GlassSurface  GlassCard  OceanButton  GlassChip  PulseDot
+WATER:       WaterLevel.REGULAR/CLEAR/IDENTITY  Modifier.waterEffect(...)
+
+UNIFIED COMPONENTS (Phase 2 — preferred):
+  AvanueSurface  AvanueCard  AvanueButton  AvanueChip
+  AvanueBubble   AvanueFAB   AvanueIconButton
+
+LEGACY COMPONENTS (deprecated — use unified instead):
+  GlassSurface  GlassCard  OceanButton  GlassChip
+  WaterSurface  WaterCard  WaterButton
+
+STILL CURRENT (not deprecated):
+  PulseDot  StatusBadge  WaterNavigationBar
 
 PACKAGES:
+  unified  → com.augmentalis.avanueui.components.*             (NEW primary)
   tokens   → com.augmentalis.avanueui.tokens.*
   theme    → com.augmentalis.avanueui.theme.*
   display  → com.augmentalis.avanueui.display.*
   glass    → com.augmentalis.avanueui.glass.* (types)
-             com.augmentalis.avanueui.components.glass.* (components)
+             com.augmentalis.avanueui.components.glass.* (deprecated components)
+  water    → com.augmentalis.avanueui.water.* (types + effects)
+             com.augmentalis.avanueui.components.water.* (deprecated components)
   settings → com.augmentalis.avanueui.components.settings.*
 ```
 

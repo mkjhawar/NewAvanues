@@ -142,6 +142,49 @@ export interface Elevation {
 }
 
 /**
+ * Water effect level (Apple Liquid Glass-inspired)
+ */
+export enum WaterLevel {
+  Regular = 'regular',
+  Clear = 'clear',
+  Identity = 'identity'
+}
+
+/**
+ * Water effect configuration for AvanueWaterUI
+ *
+ * Liquid Glass-inspired dynamic material effects.
+ * CSS implementation uses backdrop-filter + SVG displacement filters.
+ */
+export interface WaterEffect {
+  level: WaterLevel;
+  blur: number;                    // px — backdrop-filter blur radius
+  refractionStrength: number;      // px — SVG displacement magnitude
+  overlayOpacity: number;          // 0-1 — background rgba alpha
+  highlightColor: string;          // rgba() — specular highlight tint
+  causticColor: string;            // rgba() — animated shimmer color
+  borderWidth: number;             // px — hairline border width
+  borderTopColor: string;          // rgba() — gradient border top
+  borderBottomColor: string;       // rgba() — gradient border bottom
+  interactive: boolean;            // Enable press scale + shimmer
+}
+
+/**
+ * Water theme scheme (per-variant colors for water effects)
+ */
+export interface WaterScheme {
+  highlightColor: Color;
+  causticColor: Color;
+  refractionTint: Color;
+  depthShadowColor: Color;
+  surfaceTint: Color;
+  borderTint: Color;
+  enableRefraction: boolean;
+  enableCaustics: boolean;
+  enableSpecular: boolean;
+}
+
+/**
  * Theme definition
  */
 export interface Theme {
@@ -152,6 +195,7 @@ export interface Theme {
   shapes: Shapes;
   spacing: Spacing;
   elevation: Elevation;
+  water?: WaterScheme;
 }
 
 /**

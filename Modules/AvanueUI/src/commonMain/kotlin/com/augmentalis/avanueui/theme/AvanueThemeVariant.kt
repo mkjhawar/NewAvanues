@@ -20,6 +20,14 @@ enum class AvanueThemeVariant(val displayName: String) {
     SUNSET("Sunset Warm"),
     LIQUID("Liquid Glass");
 
+    /** Visual rendering mode for unified Avanue* components */
+    val materialMode: MaterialMode
+        get() = when (this) {
+            OCEAN -> MaterialMode.GLASS
+            SUNSET -> MaterialMode.GLASS
+            LIQUID -> MaterialMode.WATER
+        }
+
     val colors: AvanueColorScheme
         get() = when (this) {
             OCEAN -> OceanColors
@@ -32,6 +40,13 @@ enum class AvanueThemeVariant(val displayName: String) {
             OCEAN -> OceanGlass
             SUNSET -> SunsetGlass
             LIQUID -> LiquidGlass
+        }
+
+    val water: AvanueWaterScheme
+        get() = when (this) {
+            OCEAN -> OceanWater
+            SUNSET -> SunsetWater
+            LIQUID -> LiquidWater
         }
 
     companion object {

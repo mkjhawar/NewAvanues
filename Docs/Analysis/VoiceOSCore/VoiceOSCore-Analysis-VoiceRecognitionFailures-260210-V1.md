@@ -218,3 +218,47 @@ The `allRegisteredCommands` set comparison in `VoiceOSCore.updateCommands()` is 
 1. **Fix 1** (speechResults collector) — Without this, no voice command will EVER execute. This is the showstopper.
 2. **Fix 2** (CAS guard removal) — Without this, commands randomly fail to register on screen changes.
 3. Verify the `speechrecognition` library VivokaEngine API compatibility
+
+---
+
+## Fix Status (Updated 2026-02-10)
+
+All critical issues identified in this analysis have been resolved across three commits:
+
+### Fix 1: Speech Result Collector — FIXED
+**Commit:** `0fa13620` — `fix(voiceoscore): Wire missing speech result collector + remove aggressive CAS guard`
+- Added `speechCollectorJob` in `VoiceAvanueAccessibilityService.onServiceReady()`
+- Collects from `voiceOSCore?.speechResults` with conflation
+- Bridges recognized speech to `processVoiceCommand()`
+- Properly cancelled in `onDestroy()`
+
+### Fix 2: CAS Guard Removal — FIXED
+**Commit:** `0fa13620` (same commit)
+- Removed `isUpdatingCommands` CAS guard from `VivokaAndroidEngine.updateCommands()`
+- Retained hash dedup (Layer 3) as reasonable optimization
+- VoiceOSCore-level set comparison (Layer 1) provides sufficient dedup
+
+### Additional Fixes Discovered During Testing
+
+#### Fix 3: Dual Coordinator Handler Lookup — FIXED
+**Commit:** `64711da5`
+- **Root cause:** Two ActionCoordinator instances — bare one (no handlers) was returned by `getActionCoordinator()` instead of VoiceOSCore's (with handlers)
+- **Fix:** Exposed `VoiceOSCore.actionCoordinator` property; `getActionCoordinator()` now prefers it
+- **Doc:** `Docs/fixes/VoiceOSCore/VoiceOSCore-Fix-DualCoordinatorHandlerLookup-260210-V1.md`
+
+#### Fix 4: Static Command Grammar Loss — FIXED
+**Commit:** `346659c9`
+- **Root cause:** `VoiceOSCore.updateCommands()` replaced speech grammar with only dynamic + app phrases, dropping 184 static commands
+- **Fix:** Added `StaticCommandRegistry.allPhrases()` to the command set; added `refreshScreen()` after `initialize()`
+
+#### Fix 5: Dynamic Command Registry Race Condition — FIXED
+**Commit:** `b4f61c75`
+- **Root cause:** `clearDynamicCommands()` (sync) before `handleScreenChange()` (async) caused race where voice commands saw `registry size: 0`
+- **Fix:** Replaced explicit `clearDynamicCommands()` with `lastScreenHash = ""` invalidation; `CommandRegistry.update()` already does atomic full-replace
+- **Doc:** `Docs/fixes/VoiceOSCore/VoiceOSCore-Fix-DynamicCommandRaceCondition-260210-V1.md`
+
+### Verification Results
+- Static commands: 185 phrases registered, retained across screen changes
+- Dynamic commands: Atomically replaced on screen/app change, no zero-command gap
+- Voice engine: Vivoka receives 191+ commands (185 static + dynamic per screen)
+- Package switching: Smooth command transition with atomic replace, no race condition
