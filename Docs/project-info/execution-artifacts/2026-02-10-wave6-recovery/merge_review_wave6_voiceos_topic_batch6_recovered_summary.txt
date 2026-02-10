@@ -1,0 +1,6 @@
+batch=batch6
+manual_pool=172
+remaining_after_exclusion=75
+selected_topics=architecture (1), voiceos-agent5-lifecycle-test-status (1), blockers (1), voiceos-voicerecognition-status-report (1), voiceos-session-context (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch6_recovered.csv

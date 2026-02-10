@@ -1,0 +1,6 @@
+batch=batch14
+manual_pool=172
+remaining_after_exclusion=35
+selected_topics=docs-sync-quick-reference (1), migration-tracking-table (1), build-diagnostic-report-2025-09-07 (1), proposed-claude (1), precompaction-report-250903-0415 (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch14_recovered.csv

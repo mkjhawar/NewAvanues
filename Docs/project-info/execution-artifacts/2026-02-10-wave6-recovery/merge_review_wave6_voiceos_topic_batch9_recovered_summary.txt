@@ -1,0 +1,6 @@
+batch=batch9
+manual_pool=172
+remaining_after_exclusion=60
+selected_topics=voiceos-project-context (1), voiceos-reference-vos4-mandatory-rules (1), voiceos-backlog (1), index (1), quickstart (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch9_recovered.csv

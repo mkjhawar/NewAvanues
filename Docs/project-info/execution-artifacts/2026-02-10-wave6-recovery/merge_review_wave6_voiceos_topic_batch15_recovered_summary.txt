@@ -1,0 +1,6 @@
+batch=batch15
+manual_pool=172
+remaining_after_exclusion=30
+selected_topics=vivoka-complete-analysis-250903-1230 (1), critical-migration-gaps-250903 (1), precompaction-report-250903-1530 (1), vivoka-error-listener-issue-2025-01-26 (1), integration-fix-complete-status-251013-1957 (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch15_recovered.csv

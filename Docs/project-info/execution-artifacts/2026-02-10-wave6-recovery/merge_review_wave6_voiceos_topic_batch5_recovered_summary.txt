@@ -1,0 +1,6 @@
+batch=batch5
+manual_pool=172
+remaining_after_exclusion=110
+selected_topics=readme (31), backlog (1), voiceos-uuid-vuid-migration (1), voiceoscoreng-fix-plan (1), decisions (1)
+batch_rows=35
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch5_recovered.csv

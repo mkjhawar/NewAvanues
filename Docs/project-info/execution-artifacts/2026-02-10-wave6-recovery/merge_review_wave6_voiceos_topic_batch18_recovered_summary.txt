@@ -1,0 +1,6 @@
+batch=batch18
+manual_pool=172
+remaining_after_exclusion=15
+selected_topics=documentation-sync-implementation-report (1), phases-5-6-completion-report (1), status-content-extraction-251015-0249 (1), hash-based-persistence-251010-0637 (1), voiceaccessibility-changelog (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch18_recovered.csv

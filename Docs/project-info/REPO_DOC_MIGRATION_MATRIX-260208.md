@@ -433,3 +433,46 @@ Use a dedicated feature changelog and a central deprecations log.
 
 - Type: `MERGE_TO_MASTER` (manual merge queue shaping)
 - Outcome: fourth deterministic batch prepared; queue progression remains reproducible and auditable.
+
+## Execution log — 2026-02-10 (recovery continuation: wave6 batch5→finish on durable path)
+
+### Incident context
+
+- Prior wave artifacts were lost due to non-durable `build/` storage (`**/build/` ignored + clean deleting root build dir).
+- Recovery source used:
+  - `Docs/MasterDocs/merge_review_candidates_2026-02-10-wave4.xlsx`
+- Recovery converter:
+  - `contextsave/recover_wave4_xlsx_to_csv.py`
+- Recovered candidate CSV:
+  - `contextsave/merge_review_candidates_2026-02-10-wave4_recovered.csv`
+
+### Durable recovery execution
+
+- Runner script:
+  - `Docs/project-info/execution-artifacts/recovery_wave6_batch5_to_finish_2026_02_10.py`
+- Durable artifact root:
+  - `Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/`
+
+### Reconstructed wave5d-equivalent metrics
+
+- Execution CSV:
+  - `Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_execution_2026-02-10-wave5d-recovered.csv`
+- Execution summary:
+  - `Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_execution_2026-02-10-wave5d-recovered_summary.txt`
+- Candidate rows: **279**
+- Needs manual review: **172**
+- Skipped (outside bucket B): **107**
+- Archived: **0**
+- Errors: **0**
+
+### Wave6 continuation outcome
+
+- Starting from completed batch1–batch4 exclusions, deterministic continuation generated:
+  - **batch5 through batch20** (**16 additional batches**)
+- Final rollup summary:
+  - `Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_recovery_batch5_to_finish_summary.txt`
+
+### Action classification
+
+- Type: `MERGE_TO_MASTER` (manual queue shaping continuation, recovery mode)
+- Outcome: user-requested `batch5→finish` completed with reproducible artifacts in durable documentation path.

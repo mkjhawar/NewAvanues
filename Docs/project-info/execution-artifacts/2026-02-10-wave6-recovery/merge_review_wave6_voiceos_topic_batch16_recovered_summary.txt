@@ -1,0 +1,6 @@
+batch=batch16
+manual_pool=172
+remaining_after_exclusion=25
+selected_topics=vos4-testing-automation-guide (1), hilt-di-setup-251015-0333 (1), wrapper-pattern-implementation-251015-0254 (1), vos4-findings-and-solutions-report (1), uiscrapingservice-implementation-summary-251015-0415 (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch16_recovered.csv
