@@ -100,6 +100,11 @@ class BrowserVoiceOSCallback(
 
         println("VoiceOS: DOM scraped - ${result.elementCount} elements, $count voice commands generated")
 
+        // Emit phrases to static flow for speech engine grammar integration.
+        // The accessibility service collects this and routes to VoiceOSCore.updateWebCommands().
+        val phrases = commandGenerator.getAllCommands().map { it.fullText }
+        _activeWebPhrases.value = phrases
+
         // Persist commands if domain is whitelisted
         if (_isWhitelistedDomain.value && webCommandRepository != null) {
             scope.launch {
@@ -488,6 +493,30 @@ class BrowserVoiceOSCallback(
     }
 
     companion object {
+        /**
+         * Active web voice command phrases for the current page.
+         *
+         * This static flow bridges web-scraped commands to VoiceOSCore's speech engine.
+         * The accessibility service collects from this flow and routes phrases to
+         * VoiceOSCore.updateWebCommands(), which includes them in the speech grammar
+         * alongside static + dynamic + app phrases.
+         *
+         * Engine-agnostic: phrases flow through ISpeechEngine.updateCommands(),
+         * which all engines (Vivoka, VOSK, Android STT, Whisper) implement identically.
+         *
+         * Browser-scoped: The accessibility service clears this flow when the
+         * foreground package changes away from the browser.
+         */
+        private val _activeWebPhrases = MutableStateFlow<List<String>>(emptyList())
+        val activeWebPhrases: StateFlow<List<String>> = _activeWebPhrases.asStateFlow()
+
+        /**
+         * Clear active web phrases (called when leaving the browser or on package change).
+         */
+        fun clearActiveWebPhrases() {
+            _activeWebPhrases.value = emptyList()
+        }
+
         /**
          * Create a basic callback without persistence (memory-only).
          */

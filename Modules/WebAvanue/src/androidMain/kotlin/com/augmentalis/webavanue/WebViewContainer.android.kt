@@ -904,6 +904,16 @@ actual fun WebViewContainer(
             },
             modifier = modifier
         )
+
+        // Defense-in-depth: Sync desktop mode to WebView whenever the tab's
+        // isDesktopMode changes (e.g. after Activity restoration from saved state).
+        // Without configChanges this ensures the WebView user agent matches the
+        // persisted tab setting even if the WebView was recreated.
+        LaunchedEffect(isDesktopMode, webView) {
+            webView?.let {
+                controller?.setDesktopMode(isDesktopMode)
+            }
+        }
     } // End of key(tabId) block
 }
 

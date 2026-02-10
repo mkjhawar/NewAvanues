@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import com.augmentalis.webavanue.BrowserVoiceOSCallback
 
 private const val TAG = "VoiceAvanueService"
 
@@ -59,6 +60,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var boundsResolver: BoundsResolver? = null
     private var dynamicCommandGenerator: DynamicCommandGenerator? = null
     private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
+    private var webCommandCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
 
     override fun getActionCoordinator(): ActionCoordinator {
         // Prefer VoiceOSCore's coordinator — it has handlers registered
@@ -146,6 +148,25 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         }
                 }
 
+                // Bridge: Collect web DOM voice commands → route to VoiceOSCore speech grammar.
+                // BrowserVoiceOSCallback emits phrases from DOM scraping; we include them
+                // in the speech engine grammar so the user can speak web-specific commands.
+                // Engine-agnostic: flows through ISpeechEngine.updateCommands().
+                webCommandCollectorJob?.cancel()
+                webCommandCollectorJob = serviceScope.launch {
+                    BrowserVoiceOSCallback.activeWebPhrases
+                        .collect { phrases ->
+                            try {
+                                voiceOSCore?.updateWebCommands(phrases)
+                                if (phrases.isNotEmpty()) {
+                                    Log.d(TAG, "Web commands updated: ${phrases.size} phrases")
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to update web commands", e)
+                            }
+                        }
+                }
+
                 voiceOSCore?.onSystemAction = { action ->
                     when (action) {
                         "OPEN_DEVELOPER_SETTINGS" -> {
@@ -175,6 +196,13 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 val packageName = root.packageName?.toString() ?: return@launch
                 val isTargetApp = OverlayStateManager.TARGET_APPS.contains(packageName)
 
+                // Browser-scope: clear web commands when foreground app is not the browser.
+                // Prevents web-scraped phrases from polluting grammar in other apps.
+                val isBrowser = packageName == applicationContext.packageName
+                if (!isBrowser) {
+                    BrowserVoiceOSCallback.clearActiveWebPhrases()
+                }
+
                 dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating overlay", e)
@@ -188,6 +216,11 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         // Cancel speech result collection
         speechCollectorJob?.cancel()
         speechCollectorJob = null
+
+        // Cancel web command collection and clear stale phrases
+        webCommandCollectorJob?.cancel()
+        webCommandCollectorJob = null
+        BrowserVoiceOSCallback.clearActiveWebPhrases()
 
         // Stop overlay service
         try {

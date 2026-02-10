@@ -106,6 +106,15 @@ class VoiceOSCore private constructor(
     private val allRegisteredCommands: MutableSet<String> = mutableSetOf()
 
     /**
+     * Web browser voice command phrases (browser-scoped).
+     * Set by the host service when collecting from BrowserVoiceOSCallback.activeWebPhrases.
+     * Included in the speech grammar alongside static + dynamic + app phrases.
+     * Cleared when the foreground app switches away from the browser.
+     */
+    @Volatile
+    private var webCommandPhrases: List<String> = emptyList()
+
+    /**
      * Initialize the core.
      */
     suspend fun initialize() {
@@ -337,12 +346,14 @@ class VoiceOSCore private constructor(
         // Merge + de-dupe correctly (set of Strings)
         // MUST include static phrases — speech engine grammar is REPLACED on each call,
         // so omitting them would remove recognition of "scroll down", "back", etc.
+        // Also includes webCommandPhrases for browser-scoped DOM voice commands.
         val staticPhrases = staticCommandPersistence?.getAllPhrases()
             ?: StaticCommandRegistry.allPhrases()
         val newCommands: Set<String> = buildSet {
             addAll(commands)
             addAll(appHandlerPhrases)
             addAll(staticPhrases)
+            addAll(webCommandPhrases)
         }
 
         println("[VoiceOSCore] allRegisteredCommands = ${allRegisteredCommands.size} , newCommands = ${newCommands.size}")
@@ -364,6 +375,31 @@ class VoiceOSCore private constructor(
                 allRegisteredCommands.clear()
                 allRegisteredCommands.addAll(newCommands)
             }
+    }
+
+    /**
+     * Update web browser voice command phrases (browser-scoped).
+     *
+     * Called by the host service when web DOM scraping produces voice commands.
+     * These phrases are included in the speech grammar alongside static + dynamic
+     * + app phrases. Engine-agnostic: flows through ISpeechEngine.updateCommands().
+     *
+     * @param phrases List of web voice command phrases (e.g. "click login", "click search")
+     * @return Result indicating success or failure
+     */
+    suspend fun updateWebCommands(phrases: List<String>): Result<Unit> {
+        webCommandPhrases = phrases
+        // Re-trigger updateCommands with current dynamic commands to include web phrases
+        val currentDynamic = coordinator.getDynamicCommands().map { it.phrase }
+        return updateCommands(currentDynamic)
+    }
+
+    /**
+     * Clear web browser voice command phrases.
+     * Called when the foreground app switches away from the browser.
+     */
+    suspend fun clearWebCommands(): Result<Unit> {
+        return updateWebCommands(emptyList())
     }
 
     /**
