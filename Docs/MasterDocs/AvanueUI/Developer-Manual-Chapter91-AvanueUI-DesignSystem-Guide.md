@@ -6,9 +6,14 @@
 
 ## Overview
 
-AvanueUI is the unified design system for the Avanues ecosystem. As of v3.1, all design tokens, themes, display profiles, glass components, and settings UI are consolidated into a single Gradle module: `:Modules:AvanueUI`.
+AvanueUI is the unified design system for the Avanues ecosystem. As of v4.0, all design tokens, themes, display profiles, glass/water components, and settings UI are consolidated into a single Gradle module: `:Modules:AvanueUI`.
 
-This chapter covers everything you need to build UIs with AvanueUI — from adding the dependency to creating custom themes and glass effects.
+This chapter covers everything you need to build UIs with AvanueUI — from adding the dependency to creating custom themes and glass/water effects.
+
+> **See also:**
+> - **Chapter 92** — Phase 2 Unified Component Architecture (MaterialMode, unified components)
+> - **AvanueUI-Component-Reference-260210-V1.md** — Standalone API reference for developers/AI
+> - **AvanueUI-Adoption-Guide-260210-V1.md** — Cross-project migration guide (SmartFin, AvanueCentral, NewAvanues)
 
 ---
 
