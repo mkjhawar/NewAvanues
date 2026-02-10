@@ -61,6 +61,15 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
 
     override fun getActionCoordinator(): ActionCoordinator {
+        // Prefer VoiceOSCore's coordinator — it has handlers registered
+        // (AndroidGestureHandler, SystemHandler, AppHandler).
+        // The bare actionCoordinator created at startup has NO handlers,
+        // so findHandler() would always return null.
+        voiceOSCore?.actionCoordinator?.let { return it }
+
+        // Fallback for events arriving before VoiceOSCore initializes.
+        // Dynamic commands registered here will be re-registered when the
+        // next screen change fires after VoiceOSCore is ready.
         return actionCoordinator ?: ActionCoordinator(commandRegistry = CommandRegistry()).also {
             actionCoordinator = it
         }

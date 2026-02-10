@@ -56,6 +56,14 @@ class VoiceOSCore private constructor(
         commandRegistry = commandRegistry
     )
 
+    /**
+     * Access the internal ActionCoordinator.
+     *
+     * Platform services (e.g., VoiceOSAccessibilityService) should use this
+     * coordinator for voice command processing since it has handlers registered.
+     */
+    val actionCoordinator: ActionCoordinator get() = coordinator
+
     // State manager tracks service lifecycle
     private val stateManager = ServiceStateManager()
 
