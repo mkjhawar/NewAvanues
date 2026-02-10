@@ -21,24 +21,29 @@ object WaterTokens {
     const val shadowOpacity: Float = 0.30f
     const val illuminationOpacity: Float = 0.18f
 
-    // --- Refraction / Lensing ---
-    val refractionStrengthClear: Dp = 2.dp
-    val refractionStrengthRegular: Dp = 4.dp
+    // --- Panel background opacity (main frosted-glass fill) ---
+    const val panelOpacityRegular: Float = 0.82f
+    const val panelOpacityClear: Float = 0.60f
+    const val panelOpacityIdentity: Float = 0.0f
+
+    // --- Refraction / Lensing (disabled: distorts content text) ---
+    val refractionStrengthClear: Dp = 0.dp
+    val refractionStrengthRegular: Dp = 0.dp
     const val refractionFrequency: Float = 0.03f
 
     // --- Specular highlight ---
     val specularRadius: Dp = 80.dp
-    const val specularIntensity: Float = 0.40f
+    const val specularIntensity: Float = 0.15f
     const val specularFalloff: Float = 2.0f
 
-    // --- Blur per WaterLevel ---
-    val blurClear: Dp = 4.dp
-    val blurRegular: Dp = 12.dp
+    // --- Blur per WaterLevel (disabled: content must stay sharp) ---
+    val blurClear: Dp = 0.dp
+    val blurRegular: Dp = 0.dp
     val blurIdentity: Dp = 0.dp
 
-    // --- Background overlay ---
-    const val overlayOpacityClear: Float = 0.06f
-    const val overlayOpacityRegular: Float = 0.14f
+    // --- Color accent overlay (subtle tint on top of panel) ---
+    const val overlayOpacityClear: Float = 0.04f
+    const val overlayOpacityRegular: Float = 0.08f
     const val overlayOpacityIdentity: Float = 0.0f
 
     // --- Interactive ---
@@ -49,7 +54,7 @@ object WaterTokens {
 
     // --- Caustics (animated ripple patterns) ---
     const val causticSpeed: Float = 1.5f
-    const val causticIntensity: Float = 0.12f
+    const val causticIntensity: Float = 0.04f
     const val causticScale: Float = 0.02f
 
     // --- Border ---
@@ -66,6 +71,9 @@ object WaterTokens {
      * IDs are prefixed with "water." (e.g., "water.blurRegular").
      */
     fun resolve(id: String): Any? = when (id) {
+        "water.panelOpacityRegular" -> panelOpacityRegular
+        "water.panelOpacityClear" -> panelOpacityClear
+        "water.panelOpacityIdentity" -> panelOpacityIdentity
         "water.highlightOpacity" -> highlightOpacity
         "water.shadowOpacity" -> shadowOpacity
         "water.illuminationOpacity" -> illuminationOpacity

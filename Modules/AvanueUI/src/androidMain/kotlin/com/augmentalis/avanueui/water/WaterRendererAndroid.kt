@@ -10,8 +10,6 @@
  */
 package com.augmentalis.avanueui.water
 
-import android.graphics.RenderEffect
-import android.graphics.RuntimeShader
 import android.os.Build
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -37,7 +35,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -245,88 +242,63 @@ private fun Modifier.waterEffectApi33(
         }
     }
 
+    // Panel opacity per WaterLevel
+    val panelOpacity = when (waterLevel) {
+        WaterLevel.REGULAR -> WaterTokens.panelOpacityRegular
+        WaterLevel.CLEAR -> WaterTokens.panelOpacityClear
+        WaterLevel.IDENTITY -> 0f
+    }
+
     this
         .clip(shape)
+        // 1. Semi-transparent panel background (frosted glass fill)
+        .background(color = backgroundColor.copy(alpha = panelOpacity), shape = shape)
+        // 2. Subtle color accent tint
+        .background(color = waterRefractionTint.copy(alpha = overlayOpacity), shape = shape)
+        // 3. Press scale only (no blur/refraction — content stays sharp)
         .graphicsLayer {
-            // Apply AGSL refraction via RenderEffect
-            if (enableRefraction && Build.VERSION.SDK_INT >= 33) {
-                val refractionShader = RuntimeShader(AGSL_REFRACTION_SHADER)
-                refractionShader.setFloatUniform("resolution", size.width, size.height)
-                refractionShader.setFloatUniform("strength", refractionStrength)
-                refractionShader.setFloatUniform("frequency", WaterTokens.refractionFrequency)
-                refractionShader.setFloatUniform("time", time)
-
-                val blurEffect = if (blurRadiusPx > 0f) {
-                    RenderEffect.createBlurEffect(blurRadiusPx, blurRadiusPx, android.graphics.Shader.TileMode.CLAMP)
-                } else null
-
-                val refractionEffect = RenderEffect.createRuntimeShaderEffect(refractionShader, "content")
-
-                renderEffect = if (blurEffect != null) {
-                    RenderEffect.createChainEffect(refractionEffect, blurEffect)
-                } else {
-                    refractionEffect
-                }.asComposeRenderEffect()
-            } else if (blurRadiusPx > 0f) {
-                renderEffect = RenderEffect.createBlurEffect(
-                    blurRadiusPx, blurRadiusPx, android.graphics.Shader.TileMode.CLAMP
-                ).asComposeRenderEffect()
-            }
-
             scaleX = pressScale
             scaleY = pressScale
         }
-        // Overlay tint layer
-        .background(
-            color = waterRefractionTint.copy(alpha = overlayOpacity),
-            shape = shape
-        )
-        // Specular highlight overlay
-        .then(
+        // 4. Specular + caustics BEHIND content, content drawn LAST
+        .drawWithContent {
+            // Specular highlight behind content
             if (enableSpecular) {
-                Modifier.drawWithContent {
-                    drawContent()
-                    // Top-center specular highlight
-                    val specRadiusPx = with(density) { WaterTokens.specularRadius.toPx() }
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                waterHighlightColor.copy(alpha = WaterTokens.specularIntensity * WaterTokens.highlightOpacity),
-                                Color.Transparent
-                            ),
-                            center = Offset(size.width * 0.5f, size.height * 0.2f),
-                            radius = specRadiusPx
+                val specRadiusPx = with(density) { WaterTokens.specularRadius.toPx() }
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            waterHighlightColor.copy(alpha = WaterTokens.specularIntensity * WaterTokens.highlightOpacity),
+                            Color.Transparent
                         ),
-                        radius = specRadiusPx,
-                        center = Offset(size.width * 0.5f, size.height * 0.2f)
-                    )
-                }
-            } else Modifier
-        )
-        // Caustic shimmer overlay
-        .then(
+                        center = Offset(size.width * 0.5f, size.height * 0.15f),
+                        radius = specRadiusPx
+                    ),
+                    radius = specRadiusPx,
+                    center = Offset(size.width * 0.5f, size.height * 0.15f)
+                )
+            }
+            // Caustic shimmer behind content
             if (enableCaustics && waterLevel == WaterLevel.REGULAR) {
-                Modifier.drawWithContent {
-                    drawContent()
-                    // Animated caustic pattern using time-varying gradient
-                    val causticPhase = (time * WaterTokens.causticSpeed) % 1f
-                    val causticAlpha = WaterTokens.causticIntensity * (0.5f + 0.5f * kotlin.math.sin(causticPhase * 2f * Math.PI.toFloat()))
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                waterCausticColor.copy(alpha = causticAlpha),
-                                Color.Transparent,
-                                waterCausticColor.copy(alpha = causticAlpha * 0.6f),
-                                Color.Transparent
-                            ),
-                            start = Offset(size.width * causticPhase, 0f),
-                            end = Offset(size.width * (causticPhase + 0.5f), size.height)
-                        )
+                val causticPhase = (time * WaterTokens.causticSpeed) % 1f
+                val causticAlpha = WaterTokens.causticIntensity * (0.5f + 0.5f * kotlin.math.sin(causticPhase * 2f * Math.PI.toFloat()))
+                drawRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            waterCausticColor.copy(alpha = causticAlpha),
+                            Color.Transparent,
+                            waterCausticColor.copy(alpha = causticAlpha * 0.6f),
+                            Color.Transparent
+                        ),
+                        start = Offset(size.width * causticPhase, 0f),
+                        end = Offset(size.width * (causticPhase + 0.5f), size.height)
                     )
-                }
-            } else Modifier
-        )
+                )
+            }
+            // Content drawn LAST — always sharp and readable
+            drawContent()
+        }
 }
 
 // ============================================================================
@@ -368,24 +340,26 @@ private fun Modifier.waterEffectApi31(
         scale
     } else 1f
 
+    // Panel opacity per WaterLevel
+    val panelOpacity = when (waterLevel) {
+        WaterLevel.REGULAR -> WaterTokens.panelOpacityRegular
+        WaterLevel.CLEAR -> WaterTokens.panelOpacityClear
+        WaterLevel.IDENTITY -> 0f
+    }
+
     this
         .clip(shape)
+        // 1. Semi-transparent panel background
+        .background(color = backgroundColor.copy(alpha = panelOpacity), shape = shape)
+        // 2. Subtle color accent tint
+        .background(color = waterRefractionTint.copy(alpha = overlayOpacity), shape = shape)
+        // 3. Press scale only (no blur)
         .graphicsLayer {
-            if (blurRadiusPx > 0f && Build.VERSION.SDK_INT >= 31) {
-                renderEffect = RenderEffect.createBlurEffect(
-                    blurRadiusPx, blurRadiusPx, android.graphics.Shader.TileMode.CLAMP
-                ).asComposeRenderEffect()
-            }
             scaleX = pressScale
             scaleY = pressScale
         }
-        .background(
-            color = waterRefractionTint.copy(alpha = overlayOpacity),
-            shape = shape
-        )
+        // 4. Specular behind content, content drawn last
         .drawWithContent {
-            drawContent()
-            // Static specular highlight (no AGSL shader)
             val specRadiusPx = with(density) { WaterTokens.specularRadius.toPx() }
             drawCircle(
                 brush = Brush.radialGradient(
@@ -393,11 +367,12 @@ private fun Modifier.waterEffectApi31(
                         waterHighlightColor.copy(alpha = WaterTokens.specularIntensity * WaterTokens.highlightOpacity * 0.6f),
                         Color.Transparent
                     ),
-                    center = Offset(size.width * 0.5f, size.height * 0.2f),
+                    center = Offset(size.width * 0.5f, size.height * 0.15f),
                     radius = specRadiusPx
                 ),
                 radius = specRadiusPx,
-                center = Offset(size.width * 0.5f, size.height * 0.2f)
+                center = Offset(size.width * 0.5f, size.height * 0.15f)
             )
+            drawContent()
         }
 }
