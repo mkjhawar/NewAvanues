@@ -106,6 +106,7 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("navigate_to")?.let { route ->
             when (route) {
                 "developer_console" -> navController?.navigate(AvanueMode.DEVELOPER_CONSOLE.route)
+                else -> { /* Unknown route, ignore */ }
             }
         }
     }
