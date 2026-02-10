@@ -176,6 +176,6 @@ apply(plugin = "com.google.devtools.ksp")
 
 dependencies {
     // Hilt compiler (Android-only)
-    "ksp"(libs.hilt.compiler)
+    "kspAndroid"(libs.hilt.compiler)
     "kspAndroidTest"("com.google.dagger:hilt-compiler:2.48.1")
 }

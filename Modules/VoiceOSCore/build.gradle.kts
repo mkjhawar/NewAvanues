@@ -109,7 +109,7 @@ kotlin {
                 // AvanueUI - Design system tokens and theme
                 implementation(project(":Modules:AvanueUI"))
 
-                // Compose (use .get() to resolve provider for platform())
+                // Compose
                 implementation(platform(libs.compose.bom.get()))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
