@@ -111,7 +111,10 @@ data class DOMScrapeResult(
     val elements: List<DOMElement>,
 
     /** Total element count */
-    val elementCount: Int
+    val elementCount: Int,
+
+    /** Structural fingerprint of the DOM (djb2 hash of tag/id/role/type/depth/childCount) */
+    val structureHash: String = ""
 )
 
 /**

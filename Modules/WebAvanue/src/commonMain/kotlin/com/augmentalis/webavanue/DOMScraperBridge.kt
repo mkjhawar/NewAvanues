@@ -119,10 +119,50 @@ object DOMScraperBridge {
         'menuitemradio', 'treeitem', 'gridcell', 'row'
     ]);
 
-    // Generate unique ID for elements
-    let idCounter = 0;
-    function generateId() {
-        return 'vos_' + (++idCounter);
+    // djb2 hash utility — shared by element hashing and structure hashing.
+    // Returns 8-char hex string.
+    function djb2Hash(str) {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) + hash) + str.charCodeAt(i);
+            hash = hash & hash;
+        }
+        return (hash >>> 0).toString(16).padStart(8, '0');
+    }
+
+    // Generate stable element hash based on structural properties.
+    // Priority: id > name > aria-label > CSS selector + tag + type.
+    // Mirrors Android CommandGenerator.deriveElementHash() priority hierarchy.
+    // Returns 'vos_<8-char-hex>' for stable cross-scrape element matching.
+    const seenHashes = new Set();
+    function stableElementHash(element) {
+        const parts = [];
+        if (element.id) {
+            parts.push('id:' + element.id);
+        }
+        const name = element.getAttribute('name');
+        if (name) {
+            parts.push('name:' + name);
+        }
+        const ariaLabel = element.getAttribute('aria-label');
+        if (ariaLabel) {
+            parts.push('aria:' + ariaLabel);
+        }
+        if (parts.length === 0) {
+            // Structural fallback: selector + tag + type
+            parts.push('sel:' + generateSelector(element));
+            parts.push('tag:' + element.tagName.toLowerCase());
+            parts.push('type:' + (element.getAttribute('type') || ''));
+        }
+        let id = 'vos_' + djb2Hash(parts.join('|'));
+        // Handle hash collisions by appending a suffix
+        if (seenHashes.has(id)) {
+            let suffix = 1;
+            while (seenHashes.has(id + '_' + suffix)) suffix++;
+            id = id + '_' + suffix;
+        }
+        seenHashes.add(id);
+        return id;
     }
 
     // Get computed bounding rect
@@ -316,7 +356,7 @@ object DOMScraperBridge {
         const type = getElementType(element);
 
         return {
-            id: generateId(),
+            id: stableElementHash(element),
             tag: element.tagName.toLowerCase(),
             type: type,
             name: name,
@@ -337,11 +377,36 @@ object DOMScraperBridge {
         };
     }
 
+    // Compute a structural fingerprint of the DOM for change detection.
+    // Uses tag, id, role, type, depth, childCount, and interactivity — NO text content.
+    // Max depth 5, max 20 children per node, djb2 hash -> 8-char hex string.
+    // Mirrors ScreenCacheManager.generateScreenHash() from Android app scraping.
+    function computeStructureHash() {
+        const signatures = [];
+        function walk(node, depth) {
+            if (depth > 5 || !node || node.nodeType !== 1) return;
+            const tag = node.tagName.toLowerCase();
+            const id = node.id ? '#' + node.id : '';
+            const role = node.getAttribute('role') || '';
+            const type = node.getAttribute('type') || '';
+            const isInteractive = INTERACTIVE_TAGS.has(node.tagName) ? 'I' : '';
+            const childCount = node.children.length;
+            signatures.push(tag + id + ':' + role + ':' + type + ':d' + depth + ':c' + childCount + ':' + isInteractive);
+            const maxChildren = Math.min(node.children.length, 20);
+            for (let i = 0; i < maxChildren; i++) {
+                walk(node.children[i], depth + 1);
+            }
+        }
+        walk(document.body, 0);
+        signatures.sort();
+        return djb2Hash(signatures.join('|'));
+    }
+
     // Main scrape function
     function scrapeDOM() {
         const elements = [];
         const seen = new Set();
-        idCounter = 0;
+        seenHashes.clear();
 
         function traverse(node, depth) {
             if (depth > MAX_DEPTH) return;
@@ -381,7 +446,8 @@ object DOMScraperBridge {
                 pageHeight: document.documentElement.scrollHeight
             },
             elements: elements,
-            elementCount: elements.length
+            elementCount: elements.length,
+            structureHash: computeStructureHash()
         };
     }
 
@@ -442,7 +508,7 @@ object DOMScraperBridge {
     // Return API
     return JSON.stringify({
         scrape: scrapeDOM(),
-        version: '1.0.0'
+        version: '1.1.0'
     });
 })();
 """
