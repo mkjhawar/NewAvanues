@@ -286,6 +286,9 @@ class ActionCoordinator(
 
             // Default for custom/unknown
             CommandActionType.CUSTOM -> "tap $target"
+            CommandActionType.MACRO -> {
+                "not implemented"
+            }
         }
     }
 

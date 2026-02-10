@@ -12,9 +12,9 @@ package com.augmentalis.voiceavanue.service
 
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.foundation.util.HashUtils
 import com.augmentalis.voiceoscore.Bounds
 import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.HashUtils
 
 /**
  * Hierarchy node for tracking parent-child relationships in the accessibility tree.

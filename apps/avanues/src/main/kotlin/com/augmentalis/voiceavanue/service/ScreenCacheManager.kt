@@ -11,8 +11,7 @@ package com.augmentalis.voiceavanue.service
 
 import android.content.res.Resources
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.voiceoscore.HashUtils
-import com.augmentalis.voiceoscore.QuantizedCommand
+import com.augmentalis.foundation.util.HashUtils
 import com.augmentalis.voiceoscore.ScreenInfo
 
 private const val TAG = "ScreenCacheManager"
