@@ -30,7 +30,8 @@ sealed class DOMScrapingState {
     data class Complete(
         val elementCount: Int,
         val commandCount: Int,
-        val isWhitelisted: Boolean
+        val isWhitelisted: Boolean,
+        val fromCache: Boolean = false
     ) : DOMScrapingState()
     data class Error(val message: String) : DOMScrapingState()
 }
@@ -177,26 +178,34 @@ fun DOMScrapingChip(
             }
 
             is DOMScrapingState.Complete -> {
+                val chipColor = if (currentState.fromCache)
+                    AvanueTheme.colors.primary.copy(alpha = 0.15f)
+                else
+                    AvanueTheme.colors.success.copy(alpha = 0.15f)
+                val textColor = if (currentState.fromCache)
+                    AvanueTheme.colors.primary
+                else
+                    AvanueTheme.colors.success
                 Surface(
                     onClick = onClick,
                     shape = RoundedCornerShape(16.dp),
-                    color = AvanueTheme.colors.success.copy(alpha = 0.15f)
+                    color = chipColor
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            Icons.Default.CheckCircle,
+                            if (currentState.fromCache) Icons.Default.Cached else Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = AvanueTheme.colors.success,
+                            tint = textColor,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "${currentState.commandCount} commands",
                             style = MaterialTheme.typography.labelMedium,
-                            color = AvanueTheme.colors.success
+                            color = textColor
                         )
                         if (currentState.isWhitelisted) {
                             Spacer(modifier = Modifier.width(4.dp))
@@ -294,8 +303,11 @@ fun ScanCompleteToast(
                             color = AvanueTheme.colors.textPrimary
                         )
                         Text(
-                            text = "${s.elementCount} elements scanned" +
-                                if (s.isWhitelisted) " (saved)" else "",
+                            text = when {
+                                s.fromCache -> "${s.elementCount} elements (cached)"
+                                s.isWhitelisted -> "${s.elementCount} elements scanned (saved)"
+                                else -> "${s.elementCount} elements scanned"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = AvanueTheme.colors.textSecondary
                         )

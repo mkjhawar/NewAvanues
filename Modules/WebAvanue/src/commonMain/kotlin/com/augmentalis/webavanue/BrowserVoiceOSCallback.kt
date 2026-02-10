@@ -75,6 +75,39 @@ class BrowserVoiceOSCallback(
     // Voice command generator for matching spoken phrases to elements
     private val commandGenerator = VoiceCommandGenerator()
 
+    // ===== Session Cache (Phase 2: DOM Scraping Persistence) =====
+
+    /**
+     * Cached page data for session-level LRU cache.
+     * Stores scraped DOM elements and derived phrases so returning to a
+     * previously visited page restores voice commands instantly without re-scraping.
+     */
+    private data class CachedPage(
+        val urlHash: String,
+        val url: String,
+        val domain: String,
+        val elements: List<DOMElement>,
+        val phrases: List<String>,
+        val elementCount: Int,
+        val commandCount: Int,
+        val cachedAt: Long
+    )
+
+    /**
+     * Session cache keyed by URL hash.
+     * Uses a plain map with manual eviction (KMP-safe — no JVM-specific
+     * LinkedHashMap accessOrder or removeEldestEntry).
+     * Evicts the oldest entry (by cachedAt) when exceeding MAX_SESSION_CACHE_SIZE.
+     *
+     * Thread safety: All callers (onPageLoadStarted, onDOMScraped, onPageLoadFinished)
+     * are WebView callbacks that fire on the Android main thread only.
+     * The scope coroutines that touch sessionCache also dispatch on Default but
+     * only for whitelist/persist operations that do NOT read or write sessionCache.
+     * No synchronization is needed — matches the existing pattern in this class
+     * (StateFlow writes, commandGenerator mutations all unsynchronized, main-thread only).
+     */
+    private val sessionCache = mutableMapOf<String, CachedPage>()
+
     override fun onDOMScraped(result: DOMScrapeResult) {
         _currentScrapeResult.value = result
 
@@ -105,6 +138,26 @@ class BrowserVoiceOSCallback(
         val phrases = commandGenerator.getAllCommands().map { it.fullText }
         _activeWebPhrases.value = phrases
 
+        // Update session cache — next visit to this URL will restore instantly.
+        // Cap element storage to limit memory: 200 elements × ~500 bytes × 5 pages ≈ 500KB.
+        val urlHash = computeUrlHash(result.url)
+        val cachedElements = if (result.elements.size > MAX_CACHED_ELEMENTS_PER_PAGE) {
+            result.elements.take(MAX_CACHED_ELEMENTS_PER_PAGE)
+        } else {
+            result.elements
+        }
+        sessionCache[urlHash] = CachedPage(
+            urlHash = urlHash,
+            url = result.url,
+            domain = _currentDomain.value,
+            elements = cachedElements,
+            phrases = phrases,
+            elementCount = result.elementCount,
+            commandCount = count,
+            cachedAt = System.currentTimeMillis()
+        )
+        evictSessionCacheIfNeeded()
+
         // Persist commands if domain is whitelisted
         if (_isWhitelistedDomain.value && webCommandRepository != null) {
             scope.launch {
@@ -129,7 +182,52 @@ class BrowserVoiceOSCallback(
         val domain = extractDomain(url)
         _currentDomain.value = domain
 
-        // Clear previous scrape result when new page starts loading
+        // Check session cache — if we've visited this URL recently, restore
+        // voice commands instantly instead of waiting for a full DOM scrape.
+        val urlHash = computeUrlHash(url)
+        val cached = sessionCache[urlHash]
+
+        if (cached != null) {
+            // Session cache HIT: restore commands immediately
+            commandGenerator.clear()
+            commandGenerator.addElements(cached.elements)
+            val count = commandGenerator.getCommandCount()
+            _commandCount.value = count
+            _activeWebPhrases.value = cached.phrases
+
+            _scrapingState.value = DOMScrapingState.Complete(
+                elementCount = cached.elementCount,
+                commandCount = count,
+                isWhitelisted = _isWhitelistedDomain.value,
+                fromCache = true
+            )
+            _voiceStatus.value = VoiceCommandStatus.Ready(
+                commandCount = count,
+                isWhitelisted = _isWhitelistedDomain.value
+            )
+
+            println("VoiceOS: Session cache HIT for $url ($count commands, cached ${(System.currentTimeMillis() - cached.cachedAt) / 1000}s ago)")
+
+            // Auto-clear the "from cache" indicator after a short delay
+            scope.launch {
+                delay(3000)
+                if (_scrapingState.value is DOMScrapingState.Complete) {
+                    _scrapingState.value = DOMScrapingState.Idle
+                }
+            }
+
+            // Still check whitelist async (doesn't affect cached commands)
+            scope.launch {
+                checkWhitelistAndLoadCommands(domain, url)
+            }
+
+            // NOTE: The page will still load and onDOMScraped will fire when
+            // the JS bridge scrapes. That fresh scrape will update the cache
+            // and overwrite these restored commands with current DOM state.
+            return
+        }
+
+        // Session cache MISS: normal flow — clear and wait for scrape
         _currentScrapeResult.value = null
         commandGenerator.clear()
         _commandCount.value = 0
@@ -283,6 +381,60 @@ class BrowserVoiceOSCallback(
             whitelistRepository.updateCommandCount(domain, commands.size, now)
             println("VoiceOS: Persisted ${commands.size} commands for $domain")
         }
+    }
+
+    // ===== Session Cache Control =====
+
+    /**
+     * Invalidate the current page's session cache entry.
+     *
+     * Called when the user says "retrain page" or "rescan page" to force
+     * a fresh DOM scrape on the next visit instead of restoring from cache.
+     */
+    fun invalidateCurrentPage() {
+        val url = _currentUrl.value
+        if (url.isNotBlank()) {
+            val urlHash = computeUrlHash(url)
+            sessionCache.remove(urlHash)
+            println("VoiceOS: Session cache invalidated for $url")
+        }
+    }
+
+    /**
+     * Clear the entire session cache.
+     * Called on service destroy or when memory pressure requires eviction.
+     */
+    fun clearSessionCache() {
+        sessionCache.clear()
+        println("VoiceOS: Session cache cleared")
+    }
+
+    /**
+     * Get the number of pages in session cache (for debugging/display).
+     */
+    fun getSessionCacheSize(): Int = sessionCache.size
+
+    /**
+     * Evict the oldest cache entry if over capacity.
+     * Uses cachedAt timestamp for LRU-like behavior (oldest = least useful).
+     */
+    private fun evictSessionCacheIfNeeded() {
+        while (sessionCache.size > MAX_SESSION_CACHE_SIZE) {
+            val oldest = sessionCache.entries.minByOrNull { it.value.cachedAt }
+            if (oldest != null) {
+                sessionCache.remove(oldest.key)
+                println("VoiceOS: Session cache evicted ${oldest.value.url}")
+            } else break
+        }
+    }
+
+    /**
+     * Compute a stable hash for a URL, stripping fragment and trailing slash.
+     * Returns an 8-character hex string suitable for cache keys.
+     */
+    private fun computeUrlHash(url: String): String {
+        val normalized = url.substringBefore("#").trimEnd('/')
+        return normalized.hashCode().toUInt().toString(16).padStart(8, '0')
     }
 
     /**
@@ -493,6 +645,12 @@ class BrowserVoiceOSCallback(
     }
 
     companion object {
+        /** Maximum pages held in session-level LRU cache. */
+        private const val MAX_SESSION_CACHE_SIZE = 5
+
+        /** Maximum DOM elements stored per cached page to bound memory usage. */
+        private const val MAX_CACHED_ELEMENTS_PER_PAGE = 200
+
         /**
          * Active web voice command phrases for the current page.
          *
