@@ -19,6 +19,7 @@ import com.augmentalis.avanueui.tokens.TypographyTokens
 
 val LocalAvanueColors = staticCompositionLocalOf<AvanueColorScheme> { OceanColors }
 val LocalAvanueGlass = staticCompositionLocalOf<AvanueGlassScheme> { OceanGlass }
+val LocalAvanueWater = staticCompositionLocalOf<AvanueWaterScheme> { OceanWater }
 val LocalDisplayProfile = staticCompositionLocalOf { DisplayProfile.PHONE }
 
 /**
@@ -45,6 +46,7 @@ val LocalDisplayProfile = staticCompositionLocalOf { DisplayProfile.PHONE }
 fun AvanueThemeProvider(
     colors: AvanueColorScheme = OceanColors,
     glass: AvanueGlassScheme = OceanGlass,
+    water: AvanueWaterScheme = OceanWater,
     displayProfile: DisplayProfile = DisplayProfile.PHONE,
     content: @Composable () -> Unit
 ) {
@@ -57,6 +59,7 @@ fun AvanueThemeProvider(
     CompositionLocalProvider(
         LocalAvanueColors provides colors,
         LocalAvanueGlass provides glass,
+        LocalAvanueWater provides water,
         LocalDisplayProfile provides displayProfile,
         LocalDensity provides scaledDensity,
     ) {
@@ -82,6 +85,9 @@ object AvanueTheme {
 
     val glass: AvanueGlassScheme
         @Composable get() = LocalAvanueGlass.current
+
+    val water: AvanueWaterScheme
+        @Composable get() = LocalAvanueWater.current
 
     val displayProfile: DisplayProfile
         @Composable get() = LocalDisplayProfile.current

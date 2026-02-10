@@ -19,6 +19,7 @@ object TokenResolver {
     fun resolveColor(id: String, scheme: AvanueColorScheme): Color? = scheme.resolve(id)
     fun resolveSize(id: String): Dp? = SizeTokens.resolve(id)
     fun resolveGlass(id: String): Any? = GlassTokens.resolve(id)
+    fun resolveWater(id: String): Any? = WaterTokens.resolve(id)
 
     fun resolve(fullId: String, colorScheme: AvanueColorScheme): Any? {
         val dotIndex = fullId.indexOf('.')
@@ -33,6 +34,7 @@ object TokenResolver {
             "color" -> resolveColor(fullId, colorScheme)
             "size" -> resolveSize(fullId)
             "glass" -> resolveGlass(fullId)
+            "water" -> resolveWater(fullId)
             else -> null
         }
     }

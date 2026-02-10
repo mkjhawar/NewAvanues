@@ -44,6 +44,24 @@ class iOSThemeConverter {
     )
 
     /**
+     * Water material tokens for AvanueWaterUI (Liquid Glass effects).
+     * Maps to SwiftUI .glassEffect() on iOS 26+, Compose overlay on older.
+     */
+    data class WaterMaterialTokens(
+        val waterBlurRadius: Float,
+        val waterRefractionStrength: Float,
+        val waterHighlightColor: SwiftUIColor,
+        val waterCausticColor: SwiftUIColor,
+        val waterRefractionTint: SwiftUIColor,
+        val waterDepthShadowColor: SwiftUIColor,
+        val waterBorderTint: SwiftUIColor,
+        val waterLevel: String,
+        val enableRefraction: Boolean,
+        val enableCaustics: Boolean,
+        val enableSpecular: Boolean
+    )
+
+    /**
      * Convert a AvaElements theme to iOS design tokens
      */
     fun convert(theme: Theme): iOSDesignTokens {
@@ -230,6 +248,52 @@ class iOSThemeConverter {
             "backgroundOpacity" to 0.7f,
             "cornerStyle" to "continuous",
             "shadowIntensity" to 0.15f
+        )
+    }
+
+    /**
+     * Create AvanueWaterUI material tokens for a given level.
+     *
+     * On iOS 26+, the SwiftUI bridge maps waterLevel to .glassEffect():
+     * - "regular" -> .glassEffect(.regular, in: shape)
+     * - "clear"   -> .glassEffect(.clear, in: shape)
+     * - "identity"-> no glass effect applied
+     *
+     * The color tokens are used for overlay tinting and specular highlights.
+     */
+    fun createWaterMaterialTokens(
+        waterLevel: String = "regular",
+        highlightColor: SwiftUIColor = SwiftUIColor(0.23f, 0.51f, 0.96f, 1.0f),
+        causticColor: SwiftUIColor = SwiftUIColor(0.02f, 0.71f, 0.83f, 1.0f),
+        refractionTint: SwiftUIColor = SwiftUIColor(0.23f, 0.51f, 0.96f, 0.10f),
+        depthShadowColor: SwiftUIColor = SwiftUIColor(0f, 0f, 0f, 0.30f),
+        borderTint: SwiftUIColor = SwiftUIColor(0.23f, 0.51f, 0.96f, 0.25f),
+        enableRefraction: Boolean = true,
+        enableCaustics: Boolean = true,
+        enableSpecular: Boolean = true
+    ): WaterMaterialTokens {
+        val blurRadius = when (waterLevel) {
+            "regular" -> 12f
+            "clear" -> 4f
+            else -> 0f
+        }
+        val refractionStrength = when (waterLevel) {
+            "regular" -> 4f
+            "clear" -> 2f
+            else -> 0f
+        }
+        return WaterMaterialTokens(
+            waterBlurRadius = blurRadius,
+            waterRefractionStrength = refractionStrength,
+            waterHighlightColor = highlightColor,
+            waterCausticColor = causticColor,
+            waterRefractionTint = refractionTint,
+            waterDepthShadowColor = depthShadowColor,
+            waterBorderTint = borderTint,
+            waterLevel = waterLevel,
+            enableRefraction = enableRefraction,
+            enableCaustics = enableCaustics,
+            enableSpecular = enableSpecular
         )
     }
 

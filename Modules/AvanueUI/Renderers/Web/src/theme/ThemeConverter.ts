@@ -8,9 +8,11 @@ import type {
   Color,
   ColorScheme,
   Typography as MagicTypography,
-  Font
+  Font,
+  WaterEffect,
+  WaterScheme
 } from '../types';
-import { colorToCss, fontWeightToCss } from '../types';
+import { colorToCss, fontWeightToCss, WaterLevel } from '../types';
 
 /**
  * Convert MagicUI Theme to Material-UI Theme
@@ -154,6 +156,78 @@ function lightenColor(color: Color, factor: number): Color {
     alpha: color.alpha
   };
 }
+
+/**
+ * Convert WaterScheme + WaterLevel to CSS-ready WaterEffect tokens
+ *
+ * Usage in React components:
+ * ```css
+ * backdrop-filter: blur(${effect.blur}px);
+ * background: rgba(255,255,255,${effect.overlayOpacity});
+ * border: ${effect.borderWidth}px solid;
+ * border-image: linear-gradient(to bottom, ${effect.borderTopColor}, ${effect.borderBottomColor}) 1;
+ * filter: url(#water-refraction); // SVG displacement filter
+ * ```
+ */
+export function convertWaterEffect(
+  water: WaterScheme,
+  level: WaterLevel = WaterLevel.Regular,
+  interactive: boolean = false
+): WaterEffect {
+  const blur = level === WaterLevel.Regular ? 12 :
+               level === WaterLevel.Clear ? 4 : 0;
+  const refractionStrength = level === WaterLevel.Regular ? 4 :
+                             level === WaterLevel.Clear ? 2 : 0;
+  const overlayOpacity = level === WaterLevel.Regular ? 0.14 :
+                         level === WaterLevel.Clear ? 0.06 : 0;
+
+  return {
+    level,
+    blur,
+    refractionStrength,
+    overlayOpacity,
+    highlightColor: colorToCss({ ...water.highlightColor, alpha: 0.25 * 0.4 }),
+    causticColor: colorToCss({ ...water.causticColor, alpha: 0.12 }),
+    borderWidth: 0.5,
+    borderTopColor: colorToCss({ ...water.borderTint, alpha: 0.25 }),
+    borderBottomColor: colorToCss({ ...water.borderTint, alpha: 0.10 }),
+    interactive
+  };
+}
+
+/**
+ * Generate CSS custom properties for water effects.
+ * Apply these to :root or a container element.
+ */
+export function waterEffectToCssVars(effect: WaterEffect): Record<string, string> {
+  return {
+    '--water-blur': `${effect.blur}px`,
+    '--water-refraction-strength': `${effect.refractionStrength}`,
+    '--water-overlay-opacity': `${effect.overlayOpacity}`,
+    '--water-highlight-color': effect.highlightColor,
+    '--water-caustic-color': effect.causticColor,
+    '--water-border-width': `${effect.borderWidth}px`,
+    '--water-border-top-color': effect.borderTopColor,
+    '--water-border-bottom-color': effect.borderBottomColor,
+    '--water-press-scale': effect.interactive ? '0.96' : '1',
+    '--water-backdrop-filter': effect.blur > 0 ? `blur(${effect.blur}px)` : 'none',
+    '--water-background': `rgba(255, 255, 255, ${effect.overlayOpacity})`
+  };
+}
+
+/**
+ * SVG filter definition for water refraction displacement.
+ * Inject this into the document <svg> defs to use filter: url(#water-refraction).
+ */
+export const WATER_REFRACTION_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0">
+  <defs>
+    <filter id="water-refraction">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="3" result="noise" seed="1"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>`;
 
 /**
  * Create default Material 3 theme

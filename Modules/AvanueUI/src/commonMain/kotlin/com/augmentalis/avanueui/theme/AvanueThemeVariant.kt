@@ -34,6 +34,13 @@ enum class AvanueThemeVariant(val displayName: String) {
             LIQUID -> LiquidGlass
         }
 
+    val water: AvanueWaterScheme
+        get() = when (this) {
+            OCEAN -> OceanWater
+            SUNSET -> SunsetWater
+            LIQUID -> LiquidWater
+        }
+
     companion object {
         /** Default theme variant for new installations */
         val DEFAULT = LIQUID
