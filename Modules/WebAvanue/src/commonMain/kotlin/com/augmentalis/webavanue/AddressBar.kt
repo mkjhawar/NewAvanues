@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -170,17 +169,6 @@ fun AddressBar(
         lastSyncedUrl = url
     }
 
-    // Detect WebGL-intensive sites that may cause ANR on AOSP devices
-    val isWebGLSite = remember(url) {
-        val lowerUrl = url.lowercase()
-        lowerUrl.contains("babylon") ||
-        lowerUrl.contains("shadertoy") ||
-        lowerUrl.contains("webgl") ||
-        lowerUrl.contains("three.js") ||
-        lowerUrl.contains("threejs") ||
-        lowerUrl.contains("webgpu")
-    }
-
     // Helper function to dismiss keyboard reliably
     fun dismissKeyboard() {
         hasFocus = false
@@ -305,38 +293,17 @@ fun AddressBar(
                                 }
                             )
 
-                            // History button - tap to open history
+                            // Settings button - one-tap access to settings
                             Box(
                                 modifier = Modifier
                                     .size(28.dp)
                                     .clip(RoundedCornerShape(ShapeTokens.xs))
-                                    .clickable(onClick = onHistoryClick),
+                                    .clickable(onClick = onSettingsClick),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.History,
-                                    contentDescription = "History",
-                                    tint = IconVariant.Secondary.toColor(),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            // Go button — focuses URL field when empty
-                            IconButton(
-                                onClick = {
-                                    if (textFieldValue.text.isNotBlank()) {
-                                        dismissKeyboard()
-                                        onGo()
-                                    } else {
-                                        focusRequester.requestFocus()
-                                    }
-                                },
-                                modifier = Modifier.size(28.dp),
-                                enabled = true
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Go (Voice: go)",
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings",
                                     tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -375,31 +342,19 @@ fun AddressBar(
                             tint = IconVariant.Primary.toColor()
                         )
 
+                        LabeledNavButton(
+                            icon = Icons.Default.History,
+                            label = "History",
+                            onClick = onHistoryClick,
+                            tint = IconVariant.Primary.toColor()
+                        )
+
                         if (isArticleAvailable) {
                             LabeledNavButton(
                                 icon = Icons.Default.MenuBook,
                                 label = "Read",
                                 onClick = onReadingModeToggle,
                                 tint = if (isReadingMode) IconVariant.Primary.toColor() else IconVariant.Secondary.toColor()
-                            )
-                        }
-
-                        // Desktop mode toggle
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.alpha(if (isWebGLSite) 0.5f else 1f)
-                        ) {
-                            CompactDesktopModeIndicator(
-                                isDesktopMode = isDesktopMode,
-                                onClick = onDesktopModeToggle,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Text(
-                                text = if (isDesktopMode) "Mobile" else "Advanced",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 8.sp,
-                                color = AvanueTheme.colors.textSecondary,
-                                textAlign = TextAlign.Center
                             )
                         }
 
@@ -598,21 +553,17 @@ fun AddressBar(
                                 )
                             }
 
-                            IconButton(
-                                onClick = {
-                                    if (textFieldValue.text.isNotBlank()) {
-                                        dismissKeyboard()
-                                        onGo()
-                                    } else {
-                                        focusRequester.requestFocus()
-                                    }
-                                },
-                                modifier = Modifier.size(32.dp),
-                                enabled = true
+                            // Settings button - one-tap access to settings
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(ShapeTokens.sm))
+                                    .clickable(onClick = onSettingsClick),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Go (Voice: go)",
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings",
                                     tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -629,25 +580,6 @@ fun AddressBar(
                         )
                         Text(
                             text = "Tabs",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 8.sp,
-                            color = AvanueTheme.colors.textSecondary,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
-                    // Desktop/Advanced mode toggle
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.alpha(if (isWebGLSite) 0.5f else 1f)
-                    ) {
-                        CompactDesktopModeIndicator(
-                            isDesktopMode = isDesktopMode,
-                            onClick = onDesktopModeToggle,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Text(
-                            text = if (isDesktopMode) "Mobile" else "Advanced",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 8.sp,
                             color = AvanueTheme.colors.textSecondary,
