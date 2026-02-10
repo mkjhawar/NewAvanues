@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -446,7 +447,7 @@ private fun HorizontalCommandBarContent(
             }
             if (onExitBrowser != null) {
                 CommandButton(
-                    icon = Icons.Default.ExitToApp,
+                    icon = Icons.AutoMirrored.Filled.ExitToApp,
                     label = "Exit",
                     onClick = onExitBrowser,
                     onFocus = { onLabelChange("Exit Browser") },

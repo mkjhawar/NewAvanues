@@ -78,6 +78,7 @@ data class WaterNavItem(
  * @param isExpanded Whether the bar is fully expanded (false = collapsed on scroll)
  * @param waterLevel Effect intensity
  */
+@Suppress("DEPRECATION") // Intentional use of WaterSurface - this is a water-specific component
 @Composable
 fun WaterNavigationBar(
     items: List<WaterNavItem>,

@@ -251,7 +251,7 @@ private fun StaticDot(
 }
 
 /**
- * StatusBadge - Pill-shaped status label using GlassChip styling.
+ * StatusBadge - Pill-shaped status label using unified chip styling.
  *
  * @param state ServiceState to display
  * @param modifier Modifier
@@ -269,7 +269,7 @@ fun StatusBadge(
         is ServiceState.Degraded -> "DEGRADED" to AvanueTheme.colors.warning
     }
 
-    GlassChip(
+    com.augmentalis.avanueui.components.AvanueChip(
         onClick = {},
         label = {
             androidx.compose.material3.Text(
@@ -279,8 +279,6 @@ fun StatusBadge(
             )
         },
         modifier = modifier,
-        enabled = false,
-        glass = true,
-        glassLevel = GlassLevel.LIGHT
+        enabled = false
     )
 }

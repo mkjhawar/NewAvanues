@@ -91,7 +91,7 @@ fun SslErrorDialog(
 
                 // Additional errors (if any)
                 if (sslErrorInfo.additionalErrors.isNotEmpty()) {
-                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     Text(
                         text = "Additional Issues:",
                         style = MaterialTheme.typography.labelMedium,
@@ -108,7 +108,7 @@ fun SslErrorDialog(
 
                 // Certificate details (if available)
                 sslErrorInfo.certificateInfo?.let { certInfo ->
-                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     Text(
                         text = "Certificate Details:",
                         style = MaterialTheme.typography.labelMedium,

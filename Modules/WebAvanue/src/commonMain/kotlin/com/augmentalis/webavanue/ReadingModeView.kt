@@ -381,7 +381,7 @@ private fun ReadingModeSettingsPanel(
                 }
             }
 
-            Divider(color = colors.divider)
+            HorizontalDivider(color = colors.divider)
 
             // Theme selection
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

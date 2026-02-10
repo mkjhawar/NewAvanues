@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.webavanue.Favorite
@@ -115,7 +116,7 @@ fun AddBookmarkDialog(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
 
                     ExposedDropdownMenu(
@@ -154,7 +155,7 @@ fun AddBookmarkDialog(
                             )
                         }
 
-                        Divider()
+                        HorizontalDivider()
 
                         // Create new folder
                         DropdownMenuItem(

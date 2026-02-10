@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -74,7 +75,7 @@ fun CommandBarWrapper(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Icon(
-                        imageVector = if (isLandscape) Icons.Default.KeyboardArrowLeft else Icons.Default.KeyboardArrowUp,
+                        imageVector = if (isLandscape) Icons.AutoMirrored.Filled.KeyboardArrowLeft else Icons.Default.KeyboardArrowUp,
                         contentDescription = "Show Command Bar",
                         tint = AvanueTheme.colors.textPrimary,
                         modifier = Modifier.size(24.dp)

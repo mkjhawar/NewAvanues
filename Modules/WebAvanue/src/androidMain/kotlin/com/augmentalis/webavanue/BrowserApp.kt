@@ -8,7 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.navigator.Navigator
 import com.augmentalis.webavanue.WebViewPoolManager
 import cafe.adriel.voyager.transitions.SlideTransition
