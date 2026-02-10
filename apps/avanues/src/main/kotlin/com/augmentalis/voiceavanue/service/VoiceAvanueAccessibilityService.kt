@@ -29,21 +29,30 @@ import com.augmentalis.voiceoscore.CommandRegistry
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ServiceConfiguration
 import com.augmentalis.voiceoscore.SpeechEngine
+import com.augmentalis.voiceoscore.WebCommandHandler
 import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceavanue.MainActivity
+import com.augmentalis.avanueui.theme.AvanueModuleAccents
+import com.augmentalis.avanueui.theme.ModuleAccent
+import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.voiceavanue.data.DeveloperSettings
+import com.augmentalis.voicecursor.core.CursorConfig
+import com.augmentalis.voicecursor.core.FilterStrength
+import com.augmentalis.voicecursor.overlay.CursorOverlayService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import com.augmentalis.webavanue.BrowserVoiceOSCallback
+import com.augmentalis.webavanue.WebCommandExecutorImpl
 
 private const val TAG = "VoiceAvanueService"
 
@@ -59,8 +68,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var actionCoordinator: ActionCoordinator? = null
     private var boundsResolver: BoundsResolver? = null
     private var dynamicCommandGenerator: DynamicCommandGenerator? = null
+    private var webCommandHandler: WebCommandHandler? = null
     private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var webCommandCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
+    private var cursorSettingsJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
 
     override fun getActionCoordinator(): ActionCoordinator {
         // Prefer VoiceOSCore's coordinator — it has handlers registered
@@ -125,6 +136,12 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 )
                 voiceOSCore?.initialize()
 
+                // Register WebCommandHandler for web voice command routing
+                val handler = WebCommandHandler()
+                webCommandHandler = handler
+                voiceOSCore?.actionCoordinator?.registerHandler(handler)
+                Log.i(TAG, "WebCommandHandler registered with ActionCoordinator")
+
                 // Force screen refresh so dynamic commands register on VoiceOSCore's
                 // coordinator. Before init, commands were registered on a fallback
                 // coordinator with a different CommandRegistry. The screen hash cache
@@ -148,18 +165,36 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         }
                 }
 
-                // Bridge: Collect web DOM voice commands → route to VoiceOSCore speech grammar.
-                // BrowserVoiceOSCallback emits phrases from DOM scraping; we include them
-                // in the speech engine grammar so the user can speak web-specific commands.
-                // Engine-agnostic: flows through ISpeechEngine.updateCommands().
+                // Bridge: Collect web DOM voice commands → route to VoiceOSCore speech grammar
+                // AND register as QuantizedCommands in CommandRegistry (dual-path).
+                // Path 1: Phrases in speech grammar (recognition)
+                // Path 2: QuantizedCommands in CommandRegistry (routing to WebCommandHandler)
                 webCommandCollectorJob?.cancel()
                 webCommandCollectorJob = serviceScope.launch {
                     BrowserVoiceOSCallback.activeWebPhrases
                         .collect { phrases ->
                             try {
+                                // Path 1: Update speech grammar with web phrases
                                 voiceOSCore?.updateWebCommands(phrases)
-                                if (phrases.isNotEmpty()) {
-                                    Log.d(TAG, "Web commands updated: ${phrases.size} phrases")
+
+                                // Path 2: Register QuantizedCommands for ActionCoordinator routing
+                                val callbackInstance = BrowserVoiceOSCallback.activeInstance
+                                if (callbackInstance != null && phrases.isNotEmpty()) {
+                                    val quantizedWebCommands = callbackInstance.getWebCommandsAsQuantized()
+                                    voiceOSCore?.actionCoordinator?.updateDynamicCommands(quantizedWebCommands)
+
+                                    // Wire the WebCommandExecutorImpl to WebCommandHandler
+                                    // The executor delegates to BrowserVoiceOSCallback's JS executor
+                                    // (which is set by WebViewContainer when the bridge attaches)
+                                    webCommandHandler?.let { wch ->
+                                        val executor = WebCommandExecutorImpl(callbackInstance)
+                                        wch.setExecutor(executor)
+                                    }
+
+                                    Log.d(TAG, "Web commands dual-path: ${phrases.size} phrases, ${quantizedWebCommands.size} quantized")
+                                } else if (phrases.isEmpty()) {
+                                    // Clear dynamic commands when leaving browser
+                                    webCommandHandler?.setExecutor(null)
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to update web commands", e)
@@ -180,6 +215,73 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                             // Invalidate caches + trigger fresh DOM scrape via static signal
                             BrowserVoiceOSCallback.requestRetrain()
                             Log.i(TAG, "Retrain page requested via voice command")
+                        }
+                    }
+                }
+
+                // Wire cursor settings → CursorOverlayService lifecycle + config
+                // Collects DataStore settings, starts/stops service, and builds CursorConfig
+                cursorSettingsJob?.cancel()
+                cursorSettingsJob = serviceScope.launch {
+                    val cursorSettingsRepo = AvanuesSettingsRepository(applicationContext)
+                    cursorSettingsRepo.settings.collectLatest { settings ->
+                        // Start/stop CursorOverlayService based on toggle
+                        val canOverlay = Settings.canDrawOverlays(applicationContext)
+                        if (settings.cursorEnabled && canOverlay) {
+                            if (CursorOverlayService.getInstance() == null) {
+                                try {
+                                    val intent = Intent(applicationContext, CursorOverlayService::class.java)
+                                    applicationContext.startForegroundService(intent)
+                                    Log.i(TAG, "CursorOverlayService started via settings toggle")
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to start CursorOverlayService", e)
+                                }
+                            }
+                        } else if (!settings.cursorEnabled) {
+                            CursorOverlayService.getInstance()?.let {
+                                applicationContext.stopService(Intent(applicationContext, CursorOverlayService::class.java))
+                                Log.i(TAG, "CursorOverlayService stopped via settings toggle")
+                            }
+                        }
+
+                        // Restore custom accent override from persisted value
+                        val accentOverride = settings.cursorAccentOverride
+                        if (accentOverride != null) {
+                            val color = androidx.compose.ui.graphics.Color(accentOverride.toULong())
+                            AvanueModuleAccents.setOverride(
+                                "voicecursor",
+                                ModuleAccent(
+                                    accent = color,
+                                    onAccent = androidx.compose.ui.graphics.Color.White,
+                                    accentMuted = color.copy(alpha = 0.6f),
+                                    isCustom = true
+                                )
+                            )
+                        } else {
+                            AvanueModuleAccents.clearOverride("voicecursor")
+                        }
+
+                        // Build CursorConfig from settings + accent colors
+                        val accentArgb = AvanueModuleAccents.getAccentArgb("voicecursor").toLong() and 0xFFFFFFFFL
+                        val onAccentArgb = AvanueModuleAccents.getOnAccentArgb("voicecursor").toLong() and 0xFFFFFFFFL
+
+                        val config = CursorConfig(
+                            dwellClickEnabled = settings.dwellClickEnabled,
+                            dwellClickDelayMs = settings.dwellClickDelayMs.toLong(),
+                            jitterFilterEnabled = settings.cursorSmoothing,
+                            filterStrength = FilterStrength.Medium,
+                            size = settings.cursorSize,
+                            speed = settings.cursorSpeed,
+                            showCoordinates = settings.showCoordinates,
+                            color = accentArgb,
+                            borderColor = onAccentArgb,
+                            dwellRingColor = accentArgb
+                        )
+
+                        CursorOverlayService.getInstance()?.let { cursorService ->
+                            cursorService.updateConfig(config)
+                            // Ensure ClickDispatcher is set so "cursor click" voice command works
+                            cursorService.setClickDispatcher(AccessibilityClickDispatcher())
                         }
                     }
                 }
@@ -226,6 +328,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         webCommandCollectorJob?.cancel()
         webCommandCollectorJob = null
         BrowserVoiceOSCallback.clearActiveWebPhrases()
+
+        // Cancel cursor settings collection
+        cursorSettingsJob?.cancel()
+        cursorSettingsJob = null
 
         // Stop overlay service
         try {
