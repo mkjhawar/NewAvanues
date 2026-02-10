@@ -185,9 +185,14 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
             currentPackageName = packageName
             getBoundsResolver()?.onPackageChanged(packageName)
 
-            // Clear stale commands from previous app before loading new ones
-            // This prevents command accumulation and stale VUID references
-            getActionCoordinator().clearDynamicCommands()
+            // Force re-scan for new app by invalidating screen fingerprint.
+            // DO NOT call clearDynamicCommands() here — it creates a race condition:
+            //   clear (sync) → handleScreenChange (async coroutine) → voice command
+            //   arrives between clear and update → sees registry size: 0.
+            // CommandRegistry.update() atomically replaces all commands (never merges),
+            // so explicit clearing is unnecessary. Stale commands during the brief scan
+            // window (~100-500ms) are strictly better UX than "no commands available".
+            lastScreenHash = ""
 
             // Package change = always process immediately
             handleScreenChange(event)
