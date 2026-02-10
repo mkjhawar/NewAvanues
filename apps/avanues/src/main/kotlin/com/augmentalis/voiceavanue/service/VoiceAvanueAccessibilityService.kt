@@ -37,6 +37,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -56,6 +58,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var actionCoordinator: ActionCoordinator? = null
     private var boundsResolver: BoundsResolver? = null
     private var dynamicCommandGenerator: DynamicCommandGenerator? = null
+    private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
 
     override fun getActionCoordinator(): ActionCoordinator {
         return actionCoordinator ?: ActionCoordinator(commandRegistry = CommandRegistry()).also {
@@ -111,6 +114,21 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 )
                 voiceOSCore?.initialize()
 
+                // Bridge: Collect speech recognition results → route to command execution
+                // Without this, Vivoka emits recognized commands but nobody processes them
+                val confidenceThreshold = devSettings.confidenceThreshold
+                speechCollectorJob?.cancel()
+                speechCollectorJob = serviceScope.launch {
+                    voiceOSCore?.speechResults
+                        ?.conflate()  // Drop intermediate results if processing is slow
+                        ?.collect { result ->
+                            if (result.isFinal && result.text.isNotBlank() && result.confidence >= confidenceThreshold) {
+                                Log.d(TAG, "Voice recognized: '${result.text}' (conf: ${result.confidence})")
+                                processVoiceCommand(result.text, result.confidence)
+                            }
+                        }
+                }
+
                 voiceOSCore?.onSystemAction = { action ->
                     when (action) {
                         "OPEN_DEVELOPER_SETTINGS" -> {
@@ -149,6 +167,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
     override fun onDestroy() {
         instance = null
+
+        // Cancel speech result collection
+        speechCollectorJob?.cancel()
+        speechCollectorJob = null
 
         // Stop overlay service
         try {

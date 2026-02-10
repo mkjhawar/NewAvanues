@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -119,17 +118,7 @@ class VivokaAndroidEngine(
     private var vivokaEngine: VivokaEngine? = null
     private val pathResolver = VivokaPathResolver(context)
 
-    /**
-     * FIX: Engine-level guards to prevent command update queue buildup.
-     *
-     * When continuous accessibility events trigger rapid updateCommands calls,
-     * the underlying VivokaEngine.setDynamicCommands() launches new coroutines
-     * that queue up waiting on compilationMutex. These guards prevent that:
-     *
-     * - isUpdatingCommands: Atomic flag to skip if already updating
-     * - lastCommands: Track last command set to skip redundant updates
-     */
-    private val isUpdatingCommands = AtomicBoolean(false)
+    /** Track last command set hash to skip truly redundant Vivoka grammar updates */
     private val lastCommandsHash = AtomicReference<Int>(0)
 
     /**
@@ -317,26 +306,18 @@ class VivokaAndroidEngine(
     }
 
     /**
-     * Update dynamic commands with engine-level guards.
+     * Update dynamic commands with Vivoka grammar.
      *
-     * FIX: Prevents command update queue buildup that causes voice freeze:
-     * 1. Skips if already updating (atomic guard)
-     * 2. Skips if command set hasn't changed (hash comparison)
-     * 3. Uses try-finally to ensure lock is always released
+     * Uses hash comparison to skip redundant updates (same command set).
+     * Concurrent calls are handled by Vivoka's internal compilationMutex —
+     * the last call always wins, which is the correct behavior for screen changes.
      */
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
-        // FIX: Skip if already updating to prevent queue buildup
-        if (!isUpdatingCommands.compareAndSet(false, true)) {
-            // Already updating - skip this call
-            return Result.success(Unit)
-        }
-
         return try {
-            // FIX: Skip if commands haven't changed (same hash)
+            // Skip if commands haven't changed (hash comparison)
             val newHash = commands.sorted().hashCode()
             val oldHash = lastCommandsHash.get()
             if (newHash == oldHash) {
-                // Commands unchanged - skip update
                 return Result.success(Unit)
             }
 
@@ -345,8 +326,6 @@ class VivokaAndroidEngine(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
-        } finally {
-            isUpdatingCommands.set(false)
         }
     }
 
