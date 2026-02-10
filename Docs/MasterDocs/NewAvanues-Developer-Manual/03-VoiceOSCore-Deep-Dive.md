@@ -2,7 +2,7 @@
 title: "Chapter 03 — VoiceOSCore Deep Dive"
 owner: "Voice Platform"
 status: "active"
-last_reviewed: "2026-02-09"
+last_reviewed: "2026-02-10"
 source_of_truth: true
 ---
 
