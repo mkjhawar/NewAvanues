@@ -21,11 +21,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -56,6 +58,8 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var settingsRepository: AvanuesSettingsRepository
 
+    private var navController: NavHostController? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -83,7 +87,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AvanuesApp(startMode = launchMode)
+                    AvanuesApp(
+                        startMode = launchMode,
+                        onNavControllerReady = { this@MainActivity.navController = it }
+                    )
                 }
             }
         }
@@ -92,6 +99,15 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         checkPermissions()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.getStringExtra("navigate_to")?.let { route ->
+            when (route) {
+                "developer_console" -> navController?.navigate(AvanueMode.DEVELOPER_CONSOLE.route)
+            }
+        }
     }
 
     private fun checkPermissions() {
@@ -159,8 +175,16 @@ enum class AvanueMode(val route: String, val label: String) {
 }
 
 @Composable
-fun AvanuesApp(startMode: AvanueMode = AvanueMode.HUB) {
+fun AvanuesApp(
+    startMode: AvanueMode = AvanueMode.HUB,
+    onNavControllerReady: ((NavHostController) -> Unit)? = null
+) {
     val navController = rememberNavController()
+
+    // Expose navController to activity for onNewIntent handling
+    LaunchedEffect(navController) {
+        onNavControllerReady?.invoke(navController)
+    }
 
     NavHost(
         navController = navController,

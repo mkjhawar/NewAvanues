@@ -16,6 +16,7 @@
 package com.augmentalis.voiceavanue.service
 
 import android.content.Context
+import android.content.Intent
 import android.provider.Settings
 import android.util.Log
 import com.augmentalis.database.DatabaseDriverFactory
@@ -29,6 +30,7 @@ import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ServiceConfiguration
 import com.augmentalis.voiceoscore.SpeechEngine
 import com.augmentalis.voiceoscore.createForAndroid
+import com.augmentalis.voiceavanue.MainActivity
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.voiceavanue.data.DeveloperSettings
 import kotlinx.coroutines.CoroutineScope
@@ -108,6 +110,18 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                     commandRegistry = registry
                 )
                 voiceOSCore?.initialize()
+
+                voiceOSCore?.onSystemAction = { action ->
+                    when (action) {
+                        "OPEN_DEVELOPER_SETTINGS" -> {
+                            val intent = Intent(applicationContext, MainActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                putExtra("navigate_to", "developer_console")
+                            }
+                            startActivity(intent)
+                        }
+                    }
+                }
 
                 Log.i(TAG, "VoiceOSCore initialized with dev settings: engine=${devSettings.sttEngine}, lang=${devSettings.voiceLanguage}, confidence=${devSettings.confidenceThreshold}")
             } catch (e: Exception) {

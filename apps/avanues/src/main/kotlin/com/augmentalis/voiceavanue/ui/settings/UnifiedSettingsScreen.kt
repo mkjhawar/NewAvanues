@@ -36,9 +36,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -59,6 +61,7 @@ import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -421,6 +424,50 @@ private fun SettingsModuleList(
             }
 
             item { Spacer(modifier = Modifier.height(SpacingTokens.lg)) }
+
+            // Developer easter egg icon — 5 taps to open developer console
+            item {
+                var devTapCount by remember { mutableIntStateOf(0) }
+                var lastDevTapTime by remember { mutableLongStateOf(0L) }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = SpacingTokens.lg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Code,
+                        contentDescription = null,
+                        tint = AvanueTheme.colors.textDisabled.copy(alpha = 0.4f),
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable {
+                                val now = System.currentTimeMillis()
+                                if (now - lastDevTapTime > 2000L) {
+                                    devTapCount = 1
+                                } else {
+                                    devTapCount++
+                                }
+                                lastDevTapTime = now
+
+                                when {
+                                    devTapCount >= 5 -> {
+                                        devTapCount = 0
+                                        onNavigateToDeveloperConsole()
+                                    }
+                                    devTapCount >= 3 -> {
+                                        Toast.makeText(
+                                            context,
+                                            "${5 - devTapCount} tap(s) to developer mode",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
+                    )
+                }
+            }
         }
     }
 }

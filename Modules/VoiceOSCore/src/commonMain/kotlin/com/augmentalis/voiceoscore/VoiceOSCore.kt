@@ -84,6 +84,9 @@ class VoiceOSCore private constructor(
     val speechResults: Flow<SpeechResult>
         get() = speechEngine?.results ?: emptyFlow()
 
+    /** Callback for special system actions (easter eggs, dev mode, etc.) */
+    var onSystemAction: ((String) -> Unit)? = null
+
     /**
      * Installed app phrases list
      */
@@ -216,6 +219,15 @@ class VoiceOSCore private constructor(
      * @return HandlerResult from execution
      */
     suspend fun processCommand(text: String, confidence: Float = 1.0f): HandlerResult {
+        // Hidden system command intercept
+        val normalizedInput = text.lowercase().trim()
+        if (normalizedInput == "developer mode 5x" ||
+            normalizedInput == "developer mode five x" ||
+            normalizedInput == "developer mode 5 x") {
+            onSystemAction?.invoke("OPEN_DEVELOPER_SETTINGS")
+            return HandlerResult.success("Opening developer settings")
+        }
+
         if (!stateManager.canProcessCommands()) {
             return HandlerResult.failure("Service not ready to process commands")
         }
