@@ -10,9 +10,6 @@
 
 package com.augmentalis.voiceavanue.ui.hub
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,14 +26,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mic
@@ -44,12 +37,10 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -59,11 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import com.augmentalis.voiceavanue.R
 import com.augmentalis.avanueui.components.glass.GlassCard
 import com.augmentalis.avanueui.components.glass.GlassSurface
 import com.augmentalis.avanueui.glass.GlassLevel
@@ -82,84 +70,30 @@ fun HubDashboardScreen(
     onNavigateToAbout: () -> Unit = {},
     onNavigateToDeveloperSettings: () -> Unit = {}
 ) {
-    var showVoiceActivePopup by remember { mutableStateOf(false) }
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AvanueTheme.colors.background)
+            .statusBarsPadding()
+    ) {
+        val isLandscape = maxWidth > maxHeight || maxWidth >= 600.dp
 
-    // Auto-dismiss the popup after 2.5 seconds
-    LaunchedEffect(showVoiceActivePopup) {
-        if (showVoiceActivePopup) {
-            kotlinx.coroutines.delay(2500L)
-            showVoiceActivePopup = false
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(AvanueTheme.colors.background)
-                .statusBarsPadding()
-        ) {
-            val isLandscape = maxWidth > maxHeight || maxWidth >= 600.dp
-
-            if (isLandscape) {
-                HubLandscape(
-                    onVoiceAvanueClick = { showVoiceActivePopup = true },
-                    onNavigateToBrowser = onNavigateToBrowser,
-                    onNavigateToSettings = onNavigateToSettings,
-                    onNavigateToAbout = onNavigateToAbout,
-                    onNavigateToDeveloperSettings = onNavigateToDeveloperSettings
-                )
-            } else {
-                HubPortrait(
-                    onVoiceAvanueClick = { showVoiceActivePopup = true },
-                    onNavigateToBrowser = onNavigateToBrowser,
-                    onNavigateToSettings = onNavigateToSettings,
-                    onNavigateToAbout = onNavigateToAbout,
-                    onNavigateToDeveloperSettings = onNavigateToDeveloperSettings
-                )
-            }
-        }
-
-        // Fading popup overlay for VoiceAvanue
-        AnimatedVisibility(
-            visible = showVoiceActivePopup,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.Center)
-                .zIndex(10f)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = AvanueTheme.colors.surface.copy(alpha = 0.95f),
-                shadowElevation = 8.dp,
-                tonalElevation = 4.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = SpacingTokens.lg, vertical = SpacingTokens.md),
-                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = AvanueTheme.colors.success,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Column {
-                        Text(
-                            text = stringResource(R.string.voiceavanue_active_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = AvanueTheme.colors.textPrimary
-                        )
-                        Text(
-                            text = stringResource(R.string.voiceavanue_active_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AvanueTheme.colors.textSecondary
-                        )
-                    }
-                }
-            }
+        if (isLandscape) {
+            HubLandscape(
+                onVoiceAvanueClick = onNavigateToVoice,
+                onNavigateToBrowser = onNavigateToBrowser,
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToAbout = onNavigateToAbout,
+                onNavigateToDeveloperSettings = onNavigateToDeveloperSettings
+            )
+        } else {
+            HubPortrait(
+                onVoiceAvanueClick = onNavigateToVoice,
+                onNavigateToBrowser = onNavigateToBrowser,
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToAbout = onNavigateToAbout,
+                onNavigateToDeveloperSettings = onNavigateToDeveloperSettings
+            )
         }
     }
 }

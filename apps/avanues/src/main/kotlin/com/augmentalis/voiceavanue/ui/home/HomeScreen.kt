@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -51,6 +52,9 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Mouse
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -73,8 +77,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -114,6 +122,7 @@ data class CommandCallbacks(
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun HomeScreen(
+    onNavigateBack: () -> Unit = {},
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToCommands: () -> Unit = {},
@@ -147,10 +156,18 @@ fun HomeScreen(
         )
     }
 
+    val backgroundGradient = Brush.verticalGradient(
+        colors = listOf(
+            AvanueTheme.colors.background,
+            AvanueTheme.colors.surface.copy(alpha = 0.6f),
+            AvanueTheme.colors.background
+        )
+    )
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(AvanueTheme.colors.background)
+            .background(backgroundGradient)
             .statusBarsPadding()
     ) {
         val isLandscape = maxWidth > maxHeight || maxWidth >= 600.dp
@@ -158,6 +175,7 @@ fun HomeScreen(
         if (isLandscape) {
             DashboardLandscape(
                 uiState = uiState,
+                onNavigateBack = onNavigateBack,
                 onNavigateToBrowser = onNavigateToBrowser,
                 onNavigateToSettings = onNavigateToSettings,
                 onNavigateToCommands = onNavigateToCommands,
@@ -166,6 +184,7 @@ fun HomeScreen(
         } else {
             DashboardPortrait(
                 uiState = uiState,
+                onNavigateBack = onNavigateBack,
                 onNavigateToBrowser = onNavigateToBrowser,
                 onNavigateToSettings = onNavigateToSettings,
                 onNavigateToCommands = onNavigateToCommands,
@@ -242,87 +261,75 @@ fun CommandsScreen(
 @Composable
 private fun DashboardLandscape(
     uiState: DashboardUiState,
+    onNavigateBack: () -> Unit,
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToCommands: () -> Unit,
     callbacks: CommandCallbacks
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(SpacingTokens.md),
-        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md)
+            .padding(SpacingTokens.md)
     ) {
-        // Column 1: MODULES
-        Column(
+        // Header with back + title
+        DashboardHeader(
+            onNavigateBack = onNavigateBack,
+            onNavigateToSettings = onNavigateToSettings,
+            serviceRunning = uiState.permissions.accessibilityEnabled
+        )
+
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
+                .fillMaxSize()
+                .padding(top = SpacingTokens.sm),
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Column 1: MODULES
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
             ) {
-                Text(
-                    text = "MODULES",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = AvanueTheme.colors.textSecondary
-                )
-                IconButton(onClick = onNavigateToSettings, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        tint = AvanueTheme.colors.textSecondary,
-                        modifier = Modifier.size(20.dp)
+                SectionLabel("MODULES")
+                uiState.modules.forEach { module ->
+                    ModuleCard(
+                        module = module,
+                        onClick = {
+                            when (module.moduleId) {
+                                "webavanue" -> onNavigateToBrowser()
+                                else -> onNavigateToSettings()
+                            }
+                        }
                     )
                 }
             }
-            uiState.modules.forEach { module ->
-                ModuleCard(
-                    module = module,
-                    onClick = {
-                        when (module.moduleId) {
-                            "webavanue" -> onNavigateToBrowser()
-                            else -> onNavigateToSettings()
-                        }
-                    }
-                )
-            }
-        }
 
-        // Column 2: SYSTEM + LAST HEARD
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
-        ) {
-            Text(
-                text = "SYSTEM",
-                style = MaterialTheme.typography.labelLarge,
-                color = AvanueTheme.colors.textSecondary
-            )
-            SystemHealthBar(permissions = uiState.permissions)
-            if (uiState.hasLastCommand) {
-                LastHeardCard(command = uiState.lastHeardCommand)
+            // Column 2: SYSTEM + LAST HEARD
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
+            ) {
+                SectionLabel("SYSTEM")
+                SystemHealthBar(permissions = uiState.permissions)
+                if (uiState.hasLastCommand) {
+                    LastHeardCard(command = uiState.lastHeardCommand)
+                }
             }
-        }
 
-        // Column 3: COMMANDS button + Last Heard
-        Column(
-            modifier = Modifier
-                .weight(1.2f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
-        ) {
-            Text(
-                text = "COMMANDS",
-                style = MaterialTheme.typography.labelLarge,
-                color = AvanueTheme.colors.textSecondary
-            )
-            CommandsSummaryCard(commands = uiState.commands, onClick = onNavigateToCommands)
+            // Column 3: COMMANDS
+            Column(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
+            ) {
+                SectionLabel("COMMANDS")
+                CommandsSummaryCard(commands = uiState.commands, onClick = onNavigateToCommands)
+            }
         }
     }
 }
@@ -332,6 +339,7 @@ private fun DashboardLandscape(
 @Composable
 private fun DashboardPortrait(
     uiState: DashboardUiState,
+    onNavigateBack: () -> Unit,
     onNavigateToBrowser: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToCommands: () -> Unit,
@@ -341,33 +349,25 @@ private fun DashboardPortrait(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = SpacingTokens.md)
+            .navigationBarsPadding()
     ) {
-        // Header with title and settings gear
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = SpacingTokens.lg, bottom = SpacingTokens.sm),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "VoiceAvanue",
-                style = MaterialTheme.typography.headlineSmall,
-                color = AvanueTheme.colors.textPrimary
-            )
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = AvanueTheme.colors.textSecondary
-                )
-            }
-        }
+        // Rich header with back button, title, status, and settings
+        DashboardHeader(
+            onNavigateBack = onNavigateBack,
+            onNavigateToSettings = onNavigateToSettings,
+            serviceRunning = uiState.permissions.accessibilityEnabled
+        )
 
+        // Scrollable content
         Column(
-            modifier = Modifier.padding(bottom = SpacingTokens.md),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(SpacingTokens.md)
         ) {
+            // Module cards section
+            SectionLabel("MODULES")
+
             uiState.voiceAvanue?.let { module ->
                 ModuleCard(module = module, onClick = onNavigateToSettings)
             }
@@ -386,14 +386,92 @@ private fun DashboardPortrait(
                     }
                 }
             }
+
+            // System health section
+            SectionLabel("SYSTEM")
             SystemHealthBar(permissions = uiState.permissions)
+
             if (uiState.hasLastCommand) {
                 LastHeardCard(command = uiState.lastHeardCommand)
             }
-        }
 
-        CommandsSummaryCard(commands = uiState.commands, onClick = onNavigateToCommands)
+            // Commands summary
+            SectionLabel("COMMANDS")
+            CommandsSummaryCard(commands = uiState.commands, onClick = onNavigateToCommands)
+
+            Spacer(modifier = Modifier.height(SpacingTokens.md))
+        }
     }
+}
+
+// ──────────────────────────── HEADER ────────────────────────────
+
+@Composable
+private fun DashboardHeader(
+    onNavigateBack: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    serviceRunning: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = SpacingTokens.sm, bottom = SpacingTokens.md),
+        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onNavigateBack, modifier = Modifier.size(40.dp)) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = AvanueTheme.colors.textPrimary
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "VoiceAvanue",
+                style = MaterialTheme.typography.headlineSmall,
+                color = AvanueTheme.colors.textPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (serviceRunning) AvanueTheme.colors.success
+                            else AvanueTheme.colors.error
+                        )
+                )
+                Text(
+                    text = if (serviceRunning) "Service active" else "Service inactive",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AvanueTheme.colors.textSecondary
+                )
+            }
+        }
+        IconButton(onClick = onNavigateToSettings) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = AvanueTheme.colors.textSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = AvanueTheme.colors.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = SpacingTokens.xs)
+    )
 }
 
 // ──────────────────────────── MODULE CARD ────────────────────────────
@@ -412,49 +490,100 @@ private fun statusBorderColor(state: ServiceState): androidx.compose.ui.graphics
     }
 }
 
+/**
+ * Returns a recognizable icon for each module type.
+ */
+private fun moduleIcon(moduleId: String): ImageVector {
+    return when (moduleId) {
+        "voiceavanue" -> Icons.Default.Mic
+        "webavanue" -> Icons.Default.Public
+        "voicecursor" -> Icons.Default.Mouse
+        else -> Icons.Default.Apps
+    }
+}
+
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
     val borderColor = statusBorderColor(module.state)
+    val icon = moduleIcon(module.moduleId)
 
     GlassCard(
         onClick = onClick,
         glassLevel = GlassLevel.MEDIUM,
         border = GlassBorder(width = 1.5.dp, color = borderColor),
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val isCompact = maxWidth < 200.dp
             val cardPadding = if (isCompact) SpacingTokens.sm else SpacingTokens.md
 
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth().padding(cardPadding),
-                verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = module.displayName,
-                    style = if (isCompact) MaterialTheme.typography.labelLarge
-                           else MaterialTheme.typography.titleSmall,
-                    color = AvanueTheme.colors.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = module.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AvanueTheme.colors.textSecondary,
-                    maxLines = if (isCompact) 1 else 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (module.metadata.isNotEmpty()) {
+                // Module icon with status dot
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Box(
+                        modifier = Modifier
+                            .size(if (isCompact) 32.dp else 40.dp)
+                            .clip(CircleShape)
+                            .background(borderColor.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = borderColor,
+                            modifier = Modifier.size(if (isCompact) 18.dp else 22.dp)
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(borderColor)
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     Text(
-                        text = module.metadata.entries.joinToString(" \u00B7 ") { "${it.key}: ${it.value}" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AvanueTheme.colors.textPrimary.copy(alpha = 0.7f),
+                        text = module.displayName,
+                        style = if (isCompact) MaterialTheme.typography.labelLarge
+                               else MaterialTheme.typography.titleSmall,
+                        color = AvanueTheme.colors.textPrimary,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Text(
+                        text = module.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AvanueTheme.colors.textSecondary,
+                        maxLines = if (isCompact) 1 else 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (module.metadata.isNotEmpty()) {
+                        Text(
+                            text = module.metadata.entries.joinToString(" \u00B7 ") { "${it.key}: ${it.value}" },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AvanueTheme.colors.textTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
+
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Open",
+                    tint = AvanueTheme.colors.textDisabled,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -476,21 +605,47 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
         verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
     ) {
         if (permissions.allGranted) {
-            GlassSurface(
+            GlassCard(
                 glassLevel = GlassLevel.LIGHT,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                border = GlassBorder(width = 1.dp, color = AvanueTheme.colors.success.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(SpacingTokens.md),
-                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md),
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.CheckCircle, "All OK", tint = AvanueTheme.colors.success, modifier = Modifier.size(20.dp))
-                    Text("All permissions granted", style = MaterialTheme.typography.bodyMedium, color = AvanueTheme.colors.textPrimary)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(AvanueTheme.colors.success.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.CheckCircle, "All OK", tint = AvanueTheme.colors.success, modifier = Modifier.size(20.dp))
+                    }
+                    Column {
+                        Text(
+                            "All permissions granted",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AvanueTheme.colors.textPrimary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "System ready",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AvanueTheme.colors.success
+                        )
+                    }
                 }
             }
         } else {
-            Text("PERMISSIONS REQUIRED", style = MaterialTheme.typography.labelMedium, color = AvanueTheme.colors.error)
+            Text(
+                "PERMISSIONS REQUIRED",
+                style = MaterialTheme.typography.labelMedium,
+                color = AvanueTheme.colors.error,
+                fontWeight = FontWeight.Bold
+            )
             if (!permissions.microphoneGranted) {
                 PermissionErrorCard("Microphone", "Tap to grant microphone access") {
                     micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -591,18 +746,37 @@ private fun PermissionErrorCard(title: String, description: String, onClick: () 
         onClick = onClick,
         glassLevel = GlassLevel.LIGHT,
         border = GlassBorder(width = 1.5.dp, color = AvanueTheme.colors.error),
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(SpacingTokens.md),
-            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md),
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(AvanueTheme.colors.error.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = AvanueTheme.colors.error,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyMedium, color = AvanueTheme.colors.textPrimary)
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AvanueTheme.colors.textPrimary,
+                    fontWeight = FontWeight.Medium
+                )
                 Text(description, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
             }
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, "Open settings", tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(20.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, "Open settings", tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -612,16 +786,45 @@ private fun PermissionErrorCard(title: String, description: String, onClick: () 
 @Composable
 private fun LastHeardCard(command: LastHeardCommand) {
     val timeAgo = remember(command.timestampMs) { formatTimeAgo(command.timestampMs) }
-    GlassCard(glassLevel = GlassLevel.LIGHT, modifier = Modifier.fillMaxWidth()) {
-        Column(
+    GlassCard(
+        glassLevel = GlassLevel.MEDIUM,
+        border = GlassBorder(width = 1.dp, color = AvanueTheme.colors.primary.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
             modifier = Modifier.fillMaxWidth().padding(SpacingTokens.md),
-            verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("LAST HEARD", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.textSecondary)
-            Text("\"${command.phrase}\"", style = MaterialTheme.typography.titleMedium, color = AvanueTheme.colors.textPrimary)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md)) {
-                Text("Confidence: ${(command.confidence * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
-                Text(timeAgo, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(AvanueTheme.colors.primary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = AvanueTheme.colors.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "\"${command.phrase}\"",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = AvanueTheme.colors.textPrimary,
+                    fontWeight = FontWeight.Medium
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.md)) {
+                    Text(
+                        "${(command.confidence * 100).toInt()}% match",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AvanueTheme.colors.success
+                    )
+                    Text(timeAgo, style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.textTertiary)
+                }
             }
         }
     }
@@ -637,30 +840,42 @@ private fun LastHeardCard(command: LastHeardCommand) {
 private fun CommandsSummaryCard(commands: CommandsUiState, onClick: () -> Unit) {
     GlassCard(
         onClick = onClick,
-        glassLevel = GlassLevel.LIGHT,
+        glassLevel = GlassLevel.MEDIUM,
+        border = GlassBorder(width = 1.dp, color = AvanueTheme.colors.info.copy(alpha = 0.3f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(SpacingTokens.md),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
-                Text(
-                    text = "COMMANDS",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = AvanueTheme.colors.textSecondary
-                )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${commands.staticCount + commands.customCount}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = AvanueTheme.colors.info,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "voice commands",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AvanueTheme.colors.textPrimary
+                    )
+                }
                 Text(
                     text = "${commands.staticCount} static \u00B7 ${commands.customCount} custom \u00B7 ${commands.synonymCount} verbs",
                     style = MaterialTheme.typography.bodySmall,
-                    color = AvanueTheme.colors.textPrimary
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Open commands",
-                tint = AvanueTheme.colors.textSecondary,
+                tint = AvanueTheme.colors.info,
                 modifier = Modifier.size(20.dp)
             )
         }

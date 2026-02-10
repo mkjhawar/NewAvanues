@@ -198,6 +198,13 @@ fun AvanuesApp(startMode: AvanueMode = AvanueMode.HUB) {
 
         composable(AvanueMode.VOICE.route) {
             HomeScreen(
+                onNavigateBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(AvanueMode.HUB.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                },
                 onNavigateToBrowser = { navController.navigate(AvanueMode.BROWSER.route) },
                 onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) },
                 onNavigateToCommands = { navController.navigate(AvanueMode.COMMANDS.route) }
