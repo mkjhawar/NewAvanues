@@ -501,6 +501,114 @@ object StaticCommandRegistry {
             actionType = CommandActionType.RETRAIN_PAGE,
             category = CommandCategory.BROWSER,
             description = "Force re-scrape current web page and regenerate voice commands"
+        ),
+        // Browser Navigation
+        StaticCommand(
+            phrases = listOf("go back", "browser back"),
+            actionType = CommandActionType.PAGE_BACK,
+            category = CommandCategory.BROWSER,
+            description = "Navigate to previous page in browser history"
+        ),
+        StaticCommand(
+            phrases = listOf("go forward", "browser forward"),
+            actionType = CommandActionType.PAGE_FORWARD,
+            category = CommandCategory.BROWSER,
+            description = "Navigate to next page in browser history"
+        ),
+        StaticCommand(
+            phrases = listOf("refresh page", "reload page"),
+            actionType = CommandActionType.PAGE_REFRESH,
+            category = CommandCategory.BROWSER,
+            description = "Reload the current web page"
+        ),
+        // Page Scrolling
+        StaticCommand(
+            phrases = listOf("go to top", "top of page", "scroll to top"),
+            actionType = CommandActionType.SCROLL_TO_TOP,
+            category = CommandCategory.BROWSER,
+            description = "Scroll to the top of the page"
+        ),
+        StaticCommand(
+            phrases = listOf("go to bottom", "bottom of page", "scroll to bottom"),
+            actionType = CommandActionType.SCROLL_TO_BOTTOM,
+            category = CommandCategory.BROWSER,
+            description = "Scroll to the bottom of the page"
+        ),
+        // Form Navigation
+        StaticCommand(
+            phrases = listOf("next field", "tab forward"),
+            actionType = CommandActionType.TAB_NEXT,
+            category = CommandCategory.BROWSER,
+            description = "Focus the next focusable element"
+        ),
+        StaticCommand(
+            phrases = listOf("previous field", "tab back"),
+            actionType = CommandActionType.TAB_PREV,
+            category = CommandCategory.BROWSER,
+            description = "Focus the previous focusable element"
+        ),
+        StaticCommand(
+            phrases = listOf("submit form", "submit"),
+            actionType = CommandActionType.SUBMIT_FORM,
+            category = CommandCategory.BROWSER,
+            description = "Submit the current form"
+        ),
+        // Gestures
+        StaticCommand(
+            phrases = listOf("swipe left"),
+            actionType = CommandActionType.SWIPE_LEFT,
+            category = CommandCategory.BROWSER,
+            description = "Swipe left on the page"
+        ),
+        StaticCommand(
+            phrases = listOf("swipe right"),
+            actionType = CommandActionType.SWIPE_RIGHT,
+            category = CommandCategory.BROWSER,
+            description = "Swipe right on the page"
+        ),
+        StaticCommand(
+            phrases = listOf("swipe up"),
+            actionType = CommandActionType.SWIPE_UP,
+            category = CommandCategory.BROWSER,
+            description = "Swipe up on the page"
+        ),
+        StaticCommand(
+            phrases = listOf("swipe down"),
+            actionType = CommandActionType.SWIPE_DOWN,
+            category = CommandCategory.BROWSER,
+            description = "Swipe down on the page"
+        ),
+        StaticCommand(
+            phrases = listOf("grab", "grab this"),
+            actionType = CommandActionType.GRAB,
+            category = CommandCategory.BROWSER,
+            description = "Grab/start dragging an element"
+        ),
+        StaticCommand(
+            phrases = listOf("release", "let go", "drop"),
+            actionType = CommandActionType.RELEASE,
+            category = CommandCategory.BROWSER,
+            description = "Release a grabbed element"
+        ),
+        StaticCommand(
+            phrases = listOf("rotate left"),
+            actionType = CommandActionType.ROTATE,
+            category = CommandCategory.BROWSER,
+            description = "Rotate element left",
+            metadata = mapOf("direction" to "left")
+        ),
+        StaticCommand(
+            phrases = listOf("rotate right"),
+            actionType = CommandActionType.ROTATE,
+            category = CommandCategory.BROWSER,
+            description = "Rotate element right",
+            metadata = mapOf("direction" to "right")
+        ),
+        StaticCommand(
+            phrases = listOf("double tap", "double click"),
+            actionType = CommandActionType.DOUBLE_CLICK,
+            category = CommandCategory.BROWSER,
+            description = "Double-click/double-tap an element"
         )
     )
 

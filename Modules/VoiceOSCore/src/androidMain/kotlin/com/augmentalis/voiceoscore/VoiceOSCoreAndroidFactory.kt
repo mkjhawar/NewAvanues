@@ -59,7 +59,8 @@ internal class AndroidHandlerFactory(
         return listOf(
             AndroidGestureHandler(service),
             SystemHandler(AndroidSystemExecutor(service)),
-            AppHandler(AndroidAppLauncher(service))
+            AppHandler(AndroidAppLauncher(service)),
+            AndroidCursorHandler(service)
         )
     }
 }

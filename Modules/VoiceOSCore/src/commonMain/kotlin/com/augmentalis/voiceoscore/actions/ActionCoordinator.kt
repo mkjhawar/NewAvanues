@@ -184,7 +184,8 @@ class ActionCoordinator(
         "long click", "long press", "hold",
         "double tap", "double click",
         "scroll", "swipe",
-        "focus", "type"
+        "focus", "type",
+        "hover", "grab", "drag", "rotate"
     )
 
     /**
@@ -286,13 +287,34 @@ class ActionCoordinator(
 
             // Browser actions
             CommandActionType.RETRAIN_PAGE -> "retrain page"
+            CommandActionType.PAGE_BACK -> "go back"
+            CommandActionType.PAGE_FORWARD -> "go forward"
+            CommandActionType.PAGE_REFRESH -> "refresh page"
+
+            // Page scrolling
+            CommandActionType.SCROLL_TO_TOP -> "go to top"
+            CommandActionType.SCROLL_TO_BOTTOM -> "go to bottom"
+
+            // Form navigation
+            CommandActionType.TAB_NEXT -> "next field"
+            CommandActionType.TAB_PREV -> "previous field"
+            CommandActionType.SUBMIT_FORM -> "submit form"
+
+            // Gesture actions
+            CommandActionType.SWIPE_LEFT -> "swipe left"
+            CommandActionType.SWIPE_RIGHT -> "swipe right"
+            CommandActionType.SWIPE_UP -> "swipe up"
+            CommandActionType.SWIPE_DOWN -> "swipe down"
+            CommandActionType.GRAB -> "grab $target"
+            CommandActionType.RELEASE -> "release"
+            CommandActionType.ROTATE -> "rotate $target"
+            CommandActionType.DRAG -> "drag $target"
+            CommandActionType.DOUBLE_CLICK -> "double tap $target"
+            CommandActionType.HOVER -> "hover $target"
 
             // Default for custom/unknown
             CommandActionType.CUSTOM -> "tap $target"
-            // TODO: Need to implement later
-            CommandActionType.MACRO -> {
-                "not implemented"
-            }
+            CommandActionType.MACRO -> "not implemented"
         }
     }
 

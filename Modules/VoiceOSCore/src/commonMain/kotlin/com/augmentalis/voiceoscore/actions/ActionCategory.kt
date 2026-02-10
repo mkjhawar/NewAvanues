@@ -76,8 +76,14 @@ enum class ActionCategory {
     ACCESSIBILITY,
 
     /**
+     * Browser/web-specific actions (web element interaction, page navigation, etc.)
+     * Priority: 11
+     */
+    BROWSER,
+
+    /**
      * Custom actions (user-defined, extensions, etc.)
-     * Priority: 11 (lowest)
+     * Priority: 12 (lowest)
      */
     CUSTOM;
 
@@ -97,6 +103,7 @@ enum class ActionCategory {
             INPUT,
             MEDIA,
             ACCESSIBILITY,
+            BROWSER,
             CUSTOM
         )
     }
