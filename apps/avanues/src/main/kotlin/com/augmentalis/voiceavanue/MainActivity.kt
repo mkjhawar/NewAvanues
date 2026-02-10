@@ -82,7 +82,9 @@ class MainActivity : ComponentActivity() {
             AvanueThemeProvider(
                 colors = variant.colors,
                 glass = variant.glass,
-                displayProfile = displayProfile
+                water = variant.water,
+                displayProfile = displayProfile,
+                materialMode = variant.materialMode
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
