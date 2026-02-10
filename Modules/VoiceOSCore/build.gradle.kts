@@ -106,6 +106,9 @@ kotlin {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.lifecycle.viewmodel.compose)
 
+                // AvanueUI - Design system tokens and theme
+                implementation(project(":Modules:AvanueUI"))
+
                 // Compose (use .get() to resolve provider for platform())
                 implementation(platform(libs.compose.bom.get()))
                 implementation(libs.compose.ui.ui)

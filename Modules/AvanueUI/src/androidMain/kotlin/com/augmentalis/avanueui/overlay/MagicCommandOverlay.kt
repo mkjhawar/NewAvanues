@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Voice command data structure
@@ -232,7 +233,7 @@ private fun MagicCommandHeader(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+        color = AvanueTheme.colors.primary.copy(alpha = 0.2f),
         tonalElevation = 2.dp
     ) {
         Row(
@@ -272,9 +273,9 @@ private fun MagicCommandHeader(
                         .size(40.dp)
                         .background(
                             color = if (isListening) {
-                                MaterialTheme.colorScheme.error
+                                AvanueTheme.colors.error
                             } else {
-                                MaterialTheme.colorScheme.primary
+                                AvanueTheme.colors.primary
                             },
                             shape = CircleShape
                         )

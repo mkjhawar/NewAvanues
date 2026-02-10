@@ -20,6 +20,16 @@ interface AvanueColorScheme {
     // Tertiary
     val tertiary: Color
 
+    // Containers (M3 semantic: lighter tinted backgrounds + text-on-container)
+    val primaryContainer: Color
+    val onPrimaryContainer: Color
+    val secondaryContainer: Color
+    val onSecondaryContainer: Color
+    val tertiaryContainer: Color
+    val onTertiaryContainer: Color
+    val errorContainer: Color
+    val onErrorContainer: Color
+
     // Error
     val error: Color
     val onError: Color
@@ -64,6 +74,14 @@ interface AvanueColorScheme {
         "color.secondary" -> secondary
         "color.onSecondary" -> onSecondary
         "color.tertiary" -> tertiary
+        "color.primaryContainer" -> primaryContainer
+        "color.onPrimaryContainer" -> onPrimaryContainer
+        "color.secondaryContainer" -> secondaryContainer
+        "color.onSecondaryContainer" -> onSecondaryContainer
+        "color.tertiaryContainer" -> tertiaryContainer
+        "color.onTertiaryContainer" -> onTertiaryContainer
+        "color.errorContainer" -> errorContainer
+        "color.onErrorContainer" -> onErrorContainer
         "color.error" -> error
         "color.onError" -> onError
         "color.background" -> background

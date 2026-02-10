@@ -19,6 +19,16 @@ object SunsetColors : AvanueColorScheme {
     // Tertiary - RosePink
     override val tertiary = Color(0xFFF472B6)
 
+    // Containers - tinted backgrounds for cards/chips
+    override val primaryContainer = Color(0xFF5F2E1A)    // Deep coral (primary@20% on dark bg)
+    override val onPrimaryContainer = Color(0xFFFFD4C2)  // Light coral text on container
+    override val secondaryContainer = Color(0xFF5F4B0E)  // Deep gold
+    override val onSecondaryContainer = Color(0xFFFDE68A) // Light gold text on container
+    override val tertiaryContainer = Color(0xFF4D1B3A)   // Deep rose (tertiary@20% on dark bg)
+    override val onTertiaryContainer = Color(0xFFFBCFE8) // Light rose text on container
+    override val errorContainer = Color(0xFF5F1E1E)      // Deep red
+    override val onErrorContainer = Color(0xFFFECACA)    // Light red text on container
+
     // Error
     override val error = Color(0xFFEF4444)
     override val onError = Color.White

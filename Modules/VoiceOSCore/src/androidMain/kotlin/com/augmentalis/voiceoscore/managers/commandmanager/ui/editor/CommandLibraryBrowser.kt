@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Template library browser screen
@@ -71,8 +72,8 @@ fun CommandLibraryBrowser(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = AvanueTheme.colors.primaryContainer,
+                    titleContentColor = AvanueTheme.colors.onPrimaryContainer
                 )
             )
         }
@@ -271,7 +272,7 @@ private fun TemplateCard(
             Text(
                 text = template.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AvanueTheme.colors.textSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -280,7 +281,7 @@ private fun TemplateCard(
             Text(
                 text = "Phrases: ${template.phrases.take(3).joinToString(", ")}${if (template.phrases.size > 3) "..." else ""}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
 
             // Metadata row
@@ -292,12 +293,12 @@ private fun TemplateCard(
                     getActionTypeIcon(template.actionType),
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = AvanueTheme.colors.primary
                 )
                 Text(
                     text = template.actionType.name,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 Spacer(Modifier.weight(1f))
@@ -305,7 +306,7 @@ private fun TemplateCard(
                 Text(
                     text = "Priority: ${template.priority}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
 
@@ -394,7 +395,7 @@ private fun TemplatePreviewDialog(
                     HorizontalDivider()
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            containerColor = AvanueTheme.colors.secondaryContainer
                         )
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -442,7 +443,7 @@ private fun InfoRow(label: String, value: String) {
         Text(
             text = "$label:",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Text(
             text = value,
@@ -469,17 +470,17 @@ private fun EmptyLibraryMessage() {
                 Icons.AutoMirrored.Filled.LibraryBooks,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = AvanueTheme.colors.textSecondary
             )
             Text(
                 text = "No templates found",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
             Text(
                 text = "Try adjusting your search or filters",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }

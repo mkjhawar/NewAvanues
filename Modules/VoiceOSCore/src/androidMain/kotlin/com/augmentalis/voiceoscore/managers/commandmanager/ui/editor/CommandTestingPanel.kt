@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceoscore.managers.commandmanager.registry.ConflictInfo
 import com.augmentalis.voiceoscore.managers.commandmanager.registry.ConflictType
 import com.augmentalis.voiceoscore.managers.commandmanager.registry.VoiceCommand
@@ -54,8 +55,8 @@ fun CommandTestingPanel(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = AvanueTheme.colors.primaryContainer,
+                    titleContentColor = AvanueTheme.colors.onPrimaryContainer
                 )
             )
         }
@@ -142,7 +143,7 @@ private fun TestInputSection(
             .fillMaxWidth()
             .padding(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = AvanueTheme.colors.secondaryContainer
         )
     ) {
         Column(
@@ -158,7 +159,7 @@ private fun TestInputSection(
             Text(
                 text = "Enter a phrase to see which commands match",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+                color = AvanueTheme.colors.onSecondaryContainer
             )
 
             Row(
@@ -236,7 +237,7 @@ private fun TestResultsSection(
         Text(
             text = "Commands are sorted by priority (highest first)",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         LazyColumn(
@@ -271,9 +272,9 @@ private fun CommandMatchCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
+                AvanueTheme.colors.primaryContainer
             else
-                MaterialTheme.colorScheme.surface
+                AvanueTheme.colors.surface
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isSelected) 4.dp else 1.dp
@@ -288,10 +289,10 @@ private fun CommandMatchCard(
             Surface(
                 shape = MaterialTheme.shapes.small,
                 color = when (rank) {
-                    1 -> MaterialTheme.colorScheme.primary
-                    2 -> MaterialTheme.colorScheme.secondary
-                    3 -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.surfaceVariant
+                    1 -> AvanueTheme.colors.primary
+                    2 -> AvanueTheme.colors.secondary
+                    3 -> AvanueTheme.colors.tertiary
+                    else -> AvanueTheme.colors.surfaceVariant
                 }
             ) {
                 Text(
@@ -311,7 +312,7 @@ private fun CommandMatchCard(
                 Text(
                     text = "ID: ${command.id}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 Spacer(Modifier.height(4.dp))
@@ -329,7 +330,7 @@ private fun CommandMatchCard(
                 Icon(
                     Icons.Default.CheckCircle,
                     contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = AvanueTheme.colors.primary
                 )
             }
         }
@@ -377,13 +378,13 @@ private fun ConflictDetectionSection(conflicts: List<ConflictInfo>) {
             Icon(
                 Icons.Default.Warning,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
+                tint = AvanueTheme.colors.error
             )
             Text(
                 text = "Conflicts Detected (${conflicts.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.error
+                color = AvanueTheme.colors.error
             )
         }
 
@@ -401,7 +402,7 @@ private fun ConflictCard(conflict: ConflictInfo) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
+            containerColor = AvanueTheme.colors.errorContainer
         )
     ) {
         Column(
@@ -416,12 +417,12 @@ private fun ConflictCard(conflict: ConflictInfo) {
             Text(
                 text = "Conflicts with: ${conflict.conflictingCommandName}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = AvanueTheme.colors.onErrorContainer
             )
             Text(
                 text = "Type: ${conflict.conflictType.name.replace("_", " ")}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = AvanueTheme.colors.onErrorContainer
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Priority: ${conflict.priority}", style = MaterialTheme.typography.labelSmall)
@@ -450,17 +451,17 @@ private fun NoMatchesMessage() {
                 Icons.Default.SearchOff,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = AvanueTheme.colors.textSecondary
             )
             Text(
                 text = "No matching commands found",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
             Text(
                 text = "Try a different phrase or create a new command",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }
@@ -515,7 +516,7 @@ private fun TestHistoryItem(
                 Text(
                     text = "${entry.matchCount} matches",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
             Icon(Icons.Default.Refresh, "Retest")

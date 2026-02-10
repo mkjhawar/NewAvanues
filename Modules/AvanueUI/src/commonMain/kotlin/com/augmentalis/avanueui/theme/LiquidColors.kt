@@ -29,6 +29,16 @@ object LiquidColors : AvanueColorScheme {
     // Tertiary - Emerald
     override val tertiary = Color(0xFF34D399)
 
+    // Containers - tinted backgrounds for cards/chips (visionOS-inspired)
+    override val primaryContainer = Color(0xFF003340)    // Deep cyan (primary@20% on black)
+    override val onPrimaryContainer = Color(0xFF99EEFF)  // Light cyan text on container
+    override val secondaryContainer = Color(0xFF2E2150)  // Deep violet
+    override val onSecondaryContainer = Color(0xFFD4BBFF) // Light violet text on container
+    override val tertiaryContainer = Color(0xFF0D3326)   // Deep emerald (tertiary@20% on black)
+    override val onTertiaryContainer = Color(0xFF99F6CC) // Light emerald text on container
+    override val errorContainer = Color(0xFF3C1111)      // Deep red (Apple system red@20%)
+    override val onErrorContainer = Color(0xFFFFB3AD)    // Light red text on container
+
     // Error - Apple System Red
     override val error = Color(0xFFFF453A)
     override val onError = Color.White

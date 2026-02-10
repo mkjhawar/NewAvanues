@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceoscore.*
 
 /**
@@ -37,7 +38,7 @@ fun ErrorDisplay(
 ) {
     Card(
         modifier = modifier.padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+        colors = CardDefaults.cardColors(containerColor = AvanueTheme.colors.errorContainer)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -45,13 +46,13 @@ fun ErrorDisplay(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = AvanueTheme.colors.onErrorContainer
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
+                    containerColor = AvanueTheme.colors.error
                 )
             ) {
                 Text("Dismiss")
@@ -71,7 +72,7 @@ fun SuccessDisplay(
 ) {
     Card(
         modifier = modifier.padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(containerColor = AvanueTheme.colors.primaryContainer)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -79,7 +80,7 @@ fun SuccessDisplay(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = AvanueTheme.colors.onPrimaryContainer
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(

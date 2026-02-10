@@ -30,6 +30,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -57,7 +58,7 @@ fun SettingsSectionHeader(
     Text(
         text = title,
         style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
+        color = AvanueTheme.colors.primary,
         modifier = modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
     )
 }
@@ -95,7 +96,7 @@ fun SettingsSwitchRow(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = AvanueTheme.colors.textSecondary
                 )
             }
         } else null,
@@ -145,7 +146,7 @@ fun SettingsSliderRow(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = AvanueTheme.colors.textSecondary,
                     modifier = Modifier.padding(end = 16.dp)
                 )
             }
@@ -155,7 +156,7 @@ fun SettingsSliderRow(
                     Text(
                         subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -211,7 +212,7 @@ fun SettingsNavigationRow(
                     if (currentValue != null) {
                         Text(
                             text = currentValue,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = AvanueTheme.colors.primary,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -223,7 +224,7 @@ fun SettingsNavigationRow(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = AvanueTheme.colors.textSecondary
                 )
             }
         } else null,
@@ -268,7 +269,7 @@ fun <T> SettingsDropdownRow(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = AvanueTheme.colors.textSecondary,
                     modifier = Modifier.padding(end = 16.dp)
                 )
             }
@@ -278,7 +279,7 @@ fun <T> SettingsDropdownRow(
                     Text(
                         subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -338,7 +339,7 @@ fun SettingsGroupCard(
             .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = AvanueTheme.colors.surface
         )
     ) {
         Column(content = content)

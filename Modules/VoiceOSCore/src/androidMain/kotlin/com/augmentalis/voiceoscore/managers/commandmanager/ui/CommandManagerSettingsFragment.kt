@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
 import com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.managers.commandmanager.loader.CommandLoader
@@ -63,7 +64,7 @@ class CommandManagerSettingsFragment : Fragment() {
                 MaterialTheme {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
+                        color = AvanueTheme.colors.background
                     ) {
                         CommandManagerSettings()
                     }
@@ -153,14 +154,14 @@ class CommandManagerSettingsFragment : Fragment() {
                     Text(
                         text = "Current: ${localeDisplayName(selectedLocale)}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = AvanueTheme.colors.primary,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
                     Text(
                         text = "Select your preferred language for voice commands:",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AvanueTheme.colors.textSecondary,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
@@ -268,7 +269,7 @@ class CommandManagerSettingsFragment : Fragment() {
                     Text(
                         text = "Reload commands from JSON files. Use this after updating localization files.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AvanueTheme.colors.textSecondary,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
@@ -307,7 +308,7 @@ class CommandManagerSettingsFragment : Fragment() {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = AvanueTheme.colors.textOnPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
@@ -317,7 +318,7 @@ class CommandManagerSettingsFragment : Fragment() {
                     if (errorMessage != null) {
                         Text(
                             text = "Error: $errorMessage",
-                            color = MaterialTheme.colorScheme.error,
+                            color = AvanueTheme.colors.error,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -341,7 +342,7 @@ class CommandManagerSettingsFragment : Fragment() {
                     Text(
                         text = "Clear all command usage statistics. This cannot be undone.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AvanueTheme.colors.textSecondary,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
@@ -389,12 +390,12 @@ class CommandManagerSettingsFragment : Fragment() {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = AvanueTheme.colors.textPrimary
             )
         }
     }

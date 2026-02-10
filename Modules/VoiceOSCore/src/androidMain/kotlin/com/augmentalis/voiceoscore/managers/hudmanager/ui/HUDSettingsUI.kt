@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.rememberCoroutineScope
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceoscore.managers.hudmanager.settings.*
 import kotlinx.coroutines.launch
 
@@ -229,8 +230,8 @@ fun MasterToggle(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (enabled) MaterialTheme.colorScheme.primaryContainer 
-                            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (enabled) AvanueTheme.colors.primaryContainer 
+                            else AvanueTheme.colors.surfaceVariant
         )
     ) {
         Row(
@@ -249,7 +250,7 @@ fun MasterToggle(
                 Text(
                     text = if (enabled) "Enabled" else "Disabled",
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
             Switch(
@@ -479,8 +480,8 @@ fun ThemeButton(
     Button(
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isSelected) AvanueTheme.colors.primary
+                            else AvanueTheme.colors.surfaceVariant
         )
     ) {
         Text(label)
@@ -584,7 +585,7 @@ fun PrivacyToggle(
             Text(
                 description,
                 fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
         Switch(

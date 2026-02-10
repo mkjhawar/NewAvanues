@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceoscore.managers.commandmanager.registry.ActionType
 
 /**
@@ -53,8 +54,8 @@ fun CommandCreationWizard(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = AvanueTheme.colors.primaryContainer,
+                    titleContentColor = AvanueTheme.colors.onPrimaryContainer
                 )
             )
         },
@@ -116,7 +117,7 @@ private fun PhrasesStep(
         Text(
             text = "Enter the phrases that will trigger this command. Add multiple variations to improve recognition.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         // Command ID
@@ -205,7 +206,7 @@ private fun ActionTypeStep(
         Text(
             text = "Choose what this command should do when triggered.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         ActionType.values().forEach { actionType ->
@@ -245,7 +246,7 @@ private fun ActionParamsStep(
         Text(
             text = "Add parameters for the ${wizardState.actionType.name} action.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         // Common params for action type
@@ -326,7 +327,7 @@ private fun ActionParamsStep(
                             Text(
                                 value.toString(),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = AvanueTheme.colors.textSecondary
                             )
                         }
                         IconButton(
@@ -375,7 +376,7 @@ private fun PriorityNamespaceStep(
         Text(
             text = "Higher priority commands are matched first when conflicts occur.",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         HorizontalDivider()
@@ -391,7 +392,7 @@ private fun PriorityNamespaceStep(
         Text(
             text = "Namespace helps organize commands by module or category.",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -421,7 +422,7 @@ private fun TestStep(
         Text(
             text = "Test how well your command phrases match.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         Row(
@@ -475,14 +476,14 @@ private fun ConfirmStep(
         Text(
             text = "Review your command before saving.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         // Summary card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                containerColor = AvanueTheme.colors.secondaryContainer
             )
         ) {
             Column(
@@ -533,9 +534,9 @@ private fun ActionTypeCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
+                AvanueTheme.colors.primaryContainer
             else
-                MaterialTheme.colorScheme.surface
+                AvanueTheme.colors.surface
         )
     ) {
         Row(
@@ -549,7 +550,7 @@ private fun ActionTypeCard(
                 Text(
                     getActionTypeDescription(actionType),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }

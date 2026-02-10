@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceoscore.managers.commandmanager.registry.VoiceCommand
 
 /**
@@ -48,8 +49,8 @@ fun CommandEditorScreen(
             TopAppBar(
                 title = { Text("Command Editor") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = AvanueTheme.colors.primaryContainer,
+                    titleContentColor = AvanueTheme.colors.onPrimaryContainer
                 ),
                 actions = {
                     // Search
@@ -92,7 +93,7 @@ fun CommandEditorScreen(
                     viewModel.startWizard()
                     onNavigateToWizard()
                 },
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = AvanueTheme.colors.primaryContainer
             ) {
                 Icon(Icons.Default.Add, "Create command")
             }
@@ -292,7 +293,7 @@ private fun CommandCard(
                     Text(
                         text = "ID: ${command.id}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
 
@@ -375,17 +376,17 @@ private fun EmptyState() {
                 Icons.Default.VoiceChat,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = AvanueTheme.colors.textSecondary
             )
             Text(
                 text = "No commands yet",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
             Text(
                 text = "Create your first voice command",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }
@@ -404,7 +405,7 @@ private fun ErrorMessage(
             .fillMaxWidth()
             .padding(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
+            containerColor = AvanueTheme.colors.errorContainer
         )
     ) {
         Row(
@@ -415,18 +416,18 @@ private fun ErrorMessage(
             Icon(
                 Icons.Default.Error,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer
+                tint = AvanueTheme.colors.onErrorContainer
             )
             Text(
                 text = message,
                 modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = AvanueTheme.colors.onErrorContainer
             )
             IconButton(onClick = onDismiss) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Dismiss",
-                    tint = MaterialTheme.colorScheme.onErrorContainer
+                    tint = AvanueTheme.colors.onErrorContainer
                 )
             }
         }
@@ -446,7 +447,7 @@ private fun SuccessMessage(
             .fillMaxWidth()
             .padding(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            containerColor = AvanueTheme.colors.tertiaryContainer
         )
     ) {
         Row(
@@ -457,18 +458,18 @@ private fun SuccessMessage(
             Icon(
                 Icons.Default.CheckCircle,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                tint = AvanueTheme.colors.onTertiaryContainer
             )
             Text(
                 text = message,
                 modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onTertiaryContainer
+                color = AvanueTheme.colors.onTertiaryContainer
             )
             IconButton(onClick = onDismiss) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Dismiss",
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                    tint = AvanueTheme.colors.onTertiaryContainer
                 )
             }
         }

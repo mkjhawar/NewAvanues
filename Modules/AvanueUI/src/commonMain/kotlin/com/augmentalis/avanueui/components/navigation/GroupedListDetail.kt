@@ -37,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -128,7 +129,7 @@ fun <T> GroupedListDetailScaffold(
                                     Text(
                                         text = subtitle,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = AvanueTheme.colors.textSecondary
                                     )
                                 }
                             }
@@ -181,7 +182,7 @@ fun <T> GroupedListDetailScaffold(
                 ) {
                     Text(
                         text = "Error: $error",
-                        color = MaterialTheme.colorScheme.error,
+                        color = AvanueTheme.colors.error,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -210,7 +211,7 @@ fun <T> GroupedListDetailScaffold(
                                 if (index < section.items.lastIndex) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                        color = AvanueTheme.colors.border.copy(alpha = 0.5f)
                                     )
                                 }
                             }
@@ -235,7 +236,7 @@ fun GroupedListSectionHeader(
     Text(
         text = title.uppercase(),
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = AvanueTheme.colors.textSecondary,
         modifier = modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp, end = 16.dp)
     )
 }
@@ -260,7 +261,7 @@ fun GroupedListRow(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     icon: ImageVector? = null,
-    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    iconTint: Color = AvanueTheme.colors.textSecondary
 ) {
     ListItem(
         headlineContent = { Text(title) },
@@ -286,7 +287,7 @@ fun GroupedListRow(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = AvanueTheme.colors.textSecondary
             )
         },
         modifier = modifier.clickable(onClick = onClick)
