@@ -325,3 +325,121 @@ Accelerate consolidation throughput by executing a deterministic, high-volume ar
 
 - High-throughput duplicate cleanup completed in one safe wave with full move traceability.
 - Canonical non-backup documents retained in-place; backup/old-path exact duplicates were relocated to archive.
+
+## Completed merge-review execution wave — 2026-02-10 (wave5d: refined-candidate bucket B / VoiceOS)
+
+### Objective
+
+Run guarded near-duplicate execution for Bucket B (`Docs/VoiceOS/**`) using refined wave4b candidates.
+
+### Inputs
+
+- Candidate CSV: `build/merge_review_candidates_2026-02-10-wave4b.csv`
+- Runner: `build/merge_review_wave5_runner_2026_02_10.py`
+- Command:
+  - `python3 build/merge_review_wave5_runner_2026_02_10.py --label 2026-02-10-wave5d --input-label 2026-02-10-wave4b --ratio-threshold 0.98 --bucket B`
+
+### Execution result
+
+- Candidate rows evaluated: **217**
+- Archived: **0**
+- Needs manual review: **140**
+- Skipped due to bucket filter: **77**
+- Errors: **0**
+
+### Outputs / audit artifacts
+
+- Execution log CSV: `build/merge_review_execution_2026-02-10-wave5d.csv`
+- Execution summary: `build/merge_review_execution_2026-02-10-wave5d_summary.txt`
+- High-confidence subset CSV: `build/merge_review_wave5d_high_confidence_voiceos.csv`
+- High-confidence summary: `build/merge_review_wave5d_high_confidence_voiceos_summary.txt`
+
+### Key findings
+
+- Bucket B manual-review pool: **140**
+- High-confidence-by-ratio subset (`>=0.98`): **38**
+- Exact-hash pairs inside high-confidence subset: **0**
+- Content-contained pairs inside high-confidence subset: **0**
+
+### Outcome
+
+- Guardrails prevented unsafe auto-archival in VoiceOS domain.
+- VoiceOS near-duplicates require topic-batched manual merge flow.
+
+## Created Wave6 VoiceOS topic batch — 2026-02-10 (batch1 from wave5d manual queue)
+
+### Implementation
+
+- Script: `build/merge_review_wave6_batch1_runner_2026_02_10.py`
+- Output CSV: `build/merge_review_wave6_voiceos_topic_batch1.csv`
+- Output summary: `build/merge_review_wave6_voiceos_topic_batch1_summary.txt`
+
+### Batch1 result
+
+- Manual-review pool considered: **140**
+- Selected topics: `todo` (11), `spec` (7), `changelog` (5), `plan` (5), `voiceos-developer-manual` (5)
+- Batch1 rows prepared: **33**
+
+## Created Wave6 VoiceOS topic batch — 2026-02-10 (batch2 from remaining wave5d queue)
+
+### Implementation
+
+- Script: `build/merge_review_wave6_batch2_runner_2026_02_10.py`
+- Excluded batch1 topics: `todo`, `spec`, `changelog`, `plan`, `voiceos-developer-manual`
+- Output CSV: `build/merge_review_wave6_voiceos_topic_batch2.csv`
+- Output summary: `build/merge_review_wave6_voiceos_topic_batch2_summary.txt`
+
+### Batch2 result
+
+- Manual-review pool considered: **140**
+- Remaining queue after exclusion: **107**
+- Selected topics: `tasks` (4), `voiceos-spec` (4), `voiceos-user-manual` (4), `voiceos-changelog-2025-10` (4), `developer-manual` (3)
+- Batch2 rows prepared: **19**
+
+### Outcome
+
+- Wave6 batching now proceeds in deterministic, script-based slices (`batch1` then `batch2`) for safe high-throughput manual consolidation.
+
+## Created Wave6 VoiceOS topic batch — 2026-02-10 (batch3 from remaining wave5d queue)
+
+### Implementation
+
+- Script: `build/merge_review_wave6_batch3_runner_2026_02_10.py`
+- Excluded prior topics from batch1 + batch2:
+  - `todo`, `spec`, `changelog`, `plan`, `voiceos-developer-manual`, `tasks`, `voiceos-spec`, `voiceos-user-manual`, `voiceos-changelog-2025-10`, `developer-manual`
+- Output CSV: `build/merge_review_wave6_voiceos_topic_batch3.csv`
+- Output summary: `build/merge_review_wave6_voiceos_topic_batch3_summary.txt`
+
+### Batch3 result
+
+- Manual-review pool considered: **140**
+- Remaining queue after exclusion: **88**
+- Selected topics: `project-status` (2), `voiceos-plan` (2), `00-index` (2), `voiceos-current-status` (2), `reorganization-plan` (2)
+- Batch3 rows prepared: **10**
+
+### Outcome
+
+- Wave6 queue slicing now spans three deterministic batches with full audit artifacts.
+- Remaining queue can continue with the same script-first approach (`batch4+`) without heredoc fragility.
+
+## Created Wave6 VoiceOS topic batch — 2026-02-10 (batch4 from remaining wave5d queue)
+
+### Implementation
+
+- Script: `build/merge_review_wave6_batch4_runner_2026_02_10.py`
+- Excluded prior topics from batch1 + batch2 + batch3:
+  - `todo`, `spec`, `changelog`, `plan`, `voiceos-developer-manual`, `tasks`, `voiceos-spec`, `voiceos-user-manual`, `voiceos-changelog-2025-10`, `developer-manual`, `project-status`, `voiceos-plan`, `00-index`, `voiceos-current-status`, `reorganization-plan`
+- Output CSV: `build/merge_review_wave6_voiceos_topic_batch4.csv`
+- Output summary: `build/merge_review_wave6_voiceos_topic_batch4_summary.txt`
+
+### Batch4 result
+
+- Manual-review pool considered: **140**
+- Remaining queue after exclusion: **78**
+- Selected topics: `backlog` (1), `voiceos-uuid-vuid-migration` (1), `voiceoscoreng-fix-plan` (1), `decisions` (1), `architecture` (1)
+- Batch4 rows prepared: **5**
+
+### Outcome
+
+- Wave6 queue slicing now spans four deterministic batches with full audit artifacts.
+- Throughput remains stable via script-first continuation with explicit exclusion governance.

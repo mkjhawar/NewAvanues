@@ -180,7 +180,7 @@ fun BrowserApp(
             LocalExitBrowser provides onExitBrowser
         ) {
             Navigator(
-                screen = BrowserScreenNav()
+                screen = BrowserScreenNav
             ) { navigator ->
                 SlideTransition(navigator)
             }

@@ -68,7 +68,7 @@ data class ViewModelHolder(
 /**
  * BrowserScreenNav - Main browser screen with tab bar and WebView
  */
-class BrowserScreenNav : Screen {
+data object BrowserScreenNav : Screen {
 
     @Composable
     override fun Content() {
@@ -91,16 +91,16 @@ class BrowserScreenNav : Screen {
                 navigator.push(BookmarksScreenNav())
             },
             onNavigateToDownloads = {
-                navigator.push(DownloadsScreenNav())
+                navigator.push(DownloadsScreenNav)
             },
             onNavigateToHistory = {
-                navigator.push(HistoryScreenNav())
+                navigator.push(HistoryScreenNav)
             },
             onNavigateToSettings = {
-                navigator.push(SettingsScreenNav())
+                navigator.push(SettingsScreenNav)
             },
             onNavigateToXRSettings = {
-                navigator.push(XRSettingsScreenNav())
+                navigator.push(XRSettingsScreenNav)
             },
             onExitBrowser = exitBrowser
         )
@@ -143,7 +143,7 @@ data class BookmarksScreenNav(
 /**
  * DownloadsScreenNav - Download management screen
  */
-class DownloadsScreenNav : Screen {
+data object DownloadsScreenNav : Screen {
 
     @Composable
     override fun Content() {
@@ -165,7 +165,7 @@ class DownloadsScreenNav : Screen {
 /**
  * HistoryScreenNav - Browsing history screen
  */
-class HistoryScreenNav : Screen {
+data object HistoryScreenNav : Screen {
 
     @Composable
     override fun Content() {
@@ -188,7 +188,7 @@ class HistoryScreenNav : Screen {
 /**
  * SettingsScreenNav - Browser settings screen
  */
-class SettingsScreenNav : Screen {
+data object SettingsScreenNav : Screen {
 
     @Composable
     override fun Content() {
@@ -208,7 +208,7 @@ class SettingsScreenNav : Screen {
  * XRSettingsScreenNav - WebXR settings screen
  * Note: XR features only work on Android, but UI is cross-platform
  */
-class XRSettingsScreenNav : Screen {
+data object XRSettingsScreenNav : Screen {
 
     @Composable
     override fun Content() {
@@ -234,7 +234,7 @@ class XRSettingsScreenNav : Screen {
 /**
  * AboutScreenNav - About screen (app info, version, licenses)
  */
-class AboutScreenNav : Screen {
+data object AboutScreenNav : Screen {
 
     @Composable
     override fun Content() {
@@ -249,7 +249,7 @@ class AboutScreenNav : Screen {
 /**
  * ARPreviewScreenNav - AR Layout Preview screen for testing spatial arc layout
  */
-class ARPreviewScreenNav : Screen {
+data object ARPreviewScreenNav : Screen {
 
     @Composable
     override fun Content() {

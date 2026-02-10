@@ -321,11 +321,15 @@ fun AddressBar(
                                 )
                             }
 
-                            // Go button
+                            // Go button — focuses URL field when empty
                             IconButton(
                                 onClick = {
-                                    dismissKeyboard()
-                                    onGo()
+                                    if (textFieldValue.text.isNotBlank()) {
+                                        dismissKeyboard()
+                                        onGo()
+                                    } else {
+                                        focusRequester.requestFocus()
+                                    }
                                 },
                                 modifier = Modifier.size(28.dp),
                                 enabled = true
@@ -596,8 +600,12 @@ fun AddressBar(
 
                             IconButton(
                                 onClick = {
-                                    dismissKeyboard()
-                                    onGo()
+                                    if (textFieldValue.text.isNotBlank()) {
+                                        dismissKeyboard()
+                                        onGo()
+                                    } else {
+                                        focusRequester.requestFocus()
+                                    }
                                 },
                                 modifier = Modifier.size(32.dp),
                                 enabled = true

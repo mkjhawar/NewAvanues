@@ -340,13 +340,13 @@ private fun LicenseDetailContent(modifier: Modifier = Modifier) {
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = AvanueTheme.colors.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Licenses",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = AvanueTheme.colors.primary
                     )
                 }
             }
@@ -374,7 +374,7 @@ private fun LicenseDetailContent(modifier: Modifier = Modifier) {
                         Text(
                             text = row.lib.note,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.tertiary
+                            color = AvanueTheme.colors.tertiary
                         )
                     }
                     Spacer(modifier = Modifier.height(16.dp))

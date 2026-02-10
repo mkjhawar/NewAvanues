@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassDetection
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassType
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.OceanColors
 
 /**
@@ -182,7 +183,7 @@ object GlassesSettingsLayout {
                             .clickable { onModuleSelected(provider.moduleId) },
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            containerColor = AvanueTheme.colors.surfaceElevated
                         )
                     ) {
                         Column(
@@ -195,7 +196,7 @@ object GlassesSettingsLayout {
                                 imageVector = provider.ModuleIcon(),
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = AvanueTheme.colors.primary
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
@@ -221,7 +222,7 @@ object GlassesSettingsLayout {
                     Text(
                         text = "\"NEXT\"  \"PREVIOUS\"  \"SELECT\"",
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AvanueTheme.colors.textSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -274,7 +275,7 @@ object GlassesSettingsLayout {
                 Text(
                     text = "\"TOGGLE\"  \"NEXT\"  \"BACK\"",
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = AvanueTheme.colors.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -355,7 +356,7 @@ object GlassesSettingsLayout {
                             .clickable { onModuleSelected(provider.moduleId) },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                            containerColor = AvanueTheme.colors.surface.copy(alpha = 0.7f)
                         )
                     ) {
                         ListItem(
@@ -369,7 +370,7 @@ object GlassesSettingsLayout {
                                 Icon(
                                     imageVector = provider.ModuleIcon(),
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = AvanueTheme.colors.primary
                                 )
                             },
                             colors = ListItemDefaults.colors(
@@ -431,8 +432,8 @@ object GlassesSettingsLayout {
                         .size(if (isActive) 10.dp else 8.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isActive) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            if (isActive) AvanueTheme.colors.primary
+                            else AvanueTheme.colors.textSecondary.copy(alpha = 0.3f)
                         )
                 )
             }

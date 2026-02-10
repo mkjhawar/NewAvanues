@@ -282,3 +282,154 @@ Use a dedicated feature changelog and a central deprecations log.
 
 - Type: `ARCHIVE_IMPORT` (superseded exact duplicates from backup/old paths)
 - Canonical non-backup twins retained in place.
+
+## Execution log — 2026-02-10 (wave5d: merge-review execution, priority bucket B / VoiceOS)
+
+### Batch executed
+
+- Guarded execution run via:
+  - `python3 build/merge_review_wave5_runner_2026_02_10.py --label 2026-02-10-wave5d --input-label 2026-02-10-wave4b --ratio-threshold 0.98 --bucket B`
+
+### Scope guardrails
+
+- Bucket B only: `Docs/VoiceOS/**`
+- Auto-archive allowed only when strict safety conditions are met.
+
+### Execution evidence
+
+- Input candidates: `build/merge_review_candidates_2026-02-10-wave4b.csv`
+- Runner: `build/merge_review_wave5_runner_2026_02_10.py`
+- Execution log CSV: `build/merge_review_execution_2026-02-10-wave5d.csv`
+- Execution summary: `build/merge_review_execution_2026-02-10-wave5d_summary.txt`
+
+### Metrics
+
+- Candidate rows: **217**
+- Archived: **0**
+- Needs manual review: **140**
+- Skipped (outside bucket B): **77**
+- Errors: **0**
+
+### Follow-on analysis
+
+- Analyzer: `build/merge_review_wave5d_analyze_2026_02_10.py`
+- Output CSV: `build/merge_review_wave5d_high_confidence_voiceos.csv`
+- Summary: `build/merge_review_wave5d_high_confidence_voiceos_summary.txt`
+- Findings:
+  - Manual-review total: **140**
+  - Ratio >= 0.98 subset: **38**
+  - Exact-hash pairs in subset: **0**
+  - Content-contained pairs in subset: **0**
+
+### Action classification
+
+- Type: `MERGE_TO_MASTER` (execution pilot, VoiceOS)
+- Outcome: semantic/non-contained overlap; proceed via topic-batched manual merges.
+
+## Execution log — 2026-02-10 (wave6-batch1: VoiceOS manual-review topic batch)
+
+### Batch executed
+
+- Standalone batch builder run via:
+  - `python3 build/merge_review_wave6_batch1_runner_2026_02_10.py`
+
+### Execution evidence
+
+- Runner script: `build/merge_review_wave6_batch1_runner_2026_02_10.py`
+- Source log: `build/merge_review_execution_2026-02-10-wave5d.csv`
+- Batch CSV: `build/merge_review_wave6_voiceos_topic_batch1.csv`
+- Batch summary: `build/merge_review_wave6_voiceos_topic_batch1_summary.txt`
+
+### Metrics
+
+- Manual-review pool considered: **140**
+- Selected topics: `todo` (11), `spec` (7), `changelog` (5), `plan` (5), `voiceos-developer-manual` (5)
+- Batch1 rows: **33**
+
+### Action classification
+
+- Type: `MERGE_TO_MASTER` (manual merge queue shaping)
+- Outcome: first high-throughput manual batch prepared with reproducible artifacts.
+
+## Execution log — 2026-02-10 (wave6-batch2: VoiceOS manual-review topic batch)
+
+### Batch executed
+
+- Next-batch standalone builder run via:
+  - `python3 build/merge_review_wave6_batch2_runner_2026_02_10.py`
+
+### Execution evidence
+
+- Runner script: `build/merge_review_wave6_batch2_runner_2026_02_10.py`
+- Source log: `build/merge_review_execution_2026-02-10-wave5d.csv`
+- Excluded batch1 topics: `todo`, `spec`, `changelog`, `plan`, `voiceos-developer-manual`
+- Batch CSV: `build/merge_review_wave6_voiceos_topic_batch2.csv`
+- Batch summary: `build/merge_review_wave6_voiceos_topic_batch2_summary.txt`
+
+### Metrics
+
+- Manual-review pool considered: **140**
+- Remaining queue after exclusion: **107**
+- Selected topics: `tasks` (4), `voiceos-spec` (4), `voiceos-user-manual` (4), `voiceos-changelog-2025-10` (4), `developer-manual` (3)
+- Batch2 rows: **19**
+
+### Action classification
+
+- Type: `MERGE_TO_MASTER` (manual merge queue shaping)
+- Outcome: deterministic batch sequencing established for continued safe throughput.
+
+## Execution log — 2026-02-10 (wave6-batch3: VoiceOS manual-review topic batch)
+
+### Batch executed
+
+- Next-batch standalone builder run via:
+  - `python3 build/merge_review_wave6_batch3_runner_2026_02_10.py`
+
+### Execution evidence
+
+- Runner script: `build/merge_review_wave6_batch3_runner_2026_02_10.py`
+- Source log: `build/merge_review_execution_2026-02-10-wave5d.csv`
+- Excluded prior topics (batch1 + batch2):
+  - `todo`, `spec`, `changelog`, `plan`, `voiceos-developer-manual`, `tasks`, `voiceos-spec`, `voiceos-user-manual`, `voiceos-changelog-2025-10`, `developer-manual`
+- Batch CSV: `build/merge_review_wave6_voiceos_topic_batch3.csv`
+- Batch summary: `build/merge_review_wave6_voiceos_topic_batch3_summary.txt`
+
+### Metrics
+
+- Manual-review pool considered: **140**
+- Remaining queue after exclusion: **88**
+- Selected topics: `project-status` (2), `voiceos-plan` (2), `00-index` (2), `voiceos-current-status` (2), `reorganization-plan` (2)
+- Batch3 rows: **10**
+
+### Action classification
+
+- Type: `MERGE_TO_MASTER` (manual merge queue shaping)
+- Outcome: third deterministic batch prepared; pipeline is stable for batch4+ continuation.
+
+## Execution log — 2026-02-10 (wave6-batch4: VoiceOS manual-review topic batch)
+
+### Batch executed
+
+- Next-batch standalone builder run via:
+  - `python3 build/merge_review_wave6_batch4_runner_2026_02_10.py`
+
+### Execution evidence
+
+- Runner script: `build/merge_review_wave6_batch4_runner_2026_02_10.py`
+- Source log: `build/merge_review_execution_2026-02-10-wave5d.csv`
+- Excluded prior topics (batch1 + batch2 + batch3):
+  - `todo`, `spec`, `changelog`, `plan`, `voiceos-developer-manual`, `tasks`, `voiceos-spec`, `voiceos-user-manual`, `voiceos-changelog-2025-10`, `developer-manual`, `project-status`, `voiceos-plan`, `00-index`, `voiceos-current-status`, `reorganization-plan`
+- Batch CSV: `build/merge_review_wave6_voiceos_topic_batch4.csv`
+- Batch summary: `build/merge_review_wave6_voiceos_topic_batch4_summary.txt`
+
+### Metrics
+
+- Manual-review pool considered: **140**
+- Remaining queue after exclusion: **78**
+- Selected topics: `backlog` (1), `voiceos-uuid-vuid-migration` (1), `voiceoscoreng-fix-plan` (1), `decisions` (1), `architecture` (1)
+- Batch4 rows: **5**
+
+### Action classification
+
+- Type: `MERGE_TO_MASTER` (manual merge queue shaping)
+- Outcome: fourth deterministic batch prepared; queue progression remains reproducible and auditable.

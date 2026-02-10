@@ -223,7 +223,7 @@ fun DeveloperConsoleScreen(
                         Text(
                             "Debug & diagnostics",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 },

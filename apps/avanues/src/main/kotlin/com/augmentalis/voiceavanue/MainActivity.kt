@@ -31,6 +31,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.AvanueThemeProvider
 import com.augmentalis.avanueui.theme.AvanueThemeVariant
 import com.augmentalis.avanueui.display.DisplayProfile
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = AvanueTheme.colors.background
                 ) {
                     AvanuesApp(
                         startMode = launchMode,
