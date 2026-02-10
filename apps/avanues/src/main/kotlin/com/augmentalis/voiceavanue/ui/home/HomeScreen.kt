@@ -7,6 +7,7 @@
 package com.augmentalis.voiceavanue.ui.home
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
@@ -110,6 +111,7 @@ data class CommandCallbacks(
  * Landscape: 3-column no-scroll layout (smart glasses compatible).
  * Portrait: fixed top + scrollable commands.
  */
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun HomeScreen(
     onNavigateToBrowser: () -> Unit,
@@ -370,16 +372,16 @@ private fun DashboardPortrait(
                 ModuleCard(module = module, onClick = onNavigateToSettings)
             }
             Row(
-                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
             ) {
                 uiState.webAvanue?.let { module ->
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Box(modifier = Modifier.weight(1f)) {
                         ModuleCard(module = module, onClick = onNavigateToBrowser)
                     }
                 }
                 uiState.voiceCursor?.let { module ->
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Box(modifier = Modifier.weight(1f)) {
                         ModuleCard(module = module, onClick = onNavigateToSettings)
                     }
                 }
@@ -410,6 +412,7 @@ private fun statusBorderColor(state: ServiceState): androidx.compose.ui.graphics
     }
 }
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 private fun ModuleCard(module: ModuleStatus, onClick: () -> Unit) {
     val borderColor = statusBorderColor(module.state)
