@@ -641,55 +641,60 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
 
     Column(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
-        verticalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
+        verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
     ) {
-        if (permissions.allGranted) {
-            AvanueCard(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(SpacingTokens.md),
-                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(AvanueTheme.colors.success.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.CheckCircle, "All OK", tint = AvanueTheme.colors.success, modifier = Modifier.size(20.dp))
-                    }
-                    Column {
-                        Text(
-                            "All permissions granted",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = AvanueTheme.colors.textPrimary,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            "System ready",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = AvanueTheme.colors.success
-                        )
-                    }
-                }
-            }
-        } else {
+        // Summary header
+        val grantedCount = listOf(
+            permissions.microphoneGranted,
+            permissions.accessibilityEnabled,
+            permissions.overlayEnabled,
+            permissions.notificationsEnabled,
+            permissions.batteryOptimized
+        ).count { it }
+        val totalCount = 5
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = SpacingTokens.xs),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                "PERMISSIONS REQUIRED",
+                "SYSTEM PERMISSIONS",
                 style = MaterialTheme.typography.labelMedium,
-                color = AvanueTheme.colors.error,
+                color = if (permissions.allGranted) AvanueTheme.colors.success
+                else AvanueTheme.colors.error,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                "$grantedCount/$totalCount",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (permissions.allGranted) AvanueTheme.colors.success
+                else AvanueTheme.colors.warning,
                 fontWeight = FontWeight.Bold
             )
-            if (!permissions.microphoneGranted) {
-                PermissionErrorCard("Microphone", "Tap to grant microphone access") {
-                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
-            }
-            if (!permissions.accessibilityEnabled) {
-                PermissionErrorCard("Accessibility Service", "Find and enable VoiceOS\u00AE") {
+        }
+
+        // Microphone — Direct (runtime dialog)
+        if (permissions.microphoneGranted) {
+            PermissionGrantedRow("Microphone")
+        } else {
+            PermissionActionCard(
+                title = "Microphone",
+                description = "Tap to grant — one-step dialog",
+                badge = "Direct",
+                onClick = { micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+            )
+        }
+
+        // Accessibility — Manual (opens system list, user must find service)
+        if (permissions.accessibilityEnabled) {
+            PermissionGrantedRow("Accessibility Service")
+        } else {
+            PermissionActionCard(
+                title = "Accessibility Service",
+                description = "Find \"VoiceOS\u00AE Avanues\" \u2192 toggle ON",
+                badge = "Manual",
+                onClick = {
                     try {
                         context.startActivity(
                             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -697,7 +702,7 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
                         )
                         Toast.makeText(
                             context,
-                            "Find \"VoiceOS\u00AE\" under Downloaded/Installed services and enable it",
+                            "Scroll to Downloaded services \u2192 tap \"VoiceOS\u00AE Avanues\" \u2192 toggle ON",
                             Toast.LENGTH_LONG
                         ).show()
                     } catch (_: Exception) {
@@ -715,9 +720,18 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
                         }
                     }
                 }
-            }
-            if (!permissions.overlayEnabled) {
-                PermissionErrorCard("Display Over Apps", "Required for voice cursor") {
+            )
+        }
+
+        // Overlay — Direct (opens app-specific overlay toggle)
+        if (permissions.overlayEnabled) {
+            PermissionGrantedRow("Display Over Apps")
+        } else {
+            PermissionActionCard(
+                title = "Display Over Apps",
+                description = "Tap to open — toggle the switch ON",
+                badge = "Direct",
+                onClick = {
                     try {
                         context.startActivity(
                             Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -739,9 +753,18 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
                         }
                     }
                 }
-            }
-            if (!permissions.notificationsEnabled) {
-                PermissionErrorCard("Notifications", "Required for service status alerts") {
+            )
+        }
+
+        // Notifications — Direct (opens app notification settings)
+        if (permissions.notificationsEnabled) {
+            PermissionGrantedRow("Notifications")
+        } else {
+            PermissionActionCard(
+                title = "Notifications",
+                description = "Tap to open — enable notifications",
+                badge = "Direct",
+                onClick = {
                     try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             context.startActivity(
@@ -772,13 +795,83 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
                         }
                     }
                 }
-            }
+            )
+        }
+
+        // Battery Optimization — Direct (one-tap system dialog)
+        if (permissions.batteryOptimized) {
+            PermissionGrantedRow("Battery Unrestricted")
+        } else {
+            @SuppressLint("BatteryLife")
+            PermissionActionCard(
+                title = "Battery Unrestricted",
+                description = "Tap to allow — one-step dialog",
+                badge = "Direct",
+                onClick = {
+                    try {
+                        context.startActivity(
+                            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                android.net.Uri.parse("package:${context.packageName}"))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    } catch (_: Exception) {
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } catch (_: Exception) {
+                            context.startActivity(
+                                Intent(Settings.ACTION_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
+                    }
+                }
+            )
         }
     }
 }
 
+/** Compact row for a granted permission — green check + name. */
 @Composable
-private fun PermissionErrorCard(title: String, description: String, onClick: () -> Unit) {
+private fun PermissionGrantedRow(title: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SpacingTokens.sm, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
+    ) {
+        Icon(
+            Icons.Default.CheckCircle,
+            contentDescription = "Granted",
+            tint = AvanueTheme.colors.success,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            title,
+            style = MaterialTheme.typography.bodySmall,
+            color = AvanueTheme.colors.textSecondary
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            "OK",
+            style = MaterialTheme.typography.labelSmall,
+            color = AvanueTheme.colors.success,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/** Action card for a denied permission — tappable, with description and Direct/Manual badge. */
+@Composable
+private fun PermissionActionCard(
+    title: String,
+    description: String,
+    badge: String,
+    onClick: () -> Unit
+) {
     AvanueCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
@@ -803,12 +896,27 @@ private fun PermissionErrorCard(title: String, description: String, onClick: () 
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AvanueTheme.colors.textPrimary,
-                    fontWeight = FontWeight.Medium
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                ) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AvanueTheme.colors.textPrimary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    val badgeColor = if (badge == "Direct") AvanueTheme.colors.success else AvanueTheme.colors.warning
+                    Text(
+                        badge,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = badgeColor,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(badgeColor.copy(alpha = 0.15f), shape = CircleShape)
+                            .padding(horizontal = 6.dp, vertical = 1.dp)
+                    )
+                }
                 Text(description, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
             }
             Icon(Icons.AutoMirrored.Filled.ArrowForward, "Open settings", tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(18.dp))
