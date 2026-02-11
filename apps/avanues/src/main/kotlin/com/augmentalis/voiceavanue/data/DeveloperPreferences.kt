@@ -60,7 +60,7 @@ data class DeveloperSettings(
     val sttTimeoutMs: Long = 10000L,
     val endOfSpeechDelayMs: Long = 1500L,
     val partialResultIntervalMs: Long = 300L,
-    val confidenceThreshold: Float = 0.7f,
+    val confidenceThreshold: Float = 0.45f,
 
     // Feature Flags
     val debugMode: Boolean = true,
@@ -93,7 +93,7 @@ class DeveloperPreferencesRepository(private val context: Context) {
             sttTimeoutMs = prefs[DeveloperPreferencesKeys.STT_TIMEOUT_MS] ?: 10000L,
             endOfSpeechDelayMs = prefs[DeveloperPreferencesKeys.END_OF_SPEECH_DELAY_MS] ?: 1500L,
             partialResultIntervalMs = prefs[DeveloperPreferencesKeys.PARTIAL_RESULT_INTERVAL_MS] ?: 300L,
-            confidenceThreshold = prefs[DeveloperPreferencesKeys.CONFIDENCE_THRESHOLD] ?: 0.7f,
+            confidenceThreshold = prefs[DeveloperPreferencesKeys.CONFIDENCE_THRESHOLD] ?: 0.45f,
             debugMode = prefs[DeveloperPreferencesKeys.DEBUG_MODE] ?: true,
             verboseLogging = prefs[DeveloperPreferencesKeys.VERBOSE_LOGGING] ?: false,
             debugOverlay = prefs[DeveloperPreferencesKeys.DEBUG_OVERLAY] ?: false,
