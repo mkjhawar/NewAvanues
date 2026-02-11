@@ -194,9 +194,9 @@ class DeveloperConsoleViewModel @Inject constructor(
             states.add(
                 ServiceDebugInfo(
                     name = "Battery Optimization",
-                    status = if (batteryExempt) "EXEMPT" else "OPTIMIZED",
+                    status = if (batteryExempt) "UNRESTRICTED" else "RESTRICTED",
                     isHealthy = batteryExempt,
-                    details = mapOf("Desired" to "Exempt (unrestricted)")
+                    details = if (batteryExempt) emptyMap() else mapOf("Action" to "Exempt from optimization needed")
                 )
             )
 

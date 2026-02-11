@@ -23,11 +23,15 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -198,6 +202,17 @@ private fun Modifier.waterEffectApi33(
 ): Modifier = composed {
     val density = LocalDensity.current
 
+    // Lifecycle-aware pause: skip expensive shader/caustic drawing when backgrounded
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isActive by remember { mutableStateOf(true) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, _ ->
+            isActive = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     // Animated time uniform for refraction/caustic animation
     val infiniteTransition = rememberInfiniteTransition(label = "water")
     val time by infiniteTransition.animateFloat(
@@ -261,7 +276,12 @@ private fun Modifier.waterEffectApi33(
             scaleY = pressScale
         }
         // 4. Specular + caustics BEHIND content, content drawn LAST
+        // When app is backgrounded, skip expensive shader drawing to save CPU/GPU
         .drawWithContent {
+            if (!isActive) {
+                drawContent()
+                return@drawWithContent
+            }
             // Specular highlight behind content
             if (enableSpecular) {
                 val specRadiusPx = with(density) { WaterTokens.specularRadius.toPx() }
