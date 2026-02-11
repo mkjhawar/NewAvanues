@@ -326,8 +326,99 @@ Server-side `manifest.json` tracks all available VOS files with SHA-256 content 
 3. **Dev toggle**: UI hidden unless developer enables `vosSyncEnabled`
 4. **Registry query**: `getNotUploaded` filters `uploaded_at IS NULL AND source = 'local' AND is_active = 1`
 
-## 7. Future: In-App Crowd-Sourcing (Phase C)
+### Phase B Completion (commit b4c9e55d)
 
-- `PhraseSuggestionDialog`: Long-press command in Help screen → suggest alternative phrase
-- Suggestions stored locally → export for crowd-sourcing review
-- GitHub PR workflow for validated translations
+#### Runtime Importer Wiring
+
+`VosSyncManager` uses late-binding for `VosFileImporter` since `VoiceCommandDaoAdapter` is a lazy singleton not injectable by Hilt:
+
+```kotlin
+class VosSyncManager(
+    private val sftpClient: VosSftpClient,
+    private val registry: IVosFileRegistryRepository
+) {
+    @Volatile private var _importer: VosFileImporter? = null
+    fun setImporter(importer: VosFileImporter) { _importer = importer }
+}
+```
+
+Wiring happens in `VoiceAvanueAccessibilityService` after DB initialization via `@EntryPoint`:
+
+```kotlin
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface SyncEntryPoint {
+    fun vosSyncManager(): VosSyncManager
+}
+```
+
+#### Security Hardening
+
+- **SftpCredentialStore**: `EncryptedSharedPreferences` with `MasterKey.AES256_GCM` for SFTP password and SSH key passphrase. Fallback to regular SharedPreferences if hardware keystore unavailable.
+- **Configurable host key checking**: `hostKeyChecking` parameter on `VosSftpClient.connect()` supporting:
+  - `"no"` — Accept all keys (dev/testing)
+  - `"accept-new"` — Trust on first connect, reject changes
+  - `"yes"` — Strict verification against known_hosts
+- **Log sanitization**: Username removed from connection logs, file paths masked in progress logs.
+
+| DataStore Key | Type | Default | Purpose |
+|--------------|------|---------|---------|
+| `vos_sftp_host_key_mode` | String | "no" | SSH host key verification mode |
+
+#### WorkManager Background Sync
+
+`VosSyncWorker` is a `@HiltWorker` `CoroutineWorker` that performs periodic SFTP sync:
+
+- **Constraints**: Requires network connectivity + not low battery
+- **Backoff**: Exponential, 30s initial delay, 3 max retries
+- **Scheduling**: Configurable interval (1/2/4/8/12/24 hours) via `PeriodicWorkRequestBuilder`
+- **Auth**: Reads from `SftpCredentialStore` + `AvanuesSettingsRepository`
+
+| DataStore Key | Type | Default | Purpose |
+|--------------|------|---------|---------|
+| `vos_auto_sync_enabled` | Boolean | false | Enable periodic background sync |
+| `vos_sync_interval_hours` | Int | 4 | Sync interval in hours |
+
+#### Dependencies Added (Phase B Completion)
+
+| Dependency | Version | Purpose |
+|-----------|---------|---------|
+| `androidx.hilt:hilt-work` | 1.1.0 | @HiltWorker support |
+| `androidx.hilt:hilt-compiler` | 1.1.0 | @HiltWorker KSP processor |
+| `androidx.security:security-crypto` | latest | EncryptedSharedPreferences |
+
+## 7. Phase C Foundation: In-App Crowd-Sourcing
+
+### PhraseSuggestion Database
+
+**File**: `Modules/Database/src/commonMain/sqldelight/com/augmentalis/database/PhraseSuggestion.sq`
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | INTEGER PK | Auto-increment |
+| command_id | TEXT NOT NULL | Links to voice command |
+| original_phrase | TEXT NOT NULL | Current phrase being improved |
+| suggested_phrase | TEXT NOT NULL | User's alternative suggestion |
+| locale | TEXT NOT NULL | Language locale (e.g., "es-ES") |
+| created_at | INTEGER NOT NULL | Timestamp |
+| status | TEXT NOT NULL | "pending", "approved", "rejected" |
+| source | TEXT NOT NULL | "user", "crowd", "ai" |
+
+**Repository**: `IPhraseSuggestionRepository` / `SQLDelightPhraseSuggestionRepository`
+**Access**: `VoiceOSDatabaseManager.phraseSuggestions`
+
+### PhraseSuggestionDialog
+
+`PhraseSuggestionDialog.kt` — Composable dialog for submitting alternative phrases:
+- Shows original phrase and locale
+- Text input for suggestion
+- Submit/cancel buttons
+- Wired into VosSyncScreen with pending count display and export button
+
+### Crowd-Sourcing Workflow (Future)
+
+1. User submits alternative phrase via `PhraseSuggestionDialog`
+2. Stored locally with status "pending"
+3. `VosSyncViewModel.exportSuggestions()` exports pending suggestions as JSON
+4. Exported file uploaded via SFTP sync for review
+5. Approved suggestions merged into locale VOS files via GitHub PR workflow
