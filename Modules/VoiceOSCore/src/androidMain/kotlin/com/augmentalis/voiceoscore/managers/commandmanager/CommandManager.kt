@@ -536,11 +536,15 @@ class CommandManager(private val context: Context) {
             val switched = commandLocalizer.setLocale(locale)
 
             if (switched) {
-                // Reload commands for new locale via CommandLoader
-                val result = commandLoader.initializeCommands()
+                // Force reload commands for new locale (clears version + DB, then reloads)
+                val result = commandLoader.forceReload()
 
                 // Reload database commands for pattern matching
                 loadDatabaseCommands()
+
+                // Refresh StaticCommandRegistry so help menu + web commands update
+                StaticCommandRegistry.reset()
+                populateStaticRegistryFromDb()
 
                 when (result) {
                     is CommandLoader.LoadResult.Success -> {

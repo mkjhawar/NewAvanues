@@ -37,6 +37,7 @@ import com.augmentalis.avanueui.theme.ModuleAccent
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.voiceavanue.data.DeveloperSettings
+import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
@@ -220,12 +221,32 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                     }
                 }
 
-                // Wire cursor settings → CursorOverlayService lifecycle + config
-                // Collects DataStore settings, starts/stops service, and builds CursorConfig
+                // Wire cursor settings + voice locale → CursorOverlayService lifecycle + config
+                // Collects DataStore settings, starts/stops service, builds CursorConfig,
+                // and switches voice command locale when changed.
                 cursorSettingsJob?.cancel()
+                var previousVoiceLocale: String? = null
                 cursorSettingsJob = serviceScope.launch {
                     val cursorSettingsRepo = AvanuesSettingsRepository(applicationContext)
                     cursorSettingsRepo.settings.collectLatest { settings ->
+                        // Voice command locale switching
+                        val newLocale = settings.voiceLocale
+                        if (previousVoiceLocale != null && previousVoiceLocale != newLocale) {
+                            Log.i(TAG, "Voice locale changed: $previousVoiceLocale → $newLocale")
+                            try {
+                                val cm = CommandManager.getInstance(applicationContext)
+                                val switched = cm.switchLocale(newLocale)
+                                if (switched) {
+                                    Log.i(TAG, "✅ Voice commands switched to $newLocale")
+                                } else {
+                                    Log.w(TAG, "⚠️ Failed to switch voice commands to $newLocale")
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Locale switch failed", e)
+                            }
+                        }
+                        previousVoiceLocale = newLocale
+
                         // Start/stop CursorOverlayService based on toggle
                         val canOverlay = Settings.canDrawOverlays(applicationContext)
                         if (settings.cursorEnabled && canOverlay) {

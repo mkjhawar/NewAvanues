@@ -7,7 +7,10 @@ VoiceOS uses a layered pipeline that flows from VOS seed files through a SQLDeli
 ```
 VOS Seed Files (per locale)
   assets/localization/commands/en-US.VOS
-  assets/localization/commands/es-ES.VOS (future)
+  assets/localization/commands/es-ES.VOS
+  assets/localization/commands/fr-FR.VOS
+  assets/localization/commands/de-DE.VOS
+  assets/localization/commands/hi-IN.VOS
         |
         v
 CommandLoader.initializeCommands()  <- Seeds DB on first launch / version bump
@@ -103,9 +106,11 @@ Routes QuantizedCommands to the appropriate handler based on:
 ### File Location
 ```
 apps/avanues/src/main/assets/localization/commands/
-  en-US.VOS    <- English (current)
-  es-ES.VOS    <- Spanish (future)
-  fr-FR.VOS    <- French (future)
+  en-US.VOS    <- English (default)
+  es-ES.VOS    <- Spanish
+  fr-FR.VOS    <- French
+  de-DE.VOS    <- German
+  hi-IN.VOS    <- Hindi (romanized Hinglish)
 ```
 
 ### Format: Compact JSON with Explicit Maps
@@ -315,23 +320,109 @@ If the command should be available before DB loads, add a `StaticCommand` entry 
 ### Step 6: Add Verb Synonyms (if new verb)
 Add `SynonymEntry` to `SynonymRegistry` for the new verb.
 
-## 8. Adding New Languages
+## 8. Multi-Locale Runtime Support
+
+### Supported Locales (v1.0)
+
+| Locale | Language | Phrase Style | Example: "go back" |
+|--------|----------|-------------|---------------------|
+| en-US | English (US) | Standard English | "go back" |
+| es-ES | Spanish (Spain) | Natural spoken Spanish | "ir atras" |
+| fr-FR | French (France) | Natural spoken French | "retour" |
+| de-DE | German (Germany) | Informal "du" form | "geh zurueck" |
+| hi-IN | Hindi (India) | Romanized Hinglish | "peeche jao" |
+
+All locale files contain 107 commands with identical `command_id`, `category_map`, `action_map`, and `meta_map` keys. Only the `primary_phrase`, `synonyms`, and `description` strings are translated.
+
+### Locale Switching Architecture
+
+```
+Settings UI (VoiceControlSettingsProvider)
+    -> SettingsDropdownRow (5 locales)
+    -> AvanuesSettingsRepository.updateVoiceLocale(locale)
+    -> DataStore write: "voice_command_locale" key
+        |
+        v
+VoiceAvanueAccessibilityService (collectLatest observer)
+    -> detects locale change via previousVoiceLocale tracking
+    -> CommandManager.switchLocale(newLocale)
+        |
+        v
+CommandManager.switchLocale()
+    -> CommandLoader.forceReload()     <- clears version, reloads VOS for new locale
+    -> loadDatabaseCommands()          <- rebuilds pattern matching cache
+    -> StaticCommandRegistry.reset()   <- clears DB-backed command cache
+    -> populateStaticRegistryFromDb()  <- repopulates from new locale's DB entries
+        |
+        v
+All consumers auto-update:
+    -> Speech grammar (new locale phrases)
+    -> Help screen (translated commands)
+    -> WebCommandHandler (translated supported actions)
+```
+
+### DataStore Key
+
+| Key | Type | Default | Purpose |
+|-----|------|---------|---------|
+| `voice_command_locale` | String | `"en-US"` | Active voice command locale |
+
+### Settings UI
+
+Located in `VoiceControlSettingsProvider.kt`:
+- `SUPPORTED_LOCALES`: Static list of 5 locale pairs (code -> display name)
+- Uses `SettingsDropdownRow` component from AvanueUI
+- Changes trigger `repository.updateVoiceLocale(locale)` via coroutine
+- Searchable keywords: "language", "locale", "spanish", "french", "german", "hindi"
+
+### Locale Translation Guidelines
+
+When translating VOS files:
+
+1. **Primary phrases**: Use natural spoken language (not formal/literary)
+2. **Synonyms**: Include common alternatives a real speaker would use
+3. **ASCII-safe**: All triggers must be ASCII-compatible for STT engines (e.g., "zurueck" not "zuruck")
+4. **Hinglish**: For hi-IN, use romanized Hindi with common English loanwords (e.g., "settings kholo", "volume badhao")
+5. **Code-mixed OK**: Speakers naturally mix languages; embrace this for hi-IN especially
+6. **Keep IDs identical**: `command_id`, map keys, and `version`/`locale`/`fallback` structure must match en-US exactly
+
+## 9. Adding New Languages
 
 ### Step 1: Create Locale Seed File
-Copy `en-US.VOS` to `{locale}.VOS` (e.g., `es-ES.VOS`) in `assets/localization/commands/`.
-Translate all `primary_phrase` and `synonym` strings. Keep `command_id`, `action_map`, and `category_map` keys identical (they are code identifiers, not user-facing).
+Copy `en-US.VOS` to `{locale}.VOS` (e.g., `ja-JP.VOS`) in `assets/localization/commands/`.
+Translate all `primary_phrase` and `synonym` strings. Keep `command_id`, `action_map`, `category_map`, and `meta_map` keys identical (they are code identifiers, not user-facing).
 
-### Step 2: CommandLoader Auto-Discovery
-`CommandLoader.getAvailableLocales()` scans the `localization/commands/` directory for `.VOS` files. No code changes needed -- new locale files are discovered automatically.
+### Step 2: Add to Supported Locales
+In `VoiceControlSettingsProvider.kt`, add the new locale to `SUPPORTED_LOCALES`:
+```kotlin
+companion object {
+    val SUPPORTED_LOCALES = listOf(
+        "en-US" to "English (US)",
+        "es-ES" to "Espanol (Espana)",
+        // ... existing locales ...
+        "ja-JP" to "Japanese"  // <- NEW
+    )
+}
+```
 
-### Step 3: Test STT Recognition
-Verify the target STT engine (Vivoka/Whisper/Google) recognizes translated phrases.
+### Step 3: CommandLoader Auto-Discovery
+`CommandLoader.getAvailableLocales()` scans the `localization/commands/` directory for `.VOS` files. No additional code changes needed -- new locale files are discovered automatically.
 
-### Step 4: Verify Help Screen
-`HelpCommandDataProvider` automatically reflects the active locale's commands since it derives from `StaticCommandRegistry`, which is populated from the DB.
+### Step 4: Test Locale Switching
+1. Build and install the app
+2. Open Settings -> Voice Control -> Voice Command Language
+3. Select the new locale
+4. Verify the accessibility service logs: "Voice commands switched to {locale}"
+5. Test voice recognition with translated phrases
+
+### Step 5: Test STT Recognition
+Verify the target STT engine (Vivoka/Whisper/Google) recognizes translated phrases. Some engines may require language model configuration.
+
+### Step 6: Verify Help Screen
+`HelpCommandDataProvider` automatically reflects the active locale's commands since it derives from `StaticCommandRegistry`, which is populated from the DB after locale switch.
 
 ---
 
 *Chapter 93 | Voice Command Pipeline & Localization Architecture*
-*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-11 (Phase 2 DB-driven)*
+*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-11 (Multi-locale VOS support)*
 *Related: Chapter 03 (VoiceOSCore Deep Dive), Chapter 05 (WebAvanue Deep Dive), Chapter 94 (4-Tier Voice Enablement)*

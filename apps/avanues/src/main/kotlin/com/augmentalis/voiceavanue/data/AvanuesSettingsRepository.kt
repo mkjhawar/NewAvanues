@@ -45,6 +45,9 @@ data class AvanuesSettings(
     val themeStyle: String = MaterialMode.DEFAULT.name,
     val themeAppearance: String = AppearanceMode.DEFAULT.name,
 
+    // Voice command locale (e.g., "en-US", "es-ES")
+    val voiceLocale: String = "en-US",
+
     // VoiceCursor appearance
     val cursorSize: Int = 48,
     val cursorSpeed: Int = 8,
@@ -71,6 +74,9 @@ class AvanuesSettingsRepository @Inject constructor(
         private val KEY_THEME_APPEARANCE = stringPreferencesKey("theme_appearance")
         // Legacy key — read-only for migration
         private val KEY_THEME_VARIANT = stringPreferencesKey("theme_variant")
+
+        // Voice command locale
+        private val KEY_VOICE_LOCALE = stringPreferencesKey("voice_command_locale")
 
         // VoiceCursor appearance
         private val KEY_CURSOR_SIZE = intPreferencesKey("cursor_size")
@@ -121,6 +127,7 @@ class AvanuesSettingsRepository @Inject constructor(
             themePalette = palette,
             themeStyle = style,
             themeAppearance = prefs[KEY_THEME_APPEARANCE] ?: AppearanceMode.DEFAULT.name,
+            voiceLocale = prefs[KEY_VOICE_LOCALE] ?: "en-US",
             cursorSize = prefs[KEY_CURSOR_SIZE] ?: 48,
             cursorSpeed = prefs[KEY_CURSOR_SPEED] ?: 8,
             showCoordinates = prefs[KEY_SHOW_COORDINATES] ?: false,
@@ -162,6 +169,10 @@ class AvanuesSettingsRepository @Inject constructor(
 
     suspend fun updateThemeAppearance(appearance: String) {
         context.avanuesDataStore.edit { it[KEY_THEME_APPEARANCE] = appearance }
+    }
+
+    suspend fun updateVoiceLocale(locale: String) {
+        context.avanuesDataStore.edit { it[KEY_VOICE_LOCALE] = locale }
     }
 
     suspend fun updateCursorSize(size: Int) {
