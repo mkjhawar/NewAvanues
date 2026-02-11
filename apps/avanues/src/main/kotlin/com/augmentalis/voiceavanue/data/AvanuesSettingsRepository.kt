@@ -16,10 +16,13 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.augmentalis.avanueui.theme.AvanueThemeVariant
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -61,6 +64,10 @@ class AvanuesSettingsRepository @Inject constructor(
         private val KEY_CURSOR_SPEED = intPreferencesKey("cursor_speed")
         private val KEY_SHOW_COORDINATES = booleanPreferencesKey("show_coordinates")
         private val KEY_CURSOR_ACCENT_OVERRIDE = longPreferencesKey("cursor_accent_override")
+
+        // Voice command persistence (AVU wire protocol format)
+        private val KEY_DISABLED_COMMANDS = stringSetPreferencesKey("vcm_disabled_commands")
+        private val KEY_USER_SYNONYMS = stringPreferencesKey("vcm_user_synonyms")
     }
 
     val settings: Flow<AvanuesSettings> = context.avanuesDataStore.data.map { prefs ->
@@ -128,4 +135,113 @@ class AvanuesSettingsRepository @Inject constructor(
             }
         }
     }
+
+    // ==================== Voice Command Persistence ====================
+
+    /**
+     * Flow of disabled command IDs.
+     * Commands not in this set are enabled (default state).
+     */
+    val disabledCommands: Flow<Set<String>> = context.avanuesDataStore.data.map { prefs ->
+        prefs[KEY_DISABLED_COMMANDS] ?: emptySet()
+    }
+
+    /**
+     * Flow of user-added synonym entries, parsed from AVU-format JSON.
+     * Format: [{"vu":"SYN","canonical":"click","synonyms":["tap","push"],"v":1}, ...]
+     */
+    val userSynonyms: Flow<List<PersistedSynonym>> = context.avanuesDataStore.data.map { prefs ->
+        val json = prefs[KEY_USER_SYNONYMS] ?: "[]"
+        parseUserSynonyms(json)
+    }
+
+    /**
+     * Toggle a command's disabled state.
+     * If currently disabled, removes from set (re-enables).
+     * If currently enabled, adds to set (disables).
+     */
+    suspend fun setCommandDisabled(commandId: String, disabled: Boolean) {
+        context.avanuesDataStore.edit { prefs ->
+            val current = prefs[KEY_DISABLED_COMMANDS] ?: emptySet()
+            prefs[KEY_DISABLED_COMMANDS] = if (disabled) {
+                current + commandId
+            } else {
+                current - commandId
+            }
+        }
+    }
+
+    /**
+     * Save a user synonym entry. Merges with existing if canonical already present.
+     * Stored as AVU-format JSON: {"vu":"SYN","canonical":"click","synonyms":["tap"],"v":1}
+     */
+    suspend fun saveUserSynonym(canonical: String, synonyms: List<String>) {
+        context.avanuesDataStore.edit { prefs ->
+            val json = prefs[KEY_USER_SYNONYMS] ?: "[]"
+            val entries = parseUserSynonyms(json).toMutableList()
+            val existingIdx = entries.indexOfFirst {
+                it.canonical.equals(canonical, ignoreCase = true)
+            }
+            if (existingIdx >= 0) {
+                val existing = entries[existingIdx]
+                entries[existingIdx] = existing.copy(
+                    synonyms = (existing.synonyms + synonyms).distinct()
+                )
+            } else {
+                entries.add(PersistedSynonym(canonical, synonyms))
+            }
+            prefs[KEY_USER_SYNONYMS] = serializeUserSynonyms(entries)
+        }
+    }
+
+    /**
+     * Remove a user synonym entry by canonical name.
+     */
+    suspend fun removeUserSynonym(canonical: String) {
+        context.avanuesDataStore.edit { prefs ->
+            val json = prefs[KEY_USER_SYNONYMS] ?: "[]"
+            val entries = parseUserSynonyms(json).filter {
+                !it.canonical.equals(canonical, ignoreCase = true)
+            }
+            prefs[KEY_USER_SYNONYMS] = serializeUserSynonyms(entries)
+        }
+    }
+
+    private fun parseUserSynonyms(json: String): List<PersistedSynonym> {
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                val synArray = obj.getJSONArray("synonyms")
+                PersistedSynonym(
+                    canonical = obj.getString("canonical"),
+                    synonyms = (0 until synArray.length()).map { j -> synArray.getString(j) }
+                )
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun serializeUserSynonyms(entries: List<PersistedSynonym>): String {
+        val array = JSONArray()
+        for (entry in entries) {
+            val obj = JSONObject()
+            obj.put("vu", "SYN")
+            obj.put("v", 1)
+            obj.put("canonical", entry.canonical)
+            obj.put("synonyms", JSONArray(entry.synonyms))
+            array.put(obj)
+        }
+        return array.toString()
+    }
 }
+
+/**
+ * Persisted user synonym: canonical verb → list of alternatives.
+ * AVU unit type: SYN (Synonym mapping).
+ */
+data class PersistedSynonym(
+    val canonical: String,
+    val synonyms: List<String>
+)

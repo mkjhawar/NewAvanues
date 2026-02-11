@@ -25,6 +25,7 @@ import androidx.lifecycle.viewModelScope
 import com.augmentalis.foundation.state.LastHeardCommand
 import com.augmentalis.foundation.state.ServiceState
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
+import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.StaticCommandRegistry
 import com.augmentalis.voiceoscore.command.SynonymRegistry
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -158,7 +160,8 @@ data class DashboardUiState(
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val settingsRepository: AvanuesSettingsRepository
 ) : ViewModel() {
 
     private val _modules = MutableStateFlow<List<ModuleStatus>>(emptyList())
@@ -201,48 +204,69 @@ class DashboardViewModel @Inject constructor(
 
     /**
      * Loads static commands from VoiceOSCore's StaticCommandRegistry,
-     * grouped by CommandCategory.
+     * grouped by CommandCategory. Overlays persisted toggle state from DataStore.
      */
     private fun loadStaticCommands() {
-        val coreCommands = StaticCommandRegistry.all()
-        val grouped = coreCommands.groupBy { it.category }
+        viewModelScope.launch {
+            val disabledIds = settingsRepository.disabledCommands.first()
+            val coreCommands = StaticCommandRegistry.all()
+            val grouped = coreCommands.groupBy { it.category }
 
-        val categories = grouped.mapNotNull { (coreCat, cmds) ->
-            if (cmds.isEmpty()) return@mapNotNull null
-            CommandCategory(
-                name = formatCategoryName(coreCat),
-                commands = cmds.map { cmd ->
-                    StaticCommand(
-                        id = cmd.actionType.name,
-                        phrase = cmd.primaryPhrase,
-                        enabled = true,
-                        synonyms = cmd.phrases.drop(1),
-                        description = cmd.description,
-                        actionType = cmd.actionType
-                    )
-                }
-            )
+            val categories = grouped.mapNotNull { (coreCat, cmds) ->
+                if (cmds.isEmpty()) return@mapNotNull null
+                CommandCategory(
+                    name = formatCategoryName(coreCat),
+                    commands = cmds.map { cmd ->
+                        StaticCommand(
+                            id = cmd.actionType.name,
+                            phrase = cmd.primaryPhrase,
+                            enabled = cmd.actionType.name !in disabledIds,
+                            synonyms = cmd.phrases.drop(1),
+                            description = cmd.description,
+                            actionType = cmd.actionType
+                        )
+                    }
+                )
+            }
+
+            val current = _commands.value
+            _commands.value = current.copy(staticCategories = categories)
         }
-
-        val current = _commands.value
-        _commands.value = current.copy(staticCategories = categories)
     }
 
     /**
-     * Loads verb synonym mappings from KMP SynonymRegistry.
-     * These represent interchangeable action verbs used by the NLU engine.
+     * Loads verb synonym mappings from KMP SynonymRegistry,
+     * then merges persisted user-added synonyms from DataStore.
      */
     private fun loadDefaultSynonyms() {
-        val entries = SynonymRegistry.all().map { entry ->
-            SynonymEntryInfo(
-                canonical = entry.canonical,
-                synonyms = entry.synonyms,
-                isDefault = entry.isDefault
-            )
-        }
+        viewModelScope.launch {
+            val defaults = SynonymRegistry.all().map { entry ->
+                SynonymEntryInfo(
+                    canonical = entry.canonical,
+                    synonyms = entry.synonyms,
+                    isDefault = entry.isDefault
+                )
+            }
 
-        val current = _commands.value
-        _commands.value = current.copy(synonymEntries = entries)
+            val userSynonyms = settingsRepository.userSynonyms.first()
+            val merged = defaults.toMutableList()
+            for (persisted in userSynonyms) {
+                val idx = merged.indexOfFirst {
+                    it.canonical.equals(persisted.canonical, ignoreCase = true)
+                }
+                if (idx >= 0) {
+                    val existing = merged[idx]
+                    merged[idx] = existing.copy(
+                        synonyms = (existing.synonyms + persisted.synonyms).distinct()
+                    )
+                } else {
+                    merged.add(SynonymEntryInfo(persisted.canonical, persisted.synonyms))
+                }
+            }
+
+            val current = _commands.value
+            _commands.value = current.copy(synonymEntries = merged)
+        }
     }
 
     private fun formatCategoryName(category: CoreCommandCategory): String {
@@ -336,19 +360,26 @@ class DashboardViewModel @Inject constructor(
 
     /**
      * Toggles a static command's enabled state by ID.
-     * Updates in-memory state; DB persistence wired in Task #19.
+     * Updates in-memory state + persists to DataStore.
      */
     fun toggleCommand(commandId: String) {
         val current = _commands.value
+        var newEnabled = true
         _commands.value = current.copy(
             staticCategories = current.staticCategories.map { category ->
                 category.copy(
                     commands = category.commands.map { cmd ->
-                        if (cmd.id == commandId) cmd.copy(enabled = !cmd.enabled) else cmd
+                        if (cmd.id == commandId) {
+                            newEnabled = !cmd.enabled
+                            cmd.copy(enabled = newEnabled)
+                        } else cmd
                     }
                 )
             }
         )
+        viewModelScope.launch {
+            settingsRepository.setCommandDisabled(commandId, disabled = !newEnabled)
+        }
     }
 
     /**
@@ -403,6 +434,7 @@ class DashboardViewModel @Inject constructor(
     /**
      * Adds a verb synonym mapping (canonical → alternatives).
      * Merges with existing entry if canonical already exists.
+     * Persists non-default synonyms to DataStore (AVU SYN format).
      */
     fun addSynonym(canonical: String, synonyms: List<String>) {
         if (canonical.isBlank() || synonyms.isEmpty()) return
@@ -420,16 +452,23 @@ class DashboardViewModel @Inject constructor(
             existing.add(SynonymEntryInfo(canonical, synonyms))
         }
         _commands.value = current.copy(synonymEntries = existing)
+        viewModelScope.launch {
+            settingsRepository.saveUserSynonym(canonical, synonyms)
+        }
     }
 
     /**
      * Removes a verb synonym mapping by canonical name.
+     * Removes persisted synonym from DataStore.
      */
     fun removeSynonym(canonical: String) {
         val current = _commands.value
         _commands.value = current.copy(
             synonymEntries = current.synonymEntries.filter { it.canonical != canonical }
         )
+        viewModelScope.launch {
+            settingsRepository.removeUserSynonym(canonical)
+        }
     }
 
     private fun checkMicrophonePermission(): Boolean {

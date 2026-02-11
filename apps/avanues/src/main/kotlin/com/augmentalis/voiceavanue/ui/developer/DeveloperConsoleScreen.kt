@@ -39,10 +39,12 @@ import android.view.InputDevice
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -105,7 +107,8 @@ data class TableInfo(
 data class RpcPortInfo(
     val serviceName: String,
     val port: Int,
-    val transport: String
+    val transport: String,
+    val isActive: Boolean = false
 )
 
 // =============================================================================
@@ -135,14 +138,17 @@ class DeveloperConsoleViewModel @Inject constructor(
         put("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
     }
 
-    val rpcPorts: List<RpcPortInfo> = listOf(
-        RpcPortInfo("PluginRegistry", 50050, "UDS/TCP"),
-        RpcPortInfo("VoiceOS", 50051, "UDS/TCP"),
-        RpcPortInfo("AVA", 50052, "UDS/TCP"),
-        RpcPortInfo("Cockpit", 50053, "TCP"),
-        RpcPortInfo("NLU", 50054, "UDS/TCP"),
-        RpcPortInfo("WebAvanue", 50055, "UDS/TCP")
-    )
+    fun getRpcPorts(): List<RpcPortInfo> {
+        val serviceRunning = VoiceAvanueAccessibilityService.getInstance() != null
+        return listOf(
+            RpcPortInfo("PluginRegistry", 50050, "UDS/TCP", isActive = serviceRunning),
+            RpcPortInfo("VoiceOS", 50051, "UDS/TCP", isActive = serviceRunning),
+            RpcPortInfo("AVA", 50052, "UDS/TCP", isActive = serviceRunning),
+            RpcPortInfo("Cockpit", 50053, "TCP", isActive = false), // Not yet wired
+            RpcPortInfo("NLU", 50054, "UDS/TCP", isActive = serviceRunning),
+            RpcPortInfo("WebAvanue", 50055, "UDS/TCP", isActive = serviceRunning)
+        )
+    }
 
     init {
         observeDataStore()
@@ -577,8 +583,9 @@ class DeveloperConsoleViewModel @Inject constructor(
 
         sb.appendLine()
         sb.appendLine("--- RPC Ports ---")
-        rpcPorts.forEach { rpc ->
-            sb.appendLine("  ${rpc.serviceName}: ${rpc.port} (${rpc.transport})")
+        getRpcPorts().forEach { rpc ->
+            val status = if (rpc.isActive) "ACTIVE" else "INACTIVE"
+            sb.appendLine("  ${rpc.serviceName}: ${rpc.port} (${rpc.transport}) [$status]")
         }
 
         val dbFiles = getDatabaseFiles()
@@ -890,13 +897,21 @@ fun DeveloperConsoleScreen(
                             fontSize = 12.sp,
                             color = AvanueTheme.colors.textSecondary
                         )
+                        Text(
+                            "Status",
+                            modifier = Modifier.width(52.dp),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = AvanueTheme.colors.textSecondary
+                        )
                     }
                     HorizontalDivider(color = AvanueTheme.colors.textSecondary.copy(alpha = 0.3f))
-                    viewModel.rpcPorts.forEach { rpc ->
+                    viewModel.getRpcPorts().forEach { rpc ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 3.dp)
+                                .padding(vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 rpc.serviceName,
@@ -917,6 +932,20 @@ fun DeveloperConsoleScreen(
                                 fontSize = 11.sp,
                                 color = AvanueTheme.colors.textSecondary
                             )
+                            Box(
+                                modifier = Modifier.width(52.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .background(
+                                            color = if (rpc.isActive) AvanueTheme.colors.success
+                                                    else AvanueTheme.colors.error,
+                                            shape = CircleShape
+                                        )
+                                )
+                            }
                         }
                     }
                 }
