@@ -413,10 +413,16 @@ class ActionCoordinator(
                 val exactMatch = commandRegistry.findByPhrase(target)
                 LoggingUtils.d("findByPhrase('$target') = ${exactMatch?.phrase ?: "null"}", TAG)
                 if (exactMatch != null) {
-                    // Found! Execute the command
-                    // If user provided verb (e.g., "click 4"), use their phrase
-                    // If no verb (e.g., just "4"), use command's actionType for routing
-                    // This makes dynamic commands work like static commands
+                    // Web-sourced commands: pass directly without phrase rewriting.
+                    // WebCommandHandler uses metadata (selector, xpath) for JS execution,
+                    // not accessibility gesture bounds. Rewriting would route to AndroidGestureHandler.
+                    if (exactMatch.metadata["source"] == "web") {
+                        LoggingUtils.d("Web command match! phrase='${exactMatch.phrase}', selector=${exactMatch.metadata["selector"]}", TAG)
+                        return processCommand(exactMatch)
+                    }
+
+                    // Native commands: rewrite phrase for gesture handler routing
+                    // e.g., "click 4" → "tap 4", or just "4" → "tap 4" via actionTypeToPhrase
                     val actionPhrase = verb?.let { normalizedText }
                         ?: actionTypeToPhrase(exactMatch.actionType, target)
                     val actionCommand = exactMatch.copy(phrase = actionPhrase)
@@ -433,19 +439,24 @@ class ActionCoordinator(
 
                 when (matchResult) {
                     is CommandMatcher.MatchResult.Exact -> {
-                        // Use command's actionType for routing (same as static commands)
+                        val matched = matchResult.command
+                        if (matched.metadata["source"] == "web") {
+                            return processCommand(matched)
+                        }
                         val actionPhrase = verb?.let { normalizedText }
-                            ?: actionTypeToPhrase(matchResult.command.actionType, target)
-                        val cmd = matchResult.command.copy(phrase = actionPhrase)
+                            ?: actionTypeToPhrase(matched.actionType, target)
+                        val cmd = matched.copy(phrase = actionPhrase)
                         return processCommand(cmd)
                     }
                     is CommandMatcher.MatchResult.Fuzzy -> {
-                        // Only use fuzzy match if confidence is high enough
                         if (matchResult.confidence >= HIGH_CONFIDENCE_THRESHOLD) {
-                            // Use command's actionType for routing (same as static commands)
+                            val matched = matchResult.command
+                            if (matched.metadata["source"] == "web") {
+                                return processCommand(matched)
+                            }
                             val actionPhrase = verb?.let { normalizedText }
-                                ?: actionTypeToPhrase(matchResult.command.actionType, target)
-                            val cmd = matchResult.command.copy(phrase = actionPhrase)
+                                ?: actionTypeToPhrase(matched.actionType, target)
+                            val cmd = matched.copy(phrase = actionPhrase)
                             return processCommand(cmd)
                         }
                         // Low confidence fuzzy match - continue to NLU
