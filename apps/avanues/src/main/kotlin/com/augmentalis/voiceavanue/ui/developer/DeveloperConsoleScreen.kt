@@ -17,6 +17,7 @@
 package com.augmentalis.voiceavanue.ui.developer
 
 import android.app.ActivityManager
+import android.database.sqlite.SQLiteDatabase
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
@@ -37,6 +38,9 @@ import android.util.DisplayMetrics
 import android.view.InputDevice
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -50,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -90,6 +95,11 @@ data class DatabaseFileInfo(
     val fileName: String,
     val sizeBytes: Long,
     val lastModified: Long
+)
+
+data class TableInfo(
+    val name: String,
+    val rowCount: Long
 )
 
 data class RpcPortInfo(
@@ -464,6 +474,59 @@ class DeveloperConsoleViewModel @Inject constructor(
                     lastModified = file.lastModified()
                 )
             } ?: emptyList()
+    }
+
+    fun getTablesForDb(dbFileName: String): List<TableInfo> {
+        val dbFile = context.getDatabasePath(dbFileName)
+        if (!dbFile.exists()) return emptyList()
+        return try {
+            val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val tables = mutableListOf<TableInfo>()
+            db.rawQuery(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%' ORDER BY name",
+                null
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(0)
+                    val count = db.rawQuery("SELECT COUNT(*) FROM \"$name\"", null).use { c ->
+                        if (c.moveToFirst()) c.getLong(0) else 0L
+                    }
+                    tables.add(TableInfo(name, count))
+                }
+            }
+            db.close()
+            tables
+        } catch (e: Exception) {
+            listOf(TableInfo("Error: ${e.message}", 0))
+        }
+    }
+
+    /**
+     * Returns column names + first [limit] rows from a table.
+     * Safely opens the DB read-only and quotes the table name.
+     */
+    fun getTableRows(dbFileName: String, tableName: String, limit: Int = 30): Pair<List<String>, List<List<String>>> {
+        val dbFile = context.getDatabasePath(dbFileName)
+        if (!dbFile.exists()) return Pair(emptyList(), emptyList())
+        return try {
+            val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val cursor = db.rawQuery("SELECT * FROM \"$tableName\" LIMIT $limit", null)
+            val columns = cursor.columnNames.toList()
+            val rows = mutableListOf<List<String>>()
+            while (cursor.moveToNext()) {
+                val row = mutableListOf<String>()
+                for (i in columns.indices) {
+                    val value = try { cursor.getString(i) } catch (_: Exception) { "[blob]" }
+                    row.add(value ?: "NULL")
+                }
+                rows.add(row)
+            }
+            cursor.close()
+            db.close()
+            Pair(columns, rows)
+        } catch (e: Exception) {
+            Pair(listOf("Error"), listOf(listOf(e.message ?: "Unknown")))
+        }
     }
 
     fun clearDataStore() {
@@ -859,56 +922,9 @@ fun DeveloperConsoleScreen(
                 }
             }
 
-            // Database Files
+            // Database Browser
             item {
-                ConsoleSection(title = "Database Files", icon = Icons.Default.FolderOpen) {
-                    if (dbFiles.isEmpty()) {
-                        Text(
-                            "No database files found",
-                            color = AvanueTheme.colors.textSecondary,
-                            fontSize = 13.sp
-                        )
-                    } else {
-                        val dateFormat = remember {
-                            SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
-                        }
-                        dbFiles.forEach { db ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        db.fileName,
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 13.sp
-                                    )
-                                    Text(
-                                        "Modified: ${dateFormat.format(Date(db.lastModified))}",
-                                        fontSize = 11.sp,
-                                        color = AvanueTheme.colors.textSecondary
-                                    )
-                                }
-                                Text(
-                                    formatFileSize(db.sizeBytes),
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
-                                    color = AvanueTheme.colors.info
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Path: /data/data/${BuildConfig.APPLICATION_ID}/databases/",
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 10.sp,
-                            color = AvanueTheme.colors.textSecondary,
-                            modifier = Modifier.horizontalScroll(rememberScrollState())
-                        )
-                    }
-                }
+                DatabaseBrowserSection(viewModel = viewModel, dbFiles = dbFiles)
             }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -939,6 +955,208 @@ fun DeveloperConsoleScreen(
                 }
             }
         )
+    }
+}
+
+// =============================================================================
+// Database Browser
+// =============================================================================
+
+@Composable
+private fun DatabaseBrowserSection(
+    viewModel: DeveloperConsoleViewModel,
+    dbFiles: List<DatabaseFileInfo>
+) {
+    var expandedDb by remember { mutableStateOf<String?>(null) }
+    var expandedTable by remember { mutableStateOf<String?>(null) }
+    var tableData by remember { mutableStateOf<Pair<List<String>, List<List<String>>>?>(null) }
+
+    ConsoleSection(title = "Database Browser", icon = Icons.Default.Storage) {
+        if (dbFiles.isEmpty()) {
+            Text("No database files found", color = AvanueTheme.colors.textSecondary, fontSize = 13.sp)
+        } else {
+            val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US) }
+
+            // Only show .db files (not .db-shm/.db-wal)
+            val mainDbFiles = dbFiles.filter { it.fileName.endsWith(".db") }
+
+            mainDbFiles.forEach { db ->
+                val isExpanded = expandedDb == db.fileName
+
+                // DB file row — tappable
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .let { mod ->
+                            @Suppress("DEPRECATION")
+                            mod.pointerInput(db.fileName) {
+                                detectTapGestures {
+                                    if (isExpanded) {
+                                        expandedDb = null
+                                        expandedTable = null
+                                        tableData = null
+                                    } else {
+                                        expandedDb = db.fileName
+                                        expandedTable = null
+                                        tableData = null
+                                    }
+                                }
+                            }
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = AvanueTheme.colors.info,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(db.fileName, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                        Text(
+                            "${formatFileSize(db.sizeBytes)} · ${dateFormat.format(Date(db.lastModified))}",
+                            fontSize = 11.sp, color = AvanueTheme.colors.textSecondary
+                        )
+                    }
+                }
+
+                // Expanded: show tables
+                if (isExpanded) {
+                    val tables = remember(db.fileName) { viewModel.getTablesForDb(db.fileName) }
+                    if (tables.isEmpty()) {
+                        Text(
+                            "  (no tables)", fontSize = 12.sp,
+                            color = AvanueTheme.colors.textSecondary,
+                            modifier = Modifier.padding(start = 24.dp)
+                        )
+                    } else {
+                        tables.forEach { table ->
+                            val isTableExpanded = expandedTable == "${db.fileName}::${table.name}"
+
+                            // Table row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 24.dp, top = 2.dp, bottom = 2.dp)
+                                    .let { mod ->
+                                        @Suppress("DEPRECATION")
+                                        mod.pointerInput(table.name) {
+                                            detectTapGestures {
+                                                val key = "${db.fileName}::${table.name}"
+                                                if (isTableExpanded) {
+                                                    expandedTable = null
+                                                    tableData = null
+                                                } else {
+                                                    expandedTable = key
+                                                    tableData = viewModel.getTableRows(db.fileName, table.name)
+                                                }
+                                            }
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    if (isTableExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = AvanueTheme.colors.textSecondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    table.name,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    color = AvanueTheme.colors.textPrimary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    "${table.rowCount} rows",
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    color = AvanueTheme.colors.info
+                                )
+                            }
+
+                            // Expanded: show rows
+                            if (isTableExpanded && tableData != null) {
+                                val (columns, rows) = tableData!!
+                                if (rows.isEmpty()) {
+                                    Text(
+                                        "  (empty table)", fontSize = 11.sp,
+                                        color = AvanueTheme.colors.textSecondary,
+                                        modifier = Modifier.padding(start = 42.dp)
+                                    )
+                                } else {
+                                    // Horizontally scrollable table
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 42.dp, top = 4.dp, bottom = 4.dp)
+                                            .horizontalScroll(rememberScrollState())
+                                    ) {
+                                        Column {
+                                            // Header row
+                                            Row {
+                                                columns.forEach { col ->
+                                                    Text(
+                                                        text = col,
+                                                        fontFamily = FontFamily.Monospace,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = AvanueTheme.colors.info,
+                                                        modifier = Modifier
+                                                            .width(120.dp)
+                                                            .padding(end = 8.dp)
+                                                    )
+                                                }
+                                            }
+                                            HorizontalDivider(
+                                                color = AvanueTheme.colors.textSecondary.copy(alpha = 0.3f),
+                                                modifier = Modifier.padding(vertical = 2.dp)
+                                            )
+                                            // Data rows
+                                            rows.forEach { row ->
+                                                Row {
+                                                    row.forEach { cell ->
+                                                        Text(
+                                                            text = cell.take(40),
+                                                            fontFamily = FontFamily.Monospace,
+                                                            fontSize = 10.sp,
+                                                            color = AvanueTheme.colors.textSecondary,
+                                                            maxLines = 1,
+                                                            modifier = Modifier
+                                                                .width(120.dp)
+                                                                .padding(end = 8.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            if (rows.size >= 30) {
+                                                Text(
+                                                    "… showing first 30 rows",
+                                                    fontSize = 10.sp,
+                                                    color = AvanueTheme.colors.textTertiary,
+                                                    modifier = Modifier.padding(top = 4.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (db != mainDbFiles.last()) {
+                    HorizontalDivider(
+                        color = AvanueTheme.colors.textSecondary.copy(alpha = 0.15f),
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
