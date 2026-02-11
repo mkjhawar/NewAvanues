@@ -41,6 +41,7 @@ import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
+import com.augmentalis.voiceoscore.handlers.VoiceControlCallbacks
 import com.augmentalis.voiceoscore.vos.VosFileImporter
 import com.augmentalis.voiceoscore.vos.sync.VosSyncManager
 import dagger.hilt.EntryPoint
@@ -234,6 +235,82 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                     }
                 }
 
+                // Wire VoiceControlCallbacks for VoiceControlHandler
+                // Enables: mute/wake voice, dictation toggle, show commands, numbers overlay
+                try {
+                    val core = voiceOSCore
+                    VoiceControlCallbacks.onMuteVoice = {
+                        try {
+                            runBlocking { core?.stopListening() }
+                            Log.i(TAG, "Voice muted via callback")
+                            true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to mute voice", e)
+                            false
+                        }
+                    }
+                    VoiceControlCallbacks.onWakeVoice = {
+                        try {
+                            val result = runBlocking { core?.startListening() }
+                            val success = result?.isSuccess == true
+                            Log.i(TAG, "Voice wake via callback: success=$success")
+                            success
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to wake voice", e)
+                            false
+                        }
+                    }
+                    VoiceControlCallbacks.onStartDictation = {
+                        // Stop command recognition to avoid conflicts with keyboard dictation
+                        try {
+                            runBlocking { core?.stopListening() }
+                            Log.i(TAG, "Dictation mode: command recognition paused")
+                            true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to start dictation", e)
+                            false
+                        }
+                    }
+                    VoiceControlCallbacks.onStopDictation = {
+                        // Resume command recognition after dictation
+                        try {
+                            runBlocking { core?.startListening() }
+                            Log.i(TAG, "Command mode: recognition resumed")
+                            true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to stop dictation", e)
+                            false
+                        }
+                    }
+                    VoiceControlCallbacks.onShowCommands = {
+                        // Show numbered badges on all interactive elements
+                        OverlayStateManager.setNumbersOverlayMode(
+                            OverlayStateManager.NumbersOverlayMode.ON
+                        )
+                        Log.i(TAG, "Showing commands: numbers overlay set to ON")
+                        true
+                    }
+                    VoiceControlCallbacks.onSetNumbersMode = { mode ->
+                        try {
+                            val overlayMode = when (mode.lowercase()) {
+                                "on" -> OverlayStateManager.NumbersOverlayMode.ON
+                                "off" -> OverlayStateManager.NumbersOverlayMode.OFF
+                                "auto" -> OverlayStateManager.NumbersOverlayMode.AUTO
+                                else -> OverlayStateManager.NumbersOverlayMode.AUTO
+                            }
+                            OverlayStateManager.setNumbersOverlayMode(overlayMode)
+                            Log.i(TAG, "Numbers mode set to: $overlayMode")
+                            true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to set numbers mode", e)
+                            false
+                        }
+                    }
+                    Log.i(TAG, "VoiceControlCallbacks wired successfully")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to wire VoiceControlCallbacks", e)
+                }
+
                 // Wire VosFileImporter into VosSyncManager (late-binding).
                 // VoiceCommandDaoAdapter is created via CommandDatabase singleton,
                 // which requires VoiceOSDatabase — only available after DB init above.
@@ -373,6 +450,9 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
     override fun onDestroy() {
         instance = null
+
+        // Clear VoiceControlCallbacks to prevent stale references
+        VoiceControlCallbacks.clear()
 
         // Cancel speech result collection
         speechCollectorJob?.cancel()

@@ -273,7 +273,7 @@ class HUDContentProvider : ContentProvider() {
         ))
         
         hudElements.values.forEachIndexed { index, element ->
-            cursor.addRow(arrayOf(
+            cursor.addRow(arrayOf<Any>(
                 index,
                 element.id,
                 element.type,
@@ -300,7 +300,7 @@ class HUDContentProvider : ContentProvider() {
             COLUMN_DATA, COLUMN_SCALE, COLUMN_VISIBLE, COLUMN_PRIORITY
         ))
         
-        cursor.addRow(arrayOf(
+        cursor.addRow(arrayOf<Any>(
             0,
             element.id,
             element.type,
@@ -324,7 +324,7 @@ class HUDContentProvider : ContentProvider() {
         val isVisible = hudSystem?.isVisible() ?: false
         val fps = hudRenderer?.getCurrentFPS() ?: 0f
         
-        cursor.addRow(arrayOf(
+        cursor.addRow(arrayOf<Any>(
             if (isVisible) "visible" else "hidden",
             fps,
             "STANDARD"
@@ -338,7 +338,7 @@ class HUDContentProvider : ContentProvider() {
             "render_mode", "target_fps", "vibrancy_enabled", "glass_morphism_enabled"
         ))
         
-        cursor.addRow(arrayOf(
+        cursor.addRow(arrayOf<Any>(
             "SPATIAL_AR",
             90,
             true,
@@ -381,7 +381,7 @@ class HUDContentProvider : ContentProvider() {
             "high_contrast", "text_scale", "voice_speed", "live_transcription"
         ))
         
-        cursor.addRow(arrayOf(
+        cursor.addRow(arrayOf<Any>(
             false,
             1.0f,
             1.0f,
