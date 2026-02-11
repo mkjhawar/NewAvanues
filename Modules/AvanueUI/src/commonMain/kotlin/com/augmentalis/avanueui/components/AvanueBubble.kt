@@ -1,18 +1,21 @@
 /**
  * AvanueBubble.kt - Unified chat bubble component
  *
- * ONE component, theme decides glass/water/plain.
+ * ONE component, theme decides glass/water/cupertino/mountainview.
  * Reads AvanueTheme.materialMode to delegate to the correct implementation.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 package com.augmentalis.avanueui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.components.glass.BubbleAlign
 import com.augmentalis.avanueui.components.glass.GlassBubble
 import com.augmentalis.avanueui.components.glass.GlassDefaults
@@ -24,14 +27,7 @@ import com.augmentalis.avanueui.theme.MaterialMode
 /**
  * Unified chat bubble component for the Avanues ecosystem.
  *
- * Renders as glass, water, or plain Material3 based on [AvanueTheme.materialMode].
- *
- * @param modifier Modifier for customization
- * @param align Bubble alignment (START, END, CENTER)
- * @param shape Bubble shape
- * @param color Bubble background color
- * @param contentColor Content color
- * @param content Composable content
+ * Renders as glass, water, cupertino, or mountainview based on [AvanueTheme.materialMode].
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -48,7 +44,7 @@ fun AvanueBubble(
     content: @Composable () -> Unit
 ) {
     when (AvanueTheme.materialMode) {
-        MaterialMode.GLASS -> GlassBubble(
+        MaterialMode.Glass -> GlassBubble(
             modifier = modifier,
             align = align,
             shape = shape,
@@ -56,14 +52,25 @@ fun AvanueBubble(
             contentColor = contentColor,
             content = content
         )
-        MaterialMode.WATER -> WaterSurface(
+        MaterialMode.Water -> WaterSurface(
             modifier = modifier,
             shape = shape,
             color = color,
             contentColor = contentColor,
             content = content
         )
-        MaterialMode.PLAIN -> {
+        MaterialMode.Cupertino -> {
+            val cupertinoShape = RoundedCornerShape(18.dp)
+            Surface(
+                modifier = modifier,
+                shape = cupertinoShape,
+                color = color,
+                contentColor = contentColor,
+                border = BorderStroke(0.33.dp, AvanueTheme.colors.borderSubtle),
+                content = content
+            )
+        }
+        MaterialMode.MountainView -> {
             Surface(
                 modifier = modifier,
                 shape = shape,

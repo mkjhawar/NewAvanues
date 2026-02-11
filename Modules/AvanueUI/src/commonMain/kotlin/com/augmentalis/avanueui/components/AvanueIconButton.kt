@@ -1,7 +1,7 @@
 /**
  * AvanueIconButton.kt - Unified icon button component
  *
- * ONE component, theme decides glass/water/plain.
+ * ONE component, theme decides glass/water/cupertino/mountainview.
  * Reads AvanueTheme.materialMode to delegate to the correct implementation.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
@@ -23,12 +23,7 @@ import com.augmentalis.avanueui.water.waterEffect
 /**
  * Unified icon button for the Avanues ecosystem.
  *
- * Renders as glass, water, or plain Material3 based on [AvanueTheme.materialMode].
- *
- * @param onClick Click handler
- * @param modifier Modifier for customization
- * @param enabled Enable/disable button
- * @param content Button content (icon)
+ * Renders as glass, water, cupertino, or mountainview based on [AvanueTheme.materialMode].
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -39,14 +34,14 @@ fun AvanueIconButton(
     content: @Composable () -> Unit
 ) {
     when (AvanueTheme.materialMode) {
-        MaterialMode.GLASS -> GlassIconButton(
+        MaterialMode.Glass -> GlassIconButton(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
             glass = true,
             content = content
         )
-        MaterialMode.WATER -> {
+        MaterialMode.Water -> {
             val iconShape = RoundedCornerShape(8.dp)
             val iconModifier = modifier.waterEffect(
                 backgroundColor = AvanueTheme.colors.surfaceElevated,
@@ -61,7 +56,18 @@ fun AvanueIconButton(
                 content = content
             )
         }
-        MaterialMode.PLAIN -> {
+        MaterialMode.Cupertino -> {
+            IconButton(
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled,
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = AvanueTheme.colors.iconPrimary
+                ),
+                content = content
+            )
+        }
+        MaterialMode.MountainView -> {
             IconButton(
                 onClick = onClick,
                 modifier = modifier,

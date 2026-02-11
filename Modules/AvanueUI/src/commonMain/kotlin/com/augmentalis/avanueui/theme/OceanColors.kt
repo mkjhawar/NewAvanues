@@ -4,8 +4,10 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * Ocean Blue theme color implementation.
- * Values preserved from Foundation/OceanTheme.kt.
+ *
+ * @deprecated Use [LunaColors] instead. Ocean maps to Luna palette in Theme v5.0.
  */
+@Deprecated("Use LunaColors instead", ReplaceWith("LunaColors"))
 object OceanColors : AvanueColorScheme {
     // Primary - CoralBlue
     override val primary = Color(0xFF3B82F6)
@@ -21,14 +23,14 @@ object OceanColors : AvanueColorScheme {
     override val tertiary = Color(0xFF10B981)
 
     // Containers - tinted backgrounds for cards/chips
-    override val primaryContainer = Color(0xFF1E3A5F)    // Deep blue (primary@20% on dark bg)
-    override val onPrimaryContainer = Color(0xFFBFDBFE)  // Light blue text on container
-    override val secondaryContainer = Color(0xFF164E63)  // Deep cyan
-    override val onSecondaryContainer = Color(0xFFA5F3FC) // Light cyan text on container
-    override val tertiaryContainer = Color(0xFF1A3D2E)   // Deep seafoam (tertiary@20% on dark bg)
-    override val onTertiaryContainer = Color(0xFFA7F3D0) // Light seafoam text on container
-    override val errorContainer = Color(0xFF5F1E1E)      // Deep red
-    override val onErrorContainer = Color(0xFFFECACA)    // Light red text on container
+    override val primaryContainer = Color(0xFF1E3A5F)
+    override val onPrimaryContainer = Color(0xFFBFDBFE)
+    override val secondaryContainer = Color(0xFF164E63)
+    override val onSecondaryContainer = Color(0xFFA5F3FC)
+    override val tertiaryContainer = Color(0xFF1A3D2E)
+    override val onTertiaryContainer = Color(0xFFA7F3D0)
+    override val errorContainer = Color(0xFF5F1E1E)
+    override val onErrorContainer = Color(0xFFFECACA)
 
     // Error - CoralRed
     override val error = Color(0xFFEF4444)

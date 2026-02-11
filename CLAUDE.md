@@ -104,3 +104,52 @@ Apps/
 The repo has accumulated apps in inconsistent locations (`/Apps/`, `/android/Apps/`, mixed paths) causing confusion about where things live. This rule establishes a single, unambiguous convention going forward.
 
 **If you are about to create a file and are not 100% certain it's in the right place, STOP and ask the user.**
+
+---
+
+## MANDATORY RULE #3: THEME SYSTEM v5.1 (ZERO TOLERANCE)
+
+**ALL UI code MUST use the decoupled AvanueUI Theme v5.1 system. No exceptions.**
+
+### Three Independent Axes
+
+| Axis | Enum | Values | Default |
+|------|------|--------|---------|
+| Color Palette | `AvanueColorPalette` | SOL, LUNA, TERRA, HYDRA | HYDRA |
+| Material Style | `MaterialMode` | Glass, Water, Cupertino, MountainView | Water |
+| Appearance | `AppearanceMode` | Light, Dark, Auto | Auto |
+
+32 valid combinations (any palette x any style x light/dark). Auto follows system preference.
+
+### MANDATORY Rules
+
+1. **Use `AvanueColorPalette` + `MaterialMode` + `AppearanceMode`** — NEVER use the deprecated `AvanueThemeVariant`
+2. **Use `AvanueTheme.colors.*`** — NEVER use `MaterialTheme.colorScheme.*`
+3. **Use unified components** (`AvanueCard`, `AvanueButton`, etc.) — they auto-adapt to `MaterialMode`
+4. **Use `palette.colors(isDark)` / `palette.glass(isDark)` / `palette.water(isDark)`** for appearance-aware colors
+5. **Use `AvanueTheme.isDark`** when components need appearance-aware logic
+6. **Cupertino style**: 0dp elevation, 12dp corners, 0.33dp hairline borders, no glass/water effects
+7. **MountainView style**: Standard M3 tonal elevation, M3 shape scale, no glass/water effects
+
+### BANNED (DEPRECATED)
+
+- `AvanueThemeVariant` — use `AvanueColorPalette` + `MaterialMode` independently
+- `MaterialMode.PLAIN` — renamed to `MaterialMode.MountainView`
+- `OceanColors` / `SunsetColors` / `LiquidColors` — use `LunaColors` / `SolColors` / `HydraColors`
+- `OceanGlass` / `SunsetGlass` / `LiquidGlass` — use `LunaGlass` / `SolGlass` / `HydraGlass`
+- `OceanWater` / `SunsetWater` / `LiquidWater` — use `LunaWater` / `SolWater` / `HydraWater`
+
+### DataStore Keys
+
+- `theme_palette` — stores `AvanueColorPalette` name (SOL/LUNA/TERRA/HYDRA)
+- `theme_style` — stores `MaterialMode` name (Glass/Water/Cupertino/MountainView)
+- `theme_appearance` — stores `AppearanceMode` name (Light/Dark/Auto)
+- Old `theme_variant` key auto-migrates to new keys
+
+### When Creating UI
+
+1. Use `AvanueThemeProvider(colors = palette.colors(isDark), glass = palette.glass(isDark), water = palette.water(isDark), materialMode = style, isDark = isDark)`
+2. Read colors: `AvanueTheme.colors.primary`, `AvanueTheme.colors.surface`, etc.
+3. Read appearance: `AvanueTheme.isDark` for appearance-aware logic
+4. Use unified components (`AvanueCard`, `AvanueSurface`, `AvanueButton`, etc.) — they handle all 4 material modes
+5. Default palette: HYDRA (royal sapphire). Default style: Water. Default appearance: Auto

@@ -1,19 +1,20 @@
 /**
  * AvanueSurface.kt - Unified surface component
  *
- * ONE component, theme decides glass/water/plain.
+ * ONE component, theme decides glass/water/cupertino/mountainview.
  * Reads AvanueTheme.materialMode to delegate to the correct implementation.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 package com.augmentalis.avanueui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.components.glass.GlassDefaults
 import com.augmentalis.avanueui.components.glass.GlassSurface
@@ -24,14 +25,7 @@ import com.augmentalis.avanueui.theme.MaterialMode
 /**
  * Unified surface component for the Avanues ecosystem.
  *
- * Renders as glass, water, or plain Material3 based on [AvanueTheme.materialMode].
- *
- * @param onClick Optional click handler (makes surface interactive)
- * @param modifier Modifier for customization
- * @param shape Surface shape
- * @param color Base surface color
- * @param contentColor Content color (text, icons)
- * @param content Composable content
+ * Renders as glass, water, cupertino, or mountainview based on [AvanueTheme.materialMode].
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -44,7 +38,7 @@ fun AvanueSurface(
     content: @Composable () -> Unit
 ) {
     when (AvanueTheme.materialMode) {
-        MaterialMode.GLASS -> GlassSurface(
+        MaterialMode.Glass -> GlassSurface(
             onClick = onClick,
             modifier = modifier,
             shape = shape,
@@ -52,7 +46,7 @@ fun AvanueSurface(
             contentColor = contentColor,
             content = content
         )
-        MaterialMode.WATER -> WaterSurface(
+        MaterialMode.Water -> WaterSurface(
             onClick = onClick,
             modifier = modifier,
             shape = shape,
@@ -60,7 +54,30 @@ fun AvanueSurface(
             contentColor = contentColor,
             content = content
         )
-        MaterialMode.PLAIN -> {
+        MaterialMode.Cupertino -> {
+            val cupertinoShape = RoundedCornerShape(12.dp)
+            if (onClick != null) {
+                Surface(
+                    onClick = onClick,
+                    modifier = modifier,
+                    shape = cupertinoShape,
+                    color = color,
+                    contentColor = contentColor,
+                    border = BorderStroke(0.33.dp, AvanueTheme.colors.borderSubtle),
+                    content = content
+                )
+            } else {
+                Surface(
+                    modifier = modifier,
+                    shape = cupertinoShape,
+                    color = color,
+                    contentColor = contentColor,
+                    border = BorderStroke(0.33.dp, AvanueTheme.colors.borderSubtle),
+                    content = content
+                )
+            }
+        }
+        MaterialMode.MountainView -> {
             if (onClick != null) {
                 Surface(
                     onClick = onClick,

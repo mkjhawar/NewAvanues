@@ -17,6 +17,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,9 +32,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.augmentalis.avanueui.theme.AppearanceMode
+import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.AvanueThemeProvider
-import com.augmentalis.avanueui.theme.AvanueThemeVariant
+import com.augmentalis.avanueui.theme.MaterialMode
 import com.augmentalis.avanueui.display.DisplayProfile
 import com.augmentalis.avanueui.display.DisplayProfileResolver
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
@@ -77,14 +80,22 @@ class MainActivity : ComponentActivity() {
             val settings by settingsRepository.settings.collectAsState(
                 initial = AvanuesSettings()
             )
-            val variant = AvanueThemeVariant.fromString(settings.themeVariant)
+            val palette = AvanueColorPalette.fromString(settings.themePalette)
+            val style = MaterialMode.fromString(settings.themeStyle)
+            val appearance = AppearanceMode.fromString(settings.themeAppearance)
+            val isDark = when (appearance) {
+                AppearanceMode.Auto -> isSystemInDarkTheme()
+                AppearanceMode.Dark -> true
+                AppearanceMode.Light -> false
+            }
 
             AvanueThemeProvider(
-                colors = variant.colors,
-                glass = variant.glass,
-                water = variant.water,
+                colors = palette.colors(isDark),
+                glass = palette.glass(isDark),
+                water = palette.water(isDark),
                 displayProfile = displayProfile,
-                materialMode = variant.materialMode
+                materialMode = style,
+                isDark = isDark
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

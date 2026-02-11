@@ -1,59 +1,53 @@
 package com.augmentalis.avanueui.theme
 
 /**
- * Available theme variants for the Avanues ecosystem.
+ * Legacy theme variant enum — couples palette + material style.
  *
- * Each variant provides a complete color scheme and glass effect recipe.
- * Use with AvanueThemeProvider to apply at runtime:
- * ```
- * val variant = AvanueThemeVariant.LIQUID
- * AvanueThemeProvider(colors = variant.colors, glass = variant.glass) { ... }
- * ```
+ * @deprecated Use [AvanueColorPalette] + [MaterialMode] independently.
+ * This enum is kept for backward compatibility and migration.
  *
- * Runtime switching: Store the variant name in DataStore preferences,
- * observe as StateFlow, and pass to AvanueThemeProvider.
+ * Migration mapping:
+ * - OCEAN → LUNA + GLASS
+ * - SUNSET → SOL + GLASS
+ * - LIQUID → HYDRA + WATER
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
+@Suppress("DEPRECATION")
+@Deprecated("Use AvanueColorPalette + MaterialMode independently")
 enum class AvanueThemeVariant(val displayName: String) {
     OCEAN("Ocean Blue"),
     SUNSET("Sunset Warm"),
     LIQUID("Liquid Glass");
 
-    /** Visual rendering mode for unified Avanue* components */
+    /** Maps to the new decoupled palette */
+    val palette: AvanueColorPalette
+        get() = when (this) {
+            OCEAN -> AvanueColorPalette.LUNA
+            SUNSET -> AvanueColorPalette.SOL
+            LIQUID -> AvanueColorPalette.HYDRA
+        }
+
+    /** Maps to the new decoupled material mode */
     val materialMode: MaterialMode
         get() = when (this) {
-            OCEAN -> MaterialMode.GLASS
-            SUNSET -> MaterialMode.GLASS
-            LIQUID -> MaterialMode.WATER
+            OCEAN -> MaterialMode.Glass
+            SUNSET -> MaterialMode.Glass
+            LIQUID -> MaterialMode.Water
         }
 
-    val colors: AvanueColorScheme
-        get() = when (this) {
-            OCEAN -> OceanColors
-            SUNSET -> SunsetColors
-            LIQUID -> LiquidColors
-        }
+    /** Delegate to palette colors */
+    val colors: AvanueColorScheme get() = palette.colors
 
-    val glass: AvanueGlassScheme
-        get() = when (this) {
-            OCEAN -> OceanGlass
-            SUNSET -> SunsetGlass
-            LIQUID -> LiquidGlass
-        }
+    /** Delegate to palette glass scheme */
+    val glass: AvanueGlassScheme get() = palette.glass
 
-    val water: AvanueWaterScheme
-        get() = when (this) {
-            OCEAN -> OceanWater
-            SUNSET -> SunsetWater
-            LIQUID -> LiquidWater
-        }
+    /** Delegate to palette water scheme */
+    val water: AvanueWaterScheme get() = palette.water
 
     companion object {
-        /** Default theme variant for new installations */
         val DEFAULT = LIQUID
 
-        /** Parse from stored string, falling back to default */
         fun fromString(value: String): AvanueThemeVariant {
             return try {
                 valueOf(value.uppercase())

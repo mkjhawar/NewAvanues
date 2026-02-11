@@ -4,6 +4,9 @@
  * Persists all app-level settings (cursor, voice, boot, browser) using
  * Jetpack DataStore Preferences. Observable via Flow for reactive UI.
  *
+ * Theme v5.1: Palette, style, and appearance stored independently.
+ * Migration: old theme_variant → new palette + style keys.
+ *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 
@@ -17,7 +20,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import com.augmentalis.avanueui.theme.AvanueThemeVariant
+import com.augmentalis.avanueui.theme.AppearanceMode
+import com.augmentalis.avanueui.theme.AvanueColorPalette
+import com.augmentalis.avanueui.theme.MaterialMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -36,7 +41,9 @@ data class AvanuesSettings(
     val cursorSmoothing: Boolean = true,
     val voiceFeedback: Boolean = true,
     val autoStartOnBoot: Boolean = false,
-    val themeVariant: String = AvanueThemeVariant.DEFAULT.name,
+    val themePalette: String = AvanueColorPalette.DEFAULT.name,
+    val themeStyle: String = MaterialMode.DEFAULT.name,
+    val themeAppearance: String = AppearanceMode.DEFAULT.name,
 
     // VoiceCursor appearance
     val cursorSize: Int = 48,
@@ -57,6 +64,12 @@ class AvanuesSettingsRepository @Inject constructor(
         private val KEY_CURSOR_SMOOTHING = booleanPreferencesKey("cursor_smoothing")
         private val KEY_VOICE_FEEDBACK = booleanPreferencesKey("voice_feedback")
         private val KEY_AUTO_START_ON_BOOT = booleanPreferencesKey("auto_start_on_boot")
+
+        // Theme v5.1: decoupled palette + style + appearance
+        private val KEY_THEME_PALETTE = stringPreferencesKey("theme_palette")
+        private val KEY_THEME_STYLE = stringPreferencesKey("theme_style")
+        private val KEY_THEME_APPEARANCE = stringPreferencesKey("theme_appearance")
+        // Legacy key — read-only for migration
         private val KEY_THEME_VARIANT = stringPreferencesKey("theme_variant")
 
         // VoiceCursor appearance
@@ -68,9 +81,36 @@ class AvanuesSettingsRepository @Inject constructor(
         // Voice command persistence (AVU wire protocol format)
         private val KEY_DISABLED_COMMANDS = stringSetPreferencesKey("vcm_disabled_commands")
         private val KEY_USER_SYNONYMS = stringPreferencesKey("vcm_user_synonyms")
+
+        /**
+         * Migrate old theme_variant to new palette string.
+         * OCEAN→LUNA, SUNSET→SOL, LIQUID→HYDRA
+         */
+        private fun migrateVariantToPalette(variant: String?): String = when {
+            variant.equals("OCEAN", ignoreCase = true) -> "LUNA"
+            variant.equals("SUNSET", ignoreCase = true) -> "SOL"
+            variant.equals("LIQUID", ignoreCase = true) -> "HYDRA"
+            else -> AvanueColorPalette.DEFAULT.name
+        }
+
+        /**
+         * Migrate old theme_variant to new style string.
+         * OCEAN→GLASS, SUNSET→GLASS, LIQUID→WATER
+         */
+        private fun migrateVariantToStyle(variant: String?): String = when {
+            variant.equals("OCEAN", ignoreCase = true) -> "GLASS"
+            variant.equals("SUNSET", ignoreCase = true) -> "GLASS"
+            variant.equals("LIQUID", ignoreCase = true) -> "WATER"
+            else -> MaterialMode.DEFAULT.name
+        }
     }
 
     val settings: Flow<AvanuesSettings> = context.avanuesDataStore.data.map { prefs ->
+        // Migration: if new keys don't exist, derive from old theme_variant
+        val oldVariant = prefs[KEY_THEME_VARIANT]
+        val palette = prefs[KEY_THEME_PALETTE] ?: migrateVariantToPalette(oldVariant)
+        val style = prefs[KEY_THEME_STYLE] ?: migrateVariantToStyle(oldVariant)
+
         AvanuesSettings(
             cursorEnabled = prefs[KEY_CURSOR_ENABLED] ?: false,
             dwellClickEnabled = prefs[KEY_DWELL_CLICK_ENABLED] ?: true,
@@ -78,7 +118,9 @@ class AvanuesSettingsRepository @Inject constructor(
             cursorSmoothing = prefs[KEY_CURSOR_SMOOTHING] ?: true,
             voiceFeedback = prefs[KEY_VOICE_FEEDBACK] ?: true,
             autoStartOnBoot = prefs[KEY_AUTO_START_ON_BOOT] ?: false,
-            themeVariant = prefs[KEY_THEME_VARIANT] ?: AvanueThemeVariant.DEFAULT.name,
+            themePalette = palette,
+            themeStyle = style,
+            themeAppearance = prefs[KEY_THEME_APPEARANCE] ?: AppearanceMode.DEFAULT.name,
             cursorSize = prefs[KEY_CURSOR_SIZE] ?: 48,
             cursorSpeed = prefs[KEY_CURSOR_SPEED] ?: 8,
             showCoordinates = prefs[KEY_SHOW_COORDINATES] ?: false,
@@ -110,8 +152,16 @@ class AvanuesSettingsRepository @Inject constructor(
         context.avanuesDataStore.edit { it[KEY_AUTO_START_ON_BOOT] = enabled }
     }
 
-    suspend fun updateThemeVariant(variant: String) {
-        context.avanuesDataStore.edit { it[KEY_THEME_VARIANT] = variant }
+    suspend fun updateThemePalette(palette: String) {
+        context.avanuesDataStore.edit { it[KEY_THEME_PALETTE] = palette }
+    }
+
+    suspend fun updateThemeStyle(style: String) {
+        context.avanuesDataStore.edit { it[KEY_THEME_STYLE] = style }
+    }
+
+    suspend fun updateThemeAppearance(appearance: String) {
+        context.avanuesDataStore.edit { it[KEY_THEME_APPEARANCE] = appearance }
     }
 
     suspend fun updateCursorSize(size: Int) {

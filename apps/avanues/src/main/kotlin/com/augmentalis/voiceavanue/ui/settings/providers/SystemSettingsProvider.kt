@@ -1,7 +1,7 @@
 /**
- * SystemSettingsProvider.kt - System-level settings (boot, etc.)
+ * SystemSettingsProvider.kt - System-level settings (theme, boot)
  *
- * Provides system settings like "Start on Boot".
+ * Theme v5.1: Three independent dropdowns for palette, material style, and appearance.
  * State persisted via AvanuesSettingsRepository (DataStore).
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
@@ -10,6 +10,8 @@
 package com.augmentalis.voiceavanue.ui.settings.providers
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Settings
@@ -21,7 +23,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.augmentalis.avanueui.components.settings.SettingsDropdownRow
 import com.augmentalis.avanueui.components.settings.SettingsGroupCard
 import com.augmentalis.avanueui.components.settings.SettingsSwitchRow
-import com.augmentalis.avanueui.theme.AvanueThemeVariant
+import com.augmentalis.avanueui.theme.AppearanceMode
+import com.augmentalis.avanueui.theme.AvanueColorPalette
+import com.augmentalis.avanueui.theme.MaterialMode
 import com.augmentalis.foundation.settings.SearchableSettingEntry
 import com.augmentalis.foundation.settings.SettingsSection
 import com.augmentalis.voiceavanue.data.AvanuesSettings
@@ -45,10 +49,22 @@ class SystemSettingsProvider @Inject constructor(
 
     override val searchableEntries = listOf(
         SearchableSettingEntry(
-            key = "theme_variant",
-            displayName = "Theme",
+            key = "theme_palette",
+            displayName = "Color Palette",
             sectionId = "system",
-            keywords = listOf("theme", "color", "dark", "glass", "ocean", "sunset", "liquid", "appearance")
+            keywords = listOf("theme", "color", "palette", "sol", "luna", "terra", "hydra", "appearance")
+        ),
+        SearchableSettingEntry(
+            key = "theme_style",
+            displayName = "Material Style",
+            sectionId = "system",
+            keywords = listOf("style", "glass", "water", "cupertino", "mountainview", "material", "rendering")
+        ),
+        SearchableSettingEntry(
+            key = "theme_appearance",
+            displayName = "Appearance",
+            sectionId = "system",
+            keywords = listOf("appearance", "light", "dark", "auto", "mode", "brightness", "night")
         ),
         SearchableSettingEntry(
             key = "auto_start_on_boot",
@@ -63,17 +79,37 @@ class SystemSettingsProvider @Inject constructor(
         val settings by repository.settings.collectAsState(initial = AvanuesSettings())
         val scope = rememberCoroutineScope()
 
-        val currentVariant = AvanueThemeVariant.fromString(settings.themeVariant)
+        val currentPalette = AvanueColorPalette.fromString(settings.themePalette)
+        val currentStyle = MaterialMode.fromString(settings.themeStyle)
+        val currentAppearance = AppearanceMode.fromString(settings.themeAppearance)
 
         SettingsGroupCard {
             SettingsDropdownRow(
-                title = "Theme",
-                subtitle = "App color scheme and glass style",
+                title = "Color Palette",
+                subtitle = "App color scheme",
                 icon = Icons.Default.Palette,
-                selected = currentVariant,
-                options = AvanueThemeVariant.entries.toList(),
+                selected = currentPalette,
+                options = AvanueColorPalette.entries.toList(),
                 optionLabel = { it.displayName },
-                onSelected = { scope.launch { repository.updateThemeVariant(it.name) } }
+                onSelected = { scope.launch { repository.updateThemePalette(it.name) } }
+            )
+            SettingsDropdownRow(
+                title = "Material Style",
+                subtitle = "Visual rendering style",
+                icon = Icons.Default.Brush,
+                selected = currentStyle,
+                options = MaterialMode.entries.toList(),
+                optionLabel = { it.displayName },
+                onSelected = { scope.launch { repository.updateThemeStyle(it.name) } }
+            )
+            SettingsDropdownRow(
+                title = "Appearance",
+                subtitle = "Light or dark mode",
+                icon = Icons.Default.Brightness6,
+                selected = currentAppearance,
+                options = AppearanceMode.entries.toList(),
+                optionLabel = { it.displayName },
+                onSelected = { scope.launch { repository.updateThemeAppearance(it.name) } }
             )
         }
 
