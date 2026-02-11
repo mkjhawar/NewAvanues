@@ -13,9 +13,12 @@
 
 package com.augmentalis.voiceavanue.ui.about
 
+import android.os.Build
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Code
@@ -34,7 +38,9 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,10 +54,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.components.navigation.GroupedListDetailScaffold
@@ -63,10 +71,14 @@ import com.augmentalis.voiceavanue.ui.settings.OssLicenseRegistry
 import com.augmentalis.voiceavanue.ui.settings.OssLibrary
 import com.augmentalis.voiceavanue.ui.settings.OssHolder
 import com.augmentalis.voiceavanue.ui.settings.OssLicenseGroup
+import java.util.Calendar
 
 /**
  * About screen items — each represents a row in the grouped list.
  */
+/** Auto-incrementing copyright year: always current year. */
+private val COPYRIGHT_YEAR: Int get() = Calendar.getInstance().get(Calendar.YEAR)
+
 private enum class AboutItem(
     val displayTitle: String,
     val icon: ImageVector
@@ -74,6 +86,7 @@ private enum class AboutItem(
     VERSION("Version", Icons.Default.Info),
     BUILD("Version & Changelog", Icons.Default.Code),
     LICENSES("Open Source Licenses", Icons.Default.Description),
+    PATENTS("Patents & IP", Icons.Default.Security),
     PRIVACY("Privacy Policy", Icons.Default.PrivacyTip),
     TERMS("Terms of Service", Icons.Default.Gavel),
     CREDITS("Credits", Icons.Default.Favorite)
@@ -83,9 +96,10 @@ private fun aboutItemSubtitle(item: AboutItem): String = when (item) {
     AboutItem.VERSION -> BuildConfig.VERSION_NAME
     AboutItem.BUILD -> "What's new in this release"
     AboutItem.LICENSES -> "${OssLicenseRegistry.totalLibraries} libraries"
+    AboutItem.PATENTS -> "U.S. and international patent protection"
     AboutItem.PRIVACY -> "How we handle your data"
     AboutItem.TERMS -> "Usage terms and conditions"
-    AboutItem.CREDITS -> "\u00A9 2018-2024 Intelligent Devices LLC"
+    AboutItem.CREDITS -> "\u00A9 2018-$COPYRIGHT_YEAR Intelligent Devices LLC"
 }
 
 /**
@@ -103,7 +117,7 @@ fun AboutScreen(
         ),
         GroupedListSection(
             title = "Legal",
-            items = listOf(AboutItem.LICENSES, AboutItem.PRIVACY, AboutItem.TERMS)
+            items = listOf(AboutItem.LICENSES, AboutItem.PATENTS, AboutItem.PRIVACY, AboutItem.TERMS)
         ),
         GroupedListSection(
             title = "",
@@ -116,7 +130,7 @@ fun AboutScreen(
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
     GroupedListDetailScaffold(
-        title = "VoiceOS\u00AE Avanues",
+        title = "VoiceOS Avanues",
         sections = sections,
         itemKey = { it.name },
         onNavigateBack = onNavigateBack,
@@ -175,12 +189,50 @@ private fun AboutDetailContent(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                InfoRow("Version", BuildConfig.VERSION_NAME)
-                InfoRow("Version Code", BuildConfig.VERSION_CODE.toString())
-                InfoRow("Build Type", BuildConfig.BUILD_TYPE)
+                // App branding header
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(AvanueTheme.colors.primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Mic,
+                            contentDescription = null,
+                            tint = AvanueTheme.colors.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    Text(
+                        text = "VoiceOS Avanues",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = AvanueTheme.colors.textPrimary,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AvanueTheme.colors.textSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                HorizontalDivider(color = AvanueTheme.colors.textDisabled.copy(alpha = 0.3f))
+
+                InfoRow("Build Type", BuildConfig.BUILD_TYPE.replaceFirstChar { it.uppercaseChar() })
                 InfoRow("Application ID", BuildConfig.APPLICATION_ID)
+                InfoRow("Target SDK", "34")
+                InfoRow("Device", "${Build.MANUFACTURER} ${Build.MODEL}")
+                InfoRow("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
             }
         }
 
@@ -210,6 +262,60 @@ private fun AboutDetailContent(
 
         AboutItem.LICENSES -> {
             LicenseDetailContent(modifier = modifier)
+        }
+
+        AboutItem.PATENTS -> {
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Patents & Intellectual Property",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = AvanueTheme.colors.textPrimary
+                )
+
+                Text(
+                    text = "This application and its underlying technology are protected by " +
+                        "one or more U.S. and/or international patents, and patents pending.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AvanueTheme.colors.textSecondary
+                )
+
+                HorizontalDivider(color = AvanueTheme.colors.textDisabled.copy(alpha = 0.3f))
+
+                Text(
+                    text = "COVERED TECHNOLOGIES",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = AvanueTheme.colors.primary
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PatentRow("Voice-based accessibility UI interaction")
+                    PatentRow("Dynamic voice command generation from UI elements")
+                    PatentRow("Cross-platform voice command synchronization")
+                    PatentRow("Adaptive voice cursor control system")
+                }
+
+                HorizontalDivider(color = AvanueTheme.colors.textDisabled.copy(alpha = 0.3f))
+
+                Text(
+                    text = "\u00A9 2018-$COPYRIGHT_YEAR Intelligent Devices LLC and Augmentalis Inc.\n" +
+                        "All rights reserved.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AvanueTheme.colors.textSecondary
+                )
+
+                Text(
+                    text = "VoiceOS, VoiceTouch, CursorAvanue, WebAvanue, and Avanues are " +
+                        "trademarks of Intelligent Devices LLC.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AvanueTheme.colors.textSecondary
+                )
+            }
         }
 
         AboutItem.PRIVACY -> {
@@ -264,34 +370,63 @@ private fun AboutDetailContent(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(AvanueTheme.colors.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = AvanueTheme.colors.primary,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
                 Text(
-                    text = "Credits",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = AvanueTheme.colors.textPrimary
+                    text = "VoiceOS Avanues EcoSystem",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = AvanueTheme.colors.textPrimary,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "Imagined, Designed & Written by",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AvanueTheme.colors.textSecondary,
+                    textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "VoiceOS\u00AE Avanues EcoSystem",
+                    text = "Manoj Jhawar with Aman Jhawar",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = AvanueTheme.colors.textPrimary
+                    color = AvanueTheme.colors.textPrimary,
+                    textAlign = TextAlign.Center
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
-                    text = "Imagined, Designed & Written by: Manoj Jhawar with Aman Jhawar",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AvanueTheme.colors.textSecondary
-                )
-                Text(
-                    text = "\u00A9 2018-2024 Intelligent Devices LLC and Augmentalis Inc.",
+                    text = "\u00A9 2018-$COPYRIGHT_YEAR\nIntelligent Devices LLC and Augmentalis Inc.",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = AvanueTheme.colors.primary
+                    color = AvanueTheme.colors.primary,
+                    textAlign = TextAlign.Center
                 )
+
                 Text(
                     text = "Designed and Created in California with Love.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = AvanueTheme.colors.textSecondary
+                    color = AvanueTheme.colors.textSecondary,
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -469,6 +604,27 @@ private fun InfoRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyLarge,
+            color = AvanueTheme.colors.textPrimary
+        )
+    }
+}
+
+@Composable
+private fun PatentRow(technology: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(AvanueTheme.colors.primary)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = technology,
+            style = MaterialTheme.typography.bodyMedium,
             color = AvanueTheme.colors.textPrimary
         )
     }

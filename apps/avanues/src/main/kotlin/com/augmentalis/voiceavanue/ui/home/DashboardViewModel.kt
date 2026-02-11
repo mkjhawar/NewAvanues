@@ -313,7 +313,7 @@ class DashboardViewModel @Inject constructor(
                 ModuleStatus(
                     moduleId = "voiceavanue",
                     displayName = "VoiceTouch\u2122",
-                    description = "powered by VoiceOS\u00AE",
+                    description = "powered by VoiceOS",
                     state = voiceAvanueState,
                     metadata = (voiceAvanueState as? ServiceState.Running)?.metadata ?: emptyMap()
                 ),
