@@ -35,10 +35,14 @@ class CommandRegistry {
      * Atomic snapshot of commands and label cache.
      * Using a single reference ensures consistent reads without the risk of
      * reading commands from one update and labelCache from another.
+     *
+     * sourceKeys tracks which phrase keys belong to which source (e.g., "accessibility", "web").
+     * This enables source-isolated updates: updating one source never removes another's commands.
      */
     private data class CommandSnapshot(
         val commands: Map<String, QuantizedCommand>,
-        val labelCache: Map<String, String>
+        val labelCache: Map<String, String>,
+        val sourceKeys: Map<String, Set<String>> = emptyMap()
     )
 
     /**
@@ -88,8 +92,120 @@ class CommandRegistry {
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Source-Aware Updates
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Update commands from a specific source, preserving commands from other sources.
+     *
+     * Each source (e.g., "accessibility", "web") manages its own set of commands.
+     * Calling updateBySource("web", webCommands) replaces ONLY web commands;
+     * accessibility commands remain untouched.
+     *
+     * This eliminates the race condition where accessibility tree scans
+     * overwrite web DOM commands (and vice versa).
+     *
+     * Thread-safe: Uses runBlocking with timeout to acquire the mutex.
+     *
+     * @param source Source identifier (e.g., "accessibility", "web", "plugin")
+     * @param newCommands Commands from this source
+     */
+    fun updateBySource(source: String, newCommands: List<QuantizedCommand>) {
+        runBlocking {
+            withTimeout(5000L) {
+                mutex.withLock {
+                    updateBySourceInternal(source, newCommands)
+                }
+            }
+        }
+    }
+
+    /**
+     * Suspend version of [updateBySource] for coroutine contexts.
+     */
+    suspend fun updateBySourceSuspend(source: String, newCommands: List<QuantizedCommand>) {
+        mutex.withLock {
+            updateBySourceInternal(source, newCommands)
+        }
+    }
+
+    /**
+     * Internal source-aware update logic - must be called while holding the mutex.
+     *
+     * Steps:
+     * 1. Remove all commands belonging to [source] from the current snapshot
+     * 2. Add new valid commands
+     * 3. Update sourceKeys index: new key ownership goes to this source,
+     *    removed from any other source that previously owned it
+     * 4. Rebuild label cache
+     * 5. Single atomic snapshot write
+     */
+    private fun updateBySourceInternal(source: String, newCommands: List<QuantizedCommand>) {
+        val snap = snapshot
+        val updatedCommands = snap.commands.toMutableMap()
+        val updatedSourceKeys = snap.sourceKeys.toMutableMap()
+
+        // Remove all commands belonging to this source
+        val oldKeys = updatedSourceKeys[source] ?: emptySet()
+        oldKeys.forEach { updatedCommands.remove(it) }
+
+        // Add new valid commands
+        val validCommands = newCommands.filter { it.targetVuid != null && it.phrase.isNotBlank() }
+        val newKeys = mutableSetOf<String>()
+
+        for (cmd in validCommands) {
+            val key = cmd.phrase.lowercase()
+            updatedCommands[key] = cmd
+            newKeys.add(key)
+
+            // If another source owned this key, transfer ownership
+            // Snapshot before mutation to avoid ConcurrentModificationException
+            for ((otherSource, otherKeys) in updatedSourceKeys.toMap()) {
+                if (otherSource != source && key in otherKeys) {
+                    LoggingUtils.d("Key conflict: '$key' transferred from $otherSource to $source", TAG)
+                    updatedSourceKeys[otherSource] = otherKeys - key
+                }
+            }
+        }
+        updatedSourceKeys[source] = newKeys
+
+        // Rebuild label cache
+        val newLabelCache = mutableMapOf<String, String>()
+        for ((key, cmd) in updatedCommands) {
+            val label = cmd.phrase.substringAfter(" ").lowercase()
+            if (label.length > 1) {
+                newLabelCache[key] = label
+            }
+        }
+
+        LoggingUtils.d("updateBySource('$source'): removed ${oldKeys.size}, added ${newKeys.size}, total ${updatedCommands.size}", TAG)
+
+        // Single atomic write
+        snapshot = CommandSnapshot(updatedCommands, newLabelCache, updatedSourceKeys)
+    }
+
+    /**
+     * Clear commands from a specific source only.
+     * Other sources' commands remain untouched.
+     *
+     * Thread-safe: Uses runBlocking with timeout to acquire the mutex.
+     *
+     * @param source Source identifier to clear
+     */
+    fun clearBySource(source: String) {
+        runBlocking {
+            withTimeout(5000L) {
+                mutex.withLock {
+                    updateBySourceInternal(source, emptyList())
+                }
+            }
+        }
+    }
+
     /**
      * Internal update logic - must be called while holding the mutex.
+     * Replaces ALL commands regardless of source (clears sourceKeys).
      */
     private fun updateInternal(newCommands: List<QuantizedCommand>) {
         val validCommands = newCommands.filter { it.targetVuid != null && it.phrase.isNotBlank() }
@@ -230,8 +346,8 @@ class CommandRegistry {
                     }
 
                     LoggingUtils.d("addAll: adding ${toAdd.size} commands: ${toAdd.take(5).map { it.phrase }}", TAG)
-                    // Single atomic write ensures consistent reads
-                    snapshot = CommandSnapshot(newCommands, newLabelCache)
+                    // Single atomic write ensures consistent reads — preserve sourceKeys
+                    snapshot = CommandSnapshot(newCommands, newLabelCache, snap.sourceKeys)
                 }
             }
         }

@@ -122,6 +122,31 @@ class ActionCoordinator(
     }
 
     /**
+     * Update dynamic commands from a specific source, preserving other sources' commands.
+     *
+     * This is the source-aware variant of [updateDynamicCommands].
+     * Each source (e.g., "accessibility", "web") manages its own set of commands.
+     * Calling this with source="web" replaces only web commands; accessibility
+     * commands remain untouched, and vice versa.
+     *
+     * @param source Source identifier (e.g., "accessibility", "web")
+     * @param commands List of quantized commands from this source
+     */
+    suspend fun updateDynamicCommandsBySource(source: String, commands: List<QuantizedCommand>) {
+        commandRegistry.updateBySourceSuspend(source, commands)
+    }
+
+    /**
+     * Clear dynamic commands from a specific source only.
+     * Other sources' commands remain untouched.
+     *
+     * @param source Source identifier to clear
+     */
+    fun clearDynamicCommandsBySource(source: String) {
+        commandRegistry.clearBySource(source)
+    }
+
+    /**
      * Clear all dynamic commands.
      * Call when leaving an app or screen context is invalid.
      */

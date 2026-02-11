@@ -181,7 +181,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                 val callbackInstance = BrowserVoiceOSCallback.activeInstance
                                 if (callbackInstance != null && phrases.isNotEmpty()) {
                                     val quantizedWebCommands = callbackInstance.getWebCommandsAsQuantized()
-                                    voiceOSCore?.actionCoordinator?.updateDynamicCommands(quantizedWebCommands)
+                                    voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("web", quantizedWebCommands)
 
                                     // Wire the WebCommandExecutorImpl to WebCommandHandler
                                     // The executor delegates to BrowserVoiceOSCallback's JS executor
@@ -193,7 +193,8 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
                                     Log.d(TAG, "Web commands dual-path: ${phrases.size} phrases, ${quantizedWebCommands.size} quantized")
                                 } else if (phrases.isEmpty()) {
-                                    // Clear dynamic commands when leaving browser
+                                    // Clear web commands when leaving browser (preserves accessibility commands)
+                                    voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web")
                                     webCommandHandler?.setExecutor(null)
                                 }
                             } catch (e: Exception) {

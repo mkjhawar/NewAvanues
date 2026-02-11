@@ -285,9 +285,9 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
 
                 Log.d(TAG, "Generated ${commands.size} commands for $packageName")
 
-                // Update ActionCoordinator
+                // Update ActionCoordinator — source-tagged to preserve web commands
                 val coordinator = getActionCoordinator()
-                coordinator.updateDynamicCommands(commands)
+                coordinator.updateDynamicCommandsBySource("accessibility", commands)
 
                 // Notify app-level service
                 onCommandsUpdated(commands)
