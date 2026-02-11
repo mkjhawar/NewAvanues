@@ -1,0 +1,139 @@
+-- VosFileRegistry.sq - SQLDelight schema for VOS file registry
+-- Tracks all VOS files (bundled, local, downloaded) with full provenance metadata
+-- Author: Manoj Jhawar
+-- Date: 2026-02-11
+
+CREATE TABLE IF NOT EXISTS vos_file_registry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- Identity
+    file_id TEXT NOT NULL,                      -- domain (web) or locale (app)
+    file_type TEXT NOT NULL,                    -- "app" or "web"
+    file_name TEXT NOT NULL,                    -- e.g., "google.com.web.vos"
+
+    -- Content
+    content_hash TEXT NOT NULL,                 -- SHA-256 of commands JSON
+    command_count INTEGER NOT NULL,
+    vos_version TEXT NOT NULL,                  -- "2.1"
+
+    -- Full Provenance
+    domain TEXT,                                -- website domain (web only)
+    page_title TEXT,                            -- page title at scrape time
+    url_patterns TEXT,                          -- JSON array of URL patterns covered
+    uploader_device_id TEXT,                    -- anonymized device fingerprint
+    user_agent TEXT,                            -- browser user agent
+    scrape_duration_ms INTEGER,                 -- how long scrape took
+
+    -- Timestamps
+    scraped_at INTEGER NOT NULL,               -- when scraped/created
+    uploaded_at INTEGER,                       -- when uploaded to FTP
+    downloaded_at INTEGER,                     -- when downloaded from FTP
+
+    -- Status
+    source TEXT NOT NULL DEFAULT 'local',       -- 'local', 'downloaded', 'bundled'
+    local_path TEXT,                            -- file path on device
+    is_active INTEGER NOT NULL DEFAULT 1,       -- currently in use?
+
+    -- Versioning
+    version INTEGER NOT NULL DEFAULT 1,         -- incremental version per file_id
+
+    UNIQUE(file_id, file_type, version)
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_vfr_file_id ON vos_file_registry(file_id);
+CREATE INDEX IF NOT EXISTS idx_vfr_type ON vos_file_registry(file_type);
+CREATE INDEX IF NOT EXISTS idx_vfr_domain ON vos_file_registry(domain);
+CREATE INDEX IF NOT EXISTS idx_vfr_hash ON vos_file_registry(content_hash);
+CREATE INDEX IF NOT EXISTS idx_vfr_active ON vos_file_registry(is_active);
+
+-- ==================== Named Queries ====================
+
+-- Insert a new VOS file record
+insert:
+INSERT OR REPLACE INTO vos_file_registry (
+    file_id, file_type, file_name, content_hash, command_count, vos_version,
+    domain, page_title, url_patterns, uploader_device_id, user_agent, scrape_duration_ms,
+    scraped_at, uploaded_at, downloaded_at, source, local_path, is_active, version
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get by file ID (all versions)
+getByFileId:
+SELECT * FROM vos_file_registry
+WHERE file_id = ?
+ORDER BY version DESC;
+
+-- Get by domain (web files for a specific website)
+getByDomain:
+SELECT * FROM vos_file_registry
+WHERE domain = ? AND file_type = 'web'
+ORDER BY version DESC;
+
+-- Get by content hash (dedup check)
+getByHash:
+SELECT * FROM vos_file_registry
+WHERE content_hash = ?;
+
+-- Get all active files
+getActive:
+SELECT * FROM vos_file_registry
+WHERE is_active = 1
+ORDER BY file_type, file_id;
+
+-- Get all files by type (app or web)
+getAllByType:
+SELECT * FROM vos_file_registry
+WHERE file_type = ?
+ORDER BY file_id, version DESC;
+
+-- Get latest version for a file
+getLatestVersion:
+SELECT * FROM vos_file_registry
+WHERE file_id = ? AND file_type = ?
+ORDER BY version DESC
+LIMIT 1;
+
+-- Update uploaded timestamp
+updateUploadedAt:
+UPDATE vos_file_registry
+SET uploaded_at = ?
+WHERE id = ?;
+
+-- Update downloaded timestamp
+updateDownloadedAt:
+UPDATE vos_file_registry
+SET downloaded_at = ?
+WHERE id = ?;
+
+-- Deactivate old versions (keep only latest active)
+deactivateOldVersions:
+UPDATE vos_file_registry
+SET is_active = 0
+WHERE file_id = ? AND file_type = ? AND version < ?;
+
+-- Delete by ID
+deleteById:
+DELETE FROM vos_file_registry WHERE id = ?;
+
+-- Check if content hash exists (returns 1 or 0)
+existsByHash:
+SELECT COUNT(*) FROM vos_file_registry
+WHERE content_hash = ?;
+
+-- Count all records
+count:
+SELECT COUNT(*) FROM vos_file_registry;
+
+-- Count active records by type
+countActiveByType:
+SELECT COUNT(*) FROM vos_file_registry
+WHERE file_type = ? AND is_active = 1;
+
+-- Get all records
+getAll:
+SELECT * FROM vos_file_registry
+ORDER BY file_type, file_id, version DESC;
+
+-- Delete all records
+deleteAll:
+DELETE FROM vos_file_registry;

@@ -1,0 +1,696 @@
+{
+  "version": "2.1",
+  "locale": "de-DE",
+  "fallback": "en-US",
+  "domain": "app",
+  "category_map": {
+    "nav": "NAVIGATION",
+    "media": "MEDIA",
+    "sys": "SYSTEM",
+    "voice": "VOICE_CONTROL",
+    "app": "APP_LAUNCH",
+    "acc": "ACCESSIBILITY",
+    "text": "TEXT",
+    "input": "INPUT",
+    "appctl": "APP_CONTROL"
+  },
+  "action_map": {
+    "nav_back": "BACK",
+    "nav_home": "HOME",
+    "nav_recent": "RECENT_APPS",
+    "nav_drawer": "APP_DRAWER",
+    "nav_scroll_down": "SCROLL_DOWN",
+    "nav_scroll_up": "SCROLL_UP",
+    "nav_scroll_left": "SCROLL_LEFT",
+    "nav_scroll_right": "SCROLL_RIGHT",
+    "media_play": "MEDIA_PLAY",
+    "media_pause": "MEDIA_PAUSE",
+    "media_next": "MEDIA_NEXT",
+    "media_prev": "MEDIA_PREVIOUS",
+    "media_vol_up": "VOLUME_UP",
+    "media_vol_down": "VOLUME_DOWN",
+    "media_mute": "VOLUME_MUTE",
+    "sys_settings": "OPEN_SETTINGS",
+    "sys_notifications": "NOTIFICATIONS",
+    "sys_clear_notif": "CLEAR_NOTIFICATIONS",
+    "sys_screenshot": "SCREENSHOT",
+    "sys_flash_on": "FLASHLIGHT_ON",
+    "sys_flash_off": "FLASHLIGHT_OFF",
+    "sys_bright_up": "BRIGHTNESS_UP",
+    "sys_bright_down": "BRIGHTNESS_DOWN",
+    "sys_lock": "LOCK_SCREEN",
+    "sys_rotate": "ROTATE_SCREEN",
+    "sys_wifi": "TOGGLE_WIFI",
+    "sys_bluetooth": "TOGGLE_BLUETOOTH",
+    "voice_mute": "VOICE_MUTE",
+    "voice_wake": "VOICE_WAKE",
+    "voice_dict_start": "DICTATION_START",
+    "voice_dict_stop": "DICTATION_STOP",
+    "voice_help": "SHOW_COMMANDS",
+    "voice_num_on": "NUMBERS_ON",
+    "voice_num_off": "NUMBERS_OFF",
+    "voice_num_auto": "NUMBERS_AUTO",
+    "voice_cursor_show": "CURSOR_SHOW",
+    "voice_cursor_hide": "CURSOR_HIDE",
+    "voice_cursor_click": "CURSOR_CLICK",
+    "app_browser": "OPEN_APP",
+    "app_camera": "OPEN_APP",
+    "app_gallery": "OPEN_APP",
+    "app_calc": "OPEN_APP",
+    "app_calendar": "OPEN_APP",
+    "app_phone": "OPEN_APP",
+    "app_messages": "OPEN_APP",
+    "app_contacts": "OPEN_APP",
+    "acc_click": "CLICK",
+    "acc_long_click": "LONG_CLICK",
+    "acc_zoom_in": "ZOOM_IN",
+    "acc_zoom_out": "ZOOM_OUT",
+    "acc_read": "READ_SCREEN",
+    "acc_stop_read": "STOP_READING",
+    "text_select_all": "SELECT_ALL",
+    "text_copy": "COPY",
+    "text_paste": "PASTE",
+    "text_cut": "CUT",
+    "text_undo": "UNDO",
+    "text_redo": "REDO",
+    "text_delete": "DELETE",
+    "input_show_kb": "SHOW_KEYBOARD",
+    "input_hide_kb": "HIDE_KEYBOARD",
+    "appctl_close": "CLOSE_APP"
+  },
+  "meta_map": {
+    "app_browser": {
+      "app_type": "browser"
+    },
+    "app_camera": {
+      "app_type": "camera"
+    },
+    "app_gallery": {
+      "app_type": "gallery"
+    },
+    "app_calc": {
+      "app_type": "calculator"
+    },
+    "app_calendar": {
+      "app_type": "calendar"
+    },
+    "app_phone": {
+      "app_type": "phone"
+    },
+    "app_messages": {
+      "app_type": "messages"
+    },
+    "app_contacts": {
+      "app_type": "contacts"
+    }
+  },
+  "commands": [
+    [
+      "nav_back",
+      "geh zurueck",
+      [
+        "zurueck",
+        "vorherige Seite",
+        "zurueck gehen"
+      ],
+      "Zum vorherigen Bildschirm navigieren"
+    ],
+    [
+      "nav_home",
+      "geh zum Startbildschirm",
+      [
+        "Startseite",
+        "Home",
+        "zum Home"
+      ],
+      "Zum Startbildschirm wechseln"
+    ],
+    [
+      "nav_recent",
+      "letzte Apps zeigen",
+      [
+        "letzte Apps",
+        "App-Wechsler",
+        "zuletzt verwendet"
+      ],
+      "Zuletzt verwendete Apps anzeigen"
+    ],
+    [
+      "nav_drawer",
+      "App-Schublade oeffnen",
+      [
+        "alle Apps",
+        "App-Liste"
+      ],
+      "App-Schublade oeffnen"
+    ],
+    [
+      "nav_scroll_down",
+      "nach unten scrollen",
+      [
+        "runter scrollen",
+        "Seite runter"
+      ],
+      "Nach unten scrollen"
+    ],
+    [
+      "nav_scroll_up",
+      "nach oben scrollen",
+      [
+        "hoch scrollen",
+        "Seite hoch"
+      ],
+      "Nach oben scrollen"
+    ],
+    [
+      "nav_scroll_left",
+      "nach links scrollen",
+      [
+        "links scrollen"
+      ],
+      "Nach links scrollen"
+    ],
+    [
+      "nav_scroll_right",
+      "nach rechts scrollen",
+      [
+        "rechts scrollen"
+      ],
+      "Nach rechts scrollen"
+    ],
+    [
+      "media_play",
+      "Musik abspielen",
+      [
+        "abspielen",
+        "play",
+        "weiter abspielen"
+      ],
+      "Medien abspielen oder fortsetzen"
+    ],
+    [
+      "media_pause",
+      "Musik pausieren",
+      [
+        "pausieren",
+        "Pause",
+        "stopp Musik"
+      ],
+      "Medien pausieren"
+    ],
+    [
+      "media_next",
+      "naechster Song",
+      [
+        "naechster Titel",
+        "ueberspringen",
+        "skip"
+      ],
+      "Naechster Titel"
+    ],
+    [
+      "media_prev",
+      "vorheriger Song",
+      [
+        "vorheriger Titel",
+        "zurueck"
+      ],
+      "Vorheriger Titel"
+    ],
+    [
+      "media_vol_up",
+      "lauter machen",
+      [
+        "Lautstaerke hoch",
+        "lauter"
+      ],
+      "Lautstaerke erhoehen"
+    ],
+    [
+      "media_vol_down",
+      "leiser machen",
+      [
+        "Lautstaerke runter",
+        "leiser",
+        "Ton runter"
+      ],
+      "Lautstaerke verringern"
+    ],
+    [
+      "media_mute",
+      "Ton aus",
+      [
+        "stumm",
+        "stummschalten",
+        "Lautstaerke aus"
+      ],
+      "Ton stummschalten"
+    ],
+    [
+      "sys_settings",
+      "Einstellungen oeffnen",
+      [
+        "Einstellungen",
+        "zeig Einstellungen",
+        "Geraeteeinstellungen"
+      ],
+      "Systemeinstellungen oeffnen"
+    ],
+    [
+      "sys_notifications",
+      "Benachrichtigungen zeigen",
+      [
+        "Benachrichtigungen",
+        "Mitteilungen"
+      ],
+      "Benachrichtigungen anzeigen"
+    ],
+    [
+      "sys_clear_notif",
+      "Benachrichtigungen loeschen",
+      [
+        "Mitteilungen loeschen",
+        "Benachrichtigungen entfernen"
+      ],
+      "Alle Benachrichtigungen loeschen"
+    ],
+    [
+      "sys_screenshot",
+      "Screenshot machen",
+      [
+        "Bildschirmfoto",
+        "Screenshot",
+        "Bildschirm aufnehmen"
+      ],
+      "Einen Screenshot machen"
+    ],
+    [
+      "sys_flash_on",
+      "Taschenlampe an",
+      [
+        "Taschenlampe einschalten",
+        "Licht an",
+        "Blitz an"
+      ],
+      "Taschenlampe einschalten"
+    ],
+    [
+      "sys_flash_off",
+      "Taschenlampe aus",
+      [
+        "Taschenlampe ausschalten",
+        "Licht aus",
+        "Blitz aus"
+      ],
+      "Taschenlampe ausschalten"
+    ],
+    [
+      "sys_bright_up",
+      "Helligkeit hoch",
+      [
+        "heller machen",
+        "heller"
+      ],
+      "Bildschirmhelligkeit erhoehen"
+    ],
+    [
+      "sys_bright_down",
+      "Helligkeit runter",
+      [
+        "dunkler machen",
+        "dunkler",
+        "dimmen"
+      ],
+      "Bildschirmhelligkeit verringern"
+    ],
+    [
+      "sys_lock",
+      "Bildschirm sperren",
+      [
+        "Handy sperren",
+        "sperren"
+      ],
+      "Bildschirm sperren"
+    ],
+    [
+      "sys_rotate",
+      "Bildschirm drehen",
+      [
+        "drehen",
+        "Ausrichtung aendern"
+      ],
+      "Bildschirmausrichtung umschalten"
+    ],
+    [
+      "sys_wifi",
+      "WLAN umschalten",
+      [
+        "WLAN an",
+        "WLAN aus",
+        "WLAN einschalten",
+        "WLAN ausschalten"
+      ],
+      "WLAN ein- oder ausschalten"
+    ],
+    [
+      "sys_bluetooth",
+      "Bluetooth umschalten",
+      [
+        "Bluetooth an",
+        "Bluetooth aus",
+        "Bluetooth einschalten",
+        "Bluetooth ausschalten"
+      ],
+      "Bluetooth ein- oder ausschalten"
+    ],
+    [
+      "voice_mute",
+      "Stimme stumm",
+      [
+        "aufhoeren zuzuhoeren",
+        "Sprache aus",
+        "nicht mehr zuhoeren"
+      ],
+      "Spracherkennung stummschalten"
+    ],
+    [
+      "voice_wake",
+      "Stimme aktivieren",
+      [
+        "zuhoeren starten",
+        "Sprache an",
+        "aufwachen"
+      ],
+      "Spracherkennung aktivieren"
+    ],
+    [
+      "voice_dict_start",
+      "Diktat starten",
+      [
+        "Diktiermodus",
+        "Diktat",
+        "tippen per Sprache"
+      ],
+      "Diktiermodus starten"
+    ],
+    [
+      "voice_dict_stop",
+      "Diktat beenden",
+      [
+        "Diktat stoppen",
+        "Befehlsmodus"
+      ],
+      "Diktiermodus beenden"
+    ],
+    [
+      "voice_help",
+      "Sprachbefehle zeigen",
+      [
+        "was kann ich sagen",
+        "Hilfe",
+        "Befehle anzeigen"
+      ],
+      "Verfuegbare Befehle anzeigen"
+    ],
+    [
+      "voice_num_on",
+      "Nummern an",
+      [
+        "Nummern zeigen",
+        "Nummern immer"
+      ],
+      "Nummerierte Markierungen immer auf Bildschirmelementen anzeigen"
+    ],
+    [
+      "voice_num_off",
+      "Nummern aus",
+      [
+        "Nummern verstecken",
+        "keine Nummern"
+      ],
+      "Nummerierte Markierungen nie anzeigen"
+    ],
+    [
+      "voice_num_auto",
+      "Nummern automatisch",
+      [
+        "Nummern auto",
+        "automatische Nummern"
+      ],
+      "Nummern nur bei Listen anzeigen (E-Mails, Nachrichten usw.)"
+    ],
+    [
+      "voice_cursor_show",
+      "Cursor zeigen",
+      [
+        "Cursor an",
+        "Cursor einschalten",
+        "Zeiger zeigen"
+      ],
+      "Sprach-Cursor-Overlay anzeigen"
+    ],
+    [
+      "voice_cursor_hide",
+      "Cursor verstecken",
+      [
+        "Cursor aus",
+        "Cursor ausschalten",
+        "Zeiger verstecken"
+      ],
+      "Sprach-Cursor-Overlay ausblenden"
+    ],
+    [
+      "voice_cursor_click",
+      "Cursor klicken",
+      [
+        "hier klicken",
+        "klick hier"
+      ],
+      "An Cursorposition klicken"
+    ],
+    [
+      "app_browser",
+      "Browser oeffnen",
+      [
+        "Browser",
+        "Webbrowser oeffnen"
+      ],
+      "Webbrowser oeffnen"
+    ],
+    [
+      "app_camera",
+      "Kamera oeffnen",
+      [
+        "Kamera",
+        "Foto machen"
+      ],
+      "Kamera oeffnen"
+    ],
+    [
+      "app_gallery",
+      "Galerie oeffnen",
+      [
+        "Galerie",
+        "Fotos",
+        "Bilder"
+      ],
+      "Fotogalerie oeffnen"
+    ],
+    [
+      "app_calc",
+      "Taschenrechner oeffnen",
+      [
+        "Taschenrechner",
+        "Rechner"
+      ],
+      "Taschenrechner oeffnen"
+    ],
+    [
+      "app_calendar",
+      "Kalender oeffnen",
+      [
+        "Kalender",
+        "Termine"
+      ],
+      "Kalender oeffnen"
+    ],
+    [
+      "app_phone",
+      "Telefon oeffnen",
+      [
+        "Telefon",
+        "Waehltasten",
+        "anrufen"
+      ],
+      "Telefon-App oeffnen"
+    ],
+    [
+      "app_messages",
+      "Nachrichten oeffnen",
+      [
+        "Nachrichten",
+        "SMS",
+        "Mitteilungen"
+      ],
+      "Nachrichten-App oeffnen"
+    ],
+    [
+      "app_contacts",
+      "Kontakte oeffnen",
+      [
+        "Kontakte",
+        "Adressbuch"
+      ],
+      "Kontakte oeffnen"
+    ],
+    [
+      "acc_click",
+      "klicken",
+      [
+        "tippen",
+        "druecken"
+      ],
+      "Auf ein benanntes oder nummeriertes Element klicken"
+    ],
+    [
+      "acc_long_click",
+      "lang druecken",
+      [
+        "langer Druck",
+        "gedrueckt halten",
+        "halten"
+      ],
+      "Langen Druck auf Element ausfuehren"
+    ],
+    [
+      "acc_zoom_in",
+      "reinzoomen",
+      [
+        "vergroessern",
+        "naeher ran",
+        "zoom rein"
+      ],
+      "Hineinzoomen"
+    ],
+    [
+      "acc_zoom_out",
+      "rauszoomen",
+      [
+        "verkleinern",
+        "zoom raus"
+      ],
+      "Herauszoomen"
+    ],
+    [
+      "acc_read",
+      "Bildschirm vorlesen",
+      [
+        "vorlesen",
+        "lies vor",
+        "Seite vorlesen"
+      ],
+      "Bildschirminhalt vorlesen"
+    ],
+    [
+      "acc_stop_read",
+      "vorlesen stoppen",
+      [
+        "stopp",
+        "still",
+        "sei still",
+        "aufhoeren"
+      ],
+      "Vorlesen beenden"
+    ],
+    [
+      "text_select_all",
+      "alles markieren",
+      [
+        "alles auswaehlen"
+      ],
+      "Gesamten Text auswaehlen"
+    ],
+    [
+      "text_copy",
+      "kopieren",
+      [
+        "Text kopieren",
+        "kopier das"
+      ],
+      "Auswahl in die Zwischenablage kopieren"
+    ],
+    [
+      "text_paste",
+      "einfuegen",
+      [
+        "Text einfuegen",
+        "einsetzen"
+      ],
+      "Aus Zwischenablage einfuegen"
+    ],
+    [
+      "text_cut",
+      "ausschneiden",
+      [
+        "Text ausschneiden"
+      ],
+      "Auswahl in Zwischenablage ausschneiden"
+    ],
+    [
+      "text_undo",
+      "rueckgaengig",
+      [
+        "rueckgaengig machen",
+        "zuruecknehmen"
+      ],
+      "Letzte Aktion rueckgaengig machen"
+    ],
+    [
+      "text_redo",
+      "wiederherstellen",
+      [
+        "nochmal machen",
+        "redo"
+      ],
+      "Letzte rueckgaengig gemachte Aktion wiederholen"
+    ],
+    [
+      "text_delete",
+      "loeschen",
+      [
+        "loesch das",
+        "entfernen",
+        "weg damit"
+      ],
+      "Ausgewaehlten Text loeschen"
+    ],
+    [
+      "input_show_kb",
+      "Tastatur zeigen",
+      [
+        "Tastatur oeffnen",
+        "Tastatur"
+      ],
+      "Bildschirmtastatur anzeigen"
+    ],
+    [
+      "input_hide_kb",
+      "Tastatur verstecken",
+      [
+        "Tastatur schliessen",
+        "Tastatur weg"
+      ],
+      "Bildschirmtastatur ausblenden"
+    ],
+    [
+      "appctl_close",
+      "App schliessen",
+      [
+        "schliessen",
+        "App beenden",
+        "beenden"
+      ],
+      "Aktuelle App schliessen"
+    ]
+  ]
+}

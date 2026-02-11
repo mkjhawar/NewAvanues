@@ -1,0 +1,529 @@
+{
+  "version": "2.1",
+  "locale": "de-DE",
+  "fallback": "en-US",
+  "domain": "web",
+  "category_map": {
+    "browser": "BROWSER",
+    "gesture": "WEB_GESTURE"
+  },
+  "action_map": {
+    "browser_retrain": "RETRAIN_PAGE",
+    "browser_back": "PAGE_BACK",
+    "browser_forward": "PAGE_FORWARD",
+    "browser_refresh": "PAGE_REFRESH",
+    "browser_top": "SCROLL_TO_TOP",
+    "browser_bottom": "SCROLL_TO_BOTTOM",
+    "browser_tab_next": "TAB_NEXT",
+    "browser_tab_prev": "TAB_PREV",
+    "browser_submit": "SUBMIT_FORM",
+    "browser_swipe_left": "SWIPE_LEFT",
+    "browser_swipe_right": "SWIPE_RIGHT",
+    "browser_swipe_up": "SWIPE_UP",
+    "browser_swipe_down": "SWIPE_DOWN",
+    "browser_grab": "GRAB",
+    "browser_release": "RELEASE",
+    "browser_rotate_left": "ROTATE",
+    "browser_rotate_right": "ROTATE",
+    "browser_double_tap": "DOUBLE_CLICK",
+    "gesture_pan": "PAN",
+    "gesture_pan_left": "PAN",
+    "gesture_pan_right": "PAN",
+    "gesture_pan_up": "PAN",
+    "gesture_pan_down": "PAN",
+    "gesture_tilt": "TILT",
+    "gesture_tilt_up": "TILT",
+    "gesture_tilt_down": "TILT",
+    "gesture_orbit": "ORBIT",
+    "gesture_orbit_left": "ORBIT",
+    "gesture_orbit_right": "ORBIT",
+    "gesture_rotate_x": "ROTATE_X",
+    "gesture_rotate_y": "ROTATE_Y",
+    "gesture_rotate_z": "ROTATE_Z",
+    "gesture_pinch_in": "PINCH",
+    "gesture_pinch_out": "PINCH",
+    "gesture_fling_up": "FLING",
+    "gesture_fling_down": "FLING",
+    "gesture_fling_left": "FLING",
+    "gesture_fling_right": "FLING",
+    "gesture_throw": "THROW",
+    "gesture_scale_up": "SCALE",
+    "gesture_scale_down": "SCALE",
+    "gesture_reset_zoom": "RESET_ZOOM",
+    "gesture_select_word": "SELECT_WORD",
+    "gesture_clear_sel": "CLEAR_SELECTION",
+    "gesture_hover_out": "HOVER_OUT"
+  },
+  "meta_map": {
+    "browser_rotate_left": {
+      "direction": "left"
+    },
+    "browser_rotate_right": {
+      "direction": "right"
+    },
+    "gesture_pan_left": {
+      "direction": "left"
+    },
+    "gesture_pan_right": {
+      "direction": "right"
+    },
+    "gesture_pan_up": {
+      "direction": "up"
+    },
+    "gesture_pan_down": {
+      "direction": "down"
+    },
+    "gesture_tilt_up": {
+      "direction": "up"
+    },
+    "gesture_tilt_down": {
+      "direction": "down"
+    },
+    "gesture_orbit_left": {
+      "direction": "left"
+    },
+    "gesture_orbit_right": {
+      "direction": "right"
+    },
+    "gesture_pinch_in": {
+      "scale": "0.5"
+    },
+    "gesture_pinch_out": {
+      "scale": "2.0"
+    },
+    "gesture_fling_up": {
+      "direction": "up"
+    },
+    "gesture_fling_down": {
+      "direction": "down"
+    },
+    "gesture_fling_left": {
+      "direction": "left"
+    },
+    "gesture_fling_right": {
+      "direction": "right"
+    },
+    "gesture_scale_up": {
+      "factor": "1.5"
+    },
+    "gesture_scale_down": {
+      "factor": "0.67"
+    }
+  },
+  "commands": [
+    [
+      "browser_retrain",
+      "Seite neu scannen",
+      [
+        "Seite erneut scannen",
+        "neu scannen"
+      ],
+      "Aktuelle Webseite neu analysieren und Sprachbefehle generieren"
+    ],
+    [
+      "browser_back",
+      "Seite zurueck",
+      [
+        "Browser zurueck",
+        "zurueck im Browser"
+      ],
+      "Zur vorherigen Seite im Browserverlauf navigieren"
+    ],
+    [
+      "browser_forward",
+      "Seite vor",
+      [
+        "Browser vor",
+        "vorwaerts im Browser"
+      ],
+      "Zur naechsten Seite im Browserverlauf navigieren"
+    ],
+    [
+      "browser_refresh",
+      "Seite aktualisieren",
+      [
+        "Seite neu laden",
+        "neu laden"
+      ],
+      "Aktuelle Webseite neu laden"
+    ],
+    [
+      "browser_top",
+      "nach ganz oben",
+      [
+        "Seitenanfang",
+        "zum Anfang"
+      ],
+      "Zum Seitenanfang scrollen"
+    ],
+    [
+      "browser_bottom",
+      "nach ganz unten",
+      [
+        "Seitenende",
+        "zum Ende"
+      ],
+      "Zum Seitenende scrollen"
+    ],
+    [
+      "browser_tab_next",
+      "naechstes Feld",
+      [
+        "Tab vorwaerts",
+        "naechstes Element"
+      ],
+      "Naechstes fokussierbares Element anwaehlen"
+    ],
+    [
+      "browser_tab_prev",
+      "vorheriges Feld",
+      [
+        "Tab zurueck",
+        "vorheriges Element"
+      ],
+      "Vorheriges fokussierbares Element anwaehlen"
+    ],
+    [
+      "browser_submit",
+      "Formular absenden",
+      [
+        "absenden",
+        "abschicken"
+      ],
+      "Aktuelles Formular absenden"
+    ],
+    [
+      "browser_swipe_left",
+      "wischen links",
+      [
+        "nach links wischen"
+      ],
+      "Auf der Seite nach links wischen"
+    ],
+    [
+      "browser_swipe_right",
+      "wischen rechts",
+      [
+        "nach rechts wischen"
+      ],
+      "Auf der Seite nach rechts wischen"
+    ],
+    [
+      "browser_swipe_up",
+      "wischen hoch",
+      [
+        "nach oben wischen"
+      ],
+      "Auf der Seite nach oben wischen"
+    ],
+    [
+      "browser_swipe_down",
+      "wischen runter",
+      [
+        "nach unten wischen"
+      ],
+      "Auf der Seite nach unten wischen"
+    ],
+    [
+      "browser_grab",
+      "greifen",
+      [
+        "Element greifen",
+        "festhalten",
+        "anfassen",
+        "fixieren",
+        "einrasten"
+      ],
+      "Element greifen und ziehen starten"
+    ],
+    [
+      "browser_release",
+      "loslassen",
+      [
+        "fallen lassen",
+        "ablegen"
+      ],
+      "Gegriffenes Element loslassen"
+    ],
+    [
+      "browser_rotate_left",
+      "drehen links",
+      [
+        "links drehen",
+        "nach links rotieren"
+      ],
+      "Element nach links drehen"
+    ],
+    [
+      "browser_rotate_right",
+      "drehen rechts",
+      [
+        "rechts drehen",
+        "nach rechts rotieren"
+      ],
+      "Element nach rechts drehen"
+    ],
+    [
+      "browser_double_tap",
+      "doppelt tippen",
+      [
+        "Doppelklick",
+        "doppelt klicken"
+      ],
+      "Doppelklick auf ein Element ausfuehren"
+    ],
+    [
+      "gesture_pan",
+      "pan",
+      [
+        "Ansicht verschieben",
+        "verschieben"
+      ],
+      "Ansichtsfenster verschieben"
+    ],
+    [
+      "gesture_pan_left",
+      "pan links",
+      [
+        "Ansicht nach links",
+        "nach links verschieben",
+        "links verschieben"
+      ],
+      "Ansichtsfenster nach links verschieben"
+    ],
+    [
+      "gesture_pan_right",
+      "pan rechts",
+      [
+        "Ansicht nach rechts",
+        "nach rechts verschieben",
+        "rechts verschieben"
+      ],
+      "Ansichtsfenster nach rechts verschieben"
+    ],
+    [
+      "gesture_pan_up",
+      "pan hoch",
+      [
+        "Ansicht nach oben",
+        "nach oben verschieben"
+      ],
+      "Ansichtsfenster nach oben verschieben"
+    ],
+    [
+      "gesture_pan_down",
+      "pan runter",
+      [
+        "Ansicht nach unten",
+        "nach unten verschieben"
+      ],
+      "Ansichtsfenster nach unten verschieben"
+    ],
+    [
+      "gesture_tilt",
+      "tilt",
+      [
+        "kippen",
+        "Ansicht kippen"
+      ],
+      "Ansichtsfenster kippen"
+    ],
+    [
+      "gesture_tilt_up",
+      "tilt hoch",
+      [
+        "nach oben kippen",
+        "hoch kippen"
+      ],
+      "Ansichtsfenster nach oben kippen"
+    ],
+    [
+      "gesture_tilt_down",
+      "tilt runter",
+      [
+        "nach unten kippen",
+        "runter kippen"
+      ],
+      "Ansichtsfenster nach unten kippen"
+    ],
+    [
+      "gesture_orbit",
+      "orbit",
+      [
+        "umkreisen",
+        "kreisen"
+      ],
+      "Um Element kreisen"
+    ],
+    [
+      "gesture_orbit_left",
+      "orbit links",
+      [
+        "links umkreisen",
+        "links kreisen"
+      ],
+      "Element nach links umkreisen"
+    ],
+    [
+      "gesture_orbit_right",
+      "orbit rechts",
+      [
+        "rechts umkreisen",
+        "rechts kreisen"
+      ],
+      "Element nach rechts umkreisen"
+    ],
+    [
+      "gesture_rotate_x",
+      "rotate x",
+      [
+        "X-Achse drehen",
+        "vertikal kippen"
+      ],
+      "Element um die X-Achse drehen"
+    ],
+    [
+      "gesture_rotate_y",
+      "rotate y",
+      [
+        "Y-Achse drehen",
+        "horizontal kippen"
+      ],
+      "Element um die Y-Achse drehen"
+    ],
+    [
+      "gesture_rotate_z",
+      "rotate z",
+      [
+        "Z-Achse drehen",
+        "rotieren"
+      ],
+      "Element um die Z-Achse drehen"
+    ],
+    [
+      "gesture_pinch_in",
+      "pinch rein",
+      [
+        "zusammenziehen",
+        "zusammendruecken",
+        "pinch in"
+      ],
+      "Zusammenziehen (herauszoomen)"
+    ],
+    [
+      "gesture_pinch_out",
+      "pinch raus",
+      [
+        "auseinanderziehen",
+        "spreizen",
+        "pinch out"
+      ],
+      "Auseinanderziehen (hineinzoomen)"
+    ],
+    [
+      "gesture_fling_up",
+      "fling hoch",
+      [
+        "schnipsen hoch",
+        "flick hoch"
+      ],
+      "Mit Schwung nach oben schleudern"
+    ],
+    [
+      "gesture_fling_down",
+      "fling runter",
+      [
+        "schnipsen runter",
+        "flick runter"
+      ],
+      "Mit Schwung nach unten schleudern"
+    ],
+    [
+      "gesture_fling_left",
+      "fling links",
+      [
+        "schnipsen links",
+        "flick links"
+      ],
+      "Mit Schwung nach links schleudern"
+    ],
+    [
+      "gesture_fling_right",
+      "fling rechts",
+      [
+        "schnipsen rechts",
+        "flick rechts"
+      ],
+      "Mit Schwung nach rechts schleudern"
+    ],
+    [
+      "gesture_throw",
+      "werfen",
+      [
+        "schleudern",
+        "Element werfen",
+        "wegwerfen"
+      ],
+      "Element mit Schwung werfen"
+    ],
+    [
+      "gesture_scale_up",
+      "groesser machen",
+      [
+        "hochskalieren",
+        "vergroessern",
+        "Element vergroessern"
+      ],
+      "Element hochskalieren"
+    ],
+    [
+      "gesture_scale_down",
+      "kleiner machen",
+      [
+        "runterskalieren",
+        "verkleinern",
+        "Element verkleinern"
+      ],
+      "Element herunterskalieren"
+    ],
+    [
+      "gesture_reset_zoom",
+      "Zoom zuruecksetzen",
+      [
+        "Zoom normal",
+        "normaler Zoom",
+        "Zoom reset"
+      ],
+      "Zoom auf Standardstufe zuruecksetzen"
+    ],
+    [
+      "gesture_select_word",
+      "Wort markieren",
+      [
+        "Wort auswaehlen",
+        "Wort hervorheben"
+      ],
+      "Wort an Cursorposition auswaehlen"
+    ],
+    [
+      "gesture_clear_sel",
+      "Markierung aufheben",
+      [
+        "abwaehlen",
+        "Auswahl loeschen",
+        "Hervorhebung loeschen"
+      ],
+      "Textauswahl aufheben"
+    ],
+    [
+      "gesture_hover_out",
+      "hover beenden",
+      [
+        "nicht mehr hovern",
+        "Maus weg",
+        "Zeiger weg"
+      ],
+      "Hovern ueber Element beenden"
+    ]
+  ]
+}

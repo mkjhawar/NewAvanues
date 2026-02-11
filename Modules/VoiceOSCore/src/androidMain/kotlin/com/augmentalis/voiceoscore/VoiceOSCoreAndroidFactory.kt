@@ -10,6 +10,7 @@ package com.augmentalis.voiceoscore
 
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
+import com.augmentalis.voiceoscore.handlers.*
 
 private const val TAG = "VoiceOSFactory"
 
@@ -57,10 +58,19 @@ internal class AndroidHandlerFactory(
 
     override fun createHandlers(): List<IHandler> {
         return listOf(
+            // Existing handlers
             AndroidGestureHandler(service),
             SystemHandler(AndroidSystemExecutor(service)),
             AppHandler(AndroidAppLauncher(service)),
-            AndroidCursorHandler(service)
+            AndroidCursorHandler(service),
+            // Wave 2: Static command dispatch handlers
+            MediaHandler(service),
+            ScreenHandler(service),
+            TextHandler(service),
+            InputHandler(service),
+            AppControlHandler(service),
+            ReadingHandler(service),
+            VoiceControlHandler(service)
         )
     }
 }

@@ -5,12 +5,17 @@
 VoiceOS uses a layered pipeline that flows from VOS seed files through a SQLDelight database to multiple runtime consumers. The database is the single source of truth; hardcoded fallback lists exist only for pre-DB-init startup.
 
 ```
-VOS Seed Files (per locale)
-  assets/localization/commands/en-US.VOS
-  assets/localization/commands/es-ES.VOS
-  assets/localization/commands/fr-FR.VOS
-  assets/localization/commands/de-DE.VOS
-  assets/localization/commands/hi-IN.VOS
+VOS Seed Files (per locale, split by domain since v2.1)
+  assets/localization/commands/en-US.app.vos  (62 app commands)
+  assets/localization/commands/en-US.web.vos  (45 web commands)
+  assets/localization/commands/es-ES.app.vos
+  assets/localization/commands/es-ES.web.vos
+  assets/localization/commands/fr-FR.app.vos
+  assets/localization/commands/fr-FR.web.vos
+  assets/localization/commands/de-DE.app.vos
+  assets/localization/commands/de-DE.web.vos
+  assets/localization/commands/hi-IN.app.vos
+  assets/localization/commands/hi-IN.web.vos
         |
         v
 CommandLoader.initializeCommands()  <- Seeds DB on first launch / version bump
@@ -96,30 +101,45 @@ Routes QuantizedCommands to the appropriate handler based on:
 - **SystemHandler** -> global actions (back, home, recents)
 - **AppHandler** -> app launch via Intent
 - **AndroidCursorHandler** -> cursor overlay service
+- **MediaHandler** -> play/pause/next/prev/volume via AudioManager (since v2.1)
+- **ScreenHandler** -> brightness/wifi/bluetooth/screenshot/flashlight/rotate/settings (since v2.1)
+- **TextHandler** -> select all/copy/paste/cut/undo/redo/delete via AccessibilityNodeInfo (since v2.1)
+- **InputHandler** -> show/hide keyboard via SoftKeyboardController (since v2.1)
+- **AppControlHandler** -> close/exit app via GLOBAL_ACTION_BACK + HOME (since v2.1)
+- **ReadingHandler** -> TTS screen reader via TextToSpeech + accessibility tree (since v2.1)
+- **VoiceControlHandler** -> mute/wake/dictation/help/numbers via VoiceControlCallbacks (since v2.1)
 
 ### Layer 5: Execution
 - **Web:** JavaScript injection via DOMScraperBridge -> WebView evaluateJavascript
 - **Android:** GestureDescription API via AccessibilityService.dispatchGesture()
 
-## 3. VOS Seed File Format (v2.0)
+## 3. VOS Seed File Format (v2.1)
 
-### File Location
+### File Location (v2.1 Domain Split)
 ```
 apps/avanues/src/main/assets/localization/commands/
-  en-US.VOS    <- English (default)
-  es-ES.VOS    <- Spanish
-  fr-FR.VOS    <- French
-  de-DE.VOS    <- German
-  hi-IN.VOS    <- Hindi (romanized Hinglish)
+  en-US.app.vos  <- English app commands (62: nav, media, sys, voice, app, acc, text, input, appctl)
+  en-US.web.vos  <- English web commands (45: browser, gesture)
+  es-ES.app.vos  <- Spanish app commands
+  es-ES.web.vos  <- Spanish web commands
+  fr-FR.app.vos  <- French app commands
+  fr-FR.web.vos  <- French web commands
+  de-DE.app.vos  <- German app commands
+  de-DE.web.vos  <- German web commands
+  hi-IN.app.vos  <- Hindi app commands
+  hi-IN.web.vos  <- Hindi web commands
 ```
+
+**v2.1 Split Rationale**: App commands (62) are locale-specific and crowd-sourceable. Web/gesture commands (45) are universal technical terms shared across locales. The split enables independent versioning and future FTP distribution.
 
 ### Format: Compact JSON with Explicit Maps
 
 ```json
 {
-  "version": "2.0",
+  "version": "2.1",
   "locale": "en-US",
   "fallback": "en-US",
+  "domain": "app",
   "category_map": {
     "nav": "NAVIGATION",
     "media": "MEDIA",
@@ -149,10 +169,14 @@ Each command is a 4-element array:
   position 0    position 1          position 2              position 3
 ```
 
-### v2.0 Root-Level Maps
+### v2.1 Root-Level Fields
 
-| Map | Purpose | Example |
-|-----|---------|---------|
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `version` | Format version | `"2.1"` |
+| `locale` | Locale code | `"en-US"` |
+| `fallback` | Fallback locale | `"en-US"` |
+| `domain` | **v2.1**: `"app"` or `"web"` | `"app"` |
 | `category_map` | Prefix -> CommandCategory name | `"nav"` -> `"NAVIGATION"` |
 | `action_map` | Command ID -> CommandActionType name | `"nav_back"` -> `"BACK"` |
 | `meta_map` | Command ID -> metadata JSON | `"gesture_pan_left"` -> `{"direction":"left"}` |
@@ -293,7 +317,7 @@ Manages help screen state and command injection:
 In `CommandModels.kt` -> `CommandActionType` enum, add new entry.
 
 ### Step 2: Add to VOS Seed File
-In `en-US.VOS`, add the command to the `commands` array, and update `action_map` and optionally `category_map`/`meta_map`:
+In `en-US.app.vos` (for app commands) or `en-US.web.vos` (for web/gesture commands), add the command to the `commands` array, and update `action_map` and optionally `category_map`/`meta_map`:
 
 ```json
 // In action_map:
@@ -330,7 +354,7 @@ Add `SynonymEntry` to `SynonymRegistry` for the new verb.
 | es-ES | Spanish (Spain) | Natural spoken Spanish | "ir atras" |
 | fr-FR | French (France) | Natural spoken French | "retour" |
 | de-DE | German (Germany) | Informal "du" form | "geh zurueck" |
-| hi-IN | Hindi (India) | Romanized Hinglish | "peeche jao" |
+| hi-IN | Hindi (India) | Romanized Hindi | "peeche jao" |
 
 All locale files contain 107 commands with identical `command_id`, `category_map`, `action_map`, and `meta_map` keys. Only the `primary_phrase`, `synonyms`, and `description` strings are translated.
 
@@ -382,14 +406,14 @@ When translating VOS files:
 1. **Primary phrases**: Use natural spoken language (not formal/literary)
 2. **Synonyms**: Include common alternatives a real speaker would use
 3. **ASCII-safe**: All triggers must be ASCII-compatible for STT engines (e.g., "zurueck" not "zuruck")
-4. **Hinglish**: For hi-IN, use romanized Hindi with common English loanwords (e.g., "settings kholo", "volume badhao")
+4. **Hindi**: For hi-IN, use romanized Hindi with common English loanwords (e.g., "settings kholo", "volume badhao")
 5. **Code-mixed OK**: Speakers naturally mix languages; embrace this for hi-IN especially
 6. **Keep IDs identical**: `command_id`, map keys, and `version`/`locale`/`fallback` structure must match en-US exactly
 
 ## 9. Adding New Languages
 
-### Step 1: Create Locale Seed File
-Copy `en-US.VOS` to `{locale}.VOS` (e.g., `ja-JP.VOS`) in `assets/localization/commands/`.
+### Step 1: Create Locale Seed Files
+Copy `en-US.app.vos` to `{locale}.app.vos` and `en-US.web.vos` to `{locale}.web.vos` in `assets/localization/commands/`.
 Translate all `primary_phrase` and `synonym` strings. Keep `command_id`, `action_map`, `category_map`, and `meta_map` keys identical (they are code identifiers, not user-facing).
 
 ### Step 2: Add to Supported Locales

@@ -478,6 +478,7 @@ class CommandManager(private val context: Context) {
                     val metadata = VoiceCommandEntity.parseMetadata(entity.metadata)
 
                     StaticCommand(
+                        id = entity.id,
                         phrases = phrases,
                         actionType = actionType,
                         category = category,

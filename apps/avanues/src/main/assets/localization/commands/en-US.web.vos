@@ -1,0 +1,503 @@
+{
+  "version": "2.1",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "domain": "web",
+  "category_map": {
+    "browser": "BROWSER",
+    "gesture": "WEB_GESTURE"
+  },
+  "action_map": {
+    "browser_retrain": "RETRAIN_PAGE",
+    "browser_back": "PAGE_BACK",
+    "browser_forward": "PAGE_FORWARD",
+    "browser_refresh": "PAGE_REFRESH",
+    "browser_top": "SCROLL_TO_TOP",
+    "browser_bottom": "SCROLL_TO_BOTTOM",
+    "browser_tab_next": "TAB_NEXT",
+    "browser_tab_prev": "TAB_PREV",
+    "browser_submit": "SUBMIT_FORM",
+    "browser_swipe_left": "SWIPE_LEFT",
+    "browser_swipe_right": "SWIPE_RIGHT",
+    "browser_swipe_up": "SWIPE_UP",
+    "browser_swipe_down": "SWIPE_DOWN",
+    "browser_grab": "GRAB",
+    "browser_release": "RELEASE",
+    "browser_rotate_left": "ROTATE",
+    "browser_rotate_right": "ROTATE",
+    "browser_double_tap": "DOUBLE_CLICK",
+    "gesture_pan": "PAN",
+    "gesture_pan_left": "PAN",
+    "gesture_pan_right": "PAN",
+    "gesture_pan_up": "PAN",
+    "gesture_pan_down": "PAN",
+    "gesture_tilt": "TILT",
+    "gesture_tilt_up": "TILT",
+    "gesture_tilt_down": "TILT",
+    "gesture_orbit": "ORBIT",
+    "gesture_orbit_left": "ORBIT",
+    "gesture_orbit_right": "ORBIT",
+    "gesture_rotate_x": "ROTATE_X",
+    "gesture_rotate_y": "ROTATE_Y",
+    "gesture_rotate_z": "ROTATE_Z",
+    "gesture_pinch_in": "PINCH",
+    "gesture_pinch_out": "PINCH",
+    "gesture_fling_up": "FLING",
+    "gesture_fling_down": "FLING",
+    "gesture_fling_left": "FLING",
+    "gesture_fling_right": "FLING",
+    "gesture_throw": "THROW",
+    "gesture_scale_up": "SCALE",
+    "gesture_scale_down": "SCALE",
+    "gesture_reset_zoom": "RESET_ZOOM",
+    "gesture_select_word": "SELECT_WORD",
+    "gesture_clear_sel": "CLEAR_SELECTION",
+    "gesture_hover_out": "HOVER_OUT"
+  },
+  "meta_map": {
+    "browser_rotate_left": {
+      "direction": "left"
+    },
+    "browser_rotate_right": {
+      "direction": "right"
+    },
+    "gesture_pan_left": {
+      "direction": "left"
+    },
+    "gesture_pan_right": {
+      "direction": "right"
+    },
+    "gesture_pan_up": {
+      "direction": "up"
+    },
+    "gesture_pan_down": {
+      "direction": "down"
+    },
+    "gesture_tilt_up": {
+      "direction": "up"
+    },
+    "gesture_tilt_down": {
+      "direction": "down"
+    },
+    "gesture_orbit_left": {
+      "direction": "left"
+    },
+    "gesture_orbit_right": {
+      "direction": "right"
+    },
+    "gesture_pinch_in": {
+      "scale": "0.5"
+    },
+    "gesture_pinch_out": {
+      "scale": "2.0"
+    },
+    "gesture_fling_up": {
+      "direction": "up"
+    },
+    "gesture_fling_down": {
+      "direction": "down"
+    },
+    "gesture_fling_left": {
+      "direction": "left"
+    },
+    "gesture_fling_right": {
+      "direction": "right"
+    },
+    "gesture_scale_up": {
+      "factor": "1.5"
+    },
+    "gesture_scale_down": {
+      "factor": "0.67"
+    }
+  },
+  "commands": [
+    [
+      "browser_retrain",
+      "retrain page",
+      [
+        "rescan page",
+        "rescan"
+      ],
+      "Force re-scrape current web page and regenerate voice commands"
+    ],
+    [
+      "browser_back",
+      "go back",
+      [
+        "browser back"
+      ],
+      "Navigate to previous page in browser history"
+    ],
+    [
+      "browser_forward",
+      "go forward",
+      [
+        "browser forward"
+      ],
+      "Navigate to next page in browser history"
+    ],
+    [
+      "browser_refresh",
+      "refresh page",
+      [
+        "reload page"
+      ],
+      "Reload the current web page"
+    ],
+    [
+      "browser_top",
+      "go to top",
+      [
+        "top of page",
+        "scroll to top"
+      ],
+      "Scroll to the top of the page"
+    ],
+    [
+      "browser_bottom",
+      "go to bottom",
+      [
+        "bottom of page",
+        "scroll to bottom"
+      ],
+      "Scroll to the bottom of the page"
+    ],
+    [
+      "browser_tab_next",
+      "next field",
+      [
+        "tab forward"
+      ],
+      "Focus the next focusable element"
+    ],
+    [
+      "browser_tab_prev",
+      "previous field",
+      [
+        "tab back"
+      ],
+      "Focus the previous focusable element"
+    ],
+    [
+      "browser_submit",
+      "submit form",
+      [
+        "submit"
+      ],
+      "Submit the current form"
+    ],
+    [
+      "browser_swipe_left",
+      "swipe left",
+      [],
+      "Swipe left on the page"
+    ],
+    [
+      "browser_swipe_right",
+      "swipe right",
+      [],
+      "Swipe right on the page"
+    ],
+    [
+      "browser_swipe_up",
+      "swipe up",
+      [],
+      "Swipe up on the page"
+    ],
+    [
+      "browser_swipe_down",
+      "swipe down",
+      [],
+      "Swipe down on the page"
+    ],
+    [
+      "browser_grab",
+      "grab",
+      [
+        "grab this",
+        "grab element",
+        "lock",
+        "lock element",
+        "hold",
+        "latch"
+      ],
+      "Grab/start dragging an element"
+    ],
+    [
+      "browser_release",
+      "release",
+      [
+        "let go",
+        "drop"
+      ],
+      "Release a grabbed element"
+    ],
+    [
+      "browser_rotate_left",
+      "rotate left",
+      [],
+      "Rotate element left"
+    ],
+    [
+      "browser_rotate_right",
+      "rotate right",
+      [],
+      "Rotate element right"
+    ],
+    [
+      "browser_double_tap",
+      "double tap",
+      [
+        "double click"
+      ],
+      "Double-click/double-tap an element"
+    ],
+    [
+      "gesture_pan",
+      "pan",
+      [
+        "pan viewport",
+        "move view"
+      ],
+      "Pan the viewport"
+    ],
+    [
+      "gesture_pan_left",
+      "pan left",
+      [
+        "pan viewport left",
+        "slide view left",
+        "move view left"
+      ],
+      "Pan viewport left"
+    ],
+    [
+      "gesture_pan_right",
+      "pan right",
+      [
+        "pan viewport right",
+        "slide view right",
+        "move view right"
+      ],
+      "Pan viewport right"
+    ],
+    [
+      "gesture_pan_up",
+      "pan up",
+      [
+        "pan viewport up",
+        "move view up"
+      ],
+      "Pan viewport up"
+    ],
+    [
+      "gesture_pan_down",
+      "pan down",
+      [
+        "pan viewport down",
+        "move view down"
+      ],
+      "Pan viewport down"
+    ],
+    [
+      "gesture_tilt",
+      "tilt",
+      [
+        "tilt viewport",
+        "angle view"
+      ],
+      "Tilt the viewport"
+    ],
+    [
+      "gesture_tilt_up",
+      "tilt up",
+      [
+        "tilt viewport up",
+        "angle up"
+      ],
+      "Tilt viewport up"
+    ],
+    [
+      "gesture_tilt_down",
+      "tilt down",
+      [
+        "tilt viewport down",
+        "angle down"
+      ],
+      "Tilt viewport down"
+    ],
+    [
+      "gesture_orbit",
+      "orbit",
+      [
+        "orbit around",
+        "circle around"
+      ],
+      "Orbit around element"
+    ],
+    [
+      "gesture_orbit_left",
+      "orbit left",
+      [
+        "orbit around left",
+        "circle left"
+      ],
+      "Orbit left around element"
+    ],
+    [
+      "gesture_orbit_right",
+      "orbit right",
+      [
+        "orbit around right",
+        "circle right"
+      ],
+      "Orbit right around element"
+    ],
+    [
+      "gesture_rotate_x",
+      "rotate x",
+      [
+        "rotate x axis",
+        "flip vertical"
+      ],
+      "Rotate element around X axis"
+    ],
+    [
+      "gesture_rotate_y",
+      "rotate y",
+      [
+        "rotate y axis",
+        "flip horizontal"
+      ],
+      "Rotate element around Y axis"
+    ],
+    [
+      "gesture_rotate_z",
+      "rotate z",
+      [
+        "rotate z axis",
+        "spin"
+      ],
+      "Rotate element around Z axis"
+    ],
+    [
+      "gesture_pinch_in",
+      "pinch in",
+      [
+        "pinch to zoom out",
+        "squeeze"
+      ],
+      "Pinch in (zoom out)"
+    ],
+    [
+      "gesture_pinch_out",
+      "pinch out",
+      [
+        "pinch to zoom in",
+        "spread"
+      ],
+      "Pinch out (zoom in)"
+    ],
+    [
+      "gesture_fling_up",
+      "fling up",
+      [
+        "flick up"
+      ],
+      "Fling up with velocity"
+    ],
+    [
+      "gesture_fling_down",
+      "fling down",
+      [
+        "flick down"
+      ],
+      "Fling down with velocity"
+    ],
+    [
+      "gesture_fling_left",
+      "fling left",
+      [
+        "flick left"
+      ],
+      "Fling left with velocity"
+    ],
+    [
+      "gesture_fling_right",
+      "fling right",
+      [
+        "flick right"
+      ],
+      "Fling right with velocity"
+    ],
+    [
+      "gesture_throw",
+      "throw",
+      [
+        "toss",
+        "throw element",
+        "toss element"
+      ],
+      "Throw element with velocity"
+    ],
+    [
+      "gesture_scale_up",
+      "scale up",
+      [
+        "scale element up",
+        "enlarge",
+        "make bigger"
+      ],
+      "Scale element up"
+    ],
+    [
+      "gesture_scale_down",
+      "scale down",
+      [
+        "scale element down",
+        "shrink",
+        "make smaller"
+      ],
+      "Scale element down"
+    ],
+    [
+      "gesture_reset_zoom",
+      "reset zoom",
+      [
+        "reset zoom level",
+        "zoom reset",
+        "normal zoom"
+      ],
+      "Reset zoom to default level"
+    ],
+    [
+      "gesture_select_word",
+      "select word",
+      [
+        "pick word",
+        "highlight word"
+      ],
+      "Select word at cursor position"
+    ],
+    [
+      "gesture_clear_sel",
+      "clear selection",
+      [
+        "deselect",
+        "unselect",
+        "clear highlight"
+      ],
+      "Clear text selection"
+    ],
+    [
+      "gesture_hover_out",
+      "hover out",
+      [
+        "stop hovering",
+        "unhover",
+        "mouse leave"
+      ],
+      "Stop hovering over element"
+    ]
+  ]
+}

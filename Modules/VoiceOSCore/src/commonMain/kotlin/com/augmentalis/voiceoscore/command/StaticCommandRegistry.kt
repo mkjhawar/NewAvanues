@@ -984,6 +984,12 @@ object StaticCommandRegistry {
  */
 data class StaticCommand(
     /**
+     * Unique command identifier from VOS file (e.g., "nav_back", "browser_refresh").
+     * Empty string for hardcoded fallback commands.
+     */
+    val id: String = "",
+
+    /**
      * Alternative phrases that trigger this command
      */
     val phrases: List<String>,

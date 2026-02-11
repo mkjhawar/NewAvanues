@@ -30,6 +30,7 @@ import com.augmentalis.database.repositories.IElementStateHistoryRepository
 import com.augmentalis.database.repositories.IElementCommandRepository
 import com.augmentalis.database.repositories.IQualityMetricRepository
 import com.augmentalis.database.repositories.IScrapedWebsiteRepository
+import com.augmentalis.database.repositories.IVosFileRegistryRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandUsageRepository
 import com.augmentalis.database.repositories.impl.SQLDelightContextPreferenceRepository
 import com.augmentalis.database.repositories.impl.SQLDelightVoiceCommandRepository
@@ -51,6 +52,7 @@ import com.augmentalis.database.repositories.impl.SQLDelightElementStateHistoryR
 import com.augmentalis.database.repositories.impl.SQLDelightElementCommandRepository
 import com.augmentalis.database.repositories.impl.SQLDelightQualityMetricRepository
 import com.augmentalis.database.repositories.impl.SQLDelightScrapedWebsiteRepository
+import com.augmentalis.database.repositories.impl.SQLDelightVosFileRegistryRepository
 
 /**
  * Database statistics data class for VoiceDataManager compatibility.
@@ -182,6 +184,14 @@ class VoiceOSDatabaseManager private constructor(
      */
     val scrapedWebsites: IScrapedWebsiteRepository by lazy {
         SQLDelightScrapedWebsiteRepository(_database)
+    }
+
+    /**
+     * Repository for VOS file registry (distribution system).
+     * Tracks all VOS files with provenance metadata for version control and FTP sync.
+     */
+    val vosFileRegistry: IVosFileRegistryRepository by lazy {
+        SQLDelightVosFileRegistryRepository(_database)
     }
 
     // ==================== Context Repositories ====================
