@@ -1,19 +1,19 @@
 # Developer Manual — Chapter 91: AvanueUI Design System Guide
 
-**Date:** 2026-02-08 | **Branch:** `060226-1-consolidation-framework` | **Version:** 1.0
+**Date:** 2026-02-11 | **Branch:** `VoiceOSCore-KotlinUpdate` | **Version:** 2.0 (Theme v5.1)
 
 ---
 
 ## Overview
 
-AvanueUI is the unified design system for the Avanues ecosystem. As of v4.0, all design tokens, themes, display profiles, glass/water components, and settings UI are consolidated into a single Gradle module: `:Modules:AvanueUI`.
+AvanueUI is the unified design system for the Avanues ecosystem. All design tokens, themes, display profiles, glass/water components, and settings UI live in a single Gradle module: `:Modules:AvanueUI`.
 
-This chapter covers everything you need to build UIs with AvanueUI — from adding the dependency to creating custom themes and glass/water effects.
+**Theme v5.1** provides three independent axes — **Color Palette** x **Material Style** x **Appearance Mode** — yielding 32 visual combinations plus XR variants for AR smart glasses.
 
 > **See also:**
 > - **Chapter 92** — Phase 2 Unified Component Architecture (MaterialMode, unified components)
 > - **AvanueUI-Component-Reference-260210-V1.md** — Standalone API reference for developers/AI
-> - **AvanueUI-Adoption-Guide-260210-V1.md** — Cross-project migration guide (SmartFin, AvanueCentral, NewAvanues)
+> - **AvanueUI-Adoption-Guide-260210-V1.md** — Cross-project migration guide
 
 ---
 
@@ -29,17 +29,35 @@ Modules/AvanueUI/src/
 │   │   ├── ElevationTokens.kt
 │   │   ├── AnimationTokens.kt
 │   │   ├── GlassTokens.kt
+│   │   ├── WaterTokens.kt
 │   │   ├── ResponsiveTokens.kt
 │   │   ├── TypographyTokens.kt
 │   │   └── TokenResolver.kt
-│   ├── theme/             ← Theme colors, glass, M3 integration
+│   ├── theme/             ← Theme v5.1: 3 independent axes
 │   │   ├── AvanueTheme.kt          (AvanueThemeProvider + AvanueTheme facade)
-│   │   ├── AvanueColorScheme.kt    (interface + resolve())
+│   │   ├── AvanueColorScheme.kt    (interface)
 │   │   ├── AvanueGlassScheme.kt    (interface)
-│   │   ├── OceanColors.kt          (cool blue palette)
-│   │   ├── OceanGlass.kt           (blue glass effects)
-│   │   ├── SunsetColors.kt         (warm coral palette)
-│   │   └── SunsetGlass.kt          (coral glass effects)
+│   │   ├── AvanueWaterScheme.kt    (interface)
+│   │   ├── AvanueColorPalette.kt   (palette enum: SOL/LUNA/TERRA/HYDRA)
+│   │   ├── AppearanceMode.kt       (Light/Dark/Auto)
+│   │   ├── MaterialMode.kt         (Glass/Water/Cupertino/MountainView)
+│   │   ├── AvanueThemeVariant.kt   (DEPRECATED — use palette + mode)
+│   │   ├── ModuleAccent.kt         (per-module color accents)
+│   │   ├── HydraColors.kt          (sapphire: Dark + Light + XR)
+│   │   ├── HydraGlass.kt           (sapphire glass: Dark + Light)
+│   │   ├── HydraWater.kt           (sapphire water: Dark + Light)
+│   │   ├── SolColors.kt            (amber gold: Dark + Light + XR)
+│   │   ├── SolGlass.kt             (gold glass: Dark + Light)
+│   │   ├── SolWater.kt             (gold water: Dark + Light)
+│   │   ├── LunaColors.kt           (moonlit indigo: Dark + Light + XR)
+│   │   ├── LunaGlass.kt            (indigo glass: Dark + Light)
+│   │   ├── LunaWater.kt            (indigo water: Dark + Light)
+│   │   ├── TerraColors.kt          (forest green: Dark + Light + XR)
+│   │   ├── TerraGlass.kt           (green glass: Dark + Light)
+│   │   ├── TerraWater.kt           (green water: Dark + Light)
+│   │   ├── OceanColors.kt          (DEPRECATED → LunaColors)
+│   │   ├── SunsetColors.kt         (DEPRECATED → SolColors)
+│   │   └── LiquidColors.kt         (DEPRECATED → HydraColors)
 │   ├── display/           ← Responsive UI profiles
 │   │   ├── DisplayProfile.kt       (6 profiles: PHONE/TABLET/4x GLASS)
 │   │   ├── DisplayProfileResolver.kt (pure-function detection)
@@ -47,21 +65,34 @@ Modules/AvanueUI/src/
 │   ├── glass/             ← Glass type definitions
 │   │   ├── GlassLevel.kt           (LIGHT/MEDIUM/HEAVY)
 │   │   └── GlassBorder.kt          (border configuration)
+│   ├── water/             ← Water effect types
+│   │   └── WaterLevel.kt           (REGULAR/CLEAR/IDENTITY)
 │   └── components/
-│       ├── glass/         ← Glass UI components
-│       │   ├── GlassExtensions.kt       (Modifier.glass(), GlassShapes, GlassDefaults)
-│       │   ├── GlassmorphicComponents.kt (GlassSurface, GlassCard, OceanButton, etc.)
+│       ├── AvanueSurface.kt         ← 7 unified components (PRIMARY)
+│       ├── AvanueCard.kt
+│       ├── AvanueButton.kt
+│       ├── AvanueChip.kt
+│       ├── AvanueBubble.kt
+│       ├── AvanueFAB.kt
+│       ├── AvanueIconButton.kt
+│       ├── glass/         ← Glass UI components (DEPRECATED — use unified)
+│       │   ├── GlassExtensions.kt       (Modifier.glass() — STILL CURRENT)
+│       │   ├── GlassmorphicComponents.kt (GlassSurface, etc. — DEPRECATED)
 │       │   ├── GlassmorphismCore.kt      (GlassMorphismConfig, GlassPresets)
-│       │   ├── PulseDot.kt              (PulseDot, StatusBadge)
+│       │   ├── PulseDot.kt              (PulseDot, StatusBadge — STILL CURRENT)
 │       │   └── ComponentProvider.kt      (IconVariant, ButtonVariant)
+│       ├── water/         ← Water UI components (DEPRECATED — use unified)
+│       │   └── WaterComponents.kt
 │       └── settings/      ← Settings screen components
 │           └── SettingsComponents.kt     (SettingsSection, SettingsToggle, etc.)
 ├── androidMain/kotlin/com/augmentalis/avanueui/
-│   └── overlay/
-│       ├── MagicCommandOverlay.kt
-│       └── MagicCommandOverlayExample.kt
-├── iosMain/...
-└── desktopMain/...
+│   ├── overlay/
+│   │   ├── MagicCommandOverlay.kt
+│   │   └── MagicCommandOverlayExample.kt
+│   └── water/
+│       └── WaterRendererAndroid.kt
+├── iosMain/.../water/WaterRendererIOS.kt
+└── desktopMain/.../water/WaterRendererDesktop.kt
 ```
 
 **Single dependency in `build.gradle.kts`:**
@@ -124,26 +155,47 @@ Box(modifier = Modifier.clip(RoundedCornerShape(ShapeTokens.md)))  // 12dp
 
 ---
 
-## 3. Theme System
+## 3. Theme System (v5.1 — Three Independent Axes)
 
-### 3.1 AvanueThemeProvider (Entry Point)
+### 3.1 Three Axes Overview
+
+| Axis | Enum | Values | Default |
+|------|------|--------|---------|
+| **Color Palette** | `AvanueColorPalette` | SOL, LUNA, TERRA, HYDRA | HYDRA |
+| **Material Style** | `MaterialMode` | Glass, Water, Cupertino, MountainView | Water |
+| **Appearance** | `AppearanceMode` | Light, Dark, Auto | Auto |
+
+Any palette x any style x any appearance = **32 combinations** (+ 4 XR variants for AR glasses).
+
+### 3.2 AvanueThemeProvider (Entry Point)
 
 Wrap your app content with `AvanueThemeProvider`. It sets up:
-- Material3 `MaterialTheme` (so M3 components like TextField, Button work)
-- Custom CompositionLocals for colors, glass, and display profile
+- Material3 `MaterialTheme` (darkColorScheme or lightColorScheme based on isDark)
+- Custom CompositionLocals for colors, glass, water, display profile, isDark
 - Density override for automatic dp/sp scaling
 
 ```kotlin
-import com.augmentalis.avanueui.theme.AvanueThemeProvider
-import com.augmentalis.avanueui.theme.OceanColors
-import com.augmentalis.avanueui.theme.OceanGlass
+import com.augmentalis.avanueui.theme.*
 import com.augmentalis.avanueui.display.DisplayProfile
+import androidx.compose.foundation.isSystemInDarkTheme
 
 @Composable
 fun MyApp() {
+    val palette = AvanueColorPalette.HYDRA
+    val style = MaterialMode.Water
+    val appearance = AppearanceMode.Auto
+    val isDark = when (appearance) {
+        AppearanceMode.Auto -> isSystemInDarkTheme()
+        AppearanceMode.Dark -> true
+        AppearanceMode.Light -> false
+    }
+
     AvanueThemeProvider(
-        colors = OceanColors,           // or SunsetColors, or custom
-        glass = OceanGlass,             // or SunsetGlass
+        colors = palette.colors(isDark),    // appearance-aware
+        glass = palette.glass(isDark),      // appearance-aware
+        water = palette.water(isDark),      // appearance-aware
+        materialMode = style,
+        isDark = isDark,                    // controls M3 light/dark bridge
         displayProfile = DisplayProfile.PHONE
     ) {
         MyMainScreen()
@@ -151,7 +203,7 @@ fun MyApp() {
 }
 ```
 
-### 3.2 AvanueTheme Facade (Access Point)
+### 3.3 AvanueTheme Facade (Access Point)
 
 Access current theme values inside `@Composable` functions:
 
@@ -163,18 +215,46 @@ fun MyScreen() {
     val bg = AvanueTheme.colors.background       // Color
     val primary = AvanueTheme.colors.primary      // Color
     val overlay = AvanueTheme.glass.overlayColor  // Color
+    val water = AvanueTheme.water.highlightColor  // Color
+    val mode = AvanueTheme.materialMode           // MaterialMode
+    val isDark = AvanueTheme.isDark               // Boolean
     val profile = AvanueTheme.displayProfile      // DisplayProfile enum
 }
 ```
 
-### 3.3 Available Color Schemes
+### 3.4 Four Color Palettes
 
-| Scheme | Style | Primary | Background |
-|--------|-------|---------|------------|
-| `OceanColors` | Cool blue | `#3B82F6` | `#0F172A` (deep navy) |
-| `SunsetColors` | Warm coral | `#FF6B35` | `#1A0E1F` (deep purple) |
+| Palette | Identity | Primary (Dark) | Background (Dark) | Background (Light) |
+|---------|----------|----------------|--------------------|--------------------|
+| **HYDRA** (default) | Royal Sapphire | `#1E40AF` | `#020617` | `#F8FAFC` |
+| **SOL** | Amber Gold | `#D97706` | `#1A0F05` | `#FFFBF0` |
+| **LUNA** | Moonlit Indigo | `#818CF8` | `#0C0F1A` | `#F5F3FF` |
+| **TERRA** | Forest Green | `#2D7D46` | `#0F1A10` | `#F0FDF4` |
 
-### 3.4 Creating a Custom Color Scheme
+Each palette provides: `*Colors` (dark), `*ColorsLight`, `*ColorsXR` (AR), `*Glass`/`*GlassLight`, `*Water`/`*WaterLight`.
+
+**Appearance-aware accessors (preferred):**
+```kotlin
+palette.colors(isDark)    // returns *Colors or *ColorsLight
+palette.glass(isDark)     // returns *Glass or *GlassLight
+palette.water(isDark)     // returns *Water or *WaterLight
+palette.colorsXR          // returns *ColorsXR (always dark/additive)
+```
+
+### 3.5 XR Variants (AR Smart Glasses)
+
+For additive displays where black = transparent:
+- Fully transparent backgrounds (`Color(0x00000000)`)
+- Semi-transparent surfaces (15-25% alpha)
+- Boosted luminance primaries (-400 Tailwind variants)
+
+```kotlin
+// XR usage
+val xrColors = AvanueColorPalette.HYDRA.colorsXR
+AvanueThemeProvider(colors = xrColors, isDark = true) { ... }
+```
+
+### 3.6 Creating a Custom Color Scheme
 
 Implement `AvanueColorScheme`:
 
@@ -182,12 +262,23 @@ Implement `AvanueColorScheme`:
 object MyBrandColors : AvanueColorScheme {
     override val primary = Color(0xFF...)
     override val onPrimary = Color.White
-    // ... all 28 properties
-    override fun resolve(id: String): Color? = resolveDefault(id)
+    override val primaryDark = Color(0xFF...)
+    override val primaryLight = Color(0xFF...)
+    // ... all properties (see AvanueColorScheme.kt for full list)
 }
 ```
 
-Then use: `AvanueThemeProvider(colors = MyBrandColors) { ... }`
+Then use: `AvanueThemeProvider(colors = MyBrandColors, isDark = true) { ... }`
+
+### 3.7 DEPRECATED Theme Names
+
+| Old Name | New Name | Notes |
+|----------|----------|-------|
+| `OceanColors` | `LunaColors` | Cool blue/indigo |
+| `SunsetColors` | `SolColors` | Warm amber/gold |
+| `LiquidColors` | `HydraColors` | Sapphire blue |
+| `AvanueThemeVariant` | `AvanueColorPalette` + `MaterialMode` | Decoupled axes |
+| `MaterialMode.PLAIN` | `MaterialMode.MountainView` | Google M3 style |
 
 ---
 
@@ -481,11 +572,15 @@ BEFORE: implementation(project(":Modules:AvanueUI:DesignSystem"))
 AFTER:  implementation(project(":Modules:AvanueUI"))
 ```
 
-**Theme colors (from OceanTheme):**
+**Theme colors (from OceanTheme / OceanColors):**
 ```
 BEFORE: OceanTheme.background       →  AvanueTheme.colors.background
 BEFORE: OceanTheme.primary          →  AvanueTheme.colors.primary
-BEFORE: OceanTheme.textPrimary      →  AvanueTheme.colors.textPrimary
+BEFORE: OceanColors                 →  LunaColors (or AvanueColorPalette.LUNA.colors(isDark))
+BEFORE: SunsetColors                →  SolColors  (or AvanueColorPalette.SOL.colors(isDark))
+BEFORE: LiquidColors                →  HydraColors (or AvanueColorPalette.HYDRA.colors(isDark))
+BEFORE: AvanueThemeVariant.OCEAN    →  AvanueColorPalette.LUNA + MaterialMode.Glass
+BEFORE: AvanueThemeVariant.LIQUID   →  AvanueColorPalette.HYDRA + MaterialMode.Water
 ```
 
 **Tokens (from OceanDesignTokens):**
@@ -538,9 +633,20 @@ These packages no longer exist:
 ```
 DEPENDENCY:  implementation(project(":Modules:AvanueUI"))
 
+THEME v5.1 (3 AXES):
+  Palette:    AvanueColorPalette.HYDRA / SOL / LUNA / TERRA
+  Style:      MaterialMode.Glass / Water / Cupertino / MountainView
+  Appearance: AppearanceMode.Light / Dark / Auto
+
+ACCESSORS:
+  palette.colors(isDark)  palette.glass(isDark)  palette.water(isDark)
+  palette.colorsXR        (XR/AR smart glasses)
+
+THEME FACADE:
+  AvanueTheme.colors.*    AvanueTheme.glass.*     AvanueTheme.water.*
+  AvanueTheme.materialMode  AvanueTheme.isDark    AvanueTheme.displayProfile
+
 TOKENS:      SpacingTokens.md (16dp)  ShapeTokens.lg (16dp)  SizeTokens.iconMd (24dp)
-THEME:       AvanueTheme.colors.primary  AvanueTheme.glass.overlayColor
-             AvanueTheme.materialMode (NEW — GLASS/WATER/PLAIN)
 DISPLAY:     AvanueTheme.displayProfile  DisplayUtils.isGlass
 GLASS:       GlassLevel.LIGHT/MEDIUM/HEAVY  Modifier.glass(...)
 WATER:       WaterLevel.REGULAR/CLEAR/IDENTITY  Modifier.waterEffect(...)
@@ -554,10 +660,10 @@ LEGACY COMPONENTS (deprecated — use unified instead):
   WaterSurface  WaterCard  WaterButton
 
 STILL CURRENT (not deprecated):
-  PulseDot  StatusBadge  WaterNavigationBar
+  PulseDot  StatusBadge  WaterNavigationBar  Modifier.glass()  Modifier.waterEffect()
 
 PACKAGES:
-  unified  → com.augmentalis.avanueui.components.*             (NEW primary)
+  unified  → com.augmentalis.avanueui.components.*             (PRIMARY)
   tokens   → com.augmentalis.avanueui.tokens.*
   theme    → com.augmentalis.avanueui.theme.*
   display  → com.augmentalis.avanueui.display.*
@@ -566,9 +672,14 @@ PACKAGES:
   water    → com.augmentalis.avanueui.water.* (types + effects)
              com.augmentalis.avanueui.components.water.* (deprecated components)
   settings → com.augmentalis.avanueui.components.settings.*
+
+DATASTORE KEYS:
+  theme_palette     → SOL / LUNA / TERRA / HYDRA
+  theme_style       → Glass / Water / Cupertino / MountainView
+  theme_appearance  → Light / Dark / Auto
 ```
 
 ---
 
-*Chapter 91 | AvanueUI Design System Guide | 2026-02-08 | Branch: 060226-1-consolidation-framework*
-*Prerequisite: Chapter 88 (Consolidated App), Chapter 90 (Unified Settings)*
+*Chapter 91 | AvanueUI Design System Guide v2.0 | 2026-02-11 | Branch: VoiceOSCore-KotlinUpdate*
+*Prerequisite: Chapter 88 (Consolidated App), Chapter 90 (Unified Settings), Chapter 92 (Unified Components)*
