@@ -40,6 +40,8 @@
         android:maxSdkVersion="29"
         tools:ignore="ScopedStorage" />
 
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

@@ -364,17 +364,9 @@ class VoiceOSCore private constructor(
             addAll(webCommandPhrases)
         }
 
-        println("[VoiceOSCore] allRegisteredCommands = ${allRegisteredCommands.size} , newCommands = ${newCommands.size}")
         // No change -> skip engine call
         if (newCommands == allRegisteredCommands) {
             return Result.success(Unit)
-        }else{
-            val removed = allRegisteredCommands - newCommands
-            val new = newCommands - allRegisteredCommands
-
-            println("[VoiceOSCore] old removed = $removed")
-            println("[VoiceOSCore] new add = $new")
-
         }
 
         // Update engine; only update cache if engine update succeeds
