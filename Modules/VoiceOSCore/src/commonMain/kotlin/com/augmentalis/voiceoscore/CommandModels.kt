@@ -492,7 +492,10 @@ enum class CommandCategory {
     APP_LAUNCH,
 
     /** Browser-specific commands (retrain page, web navigation, etc.) */
-    BROWSER
+    BROWSER,
+
+    /** Web gesture commands (pan, tilt, orbit, rotate, fling, pinch, scale, etc.) */
+    WEB_GESTURE
 }
 
 /**

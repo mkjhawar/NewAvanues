@@ -65,7 +65,18 @@ object SynonymRegistry {
 
         // Reading / TTS
         SynonymEntry("read", listOf("read aloud", "speak", "narrate")),
-        SynonymEntry("stop", listOf("halt", "cancel", "enough"))
+        SynonymEntry("stop", listOf("halt", "cancel", "enough")),
+
+        // Web gestures
+        SynonymEntry("pan", listOf("move view", "slide view", "shift view")),
+        SynonymEntry("tilt", listOf("angle", "angle view")),
+        SynonymEntry("orbit", listOf("circle around", "revolve")),
+        SynonymEntry("fling", listOf("flick", "swipe fast")),
+        SynonymEntry("throw", listOf("toss", "launch")),
+        SynonymEntry("pinch", listOf("squeeze", "spread")),
+        SynonymEntry("scale", listOf("resize", "size")),
+        SynonymEntry("grab", listOf("lock", "hold", "latch", "grip")),
+        SynonymEntry("release", listOf("let go", "drop", "unlock", "ungrab"))
     )
 
     /**

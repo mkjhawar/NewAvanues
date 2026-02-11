@@ -337,6 +337,22 @@ class ActionCoordinator(
             CommandActionType.DOUBLE_CLICK -> "double tap $target"
             CommandActionType.HOVER -> "hover $target"
 
+            // Advanced gesture actions
+            CommandActionType.PAN -> "pan"
+            CommandActionType.TILT -> "tilt"
+            CommandActionType.ORBIT -> "orbit"
+            CommandActionType.ROTATE_X -> "rotate x"
+            CommandActionType.ROTATE_Y -> "rotate y"
+            CommandActionType.ROTATE_Z -> "rotate z"
+            CommandActionType.PINCH -> "pinch"
+            CommandActionType.FLING -> "fling"
+            CommandActionType.THROW -> "throw"
+            CommandActionType.SCALE -> "scale"
+            CommandActionType.RESET_ZOOM -> "reset zoom"
+            CommandActionType.SELECT_WORD -> "select word"
+            CommandActionType.CLEAR_SELECTION -> "clear selection"
+            CommandActionType.HOVER_OUT -> "hover out"
+
             // Default for custom/unknown
             CommandActionType.CUSTOM -> "tap $target"
             CommandActionType.MACRO -> "not implemented"

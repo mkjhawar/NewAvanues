@@ -100,6 +100,24 @@ enum class WebActionType {
     ZOOM_OUT,
 
     // ═══════════════════════════════════════════════════════════════════
+    // Advanced Gesture Actions
+    // ═══════════════════════════════════════════════════════════════════
+    PAN,
+    TILT,
+    ORBIT,
+    ROTATE_X,
+    ROTATE_Y,
+    ROTATE_Z,
+    PINCH,
+    FLING,
+    THROW,
+    SCALE,
+    RESET_ZOOM,
+    SELECT_WORD,
+    CLEAR_SELECTION,
+    HOVER_OUT,
+
+    // ═══════════════════════════════════════════════════════════════════
     // Text/Clipboard Actions
     // ═══════════════════════════════════════════════════════════════════
     COPY,

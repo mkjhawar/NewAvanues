@@ -330,6 +330,48 @@ enum class CommandActionType {
     /** Hover over an element */
     HOVER,
 
+    /** Move viewport (pan camera) */
+    PAN,
+
+    /** Tilt element or viewport */
+    TILT,
+
+    /** Orbit around an element */
+    ORBIT,
+
+    /** Rotate element around X axis */
+    ROTATE_X,
+
+    /** Rotate element around Y axis */
+    ROTATE_Y,
+
+    /** Rotate element around Z axis */
+    ROTATE_Z,
+
+    /** Pinch gesture (two-finger zoom) */
+    PINCH,
+
+    /** Fling gesture (fast directional swipe) */
+    FLING,
+
+    /** Throw gesture (velocity-based release) */
+    THROW,
+
+    /** Scale an element */
+    SCALE,
+
+    /** Reset zoom to default */
+    RESET_ZOOM,
+
+    /** Select a word at position */
+    SELECT_WORD,
+
+    /** Clear text selection */
+    CLEAR_SELECTION,
+
+    /** Hover out (mouse leave) */
+    HOVER_OUT,
+
     /** Custom/specialized action */
     CUSTOM,
 
@@ -403,7 +445,10 @@ enum class CommandActionType {
         TAB_NEXT, TAB_PREV, SUBMIT_FORM,
         SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN,
         GRAB, RELEASE, ROTATE, DRAG,
-        DOUBLE_CLICK, HOVER
+        DOUBLE_CLICK, HOVER,
+        PAN, TILT, ORBIT, ROTATE_X, ROTATE_Y, ROTATE_Z,
+        PINCH, FLING, THROW, SCALE,
+        RESET_ZOOM, SELECT_WORD, CLEAR_SELECTION, HOVER_OUT
     )
 
     companion object {

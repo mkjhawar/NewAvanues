@@ -137,7 +137,19 @@ internal class AndroidGestureHandler(
         "tap", "click", "press", "select",
         "long press", "long click", "hold",
         "scroll up", "scroll down", "scroll left", "scroll right",
-        "swipe up", "swipe down", "swipe left", "swipe right"
+        "swipe up", "swipe down", "swipe left", "swipe right",
+        // Advanced gestures (parallel to web gesture commands)
+        "double tap", "double click",
+        "pinch in", "pinch out", "pinch to zoom in", "pinch to zoom out",
+        "fling up", "fling down", "fling left", "fling right",
+        "flick up", "flick down", "flick left", "flick right",
+        "throw", "toss",
+        "scale up", "scale down", "enlarge", "shrink",
+        "grab", "grab element", "lock", "lock element",
+        "release", "let go", "drop",
+        "pan left", "pan right", "pan up", "pan down",
+        "select word", "clear selection", "deselect",
+        "zoom in", "zoom out", "reset zoom"
     )
 
     override suspend fun execute(
@@ -317,10 +329,240 @@ internal class AndroidGestureHandler(
                     }
                 }
 
+                // ═══════════════════════════════════════════════════════════
+                // Advanced Gesture Actions (parallel to web JS gestures)
+                // ═══════════════════════════════════════════════════════════
+
+                CommandActionType.DOUBLE_CLICK -> {
+                    val x = params["x"] as? Float
+                    val y = params["y"] as? Float
+                    if (x != null && y != null) {
+                        val success = dispatcher.doubleTap(x, y)
+                        if (success) HandlerResult.success("Double tapped")
+                        else HandlerResult.failure("Failed to double tap")
+                    } else {
+                        val bounds = boundsResolver.resolve(command)
+                        if (bounds != null) {
+                            val success = dispatcher.doubleTap(bounds.centerX.toFloat(), bounds.centerY.toFloat())
+                            if (success) HandlerResult.success("Double tapped ${command.phrase}")
+                            else HandlerResult.failure("Failed to double tap")
+                        } else HandlerResult.notHandled()
+                    }
+                }
+
+                CommandActionType.PINCH -> {
+                    val scale = command.metadata["scale"]?.toFloatOrNull()
+                        ?: params["scale"]?.toString()?.toFloatOrNull()
+                        ?: 0.5f // Default pinch-in
+                    val success = dispatcher.pinch(scale)
+                    val label = if (scale < 1f) "Pinched in" else "Pinched out"
+                    if (success) HandlerResult.success(label)
+                    else HandlerResult.failure("Failed to pinch")
+                }
+
+                CommandActionType.FLING -> {
+                    val direction = command.metadata["direction"]
+                        ?: params["direction"]?.toString()
+                        ?: extractDirectionFromPhrase(phrase)
+                        ?: "down"
+                    val success = dispatcher.fling(direction)
+                    if (success) HandlerResult.success("Flung $direction")
+                    else HandlerResult.failure("Failed to fling $direction")
+                }
+
+                CommandActionType.THROW -> {
+                    // Throw = fling with velocity, same gesture dispatch
+                    val direction = command.metadata["direction"]
+                        ?: params["direction"]?.toString()
+                        ?: "up"
+                    val success = dispatcher.fling(direction)
+                    if (success) HandlerResult.success("Threw element $direction")
+                    else HandlerResult.failure("Failed to throw")
+                }
+
+                CommandActionType.PAN -> {
+                    // Pan maps to scroll on Android native
+                    val direction = command.metadata["direction"]
+                        ?: params["direction"]?.toString()
+                        ?: extractDirectionFromPhrase(phrase)
+                        ?: "down"
+                    val success = dispatcher.scroll(direction)
+                    if (success) HandlerResult.success("Panned $direction")
+                    else HandlerResult.failure("Failed to pan $direction")
+                }
+
+                CommandActionType.SCALE -> {
+                    val factor = command.metadata["factor"]?.toFloatOrNull()
+                        ?: params["factor"]?.toString()?.toFloatOrNull()
+                        ?: 1.5f
+                    val success = dispatcher.pinch(factor)
+                    val label = if (factor > 1f) "Scaled up" else "Scaled down"
+                    if (success) HandlerResult.success(label)
+                    else HandlerResult.failure("Failed to scale")
+                }
+
+                CommandActionType.GRAB -> {
+                    // Grab = long press (start drag) on Android
+                    val x = params["x"] as? Float
+                    val y = params["y"] as? Float
+                    if (x != null && y != null) {
+                        val success = dispatcher.longPress(x, y)
+                        if (success) HandlerResult.success("Grabbed element")
+                        else HandlerResult.failure("Failed to grab")
+                    } else {
+                        val bounds = boundsResolver.resolve(command)
+                        if (bounds != null) {
+                            val success = dispatcher.longPress(bounds.centerX.toFloat(), bounds.centerY.toFloat())
+                            if (success) HandlerResult.success("Grabbed element")
+                            else HandlerResult.failure("Failed to grab")
+                        } else HandlerResult.notHandled()
+                    }
+                }
+
+                CommandActionType.RELEASE -> {
+                    // Release = tap to cancel drag state
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.tap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    if (success) HandlerResult.success("Released element")
+                    else HandlerResult.failure("Failed to release")
+                }
+
+                CommandActionType.DRAG -> {
+                    val startX = params["startX"]?.toString()?.toFloatOrNull()
+                    val startY = params["startY"]?.toString()?.toFloatOrNull()
+                    val endX = params["endX"]?.toString()?.toFloatOrNull()
+                    val endY = params["endY"]?.toString()?.toFloatOrNull()
+                    if (startX != null && startY != null && endX != null && endY != null) {
+                        val success = dispatcher.drag(startX, startY, endX, endY)
+                        if (success) HandlerResult.success("Dragged element")
+                        else HandlerResult.failure("Failed to drag")
+                    } else HandlerResult.failure("Drag requires startX, startY, endX, endY params")
+                }
+
+                CommandActionType.SELECT_WORD -> {
+                    // Double-tap selects a word in Android text views
+                    val x = params["x"] as? Float
+                    val y = params["y"] as? Float
+                    if (x != null && y != null) {
+                        val success = dispatcher.doubleTap(x, y)
+                        if (success) HandlerResult.success("Selected word")
+                        else HandlerResult.failure("Failed to select word")
+                    } else {
+                        val bounds = boundsResolver.resolve(command)
+                        if (bounds != null) {
+                            val success = dispatcher.doubleTap(bounds.centerX.toFloat(), bounds.centerY.toFloat())
+                            if (success) HandlerResult.success("Selected word")
+                            else HandlerResult.failure("Failed to select word")
+                        } else HandlerResult.notHandled()
+                    }
+                }
+
+                CommandActionType.CLEAR_SELECTION -> {
+                    // Tap to deselect on Android
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.tap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    if (success) HandlerResult.success("Cleared selection")
+                    else HandlerResult.failure("Failed to clear selection")
+                }
+
+                CommandActionType.ZOOM_IN -> {
+                    val success = dispatcher.pinch(1.5f) // Pinch out = zoom in
+                    if (success) HandlerResult.success("Zoomed in")
+                    else HandlerResult.failure("Failed to zoom in")
+                }
+
+                CommandActionType.ZOOM_OUT -> {
+                    val success = dispatcher.pinch(0.5f) // Pinch in = zoom out
+                    if (success) HandlerResult.success("Zoomed out")
+                    else HandlerResult.failure("Failed to zoom out")
+                }
+
+                CommandActionType.RESET_ZOOM -> {
+                    // No direct native equivalent — pinch to neutral scale
+                    val success = dispatcher.pinch(1.0f)
+                    if (success) HandlerResult.success("Reset zoom")
+                    else HandlerResult.failure("Failed to reset zoom")
+                }
+
+                CommandActionType.SWIPE_LEFT -> {
+                    val success = dispatcher.scroll("right") // Swipe left = content moves right
+                    if (success) HandlerResult.success("Swiped left")
+                    else HandlerResult.failure("Failed to swipe left")
+                }
+
+                CommandActionType.SWIPE_RIGHT -> {
+                    val success = dispatcher.scroll("left") // Swipe right = content moves left
+                    if (success) HandlerResult.success("Swiped right")
+                    else HandlerResult.failure("Failed to swipe right")
+                }
+
+                CommandActionType.SWIPE_UP -> {
+                    val success = dispatcher.scroll("down") // Swipe up = scroll down
+                    if (success) HandlerResult.success("Swiped up")
+                    else HandlerResult.failure("Failed to swipe up")
+                }
+
+                CommandActionType.SWIPE_DOWN -> {
+                    val success = dispatcher.scroll("up") // Swipe down = scroll up
+                    if (success) HandlerResult.success("Swiped down")
+                    else HandlerResult.failure("Failed to swipe down")
+                }
+
+                CommandActionType.HOVER -> {
+                    // Hover has no direct native equivalent; tap lightly as approximation
+                    val bounds = boundsResolver.resolve(command)
+                    if (bounds != null) {
+                        val success = dispatcher.tap(bounds.centerX.toFloat(), bounds.centerY.toFloat())
+                        if (success) HandlerResult.success("Hovered on ${command.phrase}")
+                        else HandlerResult.failure("Failed to hover")
+                    } else HandlerResult.notHandled()
+                }
+
+                // Tilt, Orbit, Rotate X/Y/Z, Hover Out — web-only, no native equivalent
+                CommandActionType.TILT -> {
+                    val direction = command.metadata["direction"]
+                        ?: extractDirectionFromPhrase(phrase) ?: "up"
+                    val success = dispatcher.scroll(direction)
+                    if (success) HandlerResult.success("Tilted $direction (scroll)")
+                    else HandlerResult.failure("Failed to tilt")
+                }
+
+                CommandActionType.ORBIT -> {
+                    val direction = command.metadata["direction"]
+                        ?: extractDirectionFromPhrase(phrase) ?: "left"
+                    val success = dispatcher.scroll(direction)
+                    if (success) HandlerResult.success("Orbited $direction (scroll)")
+                    else HandlerResult.failure("Failed to orbit")
+                }
+
+                CommandActionType.ROTATE, CommandActionType.ROTATE_X,
+                CommandActionType.ROTATE_Y, CommandActionType.ROTATE_Z -> {
+                    HandlerResult.failure("Rotation gestures not supported in native Android context", recoverable = true)
+                }
+
+                CommandActionType.HOVER_OUT -> {
+                    HandlerResult.failure("Hover out not supported in native Android context", recoverable = true)
+                }
+
                 else -> HandlerResult.notHandled()
             }
         } catch (e: Exception) {
             HandlerResult.failure("Error executing command: ${e.message}")
+        }
+    }
+
+    /**
+     * Extract directional keyword from a voice phrase.
+     * Used for gestures that encode direction in the phrase (e.g., "fling left", "pan up").
+     */
+    private fun extractDirectionFromPhrase(phrase: String): String? {
+        val normalized = phrase.lowercase()
+        return when {
+            normalized.contains("left") -> "left"
+            normalized.contains("right") -> "right"
+            normalized.contains("up") -> "up"
+            normalized.contains("down") -> "down"
+            else -> null
         }
     }
 }

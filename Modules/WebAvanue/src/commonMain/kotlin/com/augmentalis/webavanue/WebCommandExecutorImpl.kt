@@ -111,6 +111,55 @@ class WebCommandExecutorImpl : IWebCommandExecutor {
             WebActionType.ZOOM_OUT -> DOMScraperBridge.zoomScript(selector, "out")
 
             // ═══════════════════════════════════════════════════════════════
+            // Advanced Gesture Actions
+            // ═══════════════════════════════════════════════════════════════
+            WebActionType.PAN -> DOMScraperBridge.panScript(
+                action.params["dx"] ?: "0",
+                action.params["dy"] ?: "-200"
+            )
+            WebActionType.TILT -> DOMScraperBridge.tiltScript(
+                selector,
+                action.params["angle"] ?: "15"
+            )
+            WebActionType.ORBIT -> DOMScraperBridge.orbitScript(
+                selector,
+                action.params["deltaX"] ?: "30",
+                action.params["deltaY"] ?: "0"
+            )
+            WebActionType.ROTATE_X -> DOMScraperBridge.rotateXScript(
+                selector,
+                action.params["angle"] ?: "90"
+            )
+            WebActionType.ROTATE_Y -> DOMScraperBridge.rotateYScript(
+                selector,
+                action.params["angle"] ?: "90"
+            )
+            WebActionType.ROTATE_Z -> DOMScraperBridge.rotateZScript(
+                selector,
+                action.params["angle"] ?: "90"
+            )
+            WebActionType.PINCH -> DOMScraperBridge.pinchScript(
+                selector,
+                action.params["scale"] ?: "0.5"
+            )
+            WebActionType.FLING -> DOMScraperBridge.flingScript(
+                action.params["direction"] ?: "down",
+                action.params["velocity"] ?: "1500"
+            )
+            WebActionType.THROW -> DOMScraperBridge.throwScript(
+                action.params["velocityX"] ?: "500",
+                action.params["velocityY"] ?: "-500"
+            )
+            WebActionType.SCALE -> DOMScraperBridge.scaleScript(
+                selector,
+                action.params["factor"] ?: "1.5"
+            )
+            WebActionType.RESET_ZOOM -> DOMScraperBridge.resetZoomScript()
+            WebActionType.SELECT_WORD -> DOMScraperBridge.selectWordScript(selector)
+            WebActionType.CLEAR_SELECTION -> DOMScraperBridge.clearSelectionScript()
+            WebActionType.HOVER_OUT -> DOMScraperBridge.hoverOutScript(selector)
+
+            // ═══════════════════════════════════════════════════════════════
             // Text/Clipboard Actions
             // ═══════════════════════════════════════════════════════════════
             WebActionType.SELECT_ALL -> DOMScraperBridge.selectAllScript()

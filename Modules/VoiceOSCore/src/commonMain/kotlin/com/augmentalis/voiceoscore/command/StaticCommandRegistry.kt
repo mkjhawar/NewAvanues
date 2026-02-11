@@ -579,7 +579,7 @@ object StaticCommandRegistry {
             description = "Swipe down on the page"
         ),
         StaticCommand(
-            phrases = listOf("grab", "grab this"),
+            phrases = listOf("grab", "grab this", "grab element", "lock", "lock element", "hold", "latch"),
             actionType = CommandActionType.GRAB,
             category = CommandCategory.BROWSER,
             description = "Grab/start dragging an element"
@@ -613,6 +613,212 @@ object StaticCommandRegistry {
     )
 
     // ═══════════════════════════════════════════════════════════════════
+    // Web Gesture Commands (advanced touch/pointer gestures for web)
+    // ═══════════════════════════════════════════════════════════════════
+
+    val webGestureCommands = listOf(
+        // Pan (viewport translation)
+        StaticCommand(
+            phrases = listOf("pan", "pan viewport", "move view"),
+            actionType = CommandActionType.PAN,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Pan the viewport"
+        ),
+        StaticCommand(
+            phrases = listOf("pan left", "pan viewport left", "slide view left", "move view left"),
+            actionType = CommandActionType.PAN,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Pan viewport left",
+            metadata = mapOf("direction" to "left")
+        ),
+        StaticCommand(
+            phrases = listOf("pan right", "pan viewport right", "slide view right", "move view right"),
+            actionType = CommandActionType.PAN,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Pan viewport right",
+            metadata = mapOf("direction" to "right")
+        ),
+        StaticCommand(
+            phrases = listOf("pan up", "pan viewport up", "move view up"),
+            actionType = CommandActionType.PAN,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Pan viewport up",
+            metadata = mapOf("direction" to "up")
+        ),
+        StaticCommand(
+            phrases = listOf("pan down", "pan viewport down", "move view down"),
+            actionType = CommandActionType.PAN,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Pan viewport down",
+            metadata = mapOf("direction" to "down")
+        ),
+
+        // Tilt (viewport angle)
+        StaticCommand(
+            phrases = listOf("tilt", "tilt viewport", "angle view"),
+            actionType = CommandActionType.TILT,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Tilt the viewport"
+        ),
+        StaticCommand(
+            phrases = listOf("tilt up", "tilt viewport up", "angle up"),
+            actionType = CommandActionType.TILT,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Tilt viewport up",
+            metadata = mapOf("direction" to "up")
+        ),
+        StaticCommand(
+            phrases = listOf("tilt down", "tilt viewport down", "angle down"),
+            actionType = CommandActionType.TILT,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Tilt viewport down",
+            metadata = mapOf("direction" to "down")
+        ),
+
+        // Orbit (circular navigation around element)
+        StaticCommand(
+            phrases = listOf("orbit", "orbit around", "circle around"),
+            actionType = CommandActionType.ORBIT,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Orbit around element"
+        ),
+        StaticCommand(
+            phrases = listOf("orbit left", "orbit around left", "circle left"),
+            actionType = CommandActionType.ORBIT,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Orbit left around element",
+            metadata = mapOf("direction" to "left")
+        ),
+        StaticCommand(
+            phrases = listOf("orbit right", "orbit around right", "circle right"),
+            actionType = CommandActionType.ORBIT,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Orbit right around element",
+            metadata = mapOf("direction" to "right")
+        ),
+
+        // Axis rotation
+        StaticCommand(
+            phrases = listOf("rotate x", "rotate x axis", "flip vertical"),
+            actionType = CommandActionType.ROTATE_X,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Rotate element around X axis"
+        ),
+        StaticCommand(
+            phrases = listOf("rotate y", "rotate y axis", "flip horizontal"),
+            actionType = CommandActionType.ROTATE_Y,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Rotate element around Y axis"
+        ),
+        StaticCommand(
+            phrases = listOf("rotate z", "rotate z axis", "spin"),
+            actionType = CommandActionType.ROTATE_Z,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Rotate element around Z axis"
+        ),
+
+        // Pinch (two-finger zoom)
+        StaticCommand(
+            phrases = listOf("pinch in", "pinch to zoom out", "squeeze"),
+            actionType = CommandActionType.PINCH,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Pinch in (zoom out)",
+            metadata = mapOf("scale" to "0.5")
+        ),
+        StaticCommand(
+            phrases = listOf("pinch out", "pinch to zoom in", "spread"),
+            actionType = CommandActionType.PINCH,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Pinch out (zoom in)",
+            metadata = mapOf("scale" to "2.0")
+        ),
+
+        // Fling (fast directional swipe with velocity)
+        StaticCommand(
+            phrases = listOf("fling up", "flick up"),
+            actionType = CommandActionType.FLING,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Fling up with velocity",
+            metadata = mapOf("direction" to "up")
+        ),
+        StaticCommand(
+            phrases = listOf("fling down", "flick down"),
+            actionType = CommandActionType.FLING,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Fling down with velocity",
+            metadata = mapOf("direction" to "down")
+        ),
+        StaticCommand(
+            phrases = listOf("fling left", "flick left"),
+            actionType = CommandActionType.FLING,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Fling left with velocity",
+            metadata = mapOf("direction" to "left")
+        ),
+        StaticCommand(
+            phrases = listOf("fling right", "flick right"),
+            actionType = CommandActionType.FLING,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Fling right with velocity",
+            metadata = mapOf("direction" to "right")
+        ),
+
+        // Throw (velocity-based release)
+        StaticCommand(
+            phrases = listOf("throw", "toss", "throw element", "toss element"),
+            actionType = CommandActionType.THROW,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Throw element with velocity"
+        ),
+
+        // Scale
+        StaticCommand(
+            phrases = listOf("scale up", "scale element up", "enlarge", "make bigger"),
+            actionType = CommandActionType.SCALE,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Scale element up",
+            metadata = mapOf("factor" to "1.5")
+        ),
+        StaticCommand(
+            phrases = listOf("scale down", "scale element down", "shrink", "make smaller"),
+            actionType = CommandActionType.SCALE,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Scale element down",
+            metadata = mapOf("factor" to "0.67")
+        ),
+
+        // Reset zoom
+        StaticCommand(
+            phrases = listOf("reset zoom", "reset zoom level", "zoom reset", "normal zoom"),
+            actionType = CommandActionType.RESET_ZOOM,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Reset zoom to default level"
+        ),
+
+        // Selection
+        StaticCommand(
+            phrases = listOf("select word", "pick word", "highlight word"),
+            actionType = CommandActionType.SELECT_WORD,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Select word at cursor position"
+        ),
+        StaticCommand(
+            phrases = listOf("clear selection", "deselect", "unselect", "clear highlight"),
+            actionType = CommandActionType.CLEAR_SELECTION,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Clear text selection"
+        ),
+
+        // Hover out
+        StaticCommand(
+            phrases = listOf("hover out", "stop hovering", "unhover", "mouse leave"),
+            actionType = CommandActionType.HOVER_OUT,
+            category = CommandCategory.WEB_GESTURE,
+            description = "Stop hovering over element"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
     // Registry Access Methods
     // ═══════════════════════════════════════════════════════════════════
 
@@ -632,7 +838,8 @@ object StaticCommandRegistry {
         textCommands +
         readingCommands +
         inputCommands +
-        browserCommands
+        browserCommands +
+        webGestureCommands
 
     /**
      * Get all phrase strings (for speech engine vocabulary)

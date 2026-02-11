@@ -26,24 +26,20 @@ class WebCommandHandler : BaseHandler() {
 
     override val category: ActionCategory = ActionCategory.BROWSER
 
-    override val supportedActions: List<String> = listOf(
-        // Element actions (with target)
-        "click", "tap", "press", "focus", "type", "toggle", "select",
-        "long press", "double tap", "double click", "hover",
-        // Page navigation
-        "go back", "go forward", "refresh", "reload",
-        // Page scrolling
-        "page up", "page down", "go to top", "go to bottom",
-        "scroll to top", "scroll to bottom",
-        // Form navigation
-        "next field", "tab", "previous field", "submit", "submit form",
-        // Gestures
-        "swipe left", "swipe right", "swipe up", "swipe down",
-        "grab", "release", "let go", "rotate left", "rotate right",
-        "zoom in", "zoom out",
-        // Text/Clipboard
-        "select all", "copy", "copy that", "cut", "paste"
-    )
+    override val supportedActions: List<String> = buildList {
+        // Element interaction verbs (for dynamically generated web element commands)
+        addAll(listOf("click", "tap", "press", "focus", "type", "toggle", "select",
+            "long press", "double tap", "double click", "hover"))
+        // Browser commands from registry
+        StaticCommandRegistry.byCategory(CommandCategory.BROWSER)
+            .flatMap { it.phrases }.forEach { add(it) }
+        // Web gesture commands from registry
+        StaticCommandRegistry.byCategory(CommandCategory.WEB_GESTURE)
+            .flatMap { it.phrases }.forEach { add(it) }
+        // Text/clipboard commands from registry
+        StaticCommandRegistry.byCategory(CommandCategory.TEXT)
+            .flatMap { it.phrases }.forEach { add(it) }
+    }.distinct()
 
     @Volatile
     private var executor: IWebCommandExecutor? = null
@@ -89,6 +85,17 @@ class WebCommandHandler : BaseHandler() {
                 command.metadata["angle"]?.let { put("angle", it) }
                 command.metadata["direction"]?.let { put("direction", it) }
                 command.metadata["distance"]?.let { put("distance", it) }
+                command.metadata["dx"]?.let { put("dx", it) }
+                command.metadata["dy"]?.let { put("dy", it) }
+                command.metadata["deltaX"]?.let { put("deltaX", it) }
+                command.metadata["deltaY"]?.let { put("deltaY", it) }
+                command.metadata["velocityX"]?.let { put("velocityX", it) }
+                command.metadata["velocityY"]?.let { put("velocityY", it) }
+                command.metadata["velocity"]?.let { put("velocity", it) }
+                command.metadata["factor"]?.let { put("factor", it) }
+                command.metadata["scale"]?.let { put("scale", it) }
+                // Extract direction/distance from phrase for pan/fling/tilt/orbit
+                extractDirectionParams(command.phrase, actionType)?.forEach { (k, v) -> put(k, v) }
             }
         )
 
@@ -154,6 +161,22 @@ class WebCommandHandler : BaseHandler() {
             CommandActionType.ZOOM_IN -> WebActionType.ZOOM_IN
             CommandActionType.ZOOM_OUT -> WebActionType.ZOOM_OUT
 
+            // Advanced gestures
+            CommandActionType.PAN -> WebActionType.PAN
+            CommandActionType.TILT -> WebActionType.TILT
+            CommandActionType.ORBIT -> WebActionType.ORBIT
+            CommandActionType.ROTATE_X -> WebActionType.ROTATE_X
+            CommandActionType.ROTATE_Y -> WebActionType.ROTATE_Y
+            CommandActionType.ROTATE_Z -> WebActionType.ROTATE_Z
+            CommandActionType.PINCH -> WebActionType.PINCH
+            CommandActionType.FLING -> WebActionType.FLING
+            CommandActionType.THROW -> WebActionType.THROW
+            CommandActionType.SCALE -> WebActionType.SCALE
+            CommandActionType.RESET_ZOOM -> WebActionType.RESET_ZOOM
+            CommandActionType.SELECT_WORD -> WebActionType.SELECT_WORD
+            CommandActionType.CLEAR_SELECTION -> WebActionType.CLEAR_SELECTION
+            CommandActionType.HOVER_OUT -> WebActionType.HOVER_OUT
+
             // Fallback: parse from phrase
             else -> resolveFromPhrase(command.phrase)
         }
@@ -184,19 +207,95 @@ class WebCommandHandler : BaseHandler() {
             normalized == "swipe right" -> WebActionType.SWIPE_RIGHT
             normalized == "swipe up" -> WebActionType.SWIPE_UP
             normalized == "swipe down" -> WebActionType.SWIPE_DOWN
-            normalized == "grab" -> WebActionType.GRAB
+            normalized == "grab" || normalized == "lock" || normalized == "lock element" -> WebActionType.GRAB
             normalized == "release" || normalized == "let go" -> WebActionType.RELEASE
+            normalized.startsWith("rotate x") -> WebActionType.ROTATE_X
+            normalized.startsWith("rotate y") -> WebActionType.ROTATE_Y
+            normalized.startsWith("rotate z") -> WebActionType.ROTATE_Z
             normalized.startsWith("rotate") -> WebActionType.ROTATE
             normalized.startsWith("long press") -> WebActionType.LONG_PRESS
             normalized.startsWith("double") -> WebActionType.DOUBLE_CLICK
+            normalized == "hover out" || normalized == "stop hovering" -> WebActionType.HOVER_OUT
             normalized.startsWith("hover") -> WebActionType.HOVER
             normalized == "zoom in" -> WebActionType.ZOOM_IN
             normalized == "zoom out" -> WebActionType.ZOOM_OUT
+            normalized == "reset zoom" -> WebActionType.RESET_ZOOM
+            normalized == "pan" || normalized.startsWith("pan ") -> WebActionType.PAN
+            normalized == "tilt" || normalized.startsWith("tilt ") -> WebActionType.TILT
+            normalized == "orbit" || normalized.startsWith("orbit ") -> WebActionType.ORBIT
+            normalized.startsWith("pinch") -> WebActionType.PINCH
+            normalized.startsWith("fling") -> WebActionType.FLING
+            normalized == "throw" || normalized == "toss" -> WebActionType.THROW
+            normalized.startsWith("scale") -> WebActionType.SCALE
+            normalized == "select word" -> WebActionType.SELECT_WORD
+            normalized == "clear selection" || normalized == "deselect" -> WebActionType.CLEAR_SELECTION
             normalized == "select all" -> WebActionType.SELECT_ALL
             normalized.startsWith("copy") -> WebActionType.COPY
             normalized == "cut" -> WebActionType.CUT
             normalized == "paste" -> WebActionType.PASTE
             else -> WebActionType.CLICK
+        }
+    }
+
+    /**
+     * Extract directional parameters from voice phrase for gestures that
+     * encode direction in the phrase itself (e.g., "pan left", "fling down").
+     *
+     * Returns null if no directional info found in the phrase.
+     * Note: Phrases are English-only for now; localized phrase tables
+     * (Vivoka/Whisper/Google STT) will replace these string matches.
+     */
+    private fun extractDirectionParams(phrase: String, actionType: WebActionType): Map<String, String>? {
+        val normalized = phrase.lowercase().trim()
+        return when (actionType) {
+            WebActionType.PAN -> {
+                val dist = "200"
+                when {
+                    normalized.contains("left") -> mapOf("dx" to "-$dist", "dy" to "0")
+                    normalized.contains("right") -> mapOf("dx" to dist, "dy" to "0")
+                    normalized.contains("up") -> mapOf("dx" to "0", "dy" to "-$dist")
+                    normalized.contains("down") -> mapOf("dx" to "0", "dy" to dist)
+                    else -> null
+                }
+            }
+            WebActionType.TILT -> {
+                when {
+                    normalized.contains("up") -> mapOf("angle" to "15")
+                    normalized.contains("down") -> mapOf("angle" to "-15")
+                    else -> null
+                }
+            }
+            WebActionType.ORBIT -> {
+                when {
+                    normalized.contains("left") -> mapOf("deltaX" to "-30", "deltaY" to "0")
+                    normalized.contains("right") -> mapOf("deltaX" to "30", "deltaY" to "0")
+                    else -> null
+                }
+            }
+            WebActionType.FLING -> {
+                when {
+                    normalized.contains("up") -> mapOf("direction" to "up", "velocity" to "1500")
+                    normalized.contains("down") -> mapOf("direction" to "down", "velocity" to "1500")
+                    normalized.contains("left") -> mapOf("direction" to "left", "velocity" to "1500")
+                    normalized.contains("right") -> mapOf("direction" to "right", "velocity" to "1500")
+                    else -> null
+                }
+            }
+            WebActionType.PINCH -> {
+                when {
+                    normalized.contains("in") -> mapOf("scale" to "0.5")
+                    normalized.contains("out") -> mapOf("scale" to "2.0")
+                    else -> null
+                }
+            }
+            WebActionType.SCALE -> {
+                when {
+                    normalized.contains("up") -> mapOf("factor" to "1.5")
+                    normalized.contains("down") -> mapOf("factor" to "0.67")
+                    else -> null
+                }
+            }
+            else -> null
         }
     }
 }

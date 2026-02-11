@@ -1013,4 +1013,230 @@ object DOMScraperBridge {
 })();
 """
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Advanced Gesture Scripts (delegates to window.AvanuesGestures)
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun panScript(dx: String, dy: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.pan($dx, $dy);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun tiltScript(selector: String, angle: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.tilt(x, y, $angle);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun orbitScript(selector: String, deltaX: String, deltaY: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.orbit(x, y, $deltaX, $deltaY);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun rotateXScript(selector: String, angle: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.rotateX(x, y, $angle);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun rotateYScript(selector: String, angle: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.rotateY(x, y, $angle);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun rotateZScript(selector: String, angle: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.rotateZ(x, y, $angle);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun pinchScript(selector: String, scale: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            cx = rect.left + rect.width / 2;
+            cy = rect.top + rect.height / 2;
+        }
+    }
+    const offset = 50;
+    const result = window.AvanuesGestures.pinch(cx - offset, cy, cx + offset, cy, $scale);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun flingScript(direction: String, velocity: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.fling($velocity, '$direction');
+    return JSON.stringify(result);
+})();
+"""
+
+    fun throwScript(velocityX: String, velocityY: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.throwElement($velocityX, $velocityY);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun scaleScript(selector: String, factor: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.scale(x, y, $factor);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun resetZoomScript(): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.resetZoom();
+    return JSON.stringify(result);
+})();
+"""
+
+    fun selectWordScript(selector: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.selectWord(x, y);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun clearSelectionScript(): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.clearSelection();
+    return JSON.stringify(result);
+})();
+"""
+
+    fun hoverOutScript(selector: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.hoverOut(x, y);
+    return JSON.stringify(result);
+})();
+"""
 }

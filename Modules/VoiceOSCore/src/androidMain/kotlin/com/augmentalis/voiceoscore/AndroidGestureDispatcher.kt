@@ -19,6 +19,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -40,7 +41,13 @@ class AndroidGestureDispatcher(
         private const val TAP_DURATION_MS = 50L
         private const val LONG_PRESS_DURATION_MS = 500L
         private const val SCROLL_DURATION_MS = 300L
+        private const val FLING_DURATION_MS = 100L
+        private const val DRAG_DURATION_MS = 600L
+        private const val DOUBLE_TAP_DELAY_MS = 150L
+        private const val PINCH_DURATION_MS = 400L
         private const val SWIPE_DISTANCE = 500
+        private const val FLING_DISTANCE = 800
+        private const val PINCH_SPAN = 300f
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -245,6 +252,115 @@ class AndroidGestureDispatcher(
         return node.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS).also { result ->
             Log.d(TAG, "Focus: $result")
         }
+    }
+
+    /**
+     * Double-tap at specific coordinates.
+     * Used for text selection (SELECT_WORD) and DOUBLE_CLICK.
+     *
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @return true if both taps were dispatched successfully
+     */
+    suspend fun doubleTap(x: Float, y: Float): Boolean {
+        val firstTap = tap(x, y)
+        if (!firstTap) return false
+        delay(DOUBLE_TAP_DELAY_MS)
+        return tap(x, y)
+    }
+
+    /**
+     * Fling gesture — fast swipe with short duration for momentum effect.
+     *
+     * @param direction Fling direction ("up", "down", "left", "right")
+     * @return true if gesture was dispatched successfully
+     */
+    suspend fun fling(direction: String): Boolean {
+        val metrics = service.resources.displayMetrics
+        val screenWidth = metrics.widthPixels
+        val screenHeight = metrics.heightPixels
+        val startX = screenWidth / 2f
+        val startY = screenHeight / 2f
+
+        val (endX, endY) = when (direction.lowercase()) {
+            "up" -> startX to (startY - FLING_DISTANCE)
+            "down" -> startX to (startY + FLING_DISTANCE)
+            "left" -> (startX - FLING_DISTANCE) to startY
+            "right" -> (startX + FLING_DISTANCE) to startY
+            else -> {
+                Log.w(TAG, "Unknown fling direction: $direction")
+                return false
+            }
+        }
+
+        val path = Path().apply {
+            moveTo(startX, startY)
+            lineTo(endX.toFloat(), endY.toFloat())
+        }
+
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, FLING_DURATION_MS))
+            .build()
+
+        return dispatchGesture(gesture)
+    }
+
+    /**
+     * Pinch gesture — two concurrent strokes simulating two fingers.
+     * Pinch-in (scale < 1): fingers move toward center.
+     * Pinch-out (scale > 1): fingers move away from center.
+     *
+     * @param scale Scale factor. < 1 = pinch in (zoom out), > 1 = pinch out (zoom in)
+     * @return true if gesture was dispatched successfully
+     */
+    suspend fun pinch(scale: Float): Boolean {
+        val metrics = service.resources.displayMetrics
+        val centerX = metrics.widthPixels / 2f
+        val centerY = metrics.heightPixels / 2f
+
+        val startSpan = PINCH_SPAN
+        val endSpan = startSpan * scale
+
+        // Finger 1: left side
+        val finger1 = Path().apply {
+            moveTo(centerX - startSpan / 2, centerY)
+            lineTo(centerX - endSpan / 2, centerY)
+        }
+
+        // Finger 2: right side
+        val finger2 = Path().apply {
+            moveTo(centerX + startSpan / 2, centerY)
+            lineTo(centerX + endSpan / 2, centerY)
+        }
+
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(finger1, 0, PINCH_DURATION_MS))
+            .addStroke(GestureDescription.StrokeDescription(finger2, 0, PINCH_DURATION_MS))
+            .build()
+
+        return dispatchGesture(gesture)
+    }
+
+    /**
+     * Drag from one point to another (long press + move).
+     *
+     * @param startX Start X coordinate
+     * @param startY Start Y coordinate
+     * @param endX End X coordinate
+     * @param endY End Y coordinate
+     * @return true if gesture was dispatched successfully
+     */
+    suspend fun drag(startX: Float, startY: Float, endX: Float, endY: Float): Boolean {
+        val path = Path().apply {
+            moveTo(startX, startY)
+            lineTo(endX, endY)
+        }
+
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, DRAG_DURATION_MS))
+            .build()
+
+        return dispatchGesture(gesture)
     }
 
     /**

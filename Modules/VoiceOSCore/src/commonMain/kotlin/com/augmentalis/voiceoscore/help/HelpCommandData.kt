@@ -456,6 +456,150 @@ object HelpCommandDataProvider {
     )
 
     // ═══════════════════════════════════════════════════════════════════
+    // Category: Web Gestures
+    // ═══════════════════════════════════════════════════════════════════
+    private val webGestureCommands = listOf(
+        HelpCommand(
+            primaryPhrase = "pan left",
+            variations = listOf("pan viewport left", "slide view left", "move view left"),
+            description = "Pan viewport left",
+            actionResult = "Shifts viewport left"
+        ),
+        HelpCommand(
+            primaryPhrase = "pan right",
+            variations = listOf("pan viewport right", "slide view right", "move view right"),
+            description = "Pan viewport right",
+            actionResult = "Shifts viewport right"
+        ),
+        HelpCommand(
+            primaryPhrase = "pan up",
+            variations = listOf("pan viewport up", "move view up"),
+            description = "Pan viewport up",
+            actionResult = "Shifts viewport up"
+        ),
+        HelpCommand(
+            primaryPhrase = "pan down",
+            variations = listOf("pan viewport down", "move view down"),
+            description = "Pan viewport down",
+            actionResult = "Shifts viewport down"
+        ),
+        HelpCommand(
+            primaryPhrase = "tilt up",
+            variations = listOf("tilt viewport up", "angle up"),
+            description = "Tilt viewport up",
+            actionResult = "Angles viewport upward"
+        ),
+        HelpCommand(
+            primaryPhrase = "tilt down",
+            variations = listOf("tilt viewport down", "angle down"),
+            description = "Tilt viewport down",
+            actionResult = "Angles viewport downward"
+        ),
+        HelpCommand(
+            primaryPhrase = "orbit left",
+            variations = listOf("orbit around left", "circle left"),
+            description = "Orbit left around element",
+            actionResult = "Orbits camera left"
+        ),
+        HelpCommand(
+            primaryPhrase = "orbit right",
+            variations = listOf("orbit around right", "circle right"),
+            description = "Orbit right around element",
+            actionResult = "Orbits camera right"
+        ),
+        HelpCommand(
+            primaryPhrase = "rotate x",
+            variations = listOf("rotate x axis", "flip vertical"),
+            description = "Rotate element around X axis",
+            actionResult = "Rotates on X axis"
+        ),
+        HelpCommand(
+            primaryPhrase = "rotate y",
+            variations = listOf("rotate y axis", "flip horizontal"),
+            description = "Rotate element around Y axis",
+            actionResult = "Rotates on Y axis"
+        ),
+        HelpCommand(
+            primaryPhrase = "rotate z",
+            variations = listOf("rotate z axis", "spin"),
+            description = "Rotate element around Z axis",
+            actionResult = "Spins element"
+        ),
+        HelpCommand(
+            primaryPhrase = "pinch in",
+            variations = listOf("pinch to zoom out", "squeeze"),
+            description = "Pinch in to zoom out",
+            actionResult = "Zooms out via pinch"
+        ),
+        HelpCommand(
+            primaryPhrase = "pinch out",
+            variations = listOf("pinch to zoom in", "spread"),
+            description = "Pinch out to zoom in",
+            actionResult = "Zooms in via pinch"
+        ),
+        HelpCommand(
+            primaryPhrase = "fling up",
+            variations = listOf("flick up"),
+            description = "Fling content upward",
+            actionResult = "Fast-scrolls content up"
+        ),
+        HelpCommand(
+            primaryPhrase = "fling down",
+            variations = listOf("flick down"),
+            description = "Fling content downward",
+            actionResult = "Fast-scrolls content down"
+        ),
+        HelpCommand(
+            primaryPhrase = "throw",
+            variations = listOf("toss", "throw element", "toss element"),
+            description = "Throw element with velocity",
+            actionResult = "Launches element with momentum"
+        ),
+        HelpCommand(
+            primaryPhrase = "scale up",
+            variations = listOf("enlarge", "make bigger"),
+            description = "Scale element up",
+            actionResult = "Enlarges element by 50%"
+        ),
+        HelpCommand(
+            primaryPhrase = "scale down",
+            variations = listOf("shrink", "make smaller"),
+            description = "Scale element down",
+            actionResult = "Shrinks element by 33%"
+        ),
+        HelpCommand(
+            primaryPhrase = "reset zoom",
+            variations = listOf("zoom reset", "normal zoom"),
+            description = "Reset zoom to default",
+            actionResult = "Returns to 100% zoom"
+        ),
+        HelpCommand(
+            primaryPhrase = "grab",
+            variations = listOf("grab element", "lock", "lock element", "hold", "latch"),
+            description = "Grab/lock an element for dragging",
+            actionResult = "Grabs element for manipulation"
+        ),
+        HelpCommand(
+            primaryPhrase = "select word",
+            variations = listOf("pick word", "highlight word"),
+            description = "Select word at cursor",
+            actionResult = "Highlights word under cursor"
+        ),
+        HelpCommand(
+            primaryPhrase = "clear selection",
+            variations = listOf("deselect", "unselect"),
+            description = "Clear text selection",
+            actionResult = "Removes selection highlight"
+        ),
+        HelpCommand(
+            primaryPhrase = "hover out",
+            variations = listOf("stop hovering", "unhover"),
+            description = "Stop hovering over element",
+            actionResult = "Triggers mouse-leave event"
+        )
+    )
+
+    // ═══════════════════════════════════════════════════════════════════
     // All Categories
     // ═══════════════════════════════════════════════════════════════════
 
@@ -515,6 +659,14 @@ object HelpCommandDataProvider {
         color = "#00BCD4" // Cyan
     )
 
+    private val webGestureCategory = HelpCategory(
+        id = "web_gestures",
+        title = "Web Gestures",
+        iconName = "gesture",
+        commands = webGestureCommands,
+        color = "#E91E63" // Pink
+    )
+
     /**
      * Get all help categories.
      */
@@ -525,7 +677,8 @@ object HelpCommandDataProvider {
         textInputCategory,
         systemCategory,
         mediaCategory,
-        voiceOSCategory
+        voiceOSCategory,
+        webGestureCategory
     )
 
     /**
