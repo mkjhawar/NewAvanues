@@ -804,8 +804,8 @@ private fun SystemHealthBar(permissions: PermissionStatus) {
         } else {
             @SuppressLint("BatteryLife")
             PermissionActionCard(
-                title = "Battery Unrestricted",
-                description = "Tap to allow — one-step dialog",
+                title = "Battery Restricted",
+                description = "Tap to allow unrestricted — one-step dialog",
                 badge = "Direct",
                 onClick = {
                     try {
@@ -919,7 +919,7 @@ private fun PermissionActionCard(
                 }
                 Text(description, style = MaterialTheme.typography.bodySmall, color = AvanueTheme.colors.textSecondary)
             }
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, "Open settings", tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, "Open settings", tint = AvanueTheme.colors.textPrimary, modifier = Modifier.size(18.dp))
         }
     }
 }
