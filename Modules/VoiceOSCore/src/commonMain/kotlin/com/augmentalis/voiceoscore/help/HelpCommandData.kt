@@ -7,8 +7,16 @@
  *
  * Provides structured data for the help screen, including command categories,
  * individual commands with variations, and quick reference data.
+ *
+ * Phase 2 (260211): Commands now derive from StaticCommandRegistry (DB-backed)
+ * instead of being hardcoded. Template commands (with [element], [text], etc.)
+ * remain static since they document parametric usage patterns, not DB entries.
  */
 package com.augmentalis.voiceoscore.help
+
+import com.augmentalis.voiceoscore.CommandCategory
+import com.augmentalis.voiceoscore.StaticCommand
+import com.augmentalis.voiceoscore.StaticCommandRegistry
 
 /**
  * Represents a single voice command with its variations.
@@ -47,14 +55,8 @@ data class HelpCategory(
     val commands: List<HelpCommand>,
     val color: String? = null
 ) {
-    /**
-     * Number of commands in this category.
-     */
     val commandCount: Int get() = commands.size
 
-    /**
-     * Preview text showing first few commands.
-     */
     val previewText: String
         get() = commands.take(3).joinToString(", ") { "\"${it.primaryPhrase}\"" } +
                 if (commands.size > 3) "..." else ""
@@ -62,10 +64,6 @@ data class HelpCategory(
 
 /**
  * Quick reference entry for the table view.
- *
- * @property command Primary command phrase
- * @property variations Alternative phrases (comma-separated for display)
- * @property action What happens when command is executed
  */
 data class QuickReferenceEntry(
     val command: String,
@@ -75,9 +73,6 @@ data class QuickReferenceEntry(
 
 /**
  * Complete help screen data.
- *
- * @property categories All command categories
- * @property quickReference Entries for quick reference table
  */
 data class HelpScreenData(
     val categories: List<HelpCategory>,
@@ -85,104 +80,38 @@ data class HelpScreenData(
 )
 
 /**
+ * Convert StaticCommand to HelpCommand for help screen display.
+ */
+private fun StaticCommand.toHelpCommand(): HelpCommand = HelpCommand(
+    primaryPhrase = primaryPhrase,
+    variations = phrases.drop(1),
+    description = description,
+    actionResult = description
+)
+
+/**
  * Provides all help command data for the help screen.
+ *
+ * Non-template commands derive from StaticCommandRegistry (DB-backed single source of truth).
+ * Template commands (with [element], [text] patterns) remain static — they document
+ * parametric usage patterns that don't correspond to fixed DB entries.
  */
 object HelpCommandDataProvider {
 
     // ═══════════════════════════════════════════════════════════════════
-    // Category: Navigation
+    // Template Commands — parametric patterns not in DB
     // ═══════════════════════════════════════════════════════════════════
-    private val navigationCommands = listOf(
-        HelpCommand(
-            primaryPhrase = "go back",
-            variations = listOf("back", "navigate back", "previous screen"),
-            description = "Go to previous screen",
-            actionResult = "Returns to previous screen"
-        ),
-        HelpCommand(
-            primaryPhrase = "go home",
-            variations = listOf("home", "navigate home"),
-            description = "Go to home screen",
-            actionResult = "Opens home screen"
-        ),
-        HelpCommand(
-            primaryPhrase = "recent apps",
-            variations = listOf("show recents", "app switcher"),
-            description = "Show recent apps",
-            actionResult = "Opens app switcher"
-        ),
-        HelpCommand(
-            primaryPhrase = "scroll down",
-            variations = listOf("page down", "swipe up"),
-            description = "Scroll the page down",
-            actionResult = "Scrolls content down"
-        ),
-        HelpCommand(
-            primaryPhrase = "scroll up",
-            variations = listOf("page up", "swipe down"),
-            description = "Scroll the page up",
-            actionResult = "Scrolls content up"
-        ),
-        HelpCommand(
-            primaryPhrase = "scroll left",
-            variations = listOf("swipe right"),
-            description = "Scroll to the left",
-            actionResult = "Scrolls content left"
-        ),
-        HelpCommand(
-            primaryPhrase = "scroll right",
-            variations = listOf("swipe left"),
-            description = "Scroll to the right",
-            actionResult = "Scrolls content right"
-        )
-    )
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Category: App Control
-    // ═══════════════════════════════════════════════════════════════════
-    private val appControlCommands = listOf(
+    private val appControlTemplates = listOf(
         HelpCommand(
             primaryPhrase = "open [app name]",
             variations = listOf("launch [app]", "start [app]"),
             description = "Open any installed app",
             actionResult = "Launches the specified app"
-        ),
-        HelpCommand(
-            primaryPhrase = "open camera",
-            variations = listOf("camera", "take photo"),
-            description = "Open the camera app",
-            actionResult = "Launches camera"
-        ),
-        HelpCommand(
-            primaryPhrase = "open settings",
-            variations = listOf("settings", "device settings"),
-            description = "Open system settings",
-            actionResult = "Opens settings app"
-        ),
-        HelpCommand(
-            primaryPhrase = "open browser",
-            variations = listOf("browser", "web browser"),
-            description = "Open web browser",
-            actionResult = "Launches default browser"
-        ),
-        HelpCommand(
-            primaryPhrase = "open messages",
-            variations = listOf("messages", "sms"),
-            description = "Open messaging app",
-            actionResult = "Launches messages app"
-        ),
-        HelpCommand(
-            primaryPhrase = "open calculator",
-            variations = listOf("calculator"),
-            description = "Open calculator",
-            actionResult = "Launches calculator"
         )
     )
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Category: UI Interaction
-    // ═══════════════════════════════════════════════════════════════════
-    private val uiInteractionCommands = listOf(
+    private val uiInteractionTemplates = listOf(
         HelpCommand(
             primaryPhrase = "click [element]",
             variations = listOf("tap [element]", "press [element]"),
@@ -227,10 +156,7 @@ object HelpCommandDataProvider {
         )
     )
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Category: Text Input
-    // ═══════════════════════════════════════════════════════════════════
-    private val textInputCommands = listOf(
+    private val textInputTemplates = listOf(
         HelpCommand(
             primaryPhrase = "type [text]",
             variations = listOf("enter text [text]", "input [text]"),
@@ -238,46 +164,10 @@ object HelpCommandDataProvider {
             actionResult = "Enters the specified text"
         ),
         HelpCommand(
-            primaryPhrase = "delete",
-            variations = listOf("backspace"),
-            description = "Delete one character",
-            actionResult = "Deletes previous character"
-        ),
-        HelpCommand(
             primaryPhrase = "clear text",
             variations = listOf("clear all"),
             description = "Clear all text in field",
             actionResult = "Clears the text field"
-        ),
-        HelpCommand(
-            primaryPhrase = "select all",
-            variations = emptyList(),
-            description = "Select all text",
-            actionResult = "Selects all text in field"
-        ),
-        HelpCommand(
-            primaryPhrase = "copy",
-            variations = emptyList(),
-            description = "Copy selected text",
-            actionResult = "Copies to clipboard"
-        ),
-        HelpCommand(
-            primaryPhrase = "cut",
-            variations = emptyList(),
-            description = "Cut selected text",
-            actionResult = "Cuts to clipboard"
-        ),
-        HelpCommand(
-            primaryPhrase = "paste",
-            variations = emptyList(),
-            description = "Paste from clipboard",
-            actionResult = "Pastes clipboard content"
-        ),
-        HelpCommand(
-            primaryPhrase = "undo",
-            variations = emptyList(),
-            description = "Undo last action",
-            actionResult = "Undoes last text change"
         ),
         HelpCommand(
             primaryPhrase = "search [query]",
@@ -287,112 +177,7 @@ object HelpCommandDataProvider {
         )
     )
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Category: System
-    // ═══════════════════════════════════════════════════════════════════
-    private val systemCommands = listOf(
-        HelpCommand(
-            primaryPhrase = "show notifications",
-            variations = listOf("notifications", "notification panel"),
-            description = "Show notification panel",
-            actionResult = "Opens notifications"
-        ),
-        HelpCommand(
-            primaryPhrase = "clear notifications",
-            variations = listOf("dismiss notifications"),
-            description = "Clear all notifications",
-            actionResult = "Dismisses all notifications"
-        ),
-        HelpCommand(
-            primaryPhrase = "quick settings",
-            variations = emptyList(),
-            description = "Show quick settings panel",
-            actionResult = "Opens quick settings"
-        ),
-        HelpCommand(
-            primaryPhrase = "take screenshot",
-            variations = listOf("screenshot", "capture screen"),
-            description = "Capture the screen",
-            actionResult = "Takes a screenshot"
-        ),
-        HelpCommand(
-            primaryPhrase = "flashlight on",
-            variations = listOf("turn on flashlight", "torch on"),
-            description = "Turn on flashlight",
-            actionResult = "Turns flashlight on"
-        ),
-        HelpCommand(
-            primaryPhrase = "flashlight off",
-            variations = listOf("turn off flashlight", "torch off"),
-            description = "Turn off flashlight",
-            actionResult = "Turns flashlight off"
-        ),
-        HelpCommand(
-            primaryPhrase = "brightness up",
-            variations = emptyList(),
-            description = "Increase screen brightness",
-            actionResult = "Increases brightness by 10%"
-        ),
-        HelpCommand(
-            primaryPhrase = "brightness down",
-            variations = emptyList(),
-            description = "Decrease screen brightness",
-            actionResult = "Decreases brightness by 10%"
-        ),
-        HelpCommand(
-            primaryPhrase = "lock screen",
-            variations = listOf("lock"),
-            description = "Lock the device",
-            actionResult = "Locks the screen"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Category: Media
-    // ═══════════════════════════════════════════════════════════════════
-    private val mediaCommands = listOf(
-        HelpCommand(
-            primaryPhrase = "play music",
-            variations = listOf("play", "resume"),
-            description = "Play/resume media",
-            actionResult = "Plays or resumes media"
-        ),
-        HelpCommand(
-            primaryPhrase = "pause music",
-            variations = listOf("pause", "stop music"),
-            description = "Pause media playback",
-            actionResult = "Pauses current media"
-        ),
-        HelpCommand(
-            primaryPhrase = "next track",
-            variations = listOf("next song", "skip"),
-            description = "Skip to next track",
-            actionResult = "Plays next track"
-        ),
-        HelpCommand(
-            primaryPhrase = "previous track",
-            variations = listOf("previous song"),
-            description = "Go to previous track",
-            actionResult = "Plays previous track"
-        ),
-        HelpCommand(
-            primaryPhrase = "volume up",
-            variations = listOf("increase volume", "louder"),
-            description = "Increase volume",
-            actionResult = "Increases volume by 10%"
-        ),
-        HelpCommand(
-            primaryPhrase = "volume down",
-            variations = listOf("decrease volume", "quieter"),
-            description = "Decrease volume",
-            actionResult = "Decreases volume by 10%"
-        ),
-        HelpCommand(
-            primaryPhrase = "mute",
-            variations = listOf("mute volume", "silence"),
-            description = "Mute audio",
-            actionResult = "Sets volume to 0"
-        ),
+    private val mediaTemplates = listOf(
         HelpCommand(
             primaryPhrase = "set volume [number]",
             variations = emptyList(),
@@ -402,283 +187,110 @@ object HelpCommandDataProvider {
     )
 
     // ═══════════════════════════════════════════════════════════════════
-    // Category: VoiceOS Control
+    // Category Metadata — static (icons, colors, titles)
     // ═══════════════════════════════════════════════════════════════════
-    private val voiceOSCommands = listOf(
-        HelpCommand(
-            primaryPhrase = "numbers on",
-            variations = listOf("show numbers", "numbers always"),
-            description = "Always show element numbers",
-            actionResult = "Shows numbers on all elements"
-        ),
-        HelpCommand(
-            primaryPhrase = "numbers off",
-            variations = listOf("hide numbers", "no numbers"),
-            description = "Hide element numbers",
-            actionResult = "Hides all element numbers"
-        ),
-        HelpCommand(
-            primaryPhrase = "numbers auto",
-            variations = listOf("numbers automatic", "auto numbers"),
-            description = "Show numbers only for lists",
-            actionResult = "Auto-shows numbers in lists"
-        ),
-        HelpCommand(
-            primaryPhrase = "mute voice",
-            variations = listOf("stop listening", "voice off"),
-            description = "Pause voice recognition",
-            actionResult = "Stops listening for commands"
-        ),
-        HelpCommand(
-            primaryPhrase = "wake up voice",
-            variations = listOf("start listening", "voice on"),
-            description = "Resume voice recognition",
-            actionResult = "Resumes listening"
-        ),
-        HelpCommand(
-            primaryPhrase = "start dictation",
-            variations = listOf("dictation", "type mode"),
-            description = "Enter dictation mode",
-            actionResult = "Switches to text dictation"
-        ),
-        HelpCommand(
-            primaryPhrase = "stop dictation",
-            variations = listOf("end dictation", "command mode"),
-            description = "Exit dictation mode",
-            actionResult = "Returns to command mode"
-        ),
-        HelpCommand(
-            primaryPhrase = "what can I say",
-            variations = listOf("show voice commands", "help"),
-            description = "Show this help screen",
-            actionResult = "Opens command help"
-        )
+
+    private data class CategoryMeta(
+        val id: String,
+        val title: String,
+        val iconName: String,
+        val color: String
+    )
+
+    private val categoryMetaMap = mapOf(
+        "navigation" to CategoryMeta("navigation", "Navigation", "navigation", "#4285F4"),
+        "app_control" to CategoryMeta("app_control", "App Control", "apps", "#34A853"),
+        "ui_interaction" to CategoryMeta("ui_interaction", "UI Interaction", "touch_app", "#FBBC04"),
+        "text_input" to CategoryMeta("text_input", "Text Input", "keyboard", "#EA4335"),
+        "system" to CategoryMeta("system", "System", "settings", "#9C27B0"),
+        "media" to CategoryMeta("media", "Media", "play_circle", "#FF5722"),
+        "voiceos" to CategoryMeta("voiceos", "VoiceOS", "mic", "#00BCD4"),
+        "web_gestures" to CategoryMeta("web_gestures", "Web Gestures", "gesture", "#E91E63")
     )
 
     // ═══════════════════════════════════════════════════════════════════
-    // Category: Web Gestures
-    // ═══════════════════════════════════════════════════════════════════
-    private val webGestureCommands = listOf(
-        HelpCommand(
-            primaryPhrase = "pan left",
-            variations = listOf("pan viewport left", "slide view left", "move view left"),
-            description = "Pan viewport left",
-            actionResult = "Shifts viewport left"
-        ),
-        HelpCommand(
-            primaryPhrase = "pan right",
-            variations = listOf("pan viewport right", "slide view right", "move view right"),
-            description = "Pan viewport right",
-            actionResult = "Shifts viewport right"
-        ),
-        HelpCommand(
-            primaryPhrase = "pan up",
-            variations = listOf("pan viewport up", "move view up"),
-            description = "Pan viewport up",
-            actionResult = "Shifts viewport up"
-        ),
-        HelpCommand(
-            primaryPhrase = "pan down",
-            variations = listOf("pan viewport down", "move view down"),
-            description = "Pan viewport down",
-            actionResult = "Shifts viewport down"
-        ),
-        HelpCommand(
-            primaryPhrase = "tilt up",
-            variations = listOf("tilt viewport up", "angle up"),
-            description = "Tilt viewport up",
-            actionResult = "Angles viewport upward"
-        ),
-        HelpCommand(
-            primaryPhrase = "tilt down",
-            variations = listOf("tilt viewport down", "angle down"),
-            description = "Tilt viewport down",
-            actionResult = "Angles viewport downward"
-        ),
-        HelpCommand(
-            primaryPhrase = "orbit left",
-            variations = listOf("orbit around left", "circle left"),
-            description = "Orbit left around element",
-            actionResult = "Orbits camera left"
-        ),
-        HelpCommand(
-            primaryPhrase = "orbit right",
-            variations = listOf("orbit around right", "circle right"),
-            description = "Orbit right around element",
-            actionResult = "Orbits camera right"
-        ),
-        HelpCommand(
-            primaryPhrase = "rotate x",
-            variations = listOf("rotate x axis", "flip vertical"),
-            description = "Rotate element around X axis",
-            actionResult = "Rotates on X axis"
-        ),
-        HelpCommand(
-            primaryPhrase = "rotate y",
-            variations = listOf("rotate y axis", "flip horizontal"),
-            description = "Rotate element around Y axis",
-            actionResult = "Rotates on Y axis"
-        ),
-        HelpCommand(
-            primaryPhrase = "rotate z",
-            variations = listOf("rotate z axis", "spin"),
-            description = "Rotate element around Z axis",
-            actionResult = "Spins element"
-        ),
-        HelpCommand(
-            primaryPhrase = "pinch in",
-            variations = listOf("pinch to zoom out", "squeeze"),
-            description = "Pinch in to zoom out",
-            actionResult = "Zooms out via pinch"
-        ),
-        HelpCommand(
-            primaryPhrase = "pinch out",
-            variations = listOf("pinch to zoom in", "spread"),
-            description = "Pinch out to zoom in",
-            actionResult = "Zooms in via pinch"
-        ),
-        HelpCommand(
-            primaryPhrase = "fling up",
-            variations = listOf("flick up"),
-            description = "Fling content upward",
-            actionResult = "Fast-scrolls content up"
-        ),
-        HelpCommand(
-            primaryPhrase = "fling down",
-            variations = listOf("flick down"),
-            description = "Fling content downward",
-            actionResult = "Fast-scrolls content down"
-        ),
-        HelpCommand(
-            primaryPhrase = "throw",
-            variations = listOf("toss", "throw element", "toss element"),
-            description = "Throw element with velocity",
-            actionResult = "Launches element with momentum"
-        ),
-        HelpCommand(
-            primaryPhrase = "scale up",
-            variations = listOf("enlarge", "make bigger"),
-            description = "Scale element up",
-            actionResult = "Enlarges element by 50%"
-        ),
-        HelpCommand(
-            primaryPhrase = "scale down",
-            variations = listOf("shrink", "make smaller"),
-            description = "Scale element down",
-            actionResult = "Shrinks element by 33%"
-        ),
-        HelpCommand(
-            primaryPhrase = "reset zoom",
-            variations = listOf("zoom reset", "normal zoom"),
-            description = "Reset zoom to default",
-            actionResult = "Returns to 100% zoom"
-        ),
-        HelpCommand(
-            primaryPhrase = "grab",
-            variations = listOf("grab element", "lock", "lock element", "hold", "latch"),
-            description = "Grab/lock an element for dragging",
-            actionResult = "Grabs element for manipulation"
-        ),
-        HelpCommand(
-            primaryPhrase = "select word",
-            variations = listOf("pick word", "highlight word"),
-            description = "Select word at cursor",
-            actionResult = "Highlights word under cursor"
-        ),
-        HelpCommand(
-            primaryPhrase = "clear selection",
-            variations = listOf("deselect", "unselect"),
-            description = "Clear text selection",
-            actionResult = "Removes selection highlight"
-        ),
-        HelpCommand(
-            primaryPhrase = "hover out",
-            variations = listOf("stop hovering", "unhover"),
-            description = "Stop hovering over element",
-            actionResult = "Triggers mouse-leave event"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // All Categories
+    // Category Builders — derive from StaticCommandRegistry + templates
     // ═══════════════════════════════════════════════════════════════════
 
-    private val navigationCategory = HelpCategory(
-        id = "navigation",
-        title = "Navigation",
-        iconName = "navigation",
-        commands = navigationCommands,
-        color = "#4285F4" // Blue
-    )
+    private fun buildNavigationCategory(): HelpCategory {
+        val meta = categoryMetaMap["navigation"]!!
+        val commands = StaticCommandRegistry.byCategory(CommandCategory.NAVIGATION)
+            .map { it.toHelpCommand() }
+        return HelpCategory(meta.id, meta.title, meta.iconName, commands, meta.color)
+    }
 
-    private val appControlCategory = HelpCategory(
-        id = "app_control",
-        title = "App Control",
-        iconName = "apps",
-        commands = appControlCommands,
-        color = "#34A853" // Green
-    )
+    private fun buildAppControlCategory(): HelpCategory {
+        val meta = categoryMetaMap["app_control"]!!
+        val registryCommands = (
+            StaticCommandRegistry.byCategory(CommandCategory.APP_LAUNCH) +
+            StaticCommandRegistry.byCategory(CommandCategory.APP_CONTROL)
+        ).map { it.toHelpCommand() }
+        return HelpCategory(meta.id, meta.title, meta.iconName, appControlTemplates + registryCommands, meta.color)
+    }
 
-    private val uiInteractionCategory = HelpCategory(
-        id = "ui_interaction",
-        title = "UI Interaction",
-        iconName = "touch_app",
-        commands = uiInteractionCommands,
-        color = "#FBBC04" // Yellow
-    )
+    private fun buildUiInteractionCategory(): HelpCategory {
+        val meta = categoryMetaMap["ui_interaction"]!!
+        val registryCommands = StaticCommandRegistry.byCategory(CommandCategory.ACCESSIBILITY)
+            .map { it.toHelpCommand() }
+        return HelpCategory(meta.id, meta.title, meta.iconName, uiInteractionTemplates + registryCommands, meta.color)
+    }
 
-    private val textInputCategory = HelpCategory(
-        id = "text_input",
-        title = "Text Input",
-        iconName = "keyboard",
-        commands = textInputCommands,
-        color = "#EA4335" // Red
-    )
+    private fun buildTextInputCategory(): HelpCategory {
+        val meta = categoryMetaMap["text_input"]!!
+        val registryCommands = (
+            StaticCommandRegistry.byCategory(CommandCategory.TEXT) +
+            StaticCommandRegistry.byCategory(CommandCategory.INPUT)
+        ).map { it.toHelpCommand() }
+        return HelpCategory(meta.id, meta.title, meta.iconName, textInputTemplates + registryCommands, meta.color)
+    }
 
-    private val systemCategory = HelpCategory(
-        id = "system",
-        title = "System",
-        iconName = "settings",
-        commands = systemCommands,
-        color = "#9C27B0" // Purple
-    )
+    private fun buildSystemCategory(): HelpCategory {
+        val meta = categoryMetaMap["system"]!!
+        val commands = StaticCommandRegistry.byCategory(CommandCategory.SYSTEM)
+            .map { it.toHelpCommand() }
+        return HelpCategory(meta.id, meta.title, meta.iconName, commands, meta.color)
+    }
 
-    private val mediaCategory = HelpCategory(
-        id = "media",
-        title = "Media",
-        iconName = "play_circle",
-        commands = mediaCommands,
-        color = "#FF5722" // Orange
-    )
+    private fun buildMediaCategory(): HelpCategory {
+        val meta = categoryMetaMap["media"]!!
+        val registryCommands = StaticCommandRegistry.byCategory(CommandCategory.MEDIA)
+            .map { it.toHelpCommand() }
+        return HelpCategory(meta.id, meta.title, meta.iconName, registryCommands + mediaTemplates, meta.color)
+    }
 
-    private val voiceOSCategory = HelpCategory(
-        id = "voiceos",
-        title = "VoiceOS",
-        iconName = "mic",
-        commands = voiceOSCommands,
-        color = "#00BCD4" // Cyan
-    )
+    private fun buildVoiceOSCategory(): HelpCategory {
+        val meta = categoryMetaMap["voiceos"]!!
+        val commands = StaticCommandRegistry.byCategory(CommandCategory.VOICE_CONTROL)
+            .map { it.toHelpCommand() }
+        return HelpCategory(meta.id, meta.title, meta.iconName, commands, meta.color)
+    }
 
-    private val webGestureCategory = HelpCategory(
-        id = "web_gestures",
-        title = "Web Gestures",
-        iconName = "gesture",
-        commands = webGestureCommands,
-        color = "#E91E63" // Pink
-    )
+    private fun buildWebGestureCategory(): HelpCategory {
+        val meta = categoryMetaMap["web_gestures"]!!
+        val commands = (
+            StaticCommandRegistry.byCategory(CommandCategory.BROWSER) +
+            StaticCommandRegistry.byCategory(CommandCategory.WEB_GESTURE)
+        ).map { it.toHelpCommand() }
+        return HelpCategory(meta.id, meta.title, meta.iconName, commands, meta.color)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Public API
+    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * Get all help categories.
+     * Commands derive from StaticCommandRegistry (DB-backed) + static templates.
      */
     fun getCategories(): List<HelpCategory> = listOf(
-        navigationCategory,
-        appControlCategory,
-        uiInteractionCategory,
-        textInputCategory,
-        systemCategory,
-        mediaCategory,
-        voiceOSCategory,
-        webGestureCategory
+        buildNavigationCategory(),
+        buildAppControlCategory(),
+        buildUiInteractionCategory(),
+        buildTextInputCategory(),
+        buildSystemCategory(),
+        buildMediaCategory(),
+        buildVoiceOSCategory(),
+        buildWebGestureCategory()
     )
 
     /**
@@ -707,9 +319,6 @@ object HelpCommandDataProvider {
 
     /**
      * Find commands matching a search query.
-     *
-     * @param query Search text
-     * @return List of matching commands
      */
     fun searchCommands(query: String): List<HelpCommand> {
         if (query.isBlank()) return emptyList()
@@ -726,9 +335,6 @@ object HelpCommandDataProvider {
 
     /**
      * Get commands by category ID.
-     *
-     * @param categoryId Category identifier
-     * @return List of commands, or empty if category not found
      */
     fun getCommandsByCategory(categoryId: String): List<HelpCommand> {
         return getCategories().find { it.id == categoryId }?.commands ?: emptyList()
@@ -743,7 +349,6 @@ object HelpCommandDataProvider {
 
     /**
      * Get all phrases for speech engine registration.
-     * This enables voice-based help navigation.
      */
     fun getAllPhrases(): List<String> {
         return getCategories()

@@ -2,28 +2,58 @@
 
 ## 1. Architecture Overview
 
-VoiceOS uses a layered pipeline that flows from a single source of command definitions through multiple consumers. The current source is `StaticCommandRegistry` (hardcoded Kotlin); the target architecture replaces this with database-backed VOS seed files per locale.
+VoiceOS uses a layered pipeline that flows from VOS seed files through a SQLDelight database to multiple runtime consumers. The database is the single source of truth; hardcoded fallback lists exist only for pre-DB-init startup.
 
 ```
-Source of Truth (StaticCommandRegistry / future: DB)
-        │
-        ├── StaticCommandRegistry.all()
-        │       ├── Speech engine vocabulary (allPhrases)
-        │       ├── NLU schema (toNluSchema)
-        │       └── QuantizedCommand export (allAsQuantized)
-        │
-        ├── HelpCommandDataProvider.getCategories()
-        │       └── 8 categories → Help screen UI
-        │
-        ├── WebCommandHandler.supportedActions
-        │       └── Derived from BROWSER + WEB_GESTURE + TEXT categories
-        │
-        ├── AndroidGestureHandler.supportedActions
-        │       └── Native gesture dispatch (parallel to web JS)
-        │
-        └── SynonymRegistry.all()
-                └── Verb canonicalization for NLU
+VOS Seed Files (per locale)
+  assets/localization/commands/en-US.VOS
+  assets/localization/commands/es-ES.VOS (future)
+        |
+        v
+CommandLoader.initializeCommands()  <- Seeds DB on first launch / version bump
+        |
+        v
+commands_static table (SQLDelight)  <- Runtime source of truth
+        |
+        v
+CommandManager.populateStaticRegistryFromDb()
+        |
+        v
+StaticCommandRegistry._dbCommands   <- All consumers read from here
+        |
+        +-- .all() / .byCategory() / .findByPhrase()
+        |       |
+        |       +-- Speech engine vocabulary (allPhrases)
+        |       +-- NLU schema (toNluSchema)
+        |       +-- QuantizedCommand export (allAsQuantized)
+        |
+        +-- HelpCommandDataProvider.getCategories()
+        |       +-- 8 categories -> Help screen UI
+        |       +-- Template commands (parametric patterns, static)
+        |
+        +-- WebCommandHandler.supportedActions
+        |       +-- Derived from BROWSER + WEB_GESTURE categories
+        |
+        +-- AndroidGestureHandler.supportedActions
+        |       +-- Native gesture dispatch
+        |
+        +-- SynonymRegistry.all()
+                +-- Verb canonicalization for NLU
 ```
+
+### DB Loading Flow
+
+1. App starts -> `CommandManager.initialize()` launches IO coroutine
+2. `CommandLoader.initializeCommands()` checks version in `database_version` table
+3. If version mismatch or empty: parses VOS seed file -> inserts into `commands_static`
+4. `CommandManager.loadDatabaseCommands()` builds pattern matching cache
+5. `CommandManager.populateStaticRegistryFromDb()` converts `VoiceCommandEntity` -> `StaticCommand` -> calls `StaticCommandRegistry.initialize(commands)`
+6. `StaticCommandRegistry.all()` now returns DB-loaded commands
+7. `HelpCommandDataProvider` and `WebCommandHandler` automatically reflect DB content
+
+### Fallback Behavior
+
+If the database is empty or not yet loaded (e.g., during the first few milliseconds of startup), `StaticCommandRegistry.all()` returns hardcoded English commands. Once `initialize()` is called with DB data, the hardcoded lists are bypassed entirely.
 
 ## 2. Command Pipeline (5-Layer)
 
@@ -31,45 +61,111 @@ Voice commands flow through 5 layers from speech recognition to execution:
 
 ### Layer 1: CommandActionType (Enum)
 Defines WHAT action to perform. Platform-agnostic enum in `CommandModels.kt`.
-- 70+ action types across 12 categories
+- 75+ action types across 15 categories
 - Each type maps to both web (JS) and native (Android) execution paths
 - `isBrowserAction()`, `isSystemAction()`, `isMediaAction()` etc. for routing
 
 ### Layer 2: StaticCommandRegistry (Command Definitions)
-Maps voice PHRASES to CommandActionTypes. Organized by category lists:
-- `navigationCommands` (8) — back, home, scroll, app drawer
-- `mediaCommands` (7) — play, pause, volume, track skip
-- `systemCommands` (6) — settings, notifications, screenshot, flashlight
-- `screenCommands` (6) — brightness, lock, rotate, wifi, bluetooth
-- `voiceOSCommands` (8) — mute, wake, dictation, numbers overlay
-- `cursorCommands` (3) — show/hide/click cursor
-- `appCommands` (8) — open browser/camera/gallery/calculator/etc.
-- `appControlCommands` (1) — close app
-- `accessibilityCommands` (4) — click, long press, zoom
-- `textCommands` (7) — select all, copy, paste, cut, undo, redo, delete
-- `readingCommands` (2) — read screen, stop reading
-- `inputCommands` (2) — show/hide keyboard
-- `browserCommands` (19) — retrain, navigation, forms, swipes, grab/release, rotate
-- `webGestureCommands` (27) — pan, tilt, orbit, rotate x/y/z, pinch, fling, throw, scale, etc.
+Maps voice PHRASES to CommandActionTypes. Loaded from `commands_static` DB table at runtime (hardcoded fallback pre-init). Organized by CommandCategory:
+- `NAVIGATION` (8) -- back, home, scroll, app drawer
+- `MEDIA` (7) -- play, pause, volume, track skip
+- `SYSTEM` (12) -- settings, notifications, screenshot, flashlight, brightness, wifi, bluetooth
+- `VOICE_CONTROL` (11) -- mute, wake, dictation, numbers, cursor
+- `APP_LAUNCH` (8) -- open browser/camera/gallery/calculator/etc.
+- `APP_CONTROL` (1) -- close app
+- `ACCESSIBILITY` (6) -- click, long press, zoom, read screen
+- `TEXT` (7) -- select all, copy, paste, cut, undo, redo, delete
+- `INPUT` (2) -- show/hide keyboard
+- `BROWSER` (18) -- retrain, navigation, forms, swipes, grab/release, rotate
+- `WEB_GESTURE` (27) -- pan, tilt, orbit, rotate x/y/z, pinch, fling, throw, scale, etc.
+
+**Total: 107 commands**
 
 ### Layer 3: ActionCoordinator (Routing)
 Routes QuantizedCommands to the appropriate handler based on:
-1. Command metadata (source="web" → WebCommandHandler)
+1. Command metadata (source="web" -> WebCommandHandler)
 2. Handler's `canHandle()` check (phrase matching + category)
 3. Priority: Web handler > Gesture handler > System handler > App handler
 
 ### Layer 4: Handlers (Platform-Specific Execution)
-- **WebCommandHandler** → resolves WebActionType → delegates to IWebCommandExecutor
-- **AndroidGestureHandler** → dispatches via AndroidGestureDispatcher (AccessibilityService)
-- **SystemHandler** → global actions (back, home, recents)
-- **AppHandler** → app launch via Intent
-- **AndroidCursorHandler** → cursor overlay service
+- **WebCommandHandler** -> resolves WebActionType -> delegates to IWebCommandExecutor
+- **AndroidGestureHandler** -> dispatches via AndroidGestureDispatcher (AccessibilityService)
+- **SystemHandler** -> global actions (back, home, recents)
+- **AppHandler** -> app launch via Intent
+- **AndroidCursorHandler** -> cursor overlay service
 
 ### Layer 5: Execution
-- **Web:** JavaScript injection via DOMScraperBridge → WebView evaluateJavascript
+- **Web:** JavaScript injection via DOMScraperBridge -> WebView evaluateJavascript
 - **Android:** GestureDescription API via AccessibilityService.dispatchGesture()
 
-## 3. Gesture Commands
+## 3. VOS Seed File Format (v2.0)
+
+### File Location
+```
+apps/avanues/src/main/assets/localization/commands/
+  en-US.VOS    <- English (current)
+  es-ES.VOS    <- Spanish (future)
+  fr-FR.VOS    <- French (future)
+```
+
+### Format: Compact JSON with Explicit Maps
+
+```json
+{
+  "version": "2.0",
+  "locale": "en-US",
+  "fallback": "en-US",
+  "category_map": {
+    "nav": "NAVIGATION",
+    "media": "MEDIA",
+    "sys": "SYSTEM",
+    "gesture": "WEB_GESTURE"
+  },
+  "action_map": {
+    "nav_back": "BACK",
+    "nav_home": "HOME",
+    "gesture_pan_left": "PAN"
+  },
+  "meta_map": {
+    "gesture_pan_left": {"direction": "left"},
+    "gesture_pinch_in": {"scale": "0.5"}
+  },
+  "commands": [
+    ["nav_back", "go back", ["navigate back", "back", "previous screen"], "Navigate to previous screen"],
+    ["gesture_pan_left", "pan left", ["slide view left", "move view left"], "Pan viewport left"]
+  ]
+}
+```
+
+### Command Array Format
+Each command is a 4-element array:
+```
+[command_id, primary_phrase, [synonym1, synonym2, ...], description]
+  position 0    position 1          position 2              position 3
+```
+
+### v2.0 Root-Level Maps
+
+| Map | Purpose | Example |
+|-----|---------|---------|
+| `category_map` | Prefix -> CommandCategory name | `"nav"` -> `"NAVIGATION"` |
+| `action_map` | Command ID -> CommandActionType name | `"nav_back"` -> `"BACK"` |
+| `meta_map` | Command ID -> metadata JSON | `"gesture_pan_left"` -> `{"direction":"left"}` |
+
+### v1.0 Backward Compatibility
+Files without `category_map`/`action_map`/`meta_map` still work:
+- Category derived from command_id prefix: `"nav_back"` -> prefix `"nav"`
+- Action stored as command_id in DB (resolved at runtime via `VoiceCommandEntity.resolvedAction`)
+- No metadata for v1.0 commands
+
+### Parser: ArrayJsonParser
+Located at `VoiceOSCore/src/androidMain/.../loader/ArrayJsonParser.kt`
+- `parseCommandsJson(jsonString, isFallback)` -> `ParseResult.Success` or `ParseResult.Error`
+- Reads `category_map`, `action_map`, `meta_map` via `optJSONObject()`
+- `resolveCategory()`: uses categoryMap if v2.0, falls back to prefix for v1.0
+- Produces `List<VoiceCommandEntity>` with `actionType` and `metadata` fields
+
+## 4. Gesture Commands
 
 ### Web Gestures (27 commands, WEB_GESTURE category)
 
@@ -98,10 +194,10 @@ Routes QuantizedCommands to the appropriate handler based on:
 | Throw | THROW | `VOS.gesture.throwEl(vx,vy)` | "throw", "toss" | velocityX, velocityY |
 | Scale Up | SCALE | `VOS.gesture.scale(1.5)` | "scale up", "enlarge" | factor=1.5 |
 | Scale Down | SCALE | `VOS.gesture.scale(0.67)` | "scale down", "shrink" | factor=0.67 |
-| Reset Zoom | RESET_ZOOM | `VOS.gesture.resetZoom()` | "reset zoom", "normal zoom" | — |
-| Select Word | SELECT_WORD | `VOS.gesture.selectWord(el)` | "select word", "pick word" | — |
-| Clear Selection | CLEAR_SELECTION | `VOS.gesture.clearSelection()` | "clear selection", "deselect" | — |
-| Hover Out | HOVER_OUT | `VOS.gesture.hoverOut(el)` | "hover out", "unhover" | — |
+| Reset Zoom | RESET_ZOOM | `VOS.gesture.resetZoom()` | "reset zoom", "normal zoom" | -- |
+| Select Word | SELECT_WORD | `VOS.gesture.selectWord(el)` | "select word", "pick word" | -- |
+| Clear Selection | CLEAR_SELECTION | `VOS.gesture.clearSelection()` | "clear selection", "deselect" | -- |
+| Hover Out | HOVER_OUT | `VOS.gesture.hoverOut(el)` | "hover out", "unhover" | -- |
 
 ### Android Native Gesture Mapping
 
@@ -122,161 +218,120 @@ Routes QuantizedCommands to the appropriate handler based on:
 | Grab | Long press | `dispatcher.longPress(x, y)` |
 | Double Click | Double-tap | `dispatcher.doubleTap(x, y)` |
 
-## 4. Synonym System
+## 5. Synonym System
 
 ### SynonymRegistry (Verb Canonicalization)
 
 The NLU engine uses `SynonymRegistry` to normalize user speech into canonical verbs:
 
 ```
-User says: "flick down" → canonical: "fling" → CommandActionType.FLING
-User says: "lock element" → canonical: "grab" → CommandActionType.GRAB
-User says: "squeeze" → canonical: "pinch" → CommandActionType.PINCH
+User says: "flick down" -> canonical: "fling" -> CommandActionType.FLING
+User says: "lock element" -> canonical: "grab" -> CommandActionType.GRAB
+User says: "squeeze" -> canonical: "pinch" -> CommandActionType.PINCH
 ```
 
 33 entries organized by domain:
-- **Element interaction** (2): click → tap/press/push/select/hit; long press → long click/hold
+- **Element interaction** (2): click -> tap/press/push/select/hit; long press -> long click/hold
 - **Scroll** (4): scroll up/down/left/right with swipe/go/page variants
 - **Navigation** (4): open, close, back, home with multiple phrasings
-- **Search & input** (2): search → find/look for; type → enter/input/write
+- **Search & input** (2): search -> find/look for; type -> enter/input/write
 - **Text editing** (7): delete, copy, paste, cut, undo, redo, select
-- **Zoom** (2): zoom in → magnify/enlarge; zoom out → shrink/smaller
-- **Media/TTS** (2): mute → silence; read → speak/narrate
+- **Zoom** (2): zoom in -> magnify/enlarge; zoom out -> shrink/smaller
+- **Media/TTS** (2): mute -> silence; read -> speak/narrate
 - **Gestures** (9): pan, tilt, orbit, fling, throw, pinch, scale, grab, release
 
 ### Per-Command Synonyms
 
-Each `StaticCommand` has its own phrase list (distinct from verb synonyms):
-```kotlin
-StaticCommand(
-    phrases = listOf("grab", "grab element", "lock", "lock element", "hold", "latch"),
-    actionType = CommandActionType.GRAB,
-    ...
-)
+Each `StaticCommand` in the VOS seed file includes its own synonym list:
+```json
+["browser_grab", "grab", ["grab this", "grab element", "lock", "lock element", "hold", "latch"], "Grab/start dragging an element"]
 ```
 
-Both systems work together: verb synonyms handle isolated verbs ("lock" → "grab"), while command phrases handle multi-word patterns ("lock element" → GRAB directly).
+Both systems work together: verb synonyms handle isolated verbs ("lock" -> "grab"), while command phrases handle multi-word patterns ("lock element" -> GRAB directly).
 
-## 5. Help Menu Integration
+## 6. Help Menu Integration
 
 ### 8 Categories
 
-| # | ID | Title | Icon | Color | Commands |
-|---|-----|-------|------|-------|----------|
-| 1 | navigation | Navigation | navigation | #4285F4 Blue | 7 |
-| 2 | app_control | App Control | apps | #34A853 Green | 6 |
-| 3 | ui_interaction | UI Interaction | touch_app | #FBBC04 Yellow | 7 |
-| 4 | text_input | Text Input | keyboard | #EA4335 Red | 9 |
-| 5 | system | System | settings | #9C27B0 Purple | 9 |
-| 6 | media | Media | play_circle | #FF5722 Orange | 8 |
-| 7 | voiceos | VoiceOS | mic | #00BCD4 Cyan | 8 |
-| 8 | web_gestures | Web Gestures | gesture | #E91E63 Pink | 23 |
+| # | ID | Title | Icon | Color | Source |
+|---|-----|-------|------|-------|--------|
+| 1 | navigation | Navigation | navigation | #4285F4 Blue | Registry: NAVIGATION |
+| 2 | app_control | App Control | apps | #34A853 Green | Registry: APP_LAUNCH + APP_CONTROL + templates |
+| 3 | ui_interaction | UI Interaction | touch_app | #FBBC04 Yellow | Registry: ACCESSIBILITY + templates |
+| 4 | text_input | Text Input | keyboard | #EA4335 Red | Registry: TEXT + INPUT + templates |
+| 5 | system | System | settings | #9C27B0 Purple | Registry: SYSTEM |
+| 6 | media | Media | play_circle | #FF5722 Orange | Registry: MEDIA + templates |
+| 7 | voiceos | VoiceOS | mic | #00BCD4 Cyan | Registry: VOICE_CONTROL |
+| 8 | web_gestures | Web Gestures | gesture | #E91E63 Pink | Registry: BROWSER + WEB_GESTURE |
 
-### HelpCommandDataProvider
+### HelpCommandDataProvider (DB-Backed)
 
-Provides structured data for the help screen UI:
-- `getCategories()` → 8 HelpCategory objects
-- `getQuickReference()` → flat list for table view
-- `searchCommands(query)` → filtered by phrase/description
-- `getTotalCommandCount()` → sum across all categories
-- `getAllPhrases()` → for speech engine registration
+Non-template commands derive from `StaticCommandRegistry.byCategory()`. Template commands (with `[element]`, `[text]`, `[number]` patterns) remain static since they document parametric usage.
+
+- `getCategories()` -> 8 HelpCategory objects (registry-derived + templates)
+- `getQuickReference()` -> flat list for table view
+- `searchCommands(query)` -> filtered by phrase/description
+- `getTotalCommandCount()` -> sum across all categories
+- `getAllPhrases()` -> for speech engine registration
 
 ### HelpScreenHandler
 
 Manages help screen state and command injection:
-- `EXECUTABLE_COMMANDS` set — commands safe to execute on tap (no parameters)
-- `onCommandTapped(phrase)` → execute or copy-to-input
-- `searchCommands(query)` → delegates to provider
+- `EXECUTABLE_COMMANDS` set -- commands safe to execute on tap (no parameters)
+- `onCommandTapped(phrase)` -> execute or copy-to-input
+- `searchCommands(query)` -> delegates to provider
 - Tracks recently used commands
-
-## 6. Localization Architecture (Future)
-
-### Target: VOS Seed Files
-
-```
-assets/localization/commands/
-├── en-US.VOS    ← English (default)
-├── es-ES.VOS    ← Spanish
-├── fr-FR.VOS    ← French
-├── de-DE.VOS    ← German
-└── ja-JP.VOS    ← Japanese
-```
-
-Each VOS file is a JSON array:
-```json
-[
-  {
-    "id": "nav_back",
-    "locale": "en-US",
-    "trigger": "go back",
-    "synonyms": ["back", "navigate back", "previous screen"],
-    "action": "BACK",
-    "category": "NAVIGATION",
-    "description": "Navigate to previous screen"
-  }
-]
-```
-
-### Flow: VOS → DB → Runtime
-
-1. `CommandLoader.initializeCommands()` runs on first launch / version bump
-2. Parses VOS seed file for device locale (fallback: en-US)
-3. Seeds `commands_static` table in SQLDelight
-4. StaticCommandRegistry loads from DB at runtime
-5. HelpCommandDataProvider derives categories from DB
-6. WebCommandHandler derives supportedActions from registry
-
-### STT Engine Compatibility
-
-The localization system is designed for three STT backends:
-- **Vivoka** (embedded, offline) — custom vocabulary from DB phrases
-- **Whisper** (local model) — free-form recognition, post-match against DB
-- **Google STT** (cloud) — grammar hints from DB phrases
 
 ## 7. Adding New Voice Commands
 
 ### Step 1: Add CommandActionType
-In `CommandModels.kt` → `CommandActionType` enum, add new entry.
+In `CommandModels.kt` -> `CommandActionType` enum, add new entry.
 
-### Step 2: Register in StaticCommandRegistry
-Add `StaticCommand` to appropriate category list with:
-- `phrases` — primary + synonym variations
-- `actionType` — the new CommandActionType
-- `category` — CommandCategory enum value
-- `description` — human-readable
-- `metadata` — optional key-value pairs (direction, factor, etc.)
+### Step 2: Add to VOS Seed File
+In `en-US.VOS`, add the command to the `commands` array, and update `action_map` and optionally `category_map`/`meta_map`:
 
-### Step 3: Add to HelpCommandDataProvider
-Create `HelpCommand` entry in the appropriate category list.
+```json
+// In action_map:
+"my_new_cmd": "MY_NEW_ACTION"
 
-### Step 4: Add Handler Support
+// In commands array:
+["my_new_cmd", "primary phrase", ["synonym1", "synonym2"], "Description"]
+```
+
+### Step 3: Force Reload DB
+On next app launch with version bump (change `requiredVersion` in CommandLoader), the new command flows automatically through DB -> StaticCommandRegistry -> HelpCommandDataProvider -> WebCommandHandler.
+
+For development: call `CommandLoader.forceReload()` to reload immediately.
+
+### Step 4: Update Hardcoded Fallback (Optional)
+If the command should be available before DB loads, add a `StaticCommand` entry to the appropriate list in `StaticCommandRegistry.kt`. This is the fallback used during the brief window before `initialize()` is called.
+
+### Step 5: Add Handler Support
 
 **For web commands:** Add case in `WebCommandHandler.resolveWebActionType()` and `resolveFromPhrase()`. Add corresponding `WebActionType` enum entry and JS implementation in `DOMScraperBridge`.
 
 **For Android commands:** Add case in `AndroidGestureHandler.execute()`. Use `AndroidGestureDispatcher` methods (tap, scroll, fling, pinch, doubleTap, drag) or implement new dispatch method.
 
-### Step 5: Add Verb Synonyms (if new verb)
+### Step 6: Add Verb Synonyms (if new verb)
 Add `SynonymEntry` to `SynonymRegistry` for the new verb.
-
-### Step 6: Update EXECUTABLE_COMMANDS
-If the command can be executed without parameters, add to `HelpScreenHandler.EXECUTABLE_COMMANDS`.
 
 ## 8. Adding New Languages
 
 ### Step 1: Create Locale Seed File
-Copy `en-US.VOS` to `{locale}.VOS` and translate all trigger/synonym strings.
+Copy `en-US.VOS` to `{locale}.VOS` (e.g., `es-ES.VOS`) in `assets/localization/commands/`.
+Translate all `primary_phrase` and `synonym` strings. Keep `command_id`, `action_map`, and `category_map` keys identical (they are code identifiers, not user-facing).
 
-### Step 2: Register Locale in CommandLoader
-Add locale to supported locales list in `CommandLoader`.
+### Step 2: CommandLoader Auto-Discovery
+`CommandLoader.getAvailableLocales()` scans the `localization/commands/` directory for `.VOS` files. No code changes needed -- new locale files are discovered automatically.
 
 ### Step 3: Test STT Recognition
 Verify the target STT engine (Vivoka/Whisper/Google) recognizes translated phrases.
 
-### Step 4: Update Help Screen
-Ensure `HelpCommandDataProvider` loads translated descriptions (from DB) for the active locale.
+### Step 4: Verify Help Screen
+`HelpCommandDataProvider` automatically reflects the active locale's commands since it derives from `StaticCommandRegistry`, which is populated from the DB.
 
 ---
 
 *Chapter 93 | Voice Command Pipeline & Localization Architecture*
-*Author: VOS4 Development Team | Created: 2026-02-11*
-*Related: Chapter 03 (VoiceOSCore Deep Dive), Chapter 05 (WebAvanue Deep Dive)*
+*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-11 (Phase 2 DB-driven)*
+*Related: Chapter 03 (VoiceOSCore Deep Dive), Chapter 05 (WebAvanue Deep Dive), Chapter 94 (4-Tier Voice Enablement)*

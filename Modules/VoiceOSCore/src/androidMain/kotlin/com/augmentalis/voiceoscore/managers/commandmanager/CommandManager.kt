@@ -11,6 +11,8 @@ import android.util.Log
 import com.augmentalis.voiceoscore.*
 import com.augmentalis.voiceoscore.managers.commandmanager.actions.*
 import com.augmentalis.rpc.RpcEncoder
+import com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
+import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity
 import com.augmentalis.voiceoscore.managers.commandmanager.loader.CommandLoader
 import com.augmentalis.voiceoscore.managers.commandmanager.loader.CommandLocalizer
 import com.augmentalis.voiceoscore.managers.commandmanager.routing.IntentDispatcher
@@ -378,6 +380,9 @@ class CommandManager(private val context: Context) {
                 // Load database commands for pattern matching
                 loadDatabaseCommands()
 
+                // Populate StaticCommandRegistry from DB (single source of truth)
+                populateStaticRegistryFromDb()
+
             } catch (e: Exception) {
                 // Log error but don't crash - CommandManager can still operate
                 Log.e(TAG, "Failed to initialize command system", e)
@@ -430,6 +435,67 @@ class CommandManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load database commands", e)
             databaseCommandsLoaded = false
+        }
+    }
+
+    /**
+     * Populate StaticCommandRegistry from commands_static DB table.
+     *
+     * Converts VoiceCommandEntity → StaticCommand so that StaticCommandRegistry,
+     * HelpCommandDataProvider, and WebCommandHandler all derive from the DB
+     * (single source of truth). Falls back to hardcoded lists if DB is empty.
+     */
+    private suspend fun populateStaticRegistryFromDb() {
+        try {
+            val locale = getCurrentLocale()
+            val db = CommandDatabase.getInstance(context)
+            val dao = db.voiceCommandDao()
+
+            // Get all commands for current locale (with fallback)
+            val entities = dao.getCommandsWithFallback(locale)
+
+            if (entities.isEmpty()) {
+                Log.w(TAG, "No DB commands found for $locale — StaticCommandRegistry uses hardcoded fallback")
+                return
+            }
+
+            // Convert VoiceCommandEntity → StaticCommand
+            val staticCommands = entities.mapNotNull { entity ->
+                try {
+                    val phrases = buildList {
+                        add(entity.primaryText)
+                        addAll(VoiceCommandEntity.parseSynonyms(entity.synonyms))
+                    }
+                    val actionType = CommandActionType.fromString(entity.resolvedAction)
+                    val category = try {
+                        CommandCategory.valueOf(entity.category)
+                    } catch (_: IllegalArgumentException) {
+                        // Legacy category names (prefix-based) → map to closest match
+                        CommandCategory.entries.find {
+                            it.name.equals(entity.category, ignoreCase = true)
+                        } ?: CommandCategory.CUSTOM
+                    }
+                    val metadata = VoiceCommandEntity.parseMetadata(entity.metadata)
+
+                    StaticCommand(
+                        phrases = phrases,
+                        actionType = actionType,
+                        category = category,
+                        description = entity.description,
+                        metadata = metadata
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to convert entity ${entity.id} to StaticCommand", e)
+                    null
+                }
+            }
+
+            StaticCommandRegistry.initialize(staticCommands)
+            Log.i(TAG, "✅ StaticCommandRegistry populated from DB: ${staticCommands.size} commands (locale: $locale)")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to populate StaticCommandRegistry from DB", e)
+            // Registry falls back to hardcoded lists automatically
         }
     }
 

@@ -62,7 +62,7 @@ class CommandLoader(
 
             // 0. CHECK if database already loaded with correct version
             val existingVersion = versionDao.getVersion()
-            val requiredVersion = "1.0" // From JSON files
+            val requiredVersion = "2.0" // From VOS files (v2.0 format with action_map/category_map/meta_map)
 
             if (existingVersion != null && existingVersion.jsonVersion == requiredVersion) {
                 val commandCount = commandDao.getCommandCount(FALLBACK_LOCALE)
@@ -255,8 +255,8 @@ class CommandLoader(
     fun getAvailableLocales(): List<String> {
         return try {
             context.assets.list(COMMANDS_PATH)
-                ?.filter { it.endsWith(".json") }
-                ?.map { it.removeSuffix(".json") }
+                ?.filter { it.endsWith(FILE_EXTENSION) }
+                ?.map { it.removeSuffix(FILE_EXTENSION) }
                 ?: emptyList()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list available locales", e)

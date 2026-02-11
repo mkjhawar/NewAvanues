@@ -27,7 +27,38 @@ import com.augmentalis.voiceoscore.CommandActionType
 object StaticCommandRegistry {
 
     // ═══════════════════════════════════════════════════════════════════
-    // Navigation Commands
+    // DB-Loaded Commands (populated from commands_static table at runtime)
+    // Falls back to hardcoded lists below when DB not yet loaded
+    // ═══════════════════════════════════════════════════════════════════
+
+    @Volatile
+    private var _dbCommands: List<StaticCommand>? = null
+
+    /**
+     * Initialize registry with commands loaded from the database.
+     * Called from CommandManager after CommandLoader seeds the DB.
+     * Thread-safe via @Volatile.
+     *
+     * @param commands List of StaticCommand converted from DB entities
+     */
+    fun initialize(commands: List<StaticCommand>) {
+        _dbCommands = commands
+    }
+
+    /**
+     * Whether DB commands have been loaded.
+     */
+    fun isInitialized(): Boolean = _dbCommands != null
+
+    /**
+     * Clear DB commands (for testing or forced reload).
+     */
+    fun reset() {
+        _dbCommands = null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Navigation Commands (hardcoded fallback)
     // ═══════════════════════════════════════════════════════════════════
 
     val navigationCommands = listOf(
@@ -823,9 +854,15 @@ object StaticCommandRegistry {
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * Get all static commands
+     * Get all static commands.
+     * Returns DB-loaded commands if available, otherwise hardcoded fallback.
      */
-    fun all(): List<StaticCommand> =
+    fun all(): List<StaticCommand> = _dbCommands ?: hardcodedAll()
+
+    /**
+     * Hardcoded fallback — used before DB is loaded or if DB is empty.
+     */
+    private fun hardcodedAll(): List<StaticCommand> =
         navigationCommands +
         mediaCommands +
         systemCommands +
