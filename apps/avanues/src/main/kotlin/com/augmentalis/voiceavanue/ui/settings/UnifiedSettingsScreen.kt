@@ -97,11 +97,19 @@ enum class SettingsDisplayMode {
 fun UnifiedSettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDeveloperConsole: () -> Unit,
+    onNavigateToVosSync: () -> Unit = {},
     viewModel: UnifiedSettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val displayMode = remember {
         detectSettingsDisplayMode(context)
+    }
+
+    // Wire VOS sync navigation to the SystemSettingsProvider
+    viewModel.sortedProviders.forEach { provider ->
+        if (provider is com.augmentalis.voiceavanue.ui.settings.providers.SystemSettingsProvider) {
+            provider.onNavigateToVosSync = onNavigateToVosSync
+        }
     }
 
     when (displayMode) {

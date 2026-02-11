@@ -144,6 +144,9 @@ kotlin {
                 // (Consolidated from VoiceOS:core:database into Modules:Database)
                 implementation(project(":Modules:Database"))
 
+                // SFTP (for VOS sync)
+                implementation(libs.jsch)
+
                 // gRPC (transitive deps from Rpc module not exposed)
                 implementation(libs.grpc.okhttp)
                 implementation(libs.grpc.kotlin.stub)

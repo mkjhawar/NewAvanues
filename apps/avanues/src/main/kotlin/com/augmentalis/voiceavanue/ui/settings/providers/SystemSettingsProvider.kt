@@ -12,9 +12,15 @@ package com.augmentalis.voiceavanue.ui.settings.providers
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,7 +28,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.augmentalis.avanueui.components.settings.SettingsDropdownRow
 import com.augmentalis.avanueui.components.settings.SettingsGroupCard
+import com.augmentalis.avanueui.components.settings.SettingsNavigationRow
 import com.augmentalis.avanueui.components.settings.SettingsSwitchRow
+import com.augmentalis.avanueui.components.settings.SettingsTextFieldRow
 import com.augmentalis.avanueui.theme.AppearanceMode
 import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.MaterialMode
@@ -37,6 +45,9 @@ import javax.inject.Inject
 class SystemSettingsProvider @Inject constructor(
     private val repository: AvanuesSettingsRepository
 ) : ComposableSettingsProvider {
+
+    /** Navigation callback set by the settings screen before rendering. */
+    var onNavigateToVosSync: (() -> Unit)? = null
 
     override val moduleId = "system"
     override val displayName = "System"
@@ -71,6 +82,12 @@ class SystemSettingsProvider @Inject constructor(
             displayName = "Start on Boot",
             sectionId = "system",
             keywords = listOf("boot", "startup", "autostart", "launch", "restart")
+        ),
+        SearchableSettingEntry(
+            key = "vos_sync",
+            displayName = "VOS Sync",
+            sectionId = "system",
+            keywords = listOf("vos", "sync", "sftp", "upload", "download", "developer", "server")
         )
     )
 
@@ -121,6 +138,75 @@ class SystemSettingsProvider @Inject constructor(
                 checked = settings.autoStartOnBoot,
                 onCheckedChange = { scope.launch { repository.updateAutoStartOnBoot(it) } }
             )
+        }
+
+        // Developer: VOS Sync section
+        SettingsGroupCard {
+            SettingsSwitchRow(
+                title = "VOS Sync",
+                subtitle = "Enable SFTP sync for VOS files",
+                icon = Icons.Default.Sync,
+                checked = settings.vosSyncEnabled,
+                onCheckedChange = { scope.launch { repository.updateVosSyncEnabled(it) } }
+            )
+        }
+
+        if (settings.vosSyncEnabled) {
+            SettingsGroupCard {
+                SettingsTextFieldRow(
+                    title = "SFTP Host",
+                    subtitle = "Server hostname or IP",
+                    icon = Icons.Default.Storage,
+                    value = settings.vosSftpHost,
+                    placeholder = "192.168.1.100",
+                    onValueChange = { scope.launch { repository.updateVosSftpHost(it) } }
+                )
+                SettingsTextFieldRow(
+                    title = "Port",
+                    subtitle = "SFTP port (default: 22)",
+                    icon = Icons.Default.Cloud,
+                    value = if (settings.vosSftpPort > 0) settings.vosSftpPort.toString() else "",
+                    placeholder = "22",
+                    onValueChange = { text ->
+                        val port = text.filter { it.isDigit() }.toIntOrNull()
+                        if (port != null) {
+                            scope.launch { repository.updateVosSftpPort(port) }
+                        }
+                    }
+                )
+                SettingsTextFieldRow(
+                    title = "Username",
+                    icon = Icons.Default.Person,
+                    value = settings.vosSftpUsername,
+                    placeholder = "vos-user",
+                    onValueChange = { scope.launch { repository.updateVosSftpUsername(it) } }
+                )
+                SettingsTextFieldRow(
+                    title = "Remote Path",
+                    subtitle = "Server directory for VOS files",
+                    icon = Icons.Default.FolderOpen,
+                    value = settings.vosSftpRemotePath,
+                    placeholder = "/vos",
+                    onValueChange = { scope.launch { repository.updateVosSftpRemotePath(it) } }
+                )
+                SettingsTextFieldRow(
+                    title = "SSH Key File",
+                    subtitle = "Path to private key (leave empty for password)",
+                    icon = Icons.Default.Key,
+                    value = settings.vosSftpKeyPath,
+                    placeholder = "/sdcard/.ssh/id_rsa",
+                    onValueChange = { scope.launch { repository.updateVosSftpKeyPath(it) } }
+                )
+            }
+
+            SettingsGroupCard {
+                SettingsNavigationRow(
+                    title = "Manage VOS Sync",
+                    subtitle = "Upload, download, and manage VOS files",
+                    icon = Icons.Default.Sync,
+                    onClick = { onNavigateToVosSync?.invoke() }
+                )
+            }
         }
     }
 

@@ -91,4 +91,10 @@ interface IVosFileRegistryRepository {
      * Count active entries by type.
      */
     suspend fun countActiveByType(fileType: String): Long
+
+    /**
+     * Get local active files that haven't been uploaded yet.
+     * Used by SFTP sync to determine which files need uploading.
+     */
+    suspend fun getNotUploaded(): List<VosFileRegistryDTO>
 }

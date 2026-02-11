@@ -234,21 +234,97 @@ The `ActionCoordinator` iterates handlers by category priority. First handler th
 6. Add commands to appropriate VOS seed file (`.app.vos` or `.web.vos`)
 7. Bump VOS version in `CommandLoader` to force DB reload
 
-## 6. Future: FTP Sync (Phase B)
+## 6. SFTP Sync (Phase B) — Implemented
 
-Architecture planned but not yet implemented:
+Phase B adds a network sync layer for distributing VOS files between devices and a central SFTP server. Hidden behind a developer toggle in Settings → System → "Developer: VOS Sync".
+
+### Architecture
 
 ```
-VosSyncManager
-  ├── VosFtpClient (upload/download with retry)
-  ├── manifest.json (server-side index)
-  ├── WorkManager job (background auto-sync)
-  └── On-demand download (unscraped websites)
+SystemSettingsProvider                    VosSyncScreen
+  ├── VOS Sync toggle (on/off)            ├── Connection status card
+  ├── SFTP Host / Port / Username         ├── Upload All / Download All
+  ├── Remote Path                         ├── Full Sync button
+  ├── SSH Key File path                   ├── Progress indicator
+  └── [Manage VOS Sync →]                 └── File list (registry entries)
+        │                                        │
+        └───────── navigates to ─────────────────┘
+                                                  │
+                                           VosSyncViewModel
+                                                  │
+                                           VosSyncManager
+                                           ├── uploadLocalFiles()
+                                           ├── downloadNewFiles()
+                                           └── testConnection()
+                                                  │
+                                           VosSftpClient (JSch)
+                                           ├── connect / disconnect
+                                           ├── upload / download
+                                           └── listFiles / fetchManifest
 ```
 
-- Server path: `/vos/app/{locale}/` and `/vos/web/{domain}/`
-- Dedup via `content_hash` in manifest
-- Three sync modes: manual, background auto-sync, on-demand cache
+### Key Files
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `SyncModels.kt` | `VoiceOSCore/.../vos/sync/` | Sealed classes: SftpResult, SftpAuthMode, SyncStatus, SyncProgress, SyncResult, ServerManifest |
+| `VosSftpClient.kt` | `VoiceOSCore/.../vos/sync/` | JSch SFTP wrapper: connect/disconnect, upload/download, listFiles, manifest ops. All I/O in Dispatchers.IO, 30s timeout |
+| `VosSyncManager.kt` | `VoiceOSCore/.../vos/sync/` | Sync orchestrator: testConnection, uploadLocalFiles (queries getNotUploaded), downloadNewFiles (manifest hash comparison), syncAll |
+| `VosSyncViewModel.kt` | `apps/avanues/.../ui/sync/` | @HiltViewModel exposing sync actions, settings flow, registry file list |
+| `VosSyncScreen.kt` | `apps/avanues/.../ui/sync/` | Full management UI: connection status, progress, 4 action buttons, file registry list |
+| `SyncModule.kt` | `apps/avanues/.../di/` | Hilt DI: VosSftpClient, IVosFileRegistryRepository, VosSyncManager as singletons |
+
+### SFTP Library
+
+Uses `com.github.mwiede:jsch:0.2.16` (modern fork of JSch, actively maintained, Maven Central). Added to both `apps/avanues` and `Modules/VoiceOSCore` build.gradle.kts.
+
+### Manifest-Based Delta Sync
+
+Server-side `manifest.json` tracks all available VOS files with SHA-256 content hashes:
+
+```json
+{
+  "version": "1.0",
+  "files": [
+    { "hash": "abc123...", "filename": "en-US.app.vos", "size": 12345, "uploadedAt": 1707600000 }
+  ],
+  "lastUpdated": 1707600000
+}
+```
+
+- **Upload**: Queries `getNotUploaded` (WHERE uploaded_at IS NULL AND source = 'local'), uploads each file, updates registry `uploaded_at`, rebuilds manifest
+- **Download**: Fetches manifest, compares hashes against local registry, downloads + imports new files via `VosFileImporter`
+- **Full Sync**: Upload then download, returns `SyncResult(uploadedCount, downloadedCount, errors)`
+
+### DataStore Keys
+
+| Key | Type | Default | Purpose |
+|-----|------|---------|---------|
+| `vos_sync_enabled` | Boolean | false | Master toggle for sync section |
+| `vos_sftp_host` | String | "" | Server hostname or IP |
+| `vos_sftp_port` | Int | 22 | SFTP port |
+| `vos_sftp_username` | String | "" | SSH username |
+| `vos_sftp_remote_path` | String | "/vos" | Server directory |
+| `vos_sftp_key_path` | String | "" | SSH private key file path |
+| `vos_last_sync_time` | Long | null | Timestamp of last sync |
+
+### Auth Modes
+
+- **SSH Key** (preferred): Set `vos_sftp_key_path` to private key file
+- **Password** (fallback): Empty password if no key configured
+
+### Navigation
+
+- `AvanueMode.VOS_SYNC` route in `MainActivity.kt`
+- Accessed via: Settings → System → Enable "VOS Sync" → "Manage VOS Sync"
+- `onNavigateToVosSync` callback plumbed through `UnifiedSettingsScreen` → `SystemSettingsProvider`
+
+### Design Decisions
+
+1. **StrictHostKeyChecking=no**: Dev-only setting for testing without known_hosts management
+2. **Importer = null in DI**: VoiceCommandDaoAdapter is runtime-managed, not Hilt-injectable. Download imports wired when importer is available at runtime
+3. **Dev toggle**: UI hidden unless developer enables `vosSyncEnabled`
+4. **Registry query**: `getNotUploaded` filters `uploaded_at IS NULL AND source = 'local' AND is_active = 1`
 
 ## 7. Future: In-App Crowd-Sourcing (Phase C)
 

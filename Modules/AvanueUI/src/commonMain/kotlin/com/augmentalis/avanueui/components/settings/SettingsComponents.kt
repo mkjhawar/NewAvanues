@@ -333,6 +333,69 @@ fun <T> SettingsDropdownRow(
 }
 
 /**
+ * A settings row with an editable text field.
+ *
+ * Used for string or numeric settings that the user types in (e.g., hostnames,
+ * ports, paths). Renders title/subtitle header with an OutlinedTextField below.
+ *
+ * @param title Primary text
+ * @param subtitle Secondary description text (optional)
+ * @param icon Leading icon (optional)
+ * @param value Current text value
+ * @param placeholder Placeholder text when empty (optional)
+ * @param onValueChange Callback when text changes
+ * @param singleLine Whether the field is single-line (default true)
+ */
+@Composable
+fun SettingsTextFieldRow(
+    title: String,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    value: String,
+    placeholder: String = "",
+    onValueChange: (String) -> Unit,
+    singleLine: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = AvanueTheme.colors.textSecondary,
+                    modifier = Modifier.padding(end = 16.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AvanueTheme.colors.textSecondary
+                    )
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = if (placeholder.isNotEmpty()) {
+                { Text(placeholder, color = AvanueTheme.colors.textDisabled) }
+            } else null,
+            singleLine = singleLine,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = if (icon != null) 40.dp else 0.dp, top = 4.dp)
+        )
+    }
+}
+
+/**
  * iOS-style grouped card container for settings.
  *
  * Groups related settings items inside a rounded card with consistent

@@ -52,7 +52,16 @@ data class AvanuesSettings(
     val cursorSize: Int = 48,
     val cursorSpeed: Int = 8,
     val showCoordinates: Boolean = false,
-    val cursorAccentOverride: Long? = null  // null = use theme, else custom ARGB
+    val cursorAccentOverride: Long? = null,  // null = use theme, else custom ARGB
+
+    // VOS Sync (Developer)
+    val vosSyncEnabled: Boolean = false,
+    val vosSftpHost: String = "",
+    val vosSftpPort: Int = 22,
+    val vosSftpUsername: String = "",
+    val vosSftpRemotePath: String = "/vos",
+    val vosSftpKeyPath: String = "",
+    val vosLastSyncTime: Long? = null
 )
 
 @Singleton
@@ -83,6 +92,15 @@ class AvanuesSettingsRepository @Inject constructor(
         private val KEY_CURSOR_SPEED = intPreferencesKey("cursor_speed")
         private val KEY_SHOW_COORDINATES = booleanPreferencesKey("show_coordinates")
         private val KEY_CURSOR_ACCENT_OVERRIDE = longPreferencesKey("cursor_accent_override")
+
+        // VOS Sync (Developer)
+        private val KEY_VOS_SYNC_ENABLED = booleanPreferencesKey("vos_sync_enabled")
+        private val KEY_VOS_SFTP_HOST = stringPreferencesKey("vos_sftp_host")
+        private val KEY_VOS_SFTP_PORT = intPreferencesKey("vos_sftp_port")
+        private val KEY_VOS_SFTP_USERNAME = stringPreferencesKey("vos_sftp_username")
+        private val KEY_VOS_SFTP_REMOTE_PATH = stringPreferencesKey("vos_sftp_remote_path")
+        private val KEY_VOS_SFTP_KEY_PATH = stringPreferencesKey("vos_sftp_key_path")
+        private val KEY_VOS_LAST_SYNC_TIME = longPreferencesKey("vos_last_sync_time")
 
         // Voice command persistence (AVU wire protocol format)
         private val KEY_DISABLED_COMMANDS = stringSetPreferencesKey("vcm_disabled_commands")
@@ -131,7 +149,14 @@ class AvanuesSettingsRepository @Inject constructor(
             cursorSize = prefs[KEY_CURSOR_SIZE] ?: 48,
             cursorSpeed = prefs[KEY_CURSOR_SPEED] ?: 8,
             showCoordinates = prefs[KEY_SHOW_COORDINATES] ?: false,
-            cursorAccentOverride = prefs[KEY_CURSOR_ACCENT_OVERRIDE]
+            cursorAccentOverride = prefs[KEY_CURSOR_ACCENT_OVERRIDE],
+            vosSyncEnabled = prefs[KEY_VOS_SYNC_ENABLED] ?: false,
+            vosSftpHost = prefs[KEY_VOS_SFTP_HOST] ?: "",
+            vosSftpPort = prefs[KEY_VOS_SFTP_PORT] ?: 22,
+            vosSftpUsername = prefs[KEY_VOS_SFTP_USERNAME] ?: "",
+            vosSftpRemotePath = prefs[KEY_VOS_SFTP_REMOTE_PATH] ?: "/vos",
+            vosSftpKeyPath = prefs[KEY_VOS_SFTP_KEY_PATH] ?: "",
+            vosLastSyncTime = prefs[KEY_VOS_LAST_SYNC_TIME]
         )
     }
 
@@ -195,6 +220,36 @@ class AvanuesSettingsRepository @Inject constructor(
                 prefs.remove(KEY_CURSOR_ACCENT_OVERRIDE)
             }
         }
+    }
+
+    // ==================== VOS Sync Settings ====================
+
+    suspend fun updateVosSyncEnabled(enabled: Boolean) {
+        context.avanuesDataStore.edit { it[KEY_VOS_SYNC_ENABLED] = enabled }
+    }
+
+    suspend fun updateVosSftpHost(host: String) {
+        context.avanuesDataStore.edit { it[KEY_VOS_SFTP_HOST] = host }
+    }
+
+    suspend fun updateVosSftpPort(port: Int) {
+        context.avanuesDataStore.edit { it[KEY_VOS_SFTP_PORT] = port.coerceIn(1, 65535) }
+    }
+
+    suspend fun updateVosSftpUsername(username: String) {
+        context.avanuesDataStore.edit { it[KEY_VOS_SFTP_USERNAME] = username }
+    }
+
+    suspend fun updateVosSftpRemotePath(path: String) {
+        context.avanuesDataStore.edit { it[KEY_VOS_SFTP_REMOTE_PATH] = path }
+    }
+
+    suspend fun updateVosSftpKeyPath(path: String) {
+        context.avanuesDataStore.edit { it[KEY_VOS_SFTP_KEY_PATH] = path }
+    }
+
+    suspend fun updateVosLastSyncTime(time: Long) {
+        context.avanuesDataStore.edit { it[KEY_VOS_LAST_SYNC_TIME] = time }
     }
 
     // ==================== Voice Command Persistence ====================

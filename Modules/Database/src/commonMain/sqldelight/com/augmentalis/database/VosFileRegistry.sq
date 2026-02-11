@@ -134,6 +134,12 @@ getAll:
 SELECT * FROM vos_file_registry
 ORDER BY file_type, file_id, version DESC;
 
+-- Get local files that haven't been uploaded yet (for SFTP sync)
+getNotUploaded:
+SELECT * FROM vos_file_registry
+WHERE uploaded_at IS NULL AND source = 'local' AND is_active = 1
+ORDER BY scraped_at ASC;
+
 -- Delete all records
 deleteAll:
 DELETE FROM vos_file_registry;

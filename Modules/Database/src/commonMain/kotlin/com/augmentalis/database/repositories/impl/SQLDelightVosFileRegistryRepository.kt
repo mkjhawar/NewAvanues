@@ -98,4 +98,8 @@ class SQLDelightVosFileRegistryRepository(
     override suspend fun countActiveByType(fileType: String): Long = withContext(Dispatchers.Default) {
         queries.countActiveByType(fileType).executeAsOne()
     }
+
+    override suspend fun getNotUploaded(): List<VosFileRegistryDTO> = withContext(Dispatchers.Default) {
+        queries.getNotUploaded().executeAsList().map { it.toVosFileRegistryDTO() }
+    }
 }

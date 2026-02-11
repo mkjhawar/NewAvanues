@@ -83,6 +83,9 @@ dokka = "1.9.10"
 # Ktor (HTTP client for KMP)
 ktor = "2.3.7"
 
+# SFTP
+jsch = "0.2.16"
+
 # gRPC/Wire
 wire = "5.4.0"
 grpc-kotlin = "1.4.1"
@@ -225,6 +228,9 @@ grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpc-kotlin-stub = { module = "io.grpc:grpc-kotlin-stub", version.ref = "grpc-kotlin" }
 protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
 protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
+
+# SFTP
+jsch = { module = "com.github.mwiede:jsch", version.ref = "jsch" }
 
 [bundles]
 compose = [

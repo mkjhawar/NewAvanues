@@ -52,6 +52,7 @@ import com.augmentalis.voiceavanue.ui.home.HomeScreen
 import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
 import com.augmentalis.voiceavanue.ui.about.AboutScreen
 import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
+import com.augmentalis.voiceavanue.ui.sync.VosSyncScreen
 import com.augmentalis.webavanue.BrowserApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -185,7 +186,8 @@ enum class AvanueMode(val route: String, val label: String) {
     SETTINGS("settings", "Settings"),
     ABOUT("about", "About Avanues"),
     DEVELOPER_CONSOLE("developer_console", "Developer Console"),
-    DEVELOPER_SETTINGS("developer_settings", "Developer Settings")
+    DEVELOPER_SETTINGS("developer_settings", "Developer Settings"),
+    VOS_SYNC("vos_sync", "VOS Sync")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
 }
 
@@ -269,6 +271,9 @@ fun AvanuesApp(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToDeveloperConsole = {
                     navController.navigate(AvanueMode.DEVELOPER_CONSOLE.route)
+                },
+                onNavigateToVosSync = {
+                    navController.navigate(AvanueMode.VOS_SYNC.route)
                 }
             )
         }
@@ -290,6 +295,12 @@ fun AvanuesApp(
 
         composable(AvanueMode.DEVELOPER_SETTINGS.route) {
             DeveloperSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.VOS_SYNC.route) {
+            VosSyncScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
