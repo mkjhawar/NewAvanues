@@ -3,7 +3,7 @@
  *
  * Cool moonlit silver aesthetic: indigo primary, violet secondary.
  * Evolved from OceanColors with a cooler, lunar identity.
- * Dark + Light variants for AppearanceMode axis.
+ * Dark + Light + XR variants for AppearanceMode and DisplayProfile axes.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -135,4 +135,58 @@ object LunaColorsLight : AvanueColorScheme {
 
     // Special
     override val starActive = Color(0xFFF59E0B)
+}
+
+/**
+ * Luna XR — additive display variant for AR smart glasses.
+ * Cool silver/indigo boosted. Transparent background.
+ */
+object LunaColorsXR : AvanueColorScheme {
+    override val primary = Color(0xFFA5B4FC)            // indigo-300 (high luminance)
+    override val onPrimary = Color(0xFF1E1B4B)
+    override val primaryDark = Color(0xFF818CF8)
+    override val primaryLight = Color(0xFFC7D2FE)
+
+    override val secondary = Color(0xFFA78BFA)          // violet-400
+    override val onSecondary = Color(0xFF1E1B4B)
+
+    override val tertiary = Color(0xFFCBD5E1)           // slate-300
+
+    override val primaryContainer = Color(0x40818CF8)
+    override val onPrimaryContainer = Color(0xFFC7D2FE)
+    override val secondaryContainer = Color(0x407C3AED)
+    override val onSecondaryContainer = Color(0xFFDDD6FE)
+    override val tertiaryContainer = Color(0x4064748B)
+    override val onTertiaryContainer = Color(0xFFCBD5E1)
+    override val errorContainer = Color(0x40DC2626)
+    override val onErrorContainer = Color(0xFFFECACA)
+
+    override val error = Color(0xFFF87171)
+    override val onError = Color.White
+
+    override val background = Color(0x00000000)
+    override val surface = Color(0x261A1D2E)
+    override val surfaceElevated = Color(0x40282B3E)
+    override val surfaceVariant = Color(0x33363A50)
+    override val surfaceInput = Color(0x40282B3E)
+
+    override val textPrimary = Color(0xFFF1F5F9)
+    override val textSecondary = Color(0xFFCBD5E1)
+    override val textTertiary = Color(0xFF94A3B8)
+    override val textDisabled = Color(0xFF64748B)
+    override val textOnPrimary = Color(0xFF1E1B4B)
+
+    override val iconPrimary = Color(0xFFA5B4FC)
+    override val iconSecondary = Color(0xFFCBD5E1)
+    override val iconDisabled = Color(0xFF64748B)
+
+    override val border = Color(0x33FFFFFF)
+    override val borderSubtle = Color(0x1AFFFFFF)
+    override val borderStrong = Color(0x66FFFFFF)
+
+    override val success = Color(0xFF4ADE80)
+    override val warning = Color(0xFFFCD34D)
+    override val info = Color(0xFFA5B4FC)
+
+    override val starActive = Color(0xFFFCD34D)
 }

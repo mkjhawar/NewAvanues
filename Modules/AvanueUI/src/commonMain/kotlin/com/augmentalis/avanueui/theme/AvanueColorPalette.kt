@@ -52,6 +52,14 @@ enum class AvanueColorPalette(val displayName: String) {
         HYDRA -> if (isDark) HydraWater else HydraWaterLight
     }
 
+    /** XR-optimized color scheme for additive AR displays. */
+    val colorsXR: AvanueColorScheme get() = when (this) {
+        SOL -> SolColorsXR
+        LUNA -> LunaColorsXR
+        TERRA -> TerraColorsXR
+        HYDRA -> HydraColorsXR
+    }
+
     /** Backward-compatible accessor (dark default). */
     val colors: AvanueColorScheme get() = colors(isDark = true)
     /** Backward-compatible accessor (dark default). */

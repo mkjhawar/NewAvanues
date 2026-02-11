@@ -2,7 +2,7 @@
  * TerraColors.kt - Terra palette color scheme (Theme v5.1)
  *
  * Natural earth/forest aesthetic: forest green primary, warm amber secondary.
- * Dark + Light variants for AppearanceMode axis.
+ * Dark + Light + XR variants for AppearanceMode and DisplayProfile axes.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -134,4 +134,58 @@ object TerraColorsLight : AvanueColorScheme {
 
     // Special
     override val starActive = Color(0xFFF59E0B)
+}
+
+/**
+ * Terra XR — additive display variant for AR smart glasses.
+ * Forest green boosted to high luminance. Transparent background.
+ */
+object TerraColorsXR : AvanueColorScheme {
+    override val primary = Color(0xFF4ADE80)            // green-400 (excellent additive)
+    override val onPrimary = Color(0xFF0F1A10)
+    override val primaryDark = Color(0xFF22C55E)
+    override val primaryLight = Color(0xFF86EFAC)
+
+    override val secondary = Color(0xFFFBBF24)          // amber-400
+    override val onSecondary = Color(0xFF1C1917)
+
+    override val tertiary = Color(0xFFA3E635)           // lime-400
+
+    override val primaryContainer = Color(0x402D7D46)
+    override val onPrimaryContainer = Color(0xFFBBF7D0)
+    override val secondaryContainer = Color(0x40D97706)
+    override val onSecondaryContainer = Color(0xFFFDE68A)
+    override val tertiaryContainer = Color(0x40A16207)
+    override val onTertiaryContainer = Color(0xFFFDE68A)
+    override val errorContainer = Color(0x40DC2626)
+    override val onErrorContainer = Color(0xFFFECACA)
+
+    override val error = Color(0xFFF87171)
+    override val onError = Color.White
+
+    override val background = Color(0x00000000)
+    override val surface = Color(0x261A2B1C)
+    override val surfaceElevated = Color(0x40253C28)
+    override val surfaceVariant = Color(0x33304D34)
+    override val surfaceInput = Color(0x40253C28)
+
+    override val textPrimary = Color(0xFFF0FDF4)       // green-50 (warm white)
+    override val textSecondary = Color(0xFFBFD0B8)
+    override val textTertiary = Color(0xFF8AA080)
+    override val textDisabled = Color(0xFF5A6B55)
+    override val textOnPrimary = Color(0xFF0F1A10)
+
+    override val iconPrimary = Color(0xFF4ADE80)
+    override val iconSecondary = Color(0xFFBFD0B8)
+    override val iconDisabled = Color(0xFF5A6B55)
+
+    override val border = Color(0x33FFFFFF)
+    override val borderSubtle = Color(0x1AFFFFFF)
+    override val borderStrong = Color(0x66FFFFFF)
+
+    override val success = Color(0xFF4ADE80)
+    override val warning = Color(0xFFFBBF24)
+    override val info = Color(0xFF4ADE80)
+
+    override val starActive = Color(0xFFFCD34D)
 }
