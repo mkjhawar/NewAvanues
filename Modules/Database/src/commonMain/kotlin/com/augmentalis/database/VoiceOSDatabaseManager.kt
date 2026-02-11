@@ -31,6 +31,7 @@ import com.augmentalis.database.repositories.IElementCommandRepository
 import com.augmentalis.database.repositories.IQualityMetricRepository
 import com.augmentalis.database.repositories.IScrapedWebsiteRepository
 import com.augmentalis.database.repositories.IVosFileRegistryRepository
+import com.augmentalis.database.repositories.IPhraseSuggestionRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandUsageRepository
 import com.augmentalis.database.repositories.impl.SQLDelightContextPreferenceRepository
 import com.augmentalis.database.repositories.impl.SQLDelightVoiceCommandRepository
@@ -53,6 +54,7 @@ import com.augmentalis.database.repositories.impl.SQLDelightElementCommandReposi
 import com.augmentalis.database.repositories.impl.SQLDelightQualityMetricRepository
 import com.augmentalis.database.repositories.impl.SQLDelightScrapedWebsiteRepository
 import com.augmentalis.database.repositories.impl.SQLDelightVosFileRegistryRepository
+import com.augmentalis.database.repositories.impl.SQLDelightPhraseSuggestionRepository
 
 /**
  * Database statistics data class for VoiceDataManager compatibility.
@@ -192,6 +194,14 @@ class VoiceOSDatabaseManager private constructor(
      */
     val vosFileRegistry: IVosFileRegistryRepository by lazy {
         SQLDelightVosFileRegistryRepository(_database)
+    }
+
+    /**
+     * Repository for phrase suggestions (Phase C crowd-sourcing).
+     * Tracks user-submitted alternative phrases for voice commands.
+     */
+    val phraseSuggestions: IPhraseSuggestionRepository by lazy {
+        SQLDelightPhraseSuggestionRepository(_database)
     }
 
     // ==================== Context Repositories ====================

@@ -41,6 +41,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -355,6 +356,7 @@ fun SettingsTextFieldRow(
     placeholder: String = "",
     onValueChange: (String) -> Unit,
     singleLine: Boolean = true,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -388,6 +390,7 @@ fun SettingsTextFieldRow(
                 { Text(placeholder, color = AvanueTheme.colors.textDisabled) }
             } else null,
             singleLine = singleLine,
+            visualTransformation = visualTransformation,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = if (icon != null) 40.dp else 0.dp, top = 4.dp)

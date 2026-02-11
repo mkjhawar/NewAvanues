@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.augmentalis.avanueui.components.settings.SettingsDropdownRow
 import com.augmentalis.avanueui.components.settings.SettingsGroupCard
 import com.augmentalis.avanueui.components.settings.SettingsNavigationRow
@@ -38,12 +39,14 @@ import com.augmentalis.foundation.settings.SearchableSettingEntry
 import com.augmentalis.foundation.settings.SettingsSection
 import com.augmentalis.voiceavanue.data.AvanuesSettings
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
+import com.augmentalis.voiceavanue.data.SftpCredentialStore
 import com.augmentalis.voiceavanue.ui.settings.ComposableSettingsProvider
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class SystemSettingsProvider @Inject constructor(
-    private val repository: AvanuesSettingsRepository
+    private val repository: AvanuesSettingsRepository,
+    private val credentialStore: SftpCredentialStore
 ) : ComposableSettingsProvider {
 
     /** Navigation callback set by the settings screen before rendering. */
@@ -196,6 +199,37 @@ class SystemSettingsProvider @Inject constructor(
                     value = settings.vosSftpKeyPath,
                     placeholder = "/sdcard/.ssh/id_rsa",
                     onValueChange = { scope.launch { repository.updateVosSftpKeyPath(it) } }
+                )
+                SettingsTextFieldRow(
+                    title = "Password",
+                    subtitle = if (settings.vosSftpKeyPath.isNotBlank()) "SSH key passphrase" else "SFTP password",
+                    icon = Icons.Default.Key,
+                    value = if (settings.vosSftpKeyPath.isNotBlank()) credentialStore.getPassphrase() else credentialStore.getPassword(),
+                    placeholder = "Enter password",
+                    visualTransformation = PasswordVisualTransformation(),
+                    onValueChange = { value ->
+                        if (settings.vosSftpKeyPath.isNotBlank()) {
+                            credentialStore.storePassphrase(value)
+                        } else {
+                            credentialStore.storePassword(value)
+                        }
+                    }
+                )
+                SettingsDropdownRow(
+                    title = "Host Key Verification",
+                    subtitle = "SSH host key checking mode",
+                    icon = Icons.Default.Settings,
+                    selected = settings.vosSftpHostKeyMode,
+                    options = listOf("no", "accept-new", "yes"),
+                    optionLabel = { mode ->
+                        when (mode) {
+                            "no" -> "No (dev)"
+                            "accept-new" -> "Accept New"
+                            "yes" -> "Strict"
+                            else -> mode
+                        }
+                    },
+                    onSelected = { scope.launch { repository.updateVosSftpHostKeyMode(it) } }
                 )
             }
 

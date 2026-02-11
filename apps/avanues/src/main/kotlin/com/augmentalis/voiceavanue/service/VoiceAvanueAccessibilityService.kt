@@ -41,6 +41,12 @@ import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
+import com.augmentalis.voiceoscore.vos.VosFileImporter
+import com.augmentalis.voiceoscore.vos.sync.VosSyncManager
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -62,6 +68,13 @@ private const val TAG = "VoiceAvanueService"
  * Core command generation is in VoiceOSCore; this adds overlay display.
  */
 class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface SyncEntryPoint {
+        fun vosSyncManager(): VosSyncManager
+    }
+
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -219,6 +232,25 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                             Log.i(TAG, "Retrain page requested via voice command")
                         }
                     }
+                }
+
+                // Wire VosFileImporter into VosSyncManager (late-binding).
+                // VoiceCommandDaoAdapter is created via CommandDatabase singleton,
+                // which requires VoiceOSDatabase — only available after DB init above.
+                try {
+                    val commandDatabase = com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
+                        .getInstance(applicationContext)
+                    val commandDao = commandDatabase.voiceCommandDao()
+                    val vosRegistry = db.vosFileRegistry
+                    val vosImporter = VosFileImporter(vosRegistry, commandDao)
+                    val entryPoint = EntryPointAccessors.fromApplication(
+                        applicationContext,
+                        SyncEntryPoint::class.java
+                    )
+                    entryPoint.vosSyncManager().setImporter(vosImporter)
+                    Log.i(TAG, "VosFileImporter wired to VosSyncManager")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to wire VosFileImporter: ${e.message}")
                 }
 
                 // Wire cursor settings + voice locale → CursorOverlayService lifecycle + config

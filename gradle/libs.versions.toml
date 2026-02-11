@@ -204,6 +204,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 
 # Hilt Extensions
 hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
+hilt-work-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-work" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }

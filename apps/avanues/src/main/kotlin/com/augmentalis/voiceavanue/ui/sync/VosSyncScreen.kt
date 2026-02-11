@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,6 +63,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.augmentalis.avanueui.components.AvanueButton
 import com.augmentalis.avanueui.components.AvanueCard
+import com.augmentalis.avanueui.components.settings.SettingsDropdownRow
+import com.augmentalis.avanueui.components.settings.SettingsGroupCard
+import com.augmentalis.avanueui.components.settings.SettingsSwitchRow
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.database.dto.VosFileRegistryDTO
@@ -78,6 +83,7 @@ fun VosSyncScreen(
     val settings by viewModel.settings.collectAsState()
     val registryFiles by viewModel.registryFiles.collectAsState()
     val actionMessage by viewModel.actionMessage.collectAsState()
+    val pendingSuggestions by viewModel.pendingSuggestionCount.collectAsState()
 
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(
@@ -248,6 +254,33 @@ fun VosSyncScreen(
                 }
             }
 
+            // Auto-sync section
+            item {
+                SettingsGroupCard {
+                    SettingsSwitchRow(
+                        title = "Auto Sync",
+                        subtitle = if (settings.vosAutoSyncEnabled)
+                            "Every ${settings.vosSyncIntervalHours}h when connected"
+                        else
+                            "Periodic background sync",
+                        icon = Icons.Default.Schedule,
+                        checked = settings.vosAutoSyncEnabled,
+                        onCheckedChange = { viewModel.updateAutoSync(it) }
+                    )
+                    if (settings.vosAutoSyncEnabled) {
+                        SettingsDropdownRow(
+                            title = "Sync Interval",
+                            subtitle = "How often to sync in background",
+                            icon = Icons.Default.Schedule,
+                            selected = settings.vosSyncIntervalHours,
+                            options = listOf(1, 2, 4, 8, 12, 24),
+                            optionLabel = { "${it}h" },
+                            onSelected = { viewModel.updateSyncInterval(it) }
+                        )
+                    }
+                }
+            }
+
             // File registry list
             item {
                 Spacer(modifier = Modifier.height(SpacingTokens.sm))
@@ -280,6 +313,65 @@ fun VosSyncScreen(
 
             items(registryFiles, key = { it.id }) { file ->
                 RegistryFileItem(file)
+            }
+
+            // Suggestions section
+            item {
+                Spacer(modifier = Modifier.height(SpacingTokens.md))
+                Text(
+                    text = "SUGGESTIONS",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = AvanueTheme.colors.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
+                AvanueCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(SpacingTokens.md),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = AvanueTheme.colors.warning,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "$pendingSuggestions pending",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = AvanueTheme.colors.textPrimary
+                            )
+                            Text(
+                                text = "User-submitted phrase suggestions",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AvanueTheme.colors.textSecondary
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (pendingSuggestions > 0) {
+                item {
+                    AvanueButton(
+                        onClick = { viewModel.exportSuggestions() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudUpload,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Export Suggestions")
+                    }
+                }
             }
 
             item { Spacer(modifier = Modifier.height(SpacingTokens.lg)) }

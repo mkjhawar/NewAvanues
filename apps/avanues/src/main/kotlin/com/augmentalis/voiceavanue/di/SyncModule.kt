@@ -10,6 +10,7 @@
 package com.augmentalis.voiceavanue.di
 
 import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.database.repositories.IPhraseSuggestionRepository
 import com.augmentalis.database.repositories.IVosFileRegistryRepository
 import com.augmentalis.voiceoscore.vos.sync.VosSftpClient
 import com.augmentalis.voiceoscore.vos.sync.VosSyncManager
@@ -35,12 +36,18 @@ object SyncModule {
 
     @Provides
     @Singleton
+    fun providePhraseSuggestionRepository(
+        databaseManager: VoiceOSDatabaseManager
+    ): IPhraseSuggestionRepository = databaseManager.phraseSuggestions
+
+    @Provides
+    @Singleton
     fun provideVosSyncManager(
         sftpClient: VosSftpClient,
         registry: IVosFileRegistryRepository
     ): VosSyncManager = VosSyncManager(
         sftpClient = sftpClient,
         registry = registry,
-        importer = null // Importer requires VoiceCommandDaoAdapter which is runtime-managed
+        importer = null // Late-bound: VoiceAvanueAccessibilityService.onServiceReady() calls setImporter() after DB init
     )
 }

@@ -61,7 +61,10 @@ data class AvanuesSettings(
     val vosSftpUsername: String = "",
     val vosSftpRemotePath: String = "/vos",
     val vosSftpKeyPath: String = "",
-    val vosLastSyncTime: Long? = null
+    val vosLastSyncTime: Long? = null,
+    val vosSftpHostKeyMode: String = "no",
+    val vosAutoSyncEnabled: Boolean = false,
+    val vosSyncIntervalHours: Int = 4
 )
 
 @Singleton
@@ -101,6 +104,9 @@ class AvanuesSettingsRepository @Inject constructor(
         private val KEY_VOS_SFTP_REMOTE_PATH = stringPreferencesKey("vos_sftp_remote_path")
         private val KEY_VOS_SFTP_KEY_PATH = stringPreferencesKey("vos_sftp_key_path")
         private val KEY_VOS_LAST_SYNC_TIME = longPreferencesKey("vos_last_sync_time")
+        private val KEY_VOS_SFTP_HOST_KEY_MODE = stringPreferencesKey("vos_sftp_host_key_mode")
+        private val KEY_VOS_AUTO_SYNC_ENABLED = booleanPreferencesKey("vos_auto_sync_enabled")
+        private val KEY_VOS_SYNC_INTERVAL_HOURS = intPreferencesKey("vos_sync_interval_hours")
 
         // Voice command persistence (AVU wire protocol format)
         private val KEY_DISABLED_COMMANDS = stringSetPreferencesKey("vcm_disabled_commands")
@@ -156,7 +162,10 @@ class AvanuesSettingsRepository @Inject constructor(
             vosSftpUsername = prefs[KEY_VOS_SFTP_USERNAME] ?: "",
             vosSftpRemotePath = prefs[KEY_VOS_SFTP_REMOTE_PATH] ?: "/vos",
             vosSftpKeyPath = prefs[KEY_VOS_SFTP_KEY_PATH] ?: "",
-            vosLastSyncTime = prefs[KEY_VOS_LAST_SYNC_TIME]
+            vosLastSyncTime = prefs[KEY_VOS_LAST_SYNC_TIME],
+            vosSftpHostKeyMode = prefs[KEY_VOS_SFTP_HOST_KEY_MODE] ?: "no",
+            vosAutoSyncEnabled = prefs[KEY_VOS_AUTO_SYNC_ENABLED] ?: false,
+            vosSyncIntervalHours = prefs[KEY_VOS_SYNC_INTERVAL_HOURS] ?: 4
         )
     }
 
@@ -250,6 +259,18 @@ class AvanuesSettingsRepository @Inject constructor(
 
     suspend fun updateVosLastSyncTime(time: Long) {
         context.avanuesDataStore.edit { it[KEY_VOS_LAST_SYNC_TIME] = time }
+    }
+
+    suspend fun updateVosSftpHostKeyMode(mode: String) {
+        context.avanuesDataStore.edit { it[KEY_VOS_SFTP_HOST_KEY_MODE] = mode }
+    }
+
+    suspend fun updateVosAutoSyncEnabled(enabled: Boolean) {
+        context.avanuesDataStore.edit { it[KEY_VOS_AUTO_SYNC_ENABLED] = enabled }
+    }
+
+    suspend fun updateVosSyncIntervalHours(hours: Int) {
+        context.avanuesDataStore.edit { it[KEY_VOS_SYNC_INTERVAL_HOURS] = hours.coerceIn(1, 24) }
     }
 
     // ==================== Voice Command Persistence ====================

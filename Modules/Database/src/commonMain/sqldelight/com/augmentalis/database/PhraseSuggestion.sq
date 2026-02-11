@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS phrase_suggestion (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    command_id TEXT NOT NULL,
+    original_phrase TEXT NOT NULL,
+    suggested_phrase TEXT NOT NULL,
+    locale TEXT NOT NULL DEFAULT 'en-US',
+    created_at INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    source TEXT NOT NULL DEFAULT 'user'
+);
+
+getAll:
+SELECT * FROM phrase_suggestion ORDER BY created_at DESC;
+
+getPendingByLocale:
+SELECT * FROM phrase_suggestion WHERE status = 'pending' AND locale = ? ORDER BY created_at DESC;
+
+getForCommand:
+SELECT * FROM phrase_suggestion WHERE command_id = ? ORDER BY created_at DESC;
+
+insert:
+INSERT INTO phrase_suggestion (command_id, original_phrase, suggested_phrase, locale, created_at, status, source)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+updateStatus:
+UPDATE phrase_suggestion SET status = ? WHERE id = ?;
+
+getPendingCount:
+SELECT COUNT(*) FROM phrase_suggestion WHERE status = 'pending';
+
+getLastInsertedId:
+SELECT last_insert_rowid();
+
+deleteAll:
+DELETE FROM phrase_suggestion;

@@ -214,6 +214,8 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
 
     // =========================================================================
     // WebView (for WebAvanue browser)
@@ -232,6 +234,12 @@ dependencies {
     // =========================================================================
 
     implementation(libs.androidx.work.runtime.ktx)
+
+    // =========================================================================
+    // Security (Encrypted credential storage)
+    // =========================================================================
+
+    implementation(libs.androidx.security.crypto)
 
     // =========================================================================
     // Debug & Testing

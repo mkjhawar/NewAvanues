@@ -40,12 +40,18 @@ class VosSftpClient {
 
     /**
      * Connect to SFTP server.
+     *
+     * @param hostKeyChecking Host key verification mode:
+     *   - "no": Skip verification (dev only, MITM risk)
+     *   - "accept-new": Trust on first connect, reject changes (recommended for testing)
+     *   - "yes": Strict verification against known_hosts (production)
      */
     suspend fun connect(
         host: String,
         port: Int,
         username: String,
-        authMode: SftpAuthMode
+        authMode: SftpAuthMode,
+        hostKeyChecking: String = "no"
     ): SftpResult<Unit> = withContext(Dispatchers.IO) {
         try {
             disconnect()
@@ -54,7 +60,7 @@ class VosSftpClient {
                 is SftpAuthMode.SshKey -> {
                     val keyFile = File(authMode.keyFilePath)
                     if (!keyFile.exists()) {
-                        return@withContext SftpResult.Error("SSH key file not found: ${authMode.keyFilePath}")
+                        return@withContext SftpResult.Error("SSH key file not found")
                     }
                     if (authMode.passphrase.isNotEmpty()) {
                         jsch.addIdentity(authMode.keyFilePath, authMode.passphrase)
@@ -72,7 +78,7 @@ class VosSftpClient {
                     setPassword(authMode.password)
                 }
                 val config = Properties().apply {
-                    put("StrictHostKeyChecking", "no")
+                    put("StrictHostKeyChecking", hostKeyChecking)
                     put("PreferredAuthentications", when (authMode) {
                         is SftpAuthMode.SshKey -> "publickey"
                         is SftpAuthMode.Password -> "password"
@@ -89,7 +95,7 @@ class VosSftpClient {
             sftpChannel.connect(CHANNEL_TIMEOUT_MS)
             channel = sftpChannel
 
-            Log.i(TAG, "Connected to $host:$port as $username")
+            Log.i(TAG, "Connected to $host:$port")
             SftpResult.Success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed: ${e.message}", e)
@@ -148,7 +154,7 @@ class VosSftpClient {
             } else null
 
             ch.put(localPath, remotePath, monitor, ChannelSftp.OVERWRITE)
-            Log.d(TAG, "Uploaded $localPath → $remotePath (${totalSize} bytes)")
+            Log.d(TAG, "Uploaded ${File(localPath).name} (${totalSize} bytes)")
             SftpResult.Success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Upload failed: ${e.message}", e)
@@ -190,7 +196,7 @@ class VosSftpClient {
             } else null
 
             ch.get(remotePath, localPath, monitor)
-            Log.d(TAG, "Downloaded $remotePath → $localPath ($totalSize bytes)")
+            Log.d(TAG, "Downloaded ${File(localPath).name} ($totalSize bytes)")
             SftpResult.Success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Download failed: ${e.message}", e)

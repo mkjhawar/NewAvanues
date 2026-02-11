@@ -25,8 +25,21 @@ private const val TAG = "VosSyncManager"
 class VosSyncManager(
     private val sftpClient: VosSftpClient,
     private val registry: IVosFileRegistryRepository,
-    private val importer: VosFileImporter?
+    importer: VosFileImporter?
 ) {
+    @Volatile
+    private var _importer: VosFileImporter? = importer
+
+    /**
+     * Late-bind the VOS file importer.
+     * Called from AccessibilityService.onServiceReady() after DB initialization,
+     * since VoiceCommandDaoAdapter is runtime-managed and not Hilt-injectable.
+     */
+    fun setImporter(importer: VosFileImporter) {
+        _importer = importer
+        Log.i(TAG, "VosFileImporter bound")
+    }
+
     private val _syncStatus = MutableStateFlow(SyncStatus())
     val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
 
@@ -38,11 +51,12 @@ class VosSyncManager(
         host: String,
         port: Int,
         username: String,
-        authMode: SftpAuthMode
+        authMode: SftpAuthMode,
+        hostKeyChecking: String = "no"
     ): SftpResult<Unit> {
         _syncStatus.value = _syncStatus.value.copy(error = null)
 
-        val result = sftpClient.connect(host, port, username, authMode)
+        val result = sftpClient.connect(host, port, username, authMode, hostKeyChecking)
         return when (result) {
             is SftpResult.Success -> {
                 _syncStatus.value = _syncStatus.value.copy(isConnected = true, error = null)
@@ -72,10 +86,11 @@ class VosSyncManager(
         port: Int,
         username: String,
         authMode: SftpAuthMode,
-        remotePath: String
+        remotePath: String,
+        hostKeyChecking: String = "no"
     ): SftpResult<Int> {
         // Connect
-        val connectResult = sftpClient.connect(host, port, username, authMode)
+        val connectResult = sftpClient.connect(host, port, username, authMode, hostKeyChecking)
         if (connectResult is SftpResult.Error) {
             _syncStatus.value = _syncStatus.value.copy(error = connectResult.message, isSyncing = false)
             return connectResult
@@ -198,9 +213,10 @@ class VosSyncManager(
         username: String,
         authMode: SftpAuthMode,
         remotePath: String,
-        downloadDir: String
+        downloadDir: String,
+        hostKeyChecking: String = "no"
     ): SftpResult<Int> {
-        val connectResult = sftpClient.connect(host, port, username, authMode)
+        val connectResult = sftpClient.connect(host, port, username, authMode, hostKeyChecking)
         if (connectResult is SftpResult.Error) {
             _syncStatus.value = _syncStatus.value.copy(error = connectResult.message, isSyncing = false)
             return connectResult
@@ -286,8 +302,8 @@ class VosSyncManager(
                 when (downloadResult) {
                     is SftpResult.Success -> {
                         // Import the downloaded file into the command DB
-                        if (importer != null) {
-                            val importResult = importer.importFromFile(localFilePath)
+                        if (_importer != null) {
+                            val importResult = _importer!!.importFromFile(localFilePath)
                             if (importResult.success) {
                                 downloadedCount++
                                 Log.d(TAG, "Downloaded and imported ${entry.filename}")
@@ -339,11 +355,12 @@ class VosSyncManager(
         username: String,
         authMode: SftpAuthMode,
         remotePath: String,
-        downloadDir: String
+        downloadDir: String,
+        hostKeyChecking: String = "no"
     ): SftpResult<SyncResult> {
         val errors = mutableListOf<String>()
 
-        val uploadResult = uploadLocalFiles(host, port, username, authMode, remotePath)
+        val uploadResult = uploadLocalFiles(host, port, username, authMode, remotePath, hostKeyChecking)
         val uploadedCount = when (uploadResult) {
             is SftpResult.Success -> uploadResult.data
             is SftpResult.Error -> {
@@ -352,7 +369,7 @@ class VosSyncManager(
             }
         }
 
-        val downloadResult = downloadNewFiles(host, port, username, authMode, remotePath, downloadDir)
+        val downloadResult = downloadNewFiles(host, port, username, authMode, remotePath, downloadDir, hostKeyChecking)
         val downloadedCount = when (downloadResult) {
             is SftpResult.Success -> downloadResult.data
             is SftpResult.Error -> {
