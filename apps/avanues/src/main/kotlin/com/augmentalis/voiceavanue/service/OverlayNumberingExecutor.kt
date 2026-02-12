@@ -81,14 +81,15 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
 
     companion object {
         /** Threshold above which a screen change within a target app is considered
-         *  major navigation (not scroll). Gmail inbox → email detail typically exceeds 0.8. */
-        const val MAJOR_NAVIGATION_THRESHOLD = 0.6f
+         *  major navigation (not scroll). Fragment transitions like list → detail
+         *  typically exceed 0.7; lowered to 0.4 to catch subtler transitions. */
+        const val MAJOR_NAVIGATION_THRESHOLD = 0.4f
     }
 
     /**
-     * Assign numbers to overlay items using per-container stable numbering.
-     * Items with existing AVID->number mappings keep their numbers.
-     * New items get the next available number.
+     * Assign numbers to overlay items based on visual position.
+     * Always assigns 1-N sorted by top→left, so numbers match on-screen order
+     * regardless of which items were previously visible (no sticky mapping).
      */
     fun assignNumbers(
         items: List<OverlayStateManager.NumberOverlayItem>,
@@ -97,19 +98,19 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
         if (items.isEmpty()) return emptyList()
 
         val containerId = containerAvid ?: "root"
-        val containerMap = assignments.getOrPut(containerId) { linkedMapOf() }
 
+        // Position-based: sort by visual position, assign 1-N
         val sorted = items.sortedWith(compareBy({ it.top }, { it.left }))
-        val result = sorted.map { item ->
-            val number = containerMap.getOrPut(item.avid) {
-                val next = nextNumbers.getOrPut(containerId) { 1 }
-                nextNumbers[containerId] = next + 1
-                next
-            }
+        val containerMap = linkedMapOf<String, Int>()
+        val result = sorted.mapIndexed { index, item ->
+            val number = index + 1
+            containerMap[item.avid] = number
             item.copy(number = number)
         }
 
-        trimIfNeeded()
+        // Update stored mapping for voice command lookups
+        assignments[containerId] = containerMap
+        nextNumbers[containerId] = sorted.size + 1
         return result
     }
 

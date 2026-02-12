@@ -234,6 +234,7 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         // For window state changes, process immediately
         if (forceImmediate) {
             pendingScreenChangeJob?.cancel()
+            pendingScrollRefreshJob?.cancel()  // Prevent stale scroll badges during navigation
             // Signal in-app navigation so app-level service can clear overlays
             // immediately. This fires only for same-package window state changes
             // (package changes return early above).
@@ -247,6 +248,7 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         if (now - lastEventProcessTime < debounceMs) {
             // Cancel any pending job and schedule a new one
             pendingScreenChangeJob?.cancel()
+            pendingScrollRefreshJob?.cancel()  // Prevent stale scroll badges during transition
             pendingScreenChangeJob = serviceScope.launch {
                 kotlinx.coroutines.delay(debounceMs)
                 handleScreenChange(event)
