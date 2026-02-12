@@ -253,12 +253,8 @@ object TableActions {
         val row = findRowByIndex(tableNode, rowNumber - 1)
 
         return if (row != null) {
-            val result = performRowSelection(row)
-            result
+            performRowSelection(row)
         } else false
-    .also {
-            tableNode
-        }
     }
 
     /**
