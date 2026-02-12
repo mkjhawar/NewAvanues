@@ -46,14 +46,5 @@ class AppState: ObservableObject {
     @AppStorage("voice_locale") var voiceLocale: String = "en-US"
 
     // MARK: - Navigation
-    @Published var currentMode: AvanueMode = .browser
-
-    /// Navigation modes matching Android AvanueMode enum.
-    enum AvanueMode: String, CaseIterable {
-        case hub = "HUB"
-        case browser = "BROWSER"
-        case settings = "SETTINGS"
-        case about = "ABOUT"
-        case vosSyncManagement = "VOS_SYNC"
-    }
+    @Published var currentMode: AvanueMode = .hub
 }

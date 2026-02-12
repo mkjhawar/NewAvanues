@@ -1,30 +1,36 @@
 /**
- * IosSpeechRecognitionService.kt - iOS speech recognition service implementation
+ * IosSpeechRecognitionService.kt - iOS speech recognition using Apple SFSpeechRecognizer
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Manoj Jhawar
- * Created: 2026-01-18
  *
- * iOS-specific implementation of SpeechRecognitionService.
- * Will delegate to Apple Speech framework when implemented.
+ * Merged implementation: SFSpeechRecognizer engine + SpeechRecognitionService.
+ * No separate engine class needed — Apple Speech integration lives directly here.
+ * Same pattern applies to macOS (shared Speech framework), Windows (SAPI), Linux (Vosk).
  */
 package com.augmentalis.speechrecognition
 
 import com.augmentalis.nlu.matching.CommandMatchingService
+import kotlinx.cinterop.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import platform.AVFAudio.*
+import platform.Foundation.*
+import platform.Speech.*
 
 /**
- * iOS implementation of SpeechRecognitionService.
+ * iOS implementation of SpeechRecognitionService using SFSpeechRecognizer.
  *
- * This class provides the bridge between the common API and iOS-specific
- * speech recognition (Apple Speech framework).
+ * Uses AVAudioEngine for microphone input and SFSpeechAudioBufferRecognitionRequest
+ * for streaming speech-to-text. Supports on-device recognition (iOS 16+),
+ * multi-locale switching, and partial results.
  */
 class IosSpeechRecognitionService : SpeechRecognitionService {
 
     companion object {
         private const val TAG = "IosSpeechService"
+        private const val AUDIO_BUFFER_SIZE: UInt = 1024u
     }
 
     // State
@@ -49,9 +55,18 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     private val _stateFlow = MutableSharedFlow<ServiceState>(replay = 1)
     override val stateFlow: SharedFlow<ServiceState> = _stateFlow.asSharedFlow()
 
+    // Apple Speech components
+    private var speechRecognizer: SFSpeechRecognizer? = null
+    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest? = null
+    private var recognitionTask: SFSpeechRecognitionTask? = null
+    private var audioEngine: AVAudioEngine? = null
+
+    // Coroutine scope for processing results
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
     /**
      * Initialize with configuration.
-     * Sets up Apple Speech framework based on config.
+     * Creates SFSpeechRecognizer for the configured locale and requests authorization.
      */
     override suspend fun initialize(config: SpeechConfig): Result<Unit> {
         return try {
@@ -65,10 +80,24 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
             resultProcessor.setConfidenceThreshold(config.confidenceThreshold)
             resultProcessor.setFuzzyMatchingEnabled(config.enableFuzzyMatching)
 
-            // TODO: Initialize Apple Speech framework
-            // SFSpeechRecognizer setup
+            // Create SFSpeechRecognizer with locale
+            val locale = NSLocale(localeIdentifier = config.language)
+            speechRecognizer = SFSpeechRecognizer(locale = locale)
 
-            logInfo(TAG, "Initialized with engine: ${config.engine}")
+            if (speechRecognizer == null) {
+                logError(TAG, "SFSpeechRecognizer unavailable for locale: ${config.language}")
+                updateState(ServiceState.ERROR)
+                _errorFlow.emit(SpeechError.engineNotAvailable("Speech recognition unavailable for ${config.language}"))
+                return Result.failure(IllegalStateException("SFSpeechRecognizer unavailable"))
+            }
+
+            // Request authorization
+            requestAuthorization()
+
+            // Create audio engine
+            audioEngine = AVAudioEngine()
+
+            logInfo(TAG, "Initialized with locale: ${config.language}, on-device: ${speechRecognizer?.supportsOnDeviceRecognition}")
             updateState(ServiceState.READY)
 
             Result.success(Unit)
@@ -80,16 +109,127 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
         }
     }
 
+    /**
+     * Request speech recognition authorization.
+     * Maps SFSpeechRecognizerAuthorizationStatus to SpeechError.
+     */
+    private suspend fun requestAuthorization() {
+        suspendCancellableCoroutine<Unit> { cont ->
+            SFSpeechRecognizer.requestAuthorization { status ->
+                when (status) {
+                    SFSpeechRecognizerAuthorizationStatusAuthorized -> {
+                        logInfo(TAG, "Speech recognition authorized")
+                        cont.resume(Unit) {}
+                    }
+                    SFSpeechRecognizerAuthorizationStatusDenied -> {
+                        logError(TAG, "Speech recognition denied by user")
+                        scope.launch {
+                            _errorFlow.emit(SpeechError.permissionDenied("Speech recognition permission denied"))
+                        }
+                        cont.resume(Unit) {}
+                    }
+                    SFSpeechRecognizerAuthorizationStatusRestricted -> {
+                        logError(TAG, "Speech recognition restricted on this device")
+                        scope.launch {
+                            _errorFlow.emit(SpeechError.permissionDenied("Speech recognition restricted"))
+                        }
+                        cont.resume(Unit) {}
+                    }
+                    SFSpeechRecognizerAuthorizationStatusNotDetermined -> {
+                        logInfo(TAG, "Speech recognition authorization not determined")
+                        cont.resume(Unit) {}
+                    }
+                    else -> cont.resume(Unit) {}
+                }
+            }
+        }
+    }
+
     override suspend fun startListening(): Result<Unit> {
         return try {
             if (!state.canStart()) {
                 return Result.failure(IllegalStateException("Cannot start from state: $state"))
             }
 
+            // Cancel any existing task
+            cancelRecognitionTask()
+
+            // Configure audio session
+            val audioSession = AVAudioSession.sharedInstance()
+            audioSession.setCategoryWithOptions(
+                AVAudioSessionCategoryRecord,
+                AVAudioSessionCategoryOptionDefaultToSpeaker,
+                null
+            )
+            audioSession.setActive(true, null)
+
+            // Create recognition request
+            val request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+
+            // Enable on-device recognition if available (iOS 16+)
+            if (speechRecognizer?.supportsOnDeviceRecognition == true) {
+                request.requiresOnDeviceRecognition = true
+            }
+            recognitionRequest = request
+
+            // Install tap on audio engine input node
+            val inputNode = audioEngine!!.inputNode
+            val recordingFormat = inputNode.outputFormatForBus(0u)
+
+            inputNode.installTapOnBus(
+                bus = 0u,
+                bufferSize = AUDIO_BUFFER_SIZE,
+                format = recordingFormat
+            ) { buffer, _ ->
+                buffer?.let { recognitionRequest?.appendAudioPCMBuffer(it) }
+            }
+
+            // Start audio engine
+            audioEngine?.prepare()
+            audioEngine?.startAndReturnError(null)
+
+            // Start recognition task
+            recognitionTask = speechRecognizer?.recognitionTaskWithRequest(request) { result, error ->
+                if (error != null) {
+                    val nsError = error as NSError
+                    logError(TAG, "Recognition error: ${nsError.localizedDescription}")
+                    scope.launch {
+                        onError(SpeechError.audioError(nsError.localizedDescription))
+                    }
+                    stopAudioEngine()
+                    return@recognitionTaskWithRequest
+                }
+
+                result?.let { speechResult ->
+                    val text = speechResult.bestTranscription.formattedString
+                    val isFinal = speechResult.isFinal()
+                    val confidence = speechResult.bestTranscription.segments.lastOrNull()
+                        ?.confidence ?: 0.0f
+
+                    // Collect alternatives from other transcriptions
+                    val alternatives = speechResult.transcriptions
+                        .drop(1) // Skip best transcription
+                        .map { (it as SFTranscription).formattedString }
+
+                    scope.launch {
+                        onRecognitionResult(
+                            text = text,
+                            confidence = confidence,
+                            isPartial = !isFinal,
+                            alternatives = alternatives
+                        )
+                    }
+
+                    if (isFinal) {
+                        stopAudioEngine()
+                    }
+                }
+            }
+
             updateState(ServiceState.LISTENING)
             logInfo(TAG, "Started listening")
 
-            // TODO: Start Apple Speech recognition
             Result.success(Unit)
         } catch (e: Exception) {
             logError(TAG, "Failed to start listening", e)
@@ -100,10 +240,10 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
 
     override suspend fun stopListening(): Result<Unit> {
         return try {
+            stopAudioEngine()
+            cancelRecognitionTask()
             updateState(ServiceState.STOPPED)
             logInfo(TAG, "Stopped listening")
-
-            // TODO: Stop Apple Speech recognition
             Result.success(Unit)
         } catch (e: Exception) {
             logError(TAG, "Failed to stop listening", e)
@@ -114,6 +254,7 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun pause(): Result<Unit> {
         return try {
             if (state == ServiceState.LISTENING) {
+                audioEngine?.pause()
                 updateState(ServiceState.PAUSED)
                 logInfo(TAG, "Paused")
             }
@@ -126,6 +267,7 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun resume(): Result<Unit> {
         return try {
             if (state == ServiceState.PAUSED) {
+                audioEngine?.startAndReturnError(null)
                 updateState(ServiceState.LISTENING)
                 logInfo(TAG, "Resumed")
             }
@@ -154,7 +296,10 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     override fun setLanguage(language: String) {
         config = config.withLanguage(language)
         logInfo(TAG, "Language set to: $language")
-        // TODO: Update Apple Speech language
+
+        // Recreate speech recognizer with new locale
+        val locale = NSLocale(localeIdentifier = language)
+        speechRecognizer = SFSpeechRecognizer(locale = locale)
     }
 
     override fun isListening(): Boolean = state == ServiceState.LISTENING
@@ -166,11 +311,16 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun release() {
         try {
             updateState(ServiceState.DESTROYING)
+            stopAudioEngine()
+            cancelRecognitionTask()
+
             resultProcessor.clear()
             commandCache.clear()
             commandMatcher.clear()
 
-            // TODO: Release Apple Speech resources
+            speechRecognizer = null
+            audioEngine = null
+            scope.cancel()
 
             updateState(ServiceState.UNINITIALIZED)
             logInfo(TAG, "Released")
@@ -178,6 +328,8 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
             logError(TAG, "Error during release", e)
         }
     }
+
+    // MARK: - Internal Callbacks
 
     /**
      * Process recognition result from Apple Speech.
@@ -209,6 +361,20 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
         if (!error.isRecoverable) {
             updateState(ServiceState.ERROR)
         }
+    }
+
+    // MARK: - Private Helpers
+
+    private fun stopAudioEngine() {
+        audioEngine?.stop()
+        audioEngine?.inputNode?.removeTapOnBus(0u)
+        recognitionRequest?.endAudio()
+        recognitionRequest = null
+    }
+
+    private fun cancelRecognitionTask() {
+        recognitionTask?.cancel()
+        recognitionTask = null
     }
 
     private suspend fun updateState(newState: ServiceState) {

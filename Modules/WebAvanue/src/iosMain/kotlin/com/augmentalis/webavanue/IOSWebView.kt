@@ -26,22 +26,22 @@ class IOSWebView(
     private val navigationDelegate: WKNavigationDelegate
     private val uiDelegate: WKUIDelegate
 
-    private val _currentUrl = MutableStateFlow(config.initialUrl)
+    internal val _currentUrl = MutableStateFlow(config.initialUrl)
     override val currentUrl: StateFlow<String> = _currentUrl.asStateFlow()
 
-    private val _pageTitle = MutableStateFlow("")
+    internal val _pageTitle = MutableStateFlow("")
     override val pageTitle: StateFlow<String> = _pageTitle.asStateFlow()
 
-    private val _loadingProgress = MutableStateFlow(0)
+    internal val _loadingProgress = MutableStateFlow(0)
     override val loadingProgress: StateFlow<Int> = _loadingProgress.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
+    internal val _isLoading = MutableStateFlow(false)
     override val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _canGoBack = MutableStateFlow(false)
+    internal val _canGoBack = MutableStateFlow(false)
     override val canGoBack: StateFlow<Boolean> = _canGoBack.asStateFlow()
 
-    private val _canGoForward = MutableStateFlow(false)
+    internal val _canGoForward = MutableStateFlow(false)
     override val canGoForward: StateFlow<Boolean> = _canGoForward.asStateFlow()
 
     init {

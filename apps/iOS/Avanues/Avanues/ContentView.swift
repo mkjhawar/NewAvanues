@@ -2,48 +2,79 @@ import SwiftUI
 
 /// Root navigation view for the Avanues iOS app.
 ///
-/// Routes between app modes:
-/// - Browser: Main voice-controlled web browser
-/// - Settings: Theme, voice, sync configuration
-/// - About: Credits and version info
+/// Routes between app modes using NavigationStack.
+/// Hub is the default entry point; sub-apps are reached via the grid dashboard.
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isDark: Bool { colorScheme == .dark }
+    private var theme: AvanueColors {
+        AvanueThemeBridge.colors(for: appState.palette, isDark: isDark)
+    }
 
     var body: some View {
         NavigationStack {
             Group {
                 switch appState.currentMode {
-                case .hub, .browser:
-                    BrowserPlaceholderView()
+                case .hub:
+                    HubView()
+                case .browser:
+                    BrowserView()
+                case .voice:
+                    PlaceholderView(mode: .voice)
+                case .commands:
+                    PlaceholderView(mode: .commands)
                 case .settings:
-                    SettingsPlaceholderView()
+                    SettingsView()
                 case .about:
                     AboutView()
                 case .vosSyncManagement:
-                    VosSyncPlaceholderView()
+                    PlaceholderView(mode: .vosSyncManagement)
+                case .developerConsole:
+                    PlaceholderView(mode: .developerConsole)
+                case .developerSettings:
+                    PlaceholderView(mode: .developerSettings)
                 }
             }
             .toolbar {
+                // Back to hub button (shown when not on hub)
+                if appState.currentMode != .hub {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: { appState.currentMode = .hub }) {
+                            Label("Hub", systemImage: "square.grid.2x2")
+                        }
+                        .tint(theme.primary)
+                    }
+                }
+
                 ToolbarItem(placement: .bottomBar) {
                     HStack {
+                        Button(action: { appState.currentMode = .hub }) {
+                            Label("Hub", systemImage: "square.grid.2x2")
+                        }
+                        .tint(appState.currentMode == .hub ? theme.primary : theme.onSurface.opacity(0.5))
+
+                        Spacer()
+
                         Button(action: { appState.currentMode = .browser }) {
                             Label("Browser", systemImage: "globe")
                         }
-                        .tint(appState.currentMode == .browser ? .accentColor : .secondary)
+                        .tint(appState.currentMode == .browser ? theme.primary : theme.onSurface.opacity(0.5))
 
                         Spacer()
 
                         Button(action: { appState.currentMode = .settings }) {
                             Label("Settings", systemImage: "gear")
                         }
-                        .tint(appState.currentMode == .settings ? .accentColor : .secondary)
+                        .tint(appState.currentMode == .settings ? theme.primary : theme.onSurface.opacity(0.5))
 
                         Spacer()
 
                         Button(action: { appState.currentMode = .about }) {
                             Label("About", systemImage: "info.circle")
                         }
-                        .tint(appState.currentMode == .about ? .accentColor : .secondary)
+                        .tint(appState.currentMode == .about ? theme.primary : theme.onSurface.opacity(0.5))
                     }
                 }
             }
@@ -51,29 +82,48 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Placeholder Views (replaced in Phase 1-6)
+// MARK: - Placeholder Views
 
-/// Placeholder for the browser view (Phase 1).
+/// Generic placeholder for modes not yet implemented.
+struct PlaceholderView: View {
+    let mode: AvanueMode
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: mode.icon)
+                .font(.system(size: 64))
+                .foregroundStyle(.secondary)
+            Text(mode.label)
+                .font(.title)
+            Text("Coming soon")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .navigationTitle(mode.label)
+    }
+}
+
+/// Placeholder for the browser view (replaced in Phase 3).
 struct BrowserPlaceholderView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "globe")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary)
-            Text("Avanues Browser")
+            Text("WebAvanue Browser")
                 .font(.title)
             Text("Voice-controlled web browsing")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Text("Phase 1: WKWebView + DOMScraperBridge coming next")
+            Text("WKWebView + DOMScraperBridge — Phase 3")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-        .navigationTitle("Avanues")
+        .navigationTitle("WebAvanue")
     }
 }
 
-/// Placeholder for settings view (Phase 6).
+/// Placeholder for settings view (replaced in Phase 6).
 struct SettingsPlaceholderView: View {
     var body: some View {
         VStack(spacing: 16) {
@@ -90,52 +140,57 @@ struct SettingsPlaceholderView: View {
     }
 }
 
-/// Placeholder for VOS sync management (Phase 6).
-struct VosSyncPlaceholderView: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "arrow.triangle.2.circlepath")
-                .font(.system(size: 64))
-                .foregroundStyle(.secondary)
-            Text("VOS Sync")
-                .font(.title)
-        }
-        .navigationTitle("VOS Sync")
-    }
-}
-
-/// About screen with credits.
+/// About screen with credits — themed with AvanueUI colors.
 struct AboutView: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var theme: AvanueColors {
+        AvanueThemeBridge.colors(for: appState.palette, isDark: colorScheme == .dark)
+    }
+
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "waveform.and.mic")
-                .font(.system(size: 64))
-                .foregroundStyle(.blue)
+        ZStack {
+            LinearGradient(
+                colors: [theme.background, theme.surface.opacity(0.6), theme.background],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
-            Text("Avanues")
-                .font(.largeTitle.bold())
+            VStack(spacing: 24) {
+                Image(systemName: "waveform.and.mic")
+                    .font(.system(size: 64))
+                    .foregroundStyle(theme.primary)
 
-            Text("Voice-Controlled Web Browser")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                Text("Avanues")
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(theme.onBackground)
 
-            Text("Version 1.0.0")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
+                Text("Voice-Controlled Web Browser")
+                    .font(.headline)
+                    .foregroundStyle(theme.onBackground.opacity(0.7))
 
-            Divider()
+                Text("Version 1.0.0")
+                    .font(.subheadline)
+                    .foregroundStyle(theme.onBackground.opacity(0.4))
 
-            VStack(spacing: 8) {
-                Text("VoiceOS\u{00AE} Avanues EcoSystem")
-                    .font(.footnote)
-                Text("Designed and Created in California with Love.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Divider()
+                    .overlay(theme.outline.opacity(0.3))
+
+                VStack(spacing: 8) {
+                    Text("VoiceOS\u{00AE} Avanues EcoSystem")
+                        .font(.footnote)
+                        .foregroundStyle(theme.onBackground.opacity(0.5))
+                    Text("Designed and Created in California with Love.")
+                        .font(.footnote)
+                        .foregroundStyle(theme.onBackground.opacity(0.4))
+                }
+
+                Spacer()
             }
-
-            Spacer()
+            .padding(.top, 60)
         }
-        .padding(.top, 60)
         .navigationTitle("About")
     }
 }
@@ -143,4 +198,5 @@ struct AboutView: View {
 #Preview {
     ContentView()
         .environmentObject(AppState())
+        .preferredColorScheme(.dark)
 }
