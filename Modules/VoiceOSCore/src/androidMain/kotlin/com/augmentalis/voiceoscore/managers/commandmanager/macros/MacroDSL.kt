@@ -432,6 +432,7 @@ class StepListBuilder {
 /**
  * Helper extension for MacroContext in DSL conditions
  */
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER")
 fun MacroContext.screenContains(text: String): Boolean {
     return this.screenContains(text)
 }

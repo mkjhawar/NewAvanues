@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -502,7 +503,7 @@ private fun AddWebAppDialog(
                     onValueChange = { displayName = it },
                     label = { Text("Display Name") },
                     placeholder = { Text("My App") },
-                    leadingIcon = { Icon(Icons.Default.Label, null) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Label, null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(ShapeTokens.md)

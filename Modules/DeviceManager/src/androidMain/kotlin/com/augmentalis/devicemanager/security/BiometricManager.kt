@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.biometrics.BiometricManager as AndroidBiometricManager
 import android.hardware.biometrics.BiometricPrompt
+@Suppress("DEPRECATION")
 import android.hardware.fingerprint.FingerprintManager
 // FaceManager is not available in Android SDK, using BiometricManager instead
 // import android.hardware.face.FaceManager
@@ -841,8 +842,9 @@ class BiometricManager(
                 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     setConfirmationRequired(request.requireConfirmation)
-                    
+
                     if (request.fallbackToDeviceCredential) {
+                        @Suppress("DEPRECATION")
                         setDeviceCredentialAllowed(true)
                     } else {
                         setNegativeButton(

@@ -140,11 +140,12 @@ object ApiCompatibility {
     /**
      * Check network connectivity with fallback
      */
+    @Suppress("DEPRECATION")
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun isNetworkAvailable(context: Context): Boolean {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             ?: return false
-        
+
         return when {
             Build.VERSION.SDK_INT >= API_29_Q -> {
                 val network = connectivityManager.activeNetwork ?: return false
@@ -153,7 +154,6 @@ object ApiCompatibility {
                 capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             }
             else -> {
-                @Suppress("DEPRECATION")
                 val networkInfo = connectivityManager.activeNetworkInfo
                 networkInfo?.isConnected == true
             }
@@ -163,23 +163,23 @@ object ApiCompatibility {
     /**
      * Get network type with fallback
      */
+    @Suppress("DEPRECATION")
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun getNetworkType(context: Context): NetworkType {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             ?: return NetworkType.NONE
-        
+
         return when {
             Build.VERSION.SDK_INT >= API_29_Q -> {
                 val network = connectivityManager.activeNetwork ?: return NetworkType.NONE
                 val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return NetworkType.NONE
-                
+
                 when {
                     capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkType.WIFI
                     capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
                         if (Build.VERSION.SDK_INT >= API_30_R) {
                             // Check for 5G
                             val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-                            @Suppress("DEPRECATION")
                             when (telephonyManager?.dataNetworkType) {
                                 TelephonyManager.NETWORK_TYPE_NR -> NetworkType.CELLULAR_5G
                                 else -> NetworkType.CELLULAR_4G
@@ -194,7 +194,6 @@ object ApiCompatibility {
                 }
             }
             else -> {
-                @Suppress("DEPRECATION")
                 val networkInfo = connectivityManager.activeNetworkInfo ?: return NetworkType.NONE
                 when (networkInfo.type) {
                     ConnectivityManager.TYPE_WIFI -> NetworkType.WIFI

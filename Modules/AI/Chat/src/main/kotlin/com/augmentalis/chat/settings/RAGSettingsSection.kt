@@ -7,7 +7,7 @@ package com.augmentalis.chat.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -72,7 +72,7 @@ fun RAGSettingsSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Divider()
+            HorizontalDivider()
 
             // Enable/Disable Toggle
             Row(
@@ -129,7 +129,7 @@ fun RAGSettingsSection(
                         )
                     }
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.ArrowForward,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "Select documents"
                     )
                 }

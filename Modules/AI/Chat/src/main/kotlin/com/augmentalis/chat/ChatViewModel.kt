@@ -256,7 +256,7 @@ class ChatViewModel @Inject constructor(
             }
 
             val welcomeMessage = Message(
-                id = AvidHelper.randomAVID(),
+                id = AvidHelper.randomMessageAVID(),
                 conversationId = conversationId,
                 role = MessageRole.ASSISTANT,
                 content = welcomeContent,
@@ -475,7 +475,7 @@ class ChatViewModel @Inject constructor(
 
                 // Create and save user message
                 val userMessage = Message(
-                    id = AvidHelper.randomAVID(),
+                    id = AvidHelper.randomMessageAVID(),
                     conversationId = conversationId,
                     role = MessageRole.USER,
                     content = text.trim(),
@@ -533,7 +533,7 @@ class ChatViewModel @Inject constructor(
                     }
 
                     val avaMessage = Message(
-                        id = AvidHelper.randomAVID(),
+                        id = AvidHelper.randomMessageAVID(),
                         conversationId = conversationId,
                         role = MessageRole.ASSISTANT,
                         content = actionFeedback,
@@ -605,7 +605,7 @@ class ChatViewModel @Inject constructor(
 
                 // Save AVA response
                 val avaMessage = Message(
-                    id = AvidHelper.randomAVID(),
+                    id = AvidHelper.randomMessageAVID(),
                     conversationId = conversationId,
                     role = MessageRole.ASSISTANT,
                     content = responseResult.content,

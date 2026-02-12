@@ -211,6 +211,7 @@ enum class SurfaceVariant {
 // ========== Extension functions with default values ==========
 // These provide backward compatibility for call sites that expect default values
 
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER")
 @Composable
 fun ComponentProvider.Icon(
     imageVector: ImageVector,
@@ -219,6 +220,7 @@ fun ComponentProvider.Icon(
     modifier: Modifier = Modifier
 ) = Icon(imageVector, contentDescription, variant, modifier)
 
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER")
 @Composable
 fun ComponentProvider.IconButton(
     onClick: () -> Unit,
@@ -227,6 +229,7 @@ fun ComponentProvider.IconButton(
     content: @Composable () -> Unit
 ) = IconButton(onClick, enabled, modifier, content)
 
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER")
 @Composable
 fun ComponentProvider.Button(
     onClick: () -> Unit,
@@ -236,6 +239,7 @@ fun ComponentProvider.Button(
     content: @Composable RowScope.() -> Unit
 ) = Button(onClick, enabled, variant, modifier, content)
 
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER")
 @Composable
 fun ComponentProvider.Surface(
     modifier: Modifier = Modifier,
@@ -245,6 +249,7 @@ fun ComponentProvider.Surface(
     content: @Composable () -> Unit
 ) = Surface(modifier, variant, shape, onClick, content)
 
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER")
 @Composable
 fun ComponentProvider.TextField(
     value: String,
@@ -256,6 +261,7 @@ fun ComponentProvider.TextField(
     enabled: Boolean = true
 ) = TextField(value, onValueChange, modifier, placeholder, leadingIcon, trailingIcon, enabled)
 
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER")
 @Composable
 fun ComponentProvider.FloatingActionButton(
     onClick: () -> Unit,

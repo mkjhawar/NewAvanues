@@ -165,10 +165,11 @@ class AudioRouting(
     
     /**
      * Start Bluetooth SCO for voice with enhanced device selection
-     * 
+     *
      * COT: SCO (Synchronous Connection-Oriented) is the Bluetooth profile used for voice calls.
      * We check for available SCO devices and route audio appropriately, with fallback handling.
      */
+    @Suppress("DEPRECATION")
     fun startBluetoothSco(preferredDeviceAddress: String? = null): Boolean {
         return try {
             // COT: First check if SCO is available and if we have suitable BT devices
@@ -180,7 +181,7 @@ class AudioRouting(
                 )
                 return false
             }
-            
+
             // COT: If a specific device is preferred, try to route to it first
             preferredDeviceAddress?.let { address ->
                 val targetDevice = getBluetoothAudioDevice(address)
@@ -188,20 +189,20 @@ class AudioRouting(
                     Log.d(TAG, "Routing SCO to preferred device: ${targetDevice.name}")
                 }
             }
-            
+
             updateBluetoothAudioState(scoState = BluetoothProfile.SCO_CONNECTING)
             audioManager.startBluetoothSco()
-            
+
             // COT: Monitor SCO connection state
             updateBluetoothAudioState(
                 scoState = BluetoothProfile.SCO_AUDIO_CONNECTED,
                 activeProfile = BluetoothProfile.SCO
             )
-            
+
             Log.d(TAG, "Bluetooth SCO started successfully")
             updateRoutingState(activeRoute = AudioRoute.BLUETOOTH_SCO)
             true
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start Bluetooth SCO", e)
             updateBluetoothAudioState(
@@ -215,21 +216,22 @@ class AudioRouting(
     /**
      * Stop Bluetooth SCO with proper state cleanup
      */
+    @Suppress("DEPRECATION")
     fun stopBluetoothSco() {
         try {
             updateBluetoothAudioState(scoState = BluetoothProfile.SCO_DISCONNECTING)
             audioManager.stopBluetoothSco()
-            
+
             updateBluetoothAudioState(
                 scoState = BluetoothProfile.SCO_DISCONNECTED,
                 activeProfile = null
             )
-            
+
             Log.d(TAG, "Bluetooth SCO stopped")
-            
+
             // COT: After stopping SCO, determine the next best audio route
             determineOptimalAudioRoute()
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop Bluetooth SCO", e)
             updateBluetoothAudioState(errorMessage = e.message)

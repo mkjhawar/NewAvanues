@@ -70,6 +70,7 @@ class ScreenCacheManager(private val resources: Resources) {
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { child ->
                 collectElementSignatures(child, signatures, depth + 1, childDepthLimit)
+                @Suppress("DEPRECATION")
                 child.recycle()
             }
         }

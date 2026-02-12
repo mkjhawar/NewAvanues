@@ -139,7 +139,7 @@ object DefaultAppCategoryProvider : IAppCategoryProvider {
      * @return [AppCategory] based on pattern matching
      */
     override fun getCategory(packageName: String): AppCategory {
-        return AppCategoryClassifier.classifyPackage(packageName)
+        return AppCategoryClassifier.classifyByPattern(packageName)
     }
 
     /**

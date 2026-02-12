@@ -52,7 +52,7 @@ class CommandExporter(
     private val commandPersistence: ICommandPersistence,
     private val getPackageNames: suspend () -> List<String>,
     private val getAppInfo: suspend (String) -> AppMetadata = { AppMetadata.fromPackageName(it) },
-    private val getAppCategory: (String) -> AppCategory = { AppCategoryClassifier.classifyPackage(it) }
+    private val getAppCategory: (String) -> AppCategory = { AppCategoryClassifier.classifyByPattern(it) }
 ) : ICommandExporter {
 
     override suspend fun exportAll(): ExportPackage {

@@ -5,7 +5,7 @@ import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.ElementFingerprint
 import com.augmentalis.voiceoscore.currentTimeMillis
-import com.augmentalis.voiceoscore.util.NumberToWords
+import com.augmentalis.foundation.util.NumberToWords
 
 /**
  * Command Generator - Creates voice commands from UI elements.
@@ -37,6 +37,7 @@ object CommandGenerator {
         val listIndex: Int = -1  // Position in list for index-based commands
     )
 
+    @Suppress("DEPRECATION")
     fun fromElement(
         element: ElementInfo,
         packageName: String
@@ -145,6 +146,7 @@ object CommandGenerator {
         val currentTime = currentTimeMillis()
 
         // Determine if this is dynamic content (should NOT be persisted)
+        @Suppress("DEPRECATION")
         val isDynamic = element.isDynamicContent
 
         val command = QuantizedCommand(

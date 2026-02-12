@@ -73,6 +73,7 @@ class SettingsApplicator {
     /**
      * Apply privacy and security settings.
      */
+    @Suppress("DEPRECATION")
     private fun applyPrivacySettings(webView: WebView, settings: BrowserSettings) {
         webView.settings.apply {
             // JavaScript
@@ -162,6 +163,7 @@ class SettingsApplicator {
     /**
      * Apply performance and optimization settings.
      */
+    @Suppress("DEPRECATION")
     private fun applyPerformanceSettings(webView: WebView, settings: BrowserSettings) {
         webView.settings.apply {
             // Hardware acceleration priority

@@ -5,6 +5,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -51,9 +53,9 @@ fun TTSButton(
     ) {
         Icon(
             imageVector = if (isSpeaking) {
-                Icons.Filled.VolumeOff
+                Icons.AutoMirrored.Filled.VolumeOff
             } else {
-                Icons.Filled.VolumeUp
+                Icons.AutoMirrored.Filled.VolumeUp
             },
             contentDescription = null,
             tint = when {
@@ -196,7 +198,7 @@ fun TTSSettingsPanel(
                         )
                     }
 
-                    Divider()
+                    HorizontalDivider()
 
                     // Voice selection
                     VoiceSelector(
@@ -205,7 +207,7 @@ fun TTSSettingsPanel(
                         onVoiceSelected = onVoiceSelected
                     )
 
-                    Divider()
+                    HorizontalDivider()
 
                     // Speech rate slider
                     Column {
@@ -261,7 +263,7 @@ fun TTSSettingsPanel(
                         )
                     }
 
-                    Divider()
+                    HorizontalDivider()
 
                     // Test button
                     Row(
@@ -339,7 +341,7 @@ private fun VoiceSelector(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(),
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
             )
 

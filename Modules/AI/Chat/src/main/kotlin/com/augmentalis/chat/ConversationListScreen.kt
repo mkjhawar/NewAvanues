@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,7 +69,7 @@ fun ConversationListScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
@@ -122,7 +124,7 @@ fun ConversationListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Chat,
+                            imageVector = Icons.AutoMirrored.Filled.Chat,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -297,7 +299,7 @@ private fun ConversationListItem(
         ) {
             // Conversation icon
             Icon(
-                imageVector = Icons.Filled.Chat,
+                imageVector = Icons.AutoMirrored.Filled.Chat,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
                 tint = if (isActive) {

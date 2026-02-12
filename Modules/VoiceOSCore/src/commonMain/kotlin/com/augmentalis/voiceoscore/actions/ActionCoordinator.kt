@@ -722,7 +722,7 @@ class ActionCoordinator(
             appendLine()
             appendLine("Dynamic Commands:")
             commandRegistry.all().take(10).forEach { cmd ->
-                appendLine("  - ${cmd.phrase} (VUID: ${cmd.targetVuid})")
+                appendLine("  - ${cmd.phrase} (AVID: ${cmd.targetAvid})")
             }
             if (commandRegistry.size > 10) {
                 appendLine("  ... and ${commandRegistry.size - 10} more")

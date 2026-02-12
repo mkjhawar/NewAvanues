@@ -124,7 +124,7 @@ fun DocumentSelectorDialog(
                     }
                 )
 
-                Divider()
+                HorizontalDivider()
 
                 // Document list
                 if (indexedDocuments.isEmpty()) {

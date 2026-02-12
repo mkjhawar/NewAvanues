@@ -72,7 +72,7 @@ import androidx.compose.ui.unit.sp
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassDetection
 import com.augmentalis.devicemanager.deviceinfo.detection.SmartGlassType
 import com.augmentalis.avanueui.theme.AvanueTheme
-import com.augmentalis.avanueui.theme.OceanColors
+import com.augmentalis.avanueui.theme.LunaColors
 
 /**
  * Smart glasses settings layout implementations.
@@ -95,7 +95,7 @@ object GlassesSettingsLayout {
         SmartGlassType.TCL -> Color(0xFFE60012)             // TCL red
         SmartGlassType.PICO -> Color(0xFF00B4D8)            // Pico blue
         SmartGlassType.HTC -> Color(0xFF69BE28)             // HTC green
-        else -> OceanColors.primary
+        else -> LunaColors.primary
     }
 
     // =========================================================================

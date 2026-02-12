@@ -19,10 +19,10 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.ui.semantics.contentDescription
@@ -262,7 +262,7 @@ fun ChatScreen(
                             ) {
                                 // Large icon with Ocean primary color
                                 Icon(
-                                    imageVector = Icons.Filled.Chat,
+                                    imageVector = Icons.AutoMirrored.Filled.Chat,
                                     contentDescription = null,
                                     modifier = Modifier.size(72.dp),
                                     tint = AvanueTheme.colors.primary.copy(alpha = 0.8f)
@@ -661,7 +661,7 @@ private fun MessageInputField(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Filled.Send,
+                            imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = if (text.isNotBlank()) "Send message" else "Type a message first",
                             tint = if (text.isNotBlank()) {
                                 AvanueTheme.colors.primary

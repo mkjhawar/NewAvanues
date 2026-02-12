@@ -49,6 +49,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -368,6 +369,7 @@ class DeveloperConsoleViewModel @Inject constructor(
             val heightInches = metrics.heightPixels / metrics.ydpi
             val diagInches = Math.sqrt((widthInches * widthInches + heightInches * heightInches).toDouble())
             put("Physical Size", "%.1f\" diagonal".format(diagInches))
+            @Suppress("DEPRECATION")
             put("Scaled Density", metrics.scaledDensity.toString())
 
             @Suppress("DEPRECATION")
@@ -1036,7 +1038,7 @@ private fun DatabaseBrowserSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                        if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
                         tint = AvanueTheme.colors.info,
                         modifier = Modifier.size(18.dp)
@@ -1087,7 +1089,7 @@ private fun DatabaseBrowserSection(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    if (isTableExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                                    if (isTableExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
                                     tint = AvanueTheme.colors.textSecondary,
                                     modifier = Modifier.size(14.dp)

@@ -262,9 +262,9 @@ object LearnAppDevToggle {
     }
 
     /**
-     * Check if a feature is enabled (inline for performance).
+     * Check if a feature is enabled.
      */
-    inline fun isFeatureEnabled(feature: Feature): Boolean = isEnabled(feature)
+    fun isFeatureEnabled(feature: Feature): Boolean = isEnabled(feature)
 
     /**
      * Execute action only if feature is enabled.

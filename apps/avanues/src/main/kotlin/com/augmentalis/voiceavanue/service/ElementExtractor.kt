@@ -136,6 +136,7 @@ object ElementExtractor {
                     isInDynamic, currentContainerType, childListIndex,
                     isParentClickable = canChildrenInheritClickability
                 )
+                @Suppress("DEPRECATION")
                 child.recycle()
             }
         }

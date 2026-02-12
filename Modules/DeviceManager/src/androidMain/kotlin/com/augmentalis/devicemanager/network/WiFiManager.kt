@@ -459,6 +459,7 @@ class WiFiManager(
     
     // ========== SCANNING ==========
     
+    @Suppress("DEPRECATION")
     @RequiresPermission(allOf = [
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_WIFI_STATE
@@ -468,7 +469,7 @@ class WiFiManager(
             Log.w(TAG, "WiFi is not enabled")
             return
         }
-        
+
         val success = wifiManager.startScan()
         if (success) {
             Log.d(TAG, "WiFi scan started")
@@ -477,6 +478,7 @@ class WiFiManager(
         }
     }
     
+    @Suppress("DEPRECATION")
     @SuppressLint("MissingPermission")
     private fun processScanResults() {
         val results = wifiManager.scanResults
@@ -507,7 +509,7 @@ class WiFiManager(
                 timestamp = System.currentTimeMillis()
             )
         }
-        
+
         _scanResults.value = networks
     }
     
@@ -878,6 +880,7 @@ class WiFiManager(
     // ========== BROADCAST RECEIVERS ==========
     
     private val wifiReceiver = object : BroadcastReceiver() {
+        @Suppress("DEPRECATION")
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 WifiManager.WIFI_STATE_CHANGED_ACTION -> {
@@ -896,6 +899,7 @@ class WiFiManager(
     }
     
     private val p2pReceiver = object : BroadcastReceiver() {
+        @Suppress("DEPRECATION")
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
@@ -918,10 +922,11 @@ class WiFiManager(
         _wifiState.update { it.copy(isEnabled = isEnabled) }
     }
     
+    @Suppress("DEPRECATION")
     private fun handleNetworkStateChanged(networkInfo: NetworkInfo?) {
         val isConnected = networkInfo?.isConnected == true
         _wifiState.update { it.copy(isConnected = isConnected) }
-        
+
         if (isConnected) {
             updateCurrentNetwork()
         }
@@ -983,6 +988,7 @@ class WiFiManager(
         }
     }
     
+    @Suppress("DEPRECATION")
     private fun handleP2pConnectionChanged(networkInfo: NetworkInfo?) {
         if (networkInfo?.isConnected == true) {
             Log.d(TAG, "P2P connection established")

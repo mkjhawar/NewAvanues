@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -343,7 +344,7 @@ fun AddressBar(
 
                         if (isArticleAvailable) {
                             LabeledNavButton(
-                                icon = Icons.Default.MenuBook,
+                                icon = Icons.AutoMirrored.Filled.MenuBook,
                                 label = "Read",
                                 onClick = onReadingModeToggle,
                                 tint = if (isReadingMode) IconVariant.Primary.toColor() else IconVariant.Secondary.toColor(),
