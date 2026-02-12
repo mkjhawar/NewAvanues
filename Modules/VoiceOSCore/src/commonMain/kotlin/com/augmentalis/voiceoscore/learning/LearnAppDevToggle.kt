@@ -1,5 +1,10 @@
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
+
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+
 /**
  * LearnApp Dev Toggle - Feature flag system for VoiceOSCoreNG.
  *
@@ -167,11 +172,11 @@ object LearnAppDevToggle {
 
     /** Overrides for individual features - synchronized access required */
     private val featureOverrides = mutableMapOf<Feature, Boolean>()
-    private val overridesLock = Any()
+    private val overridesLock = SynchronizedObject()
 
     /** Listeners for tier changes - synchronized access required */
     private val tierChangeListeners = mutableListOf<(Tier) -> Unit>()
-    private val listenersLock = Any()
+    private val listenersLock = SynchronizedObject()
 
     // ==================== Configuration ====================
 

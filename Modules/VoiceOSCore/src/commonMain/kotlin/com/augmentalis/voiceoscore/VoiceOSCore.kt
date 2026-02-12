@@ -19,6 +19,7 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
 import kotlinx.coroutines.flow.*
 import kotlin.collections.flatMap
 

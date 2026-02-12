@@ -10,6 +10,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
+
 /**
  * Handler that processes web page voice commands.
  *

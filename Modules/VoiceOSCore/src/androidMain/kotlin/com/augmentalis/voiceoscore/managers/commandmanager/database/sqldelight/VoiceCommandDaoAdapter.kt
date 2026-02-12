@@ -98,8 +98,14 @@ data class LocaleStats(
 )
 
 /**
- * SQLDelight adapter implementing VoiceCommandDao-like interface
+ * SQLDelight adapter implementing VoiceCommandDao-like interface.
+ *
+ * @deprecated This Room-to-SQLDelight bridge is unnecessary indirection now that
+ * [com.augmentalis.voiceoscore.loader.StaticCommandPersistenceImpl] uses raw
+ * voiceCommandQueries directly. Still used by CommandLoader and CommandManager.
+ * Will be removed when those callers are migrated to use raw queries.
  */
+@Deprecated("Use VoiceOSDatabase.voiceCommandQueries directly")
 class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
 
     private val queries = database.voiceCommandQueries

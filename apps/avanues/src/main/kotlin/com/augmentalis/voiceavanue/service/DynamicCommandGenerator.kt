@@ -50,16 +50,32 @@ class DynamicCommandGenerator(
      * @param rootNode Root accessibility node
      * @param packageName Current app package name
      * @param isTargetApp Whether this app is in the TARGET_APPS list
+     * @param fromScroll True when called after a scroll event (onScrollSettled).
+     *   False for screen changes (onCommandsUpdated, refreshOverlayBadges).
+     *   Used to distinguish scroll from in-app navigation in target apps:
+     *   scroll preserves overlay context, navigation clears and re-numbers.
      */
     fun processScreen(
         rootNode: AccessibilityNodeInfo,
         packageName: String,
-        isTargetApp: Boolean
+        isTargetApp: Boolean,
+        fromScroll: Boolean = false
     ) {
         try {
             // Executor handles app-change and screen-change reset logic
             val screenHash = screenCacheManager.generateScreenHash(rootNode)
             val isNewScreen = screenHash != lastScreenHash
+
+            // For target apps: if new screen detected and NOT from scroll,
+            // this is a real navigation (e.g., Gmail inbox → email detail).
+            // Reset numbering and clear overlays for a fresh scan.
+            if (isNewScreen && isTargetApp && !fromScroll) {
+                Log.d(TAG, "In-app navigation detected in target app, resetting overlay")
+                numberingExecutor.resetForNavigation()
+                OverlayStateManager.clearOverlayItems()
+                lastScreenHash = ""
+                lastTopLevelSignatures = emptySet()
+            }
 
             // Calculate structural change ratio for target app major navigation detection
             val structuralChangeRatio = if (isNewScreen && isTargetApp) {

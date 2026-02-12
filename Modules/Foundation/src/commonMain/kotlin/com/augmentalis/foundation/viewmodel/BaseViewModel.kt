@@ -71,7 +71,7 @@ abstract class BaseViewModel {
      * Use for database/network operations
      */
     protected fun launchIO(block: suspend CoroutineScope.() -> Unit) {
-        viewModelScope.launch(Dispatchers.IO, block = block)
+        viewModelScope.launch(Dispatchers.Default, block = block)
     }
 
     /**

@@ -10,6 +10,7 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
 import com.augmentalis.voiceoscore.CommandActionType
 
 /**

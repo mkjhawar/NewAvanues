@@ -164,6 +164,11 @@ kotlin {
                 iosX64Main.dependsOn(this)
                 iosArm64Main.dependsOn(this)
                 iosSimulatorArm64Main.dependsOn(this)
+                dependencies {
+                    implementation(libs.kotlinx.atomicfu)
+                    // Compose runtime needed for kotlin.compose plugin on native targets
+                    implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+                }
             }
         }
         val desktopMain by getting {

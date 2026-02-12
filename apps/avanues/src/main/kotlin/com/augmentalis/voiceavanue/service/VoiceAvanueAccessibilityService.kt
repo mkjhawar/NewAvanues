@@ -155,6 +155,12 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 )
                 voiceOSCore?.initialize()
 
+                // Initialize CommandManager to build pattern matching cache + populate
+                // StaticCommandRegistry from DB. VoiceOSCore.initialize() already loaded
+                // commands to DB via StaticCommandPersistenceImpl; CommandManager's version
+                // check (v2.1) will skip re-loading since persistence already loaded.
+                CommandManager.getInstance(applicationContext).initialize()
+
                 // Register WebCommandHandler for web voice command routing
                 val handler = WebCommandHandler()
                 webCommandHandler = handler
@@ -468,7 +474,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             // Without this, the content-aware hash might still match if the depth limit
             // is too shallow to reach actual text nodes inside RecyclerView children.
             dynamicCommandGenerator?.invalidateScreenHash()
-            refreshOverlayBadges()
+            refreshOverlayBadges(fromScroll = true)
         }
     }
 
@@ -476,8 +482,11 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
      * Common overlay refresh logic used by both onCommandsUpdated (screen change)
      * and onScrollSettled (scroll). Gets fresh rootInActiveWindow and runs
      * DynamicCommandGenerator.processScreen().
+     *
+     * @param fromScroll True when called from onScrollSettled (preserves overlay context).
+     *   False for screen changes (clears overlays on in-app navigation in target apps).
      */
-    private fun refreshOverlayBadges() {
+    private fun refreshOverlayBadges(fromScroll: Boolean = false) {
         try {
             val root = rootInActiveWindow ?: return
             val packageName = root.packageName?.toString() ?: return
@@ -490,7 +499,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 BrowserVoiceOSCallback.clearActiveWebPhrases()
             }
 
-            dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
+            dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp, fromScroll)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating overlay", e)
         }

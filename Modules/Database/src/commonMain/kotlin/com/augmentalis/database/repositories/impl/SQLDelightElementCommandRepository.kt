@@ -15,6 +15,7 @@ import com.augmentalis.database.repositories.IElementCommandRepository
 import com.augmentalis.database.repositories.IQualityMetricRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 
 /**
  * SQLDelight implementation of IElementCommandRepository
@@ -165,7 +166,7 @@ class SQLDelightQualityMetricRepository(
         queries.updateCommandCounts(
             commandCount.toLong(),
             manualCount.toLong(),
-            System.currentTimeMillis(),
+            Clock.System.now().toEpochMilliseconds(),
             elementUuid
         )
     }

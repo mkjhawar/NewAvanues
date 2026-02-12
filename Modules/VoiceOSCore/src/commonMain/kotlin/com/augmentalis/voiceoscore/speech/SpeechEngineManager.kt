@@ -16,6 +16,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
+
 import com.augmentalis.voiceoscore.*
 import com.augmentalis.voiceoscore.StaticCommandRegistry
 import kotlinx.coroutines.*

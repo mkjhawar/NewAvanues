@@ -18,6 +18,7 @@ import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.dto.AppVersionDTO
 import com.augmentalis.database.repositories.IAppVersionRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.datetime.Clock
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
@@ -77,7 +78,7 @@ class SQLDelightAppVersionRepository(
         require(versionName.isNotBlank()) { "versionName cannot be blank" }
         require(versionCode >= 0) { "versionCode must be non-negative" }
 
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
 
         // Manual UPSERT: try to update first, insert if not exists
         database.transaction {
@@ -112,7 +113,7 @@ class SQLDelightAppVersionRepository(
         queries.getAppVersion(packageName).executeAsOneOrNull()
             ?: return@withContext false
 
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
 
         queries.updateAppVersion(
             version_name = versionName,
@@ -138,7 +139,7 @@ class SQLDelightAppVersionRepository(
     override suspend fun updateLastChecked(packageName: String) = withContext(Dispatchers.Default) {
         require(packageName.isNotBlank()) { "packageName cannot be blank" }
 
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         queries.updateLastChecked(now, packageName)
     }
 

@@ -131,6 +131,9 @@ include(":Modules:AVU")                                  // KMP AVU format: code
 // WebAvanue Module - Unified KMP Browser Library
 include(":Modules:WebAvanue")            // Merged flat structure: data + UI in single module
 
+// KMP iOS Umbrella Module - Re-exports shared modules as single iOS framework via CocoaPods
+include(":Modules:AvanuesShared")
+
 // Rpc - Cross-platform RPC module
 include(":Modules:Rpc")                  // Root module with KMP + Wire
 

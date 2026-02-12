@@ -40,37 +40,15 @@ object OverlayItemGenerator {
             }
             if (element.text.isNotBlank()) {
                 append("|")
-                append(element.text.take(40))
+                append(element.text.take(120))
             }
             if (element.contentDescription.isNotBlank()) {
                 append("|")
-                append(element.contentDescription.take(40))
+                append(element.contentDescription.take(120))
             }
         }
         val hash = contentKey.hashCode().toUInt().toString(16).padStart(8, '0')
         return "dyn_$hash"
-    }
-
-    /**
-     * Deduplicate AVIDs within a single overlay item list.
-     *
-     * When multiple elements share the same content-based AVID (e.g., three
-     * "Google Flights" emails with identical subject+sender), append an ordinal
-     * suffix so each gets a unique AVID → unique badge number.
-     *
-     * The ordinal is based on list order (top-to-bottom, which is the adapter
-     * order in a RecyclerView). This is stable across scroll because the adapter
-     * doesn't reorder items on scroll.
-     */
-    private fun deduplicateAvids(
-        items: List<OverlayStateManager.NumberOverlayItem>
-    ): List<OverlayStateManager.NumberOverlayItem> {
-        val seen = mutableMapOf<String, Int>()
-        return items.map { item ->
-            val count = seen.getOrDefault(item.avid, 0)
-            seen[item.avid] = count + 1
-            if (count == 0) item else item.copy(avid = "${item.avid}_$count")
-        }
     }
 
     /**
@@ -108,7 +86,7 @@ object OverlayItemGenerator {
                 avid = generateContentAvid(element)
             )
         }
-        return deduplicateAvids(items)
+        return items
     }
 
     /**
@@ -154,6 +132,6 @@ object OverlayItemGenerator {
                 avid = generateContentAvid(element)
             )
         }
-        return deduplicateAvids(items)
+        return items
     }
 }

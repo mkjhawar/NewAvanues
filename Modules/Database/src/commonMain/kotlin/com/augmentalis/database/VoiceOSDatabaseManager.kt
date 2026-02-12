@@ -9,6 +9,9 @@
 
 package com.augmentalis.database
 
+import kotlin.concurrent.Volatile
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
 import com.augmentalis.database.repositories.IVoiceCommandRepository
@@ -87,6 +90,8 @@ class VoiceOSDatabaseManager private constructor(
 ) {
 
     companion object {
+        private val lock = SynchronizedObject()
+
         @Volatile
         private var instance: VoiceOSDatabaseManager? = null
 
@@ -97,7 +102,7 @@ class VoiceOSDatabaseManager private constructor(
          * @return Singleton database manager instance
          */
         fun getInstance(driverFactory: DatabaseDriverFactory): VoiceOSDatabaseManager {
-            return instance ?: synchronized(this) {
+            return instance ?: synchronized(lock) {
                 instance ?: VoiceOSDatabaseManager(driverFactory).also {
                     instance = it
                 }
@@ -108,7 +113,7 @@ class VoiceOSDatabaseManager private constructor(
          * Clear singleton instance (for testing only).
          */
         fun clearInstance() {
-            synchronized(this) {
+            synchronized(lock) {
                 instance = null
             }
         }

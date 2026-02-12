@@ -10,7 +10,11 @@ package com.augmentalis.voiceoscore
 
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
+import com.augmentalis.database.DatabaseDriverFactory
+import com.augmentalis.database.VoiceOSDatabase
+import com.augmentalis.database.VoiceOSDatabaseManager
 import com.augmentalis.voiceoscore.handlers.*
+import com.augmentalis.voiceoscore.loader.StaticCommandPersistenceImpl
 
 private const val TAG = "VoiceOSFactory"
 
@@ -19,6 +23,9 @@ private const val TAG = "VoiceOSFactory"
  *
  * This is the primary entry point for Android apps using VoiceOSCore.
  * It sets up Android-specific speech engines, handlers, and configuration.
+ *
+ * Wires [StaticCommandPersistenceImpl] so that VoiceOSCore.initialize()
+ * populates the commands_static table from VOS seed files on first run.
  *
  * @param service The accessibility service for gesture dispatch
  * @param configuration Service configuration options
@@ -36,11 +43,36 @@ fun VoiceOSCore.Companion.createForAndroid(
     // Create Android handler factory with the accessibility service
     val handlerFactory = AndroidHandlerFactory(service)
 
-    // Build the VoiceOSCore instance
+    // Get VoiceOSDatabase from VoiceOSDatabaseManager singleton.
+    // The accessibility service already calls VoiceOSDatabaseManager.getInstance()
+    // before createForAndroid(), so the database is already initialized.
+    val dbManager = VoiceOSDatabaseManager.getInstance(DatabaseDriverFactory(service.applicationContext))
+    val database: VoiceOSDatabase = dbManager.getDatabase()
+
+    // Create platform file reader for Android assets
+    val context = service.applicationContext
+    val fileReader: (String) -> String? = { path ->
+        try {
+            context.assets.open(path).bufferedReader().use { it.readText() }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read asset: $path", e)
+            null
+        }
+    }
+
+    // Create KMP static command persistence
+    val persistence = StaticCommandPersistenceImpl(
+        database = database,
+        fileReader = fileReader,
+        fallbackLocale = "en-US"
+    )
+
+    // Build the VoiceOSCore instance with persistence wired
     return VoiceOSCore.Builder()
         .withHandlerFactory(handlerFactory)
         .withSpeechEngineFactory(speechEngineFactory)
         .withConfiguration(configuration)
+        .withStaticCommandPersistence(persistence)
         .apply {
             commandRegistry?.let { withCommandRegistry(it) }
         }

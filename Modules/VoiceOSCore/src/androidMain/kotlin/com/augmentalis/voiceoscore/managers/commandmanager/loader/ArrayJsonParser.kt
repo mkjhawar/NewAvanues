@@ -23,7 +23,12 @@ import android.util.Log
  * Parser for VOS (Voice OS) command files.
  * Reads .VOS files containing compact array-format commands.
  * Supports v1.0 (prefix-derived category) and v2.0 (explicit maps).
+ *
+ * @deprecated Use [com.augmentalis.voiceoscore.loader.VosParser] (commonMain, kotlinx.serialization)
+ * instead. This Android-only parser uses org.json and will be removed when all callers
+ * (CommandLoader, VosFileImporter) are migrated to VosParser.
  */
+@Deprecated("Use VosParser in commonMain instead", ReplaceWith("VosParser", "com.augmentalis.voiceoscore.loader.VosParser"))
 class ArrayJsonParser {
 
     companion object {

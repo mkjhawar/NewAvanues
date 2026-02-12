@@ -1,7 +1,10 @@
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.FrameworkType
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 
 /**
  * Base interface for framework-specific element handlers.
@@ -161,9 +164,10 @@ class FrameworkHandlerRegistryImpl(
 object FrameworkHandlerRegistryGlobal {
     @Volatile
     private var instance: FrameworkHandlerRegistryImpl? = null
+    private val lock = SynchronizedObject()
 
     fun getInstance(): FrameworkHandlerRegistryImpl {
-        return instance ?: synchronized(this) {
+        return instance ?: synchronized(lock) {
             instance ?: FrameworkHandlerRegistryImpl.withDefaults().also {
                 instance = it
             }
