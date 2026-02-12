@@ -27,26 +27,53 @@ class ScreenCacheManager(private val resources: Resources) {
     /**
      * Generate a hash of the current screen for comparison.
      * Includes screen dimensions so different orientations get separate cache entries.
+     *
+     * Uses a hybrid hash: structural signatures + content digest from scrollable containers.
+     * The content digest captures visible text snippets so the hash changes when new content
+     * scrolls into view or when navigating between screens with similar structure (e.g.,
+     * Gmail inbox list → email detail view).
      */
     fun generateScreenHash(rootNode: AccessibilityNodeInfo): String {
         val elements = mutableListOf<String>()
-        collectElementSignatures(rootNode, elements, maxDepth = 8)
+        val contentDigest = mutableListOf<String>()
+        collectElementSignatures(rootNode, elements, contentDigest = contentDigest, maxDepth = 8)
 
         val displayMetrics = resources.displayMetrics
         val dimensionKey = "${displayMetrics.widthPixels}x${displayMetrics.heightPixels}"
-        val signature = "$dimensionKey|${elements.sorted().joinToString("|")}"
+
+        // Hybrid hash: structural signature + content digest from scrollable areas
+        val contentKey = if (contentDigest.isNotEmpty()) {
+            val first5 = contentDigest.take(5).joinToString(",")
+            val last5 = contentDigest.takeLast(5).joinToString(",")
+            "|ct${contentDigest.size}:$first5:$last5"
+        } else ""
+
+        val signature = "$dimensionKey|${elements.sorted().joinToString("|")}$contentKey"
         return HashUtils.calculateHash(signature).take(16)
     }
 
+    // Regex patterns for normalizing dynamic text content in hashes
+    private val timePattern = Regex("\\d+:\\d+\\s*(am|pm)?", RegexOption.IGNORE_CASE)
+    private val relativeTimePattern = Regex("\\d+\\s*(min|hour|day|week)s?\\s*ago", RegexOption.IGNORE_CASE)
+    private val countPattern = Regex("\\(\\d+\\)")
+
     /**
-     * Collects structural element signatures for hashing.
-     * Uses ONLY structural properties (not text content) for stability.
+     * Collects structural element signatures AND content digest for hashing.
+     *
+     * Structural signatures use className, resourceId, depth, childCount, click/scroll flags.
+     * Content digest captures text from scrollable container children so the hash changes
+     * when new content scrolls into view.
+     *
+     * @param contentDigest Collects normalized text snippets from scrollable container children.
+     *                      Used to make the hash content-aware for scroll and navigation detection.
      */
     fun collectElementSignatures(
         node: AccessibilityNodeInfo,
         signatures: MutableList<String>,
         depth: Int = 0,
-        maxDepth: Int = 5
+        maxDepth: Int = 5,
+        contentDigest: MutableList<String> = mutableListOf(),
+        inScrollableContainer: Boolean = false
     ) {
         if (depth > maxDepth) return
 
@@ -66,10 +93,29 @@ class ScreenCacheManager(private val resources: Resources) {
             signatures.add("$className:$resourceId:d$depth:$childCount:$isClickable$isScrollable")
         }
 
+        // Collect text from scrollable container children for content digest
+        val isInsideScrollable = inScrollableContainer || isScrollableContainer
+        if (isInsideScrollable && contentDigest.size < 30) {
+            val text = node.text?.toString()?.take(30)
+            if (!text.isNullOrBlank()) {
+                val normalized = text
+                    .replace(timePattern, "[T]")
+                    .replace(relativeTimePattern, "[RT]")
+                    .replace(countPattern, "[N]")
+                    .trim()
+                if (normalized.isNotBlank() && normalized.length > 2) {
+                    contentDigest.add(normalized)
+                }
+            }
+        }
+
         val childDepthLimit = if (isScrollableContainer) depth + 2 else maxDepth
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { child ->
-                collectElementSignatures(child, signatures, depth + 1, childDepthLimit)
+                collectElementSignatures(
+                    child, signatures, depth + 1, childDepthLimit,
+                    contentDigest, isInsideScrollable
+                )
                 @Suppress("DEPRECATION")
                 child.recycle()
             }
