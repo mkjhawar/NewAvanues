@@ -68,6 +68,13 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
             didReset = true
         }
 
+        // Immediately clear stale overlay badges on screen/app transition.
+        // Without this, old badges persist during the async element extraction gap
+        // between transition detection and new overlay generation.
+        if (didReset) {
+            OverlayStateManager.clearOverlayItems()
+        }
+
         lastIsTargetApp = isTargetApp
         return didReset
     }

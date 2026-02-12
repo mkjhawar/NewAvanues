@@ -24,6 +24,38 @@ private const val TAG = "OverlayItemGenerator"
 object OverlayItemGenerator {
 
     /**
+     * Generate a content-based AVID for an element.
+     *
+     * Uses className + resourceId + text + contentDescription to create a stable
+     * identifier that survives scroll recycling. Unlike bounds-based AVIDs, this
+     * returns the same value for the same element even if its screen position changes
+     * (e.g., after scrolling down and back up in a RecyclerView).
+     *
+     * For truly identical elements (same type, text, resourceId), this produces
+     * the same AVID — they'll share the same badge number, which is acceptable
+     * since the user would need disambiguation regardless.
+     */
+    private fun generateContentAvid(element: ElementInfo): String {
+        val contentKey = buildString {
+            append(element.className.substringAfterLast("."))
+            if (element.resourceId.isNotBlank()) {
+                append("|")
+                append(element.resourceId.substringAfterLast("/"))
+            }
+            if (element.text.isNotBlank()) {
+                append("|")
+                append(element.text.take(40))
+            }
+            if (element.contentDescription.isNotBlank()) {
+                append("|")
+                append(element.contentDescription.take(40))
+            }
+        }
+        val hash = contentKey.hashCode().toUInt().toString(16).padStart(8, '0')
+        return "dyn_$hash"
+    }
+
+    /**
      * Generate overlay items from extracted elements for list-based apps.
      * Uses ElementExtractor.findTopLevelListItems for smart row detection.
      *
@@ -55,7 +87,7 @@ object OverlayItemGenerator {
                 top = element.bounds.top,
                 right = element.bounds.right,
                 bottom = element.bounds.bottom,
-                avid = "dynamic_${element.bounds.left}_${element.bounds.top}_${element.bounds.right}_${element.bounds.bottom}"
+                avid = generateContentAvid(element)
             )
         }
     }
@@ -100,7 +132,7 @@ object OverlayItemGenerator {
                 top = element.bounds.top,
                 right = element.bounds.right,
                 bottom = element.bounds.bottom,
-                avid = "dynamic_${element.bounds.left}_${element.bounds.top}_${element.bounds.right}_${element.bounds.bottom}"
+                avid = generateContentAvid(element)
             )
         }
     }
