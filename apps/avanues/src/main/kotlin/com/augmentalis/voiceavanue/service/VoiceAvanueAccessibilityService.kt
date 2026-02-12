@@ -474,7 +474,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             // Without this, the content-aware hash might still match if the depth limit
             // is too shallow to reach actual text nodes inside RecyclerView children.
             dynamicCommandGenerator?.invalidateScreenHash()
-            refreshOverlayBadges(fromScroll = true)
+            refreshOverlayBadges()
         }
     }
 
@@ -483,10 +483,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
      * and onScrollSettled (scroll). Gets fresh rootInActiveWindow and runs
      * DynamicCommandGenerator.processScreen().
      *
-     * @param fromScroll True when called from onScrollSettled (preserves overlay context).
-     *   False for screen changes (clears overlays on in-app navigation in target apps).
+     * Navigation detection is handled by structural-change-ratio in handleScreenContext(),
+     * not by event source. This works for both Activity and Fragment transitions.
      */
-    private fun refreshOverlayBadges(fromScroll: Boolean = false) {
+    private fun refreshOverlayBadges() {
         try {
             val root = rootInActiveWindow ?: return
             val packageName = root.packageName?.toString() ?: return
@@ -499,7 +499,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 BrowserVoiceOSCallback.clearActiveWebPhrases()
             }
 
-            dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp, fromScroll)
+            dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating overlay", e)
         }
