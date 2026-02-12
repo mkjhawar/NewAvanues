@@ -67,10 +67,23 @@ object OverlayStateManager {
     }
 
     /**
-     * Data for displaying numbered badges on screen elements.
+     * Data for displaying numbered badges on screen elements (Layer 2).
      */
     data class NumberOverlayItem(
         val number: Int,
+        val label: String,
+        val left: Int,
+        val top: Int,
+        val right: Int,
+        val bottom: Int,
+        val avid: String
+    )
+
+    /**
+     * Data for displaying text labels under icon-only elements (Layer 1).
+     * Always visible regardless of numbers overlay mode.
+     */
+    data class IconLabelItem(
         val label: String,
         val left: Int,
         val top: Int,
@@ -104,6 +117,9 @@ object OverlayStateManager {
 
     private val _numberedOverlayItems = MutableStateFlow<List<NumberOverlayItem>>(emptyList())
     val numberedOverlayItems: StateFlow<List<NumberOverlayItem>> = _numberedOverlayItems.asStateFlow()
+
+    private val _iconLabelItems = MutableStateFlow<List<IconLabelItem>>(emptyList())
+    val iconLabelItems: StateFlow<List<IconLabelItem>> = _iconLabelItems.asStateFlow()
 
     private val _numbersOverlayMode = MutableStateFlow(NumbersOverlayMode.AUTO)
     val numbersOverlayMode: StateFlow<NumbersOverlayMode> = _numbersOverlayMode.asStateFlow()
@@ -171,10 +187,31 @@ object OverlayStateManager {
     }
 
     fun clearOverlayItems() {
-        if (_numberedOverlayItems.value.isNotEmpty()) {
-            Log.d(TAG, "Clearing ${_numberedOverlayItems.value.size} overlay items")
+        val hadNumbered = _numberedOverlayItems.value.isNotEmpty()
+        val hadLabels = _iconLabelItems.value.isNotEmpty()
+        if (hadNumbered) {
             _numberedOverlayItems.value = emptyList()
+        }
+        if (hadLabels) {
+            _iconLabelItems.value = emptyList()
+        }
+        if (hadNumbered || hadLabels) {
+            Log.d(TAG, "Cleared overlay items (numbered=$hadNumbered, labels=$hadLabels)")
             updateNumbersOverlayVisibility()
+        }
+    }
+
+    fun updateIconLabelItems(items: List<IconLabelItem>) {
+        _iconLabelItems.value = items
+        if (items.isNotEmpty()) {
+            Log.d(TAG, "Icon labels: ${items.size} text labels for icon-only elements")
+        }
+    }
+
+    fun clearIconLabelItems() {
+        if (_iconLabelItems.value.isNotEmpty()) {
+            Log.d(TAG, "Clearing ${_iconLabelItems.value.size} icon label items")
+            _iconLabelItems.value = emptyList()
         }
     }
 

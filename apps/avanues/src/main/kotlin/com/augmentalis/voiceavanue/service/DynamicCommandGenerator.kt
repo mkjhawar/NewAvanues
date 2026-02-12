@@ -118,16 +118,25 @@ class DynamicCommandGenerator(
                 }
             }
 
-            // Executor assigns per-container numbers, then simple setter
+            // Layer 2: Executor assigns per-container numbers for badge overlay
             if (overlayItems.isNotEmpty()) {
                 val numbered = numberingExecutor.assignNumbers(overlayItems)
                 OverlayStateManager.updateNumberedOverlayItems(numbered)
             } else {
-                OverlayStateManager.clearOverlayItems()
+                OverlayStateManager.updateNumberedOverlayItems(emptyList())
+                OverlayStateManager.updateNumbersOverlayVisibility()
+            }
+
+            // Layer 1: Generate text labels for icon-only elements (always on, any app)
+            val iconLabels = OverlayItemGenerator.generateIconLabels(elements, labels)
+            if (iconLabels.isNotEmpty()) {
+                OverlayStateManager.updateIconLabelItems(iconLabels)
+            } else {
+                OverlayStateManager.clearIconLabelItems()
             }
 
             val actionableCount = elements.count { it.isClickable || it.isLongClickable || it.isScrollable }
-            Log.d(TAG, "Processed $packageName: ${elements.size} elements, $actionableCount actionable, ${overlayItems.size} overlay items")
+            Log.d(TAG, "Processed $packageName: ${elements.size} elements, $actionableCount actionable, ${overlayItems.size} badges, ${iconLabels.size} icon labels")
 
         } catch (e: Exception) {
             Log.e(TAG, "Error processing screen for $packageName", e)

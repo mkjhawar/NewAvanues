@@ -181,8 +181,8 @@ object ElementExtractor {
         elements.forEachIndexed { index, element ->
             var label: String? = when {
                 element.text.isNotBlank() -> element.text.take(30)
-                element.contentDescription.isNotBlank() -> element.contentDescription.take(30)
-                element.resourceId.isNotBlank() -> element.resourceId.substringAfterLast("/").replace("_", " ")
+                element.contentDescription.isNotBlank() -> cleanCommaLabel(element.contentDescription)
+                element.resourceId.isNotBlank() -> cleanResourceId(element.resourceId)
                 else -> null
             }
 
@@ -199,7 +199,7 @@ object ElementExtractor {
                                 break
                             }
                             if (childElement.contentDescription.isNotBlank()) {
-                                label = childElement.contentDescription.take(30)
+                                label = cleanCommaLabel(childElement.contentDescription)
                                 break
                             }
                         }
@@ -211,6 +211,75 @@ object ElementExtractor {
         }
 
         return labels
+    }
+
+    // ===== Label cleaning utilities =====
+
+    /**
+     * Clean comma-separated contentDescription like Gmail's
+     * "Unread, , , Sender Name, Subject, Snippet, Date".
+     *
+     * Strips empty segments and common email/messaging status prefixes,
+     * returns the first meaningful text segment. Works generically on any
+     * app that uses comma-separated contentDescription.
+     */
+    fun cleanCommaLabel(raw: String): String {
+        if (!raw.contains(",")) return raw.take(30)
+
+        val parts = raw.split(",").map { it.trim() }.filter { it.isNotBlank() }
+        if (parts.isEmpty()) return raw.take(30)
+
+        // Common status prefixes in email/messaging apps (localized variants
+        // will naturally be different strings and pass through)
+        val statusWords = setOf(
+            "Unread", "Read", "Starred", "Not starred",
+            "Important", "Not important", "Has attachment"
+        )
+
+        val meaningful = parts.dropWhile { it in statusWords }
+        return (meaningful.firstOrNull() ?: parts.firstOrNull() ?: raw).take(30)
+    }
+
+    /**
+     * Clean a resource ID into a human-readable label.
+     * "com.google.android.gm:id/action_archive" → "Archive"
+     */
+    fun cleanResourceId(resourceId: String): String {
+        return resourceId
+            .substringAfterLast("/")
+            .removePrefix("action_")
+            .removePrefix("btn_")
+            .removePrefix("menu_")
+            .removePrefix("ic_")
+            .removePrefix("img_")
+            .replace("_", " ")
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            .take(30)
+    }
+
+    /**
+     * Determines if an element is an icon-only interactive element.
+     * Icon-only = clickable, no visible text, but has metadata for a label.
+     *
+     * These elements get text labels in Layer 1 of the two-layer overlay system.
+     */
+    fun isIconOnlyElement(element: ElementInfo): Boolean {
+        // Must have no visible text
+        if (element.text.isNotBlank()) return false
+        // Must be interactive
+        if (!element.isClickable && !element.isLongClickable) return false
+        // Exclude scroll containers and input fields
+        if (element.isScrollable || element.isEditable) return false
+        // Must have metadata to derive a label from
+        if (element.contentDescription.isBlank() && element.resourceId.isBlank()) return false
+
+        // Size check: icon buttons are typically 24-80dp (72-240px at 3x density)
+        val width = element.bounds.right - element.bounds.left
+        val height = element.bounds.bottom - element.bounds.top
+        if (width <= 0 || height <= 0) return false
+        if (width > 300 || height > 300) return false  // too large, not an icon
+
+        return true
     }
 }
 

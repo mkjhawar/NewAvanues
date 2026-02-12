@@ -134,4 +134,65 @@ object OverlayItemGenerator {
         }
         return items
     }
+
+    /**
+     * Generate text-label-only overlay items for icon-only interactive elements.
+     * Layer 1 of the two-layer overlay — always displayed regardless of numbers mode.
+     *
+     * Finds clickable elements with no visible text but with metadata
+     * (contentDescription or resourceId) that provides a meaningful label.
+     * Labels are positioned below the icon for a clean, unobtrusive appearance.
+     *
+     * @param elements All extracted elements
+     * @param labels Derived labels map from ElementExtractor
+     * @return List of IconLabelItem for icon-only elements
+     */
+    fun generateIconLabels(
+        elements: List<ElementInfo>,
+        labels: Map<Int, String>
+    ): List<OverlayStateManager.IconLabelItem> {
+        val iconElements = elements.filter { ElementExtractor.isIconOnlyElement(it) }
+
+        if (iconElements.size > 30) {
+            Log.d(TAG, "Too many icon elements (${iconElements.size}), skipping labels")
+            return emptyList()
+        }
+
+        return iconElements.mapNotNull { element ->
+            val elementIndex = elements.indexOf(element)
+            val label = deriveIconLabel(element, labels[elementIndex])
+
+            // Skip meaningless or too-short labels
+            if (label.isBlank() || label.length < 2) return@mapNotNull null
+
+            OverlayStateManager.IconLabelItem(
+                label = label,
+                left = element.bounds.left,
+                top = element.bounds.top,
+                right = element.bounds.right,
+                bottom = element.bounds.bottom,
+                avid = generateContentAvid(element)
+            )
+        }
+    }
+
+    /**
+     * Derive a clean, short label for an icon-only element.
+     * Priority: contentDescription → cleaned resourceId → derived label from hierarchy.
+     */
+    private fun deriveIconLabel(element: ElementInfo, derivedLabel: String?): String {
+        // contentDescription is best — already localized by the OS
+        // (e.g., "Navigate up", "Archive", "Delete", "More options")
+        if (element.contentDescription.isNotBlank()) {
+            return element.contentDescription.take(15)
+        }
+
+        // Cleaned resource ID as fallback (e.g., "action_archive" → "Archive")
+        if (element.resourceId.isNotBlank()) {
+            return ElementExtractor.cleanResourceId(element.resourceId).take(15)
+        }
+
+        // Last resort: use the derived label from ElementExtractor's hierarchy walk
+        return derivedLabel?.take(15) ?: ""
+    }
 }

@@ -247,29 +247,47 @@ class CommandOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
 
 @Composable
 private fun NumbersOverlayContent() {
-    val showOverlay by OverlayStateManager.showNumbersOverlayComputed.collectAsState()
-    val items by OverlayStateManager.numberedOverlayItems.collectAsState()
-    val mode by OverlayStateManager.numbersOverlayMode.collectAsState()
+    val showNumbersOverlay by OverlayStateManager.showNumbersOverlayComputed.collectAsState()
+    val numberedItems by OverlayStateManager.numberedOverlayItems.collectAsState()
+    val iconLabels by OverlayStateManager.iconLabelItems.collectAsState()
 
-    if (!showOverlay) return
-    if (mode == OverlayStateManager.NumbersOverlayMode.AUTO && items.isEmpty()) return
+    // Nothing to render at all
+    if (!showNumbersOverlay && iconLabels.isEmpty()) return
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Transparent)
     ) {
-        items.forEach { item ->
-            key(item.avid) {
-                NumberBadge(item)
+        // Layer 1: Icon text labels (always on when present).
+        // Skip labels for elements that already have a number badge to avoid redundancy.
+        val numberedAvids = if (showNumbersOverlay) {
+            numberedItems.map { it.avid }.toSet()
+        } else {
+            emptySet()
+        }
+        iconLabels.forEach { item ->
+            if (item.avid !in numberedAvids) {
+                key("label_${item.avid}") {
+                    IconLabelOverlay(item)
+                }
             }
         }
 
-        if (items.isNotEmpty()) {
-            NumbersInstructionPanel(
-                itemCount = items.size,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+        // Layer 2: Number badges (user-toggled / AUTO for target apps)
+        if (showNumbersOverlay) {
+            numberedItems.forEach { item ->
+                key(item.avid) {
+                    NumberBadge(item)
+                }
+            }
+
+            if (numberedItems.isNotEmpty()) {
+                NumbersInstructionPanel(
+                    itemCount = numberedItems.size,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
         }
     }
 }
@@ -319,6 +337,43 @@ private fun NumberBadge(item: OverlayStateManager.NumberOverlayItem) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+    }
+}
+
+/**
+ * Renders a text label below an icon-only element (Layer 1).
+ * Centered horizontally under the element, positioned just below it.
+ */
+@Composable
+private fun IconLabelOverlay(item: OverlayStateManager.IconLabelItem) {
+    val density = LocalDensity.current
+
+    // Center horizontally under the element, position at bottom edge
+    val centerXPx = (item.left + item.right) / 2
+    val bottomYPx = item.bottom
+
+    // Estimate label width to center it (approx 5px per character at 9sp)
+    val estimatedLabelWidthPx = (item.label.length * 5).coerceAtMost(100)
+    val offsetXPx = (centerXPx - estimatedLabelWidthPx / 2).coerceAtLeast(0)
+    val offsetXDp = with(density) { offsetXPx.toDp() }
+    val offsetYDp = with(density) { (bottomYPx + 2).toDp() }
+
+    Box(modifier = Modifier.offset(x = offsetXDp, y = offsetYDp)) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(3.dp))
+                .background(Color(0xDD1A1A2E))
+                .padding(horizontal = 5.dp, vertical = 1.dp)
+        ) {
+            Text(
+                text = item.label,
+                color = Color(0xFFE0E0FF),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
