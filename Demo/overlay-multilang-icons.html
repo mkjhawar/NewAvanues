@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceOS — Icon Labels Across Languages</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #111827; color: #e0e0e0; padding: 16px; }
+  h1 { text-align: center; margin-bottom: 4px; color: #fff; font-size: 20px; }
+  .subtitle { text-align: center; color: #9ca3af; margin-bottom: 6px; font-size: 13px; }
+  .subtitle2 { text-align: center; color: #6b7280; margin-bottom: 20px; font-size: 11px; }
+
+  .section-title { text-align: center; font-size: 16px; font-weight: 700; margin: 28px 0 6px; color: #fff; }
+  .section-sub { text-align: center; font-size: 11px; color: #9ca3af; margin-bottom: 14px; }
+
+  .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+
+  .phone-wrap { width: 260px; }
+  .lang-tag { text-align: center; font-size: 11px; font-weight: 600; margin-bottom: 4px; padding: 4px 10px; border-radius: 6px; background: #1e3a5f; color: #93c5fd; }
+
+  .phone { background: #fff; border-radius: 14px; overflow: hidden; border: 2px solid #374151; }
+  .phone.active { border-color: #10b981; }
+
+  /* Status bar */
+  .status-bar { padding: 3px 10px; font-size: 8px; color: #666; display: flex; justify-content: space-between; }
+  .status-bar.dark { background: #1a1a1a; color: #aaa; }
+  .status-bar.gmail { background: #f5ebe0; }
+  .status-bar.maps { background: #fff; }
+  .status-bar.photos { background: #fff; }
+  .status-bar.player { background: #121212; color: #aaa; }
+
+  /* Generic toolbar */
+  .toolbar { padding: 6px 8px; display: flex; align-items: center; gap: 4px; }
+  .toolbar.gmail-tb { background: #f5ebe0; border-bottom: 1px solid #e5d5c3; }
+  .toolbar.maps-tb { background: #fff; border-bottom: 1px solid #eee; }
+  .toolbar.photos-tb { background: #fff; border-bottom: 1px solid #eee; }
+  .toolbar.player-tb { background: #121212; border-bottom: 1px solid #333; }
+
+  .tb-spacer { flex: 1; }
+  .tb-title { font-size: 13px; font-weight: 600; flex: 1; }
+  .tb-title.dark { color: #fff; }
+
+  /* Icon with label */
+  .icon-col { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 30px; }
+  .icon-box { width: 24px; height: 24px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .icon-box.light { background: #e8e8e8; color: #555; }
+  .icon-box.dark { background: #333; color: #ccc; }
+  .icon-box.maps { background: #e8f5e9; color: #2e7d32; }
+  .icon-box.photos { background: #e3f2fd; color: #1565c0; }
+
+  .voice-label { font-size: 6.5px; color: #fff; background: rgba(0,0,0,0.82); padding: 1px 3px; border-radius: 2px; white-space: nowrap; text-align: center; line-height: 1.2; max-width: 52px; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Content area */
+  .content-area { padding: 10px; min-height: 90px; font-size: 10px; color: #666; }
+  .content-area.dark { background: #1a1a1a; color: #888; }
+  .content-area.maps { background: #c8e6c9; }
+  .content-area.white { background: #fff; }
+
+  .map-placeholder { width: 100%; height: 80px; background: linear-gradient(135deg, #a5d6a7 0%, #81c784 50%, #66bb6a 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 12px; }
+
+  .media-controls { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 12px; }
+  .media-btn { width: 36px; height: 36px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .media-btn .icon-box { width: 28px; height: 28px; border-radius: 50%; font-size: 16px; }
+  .media-btn.big .icon-box { width: 40px; height: 40px; font-size: 20px; background: #1db954; color: #fff; }
+  .media-btn .voice-label { font-size: 6px; }
+
+  /* Bottom nav */
+  .bottom-nav { display: flex; justify-content: space-around; padding: 4px 0; border-top: 1px solid #eee; background: #fff; }
+  .bottom-nav.dark { background: #1a1a1a; border-top-color: #333; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 2px 6px; }
+  .nav-icon { font-size: 14px; color: #666; }
+  .nav-icon.dark { color: #aaa; }
+  .nav-text { font-size: 7px; color: #999; }
+
+  /* Photo grid */
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+  .photo-cell { aspect-ratio: 1; background: #e0e0e0; border-radius: 2px; }
+  .photo-cell:nth-child(1) { background: #bbdefb; }
+  .photo-cell:nth-child(2) { background: #c8e6c9; }
+  .photo-cell:nth-child(3) { background: #ffe0b2; }
+  .photo-cell:nth-child(4) { background: #f8bbd0; }
+  .photo-cell:nth-child(5) { background: #d1c4e9; }
+  .photo-cell:nth-child(6) { background: #b2dfdb; }
+
+  /* Before/After */
+  .compare-box { max-width: 680px; margin: 20px auto; background: #1f2937; border-radius: 12px; padding: 16px; }
+  .compare-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .compare-row { display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }
+  .compare-before { flex: 1; background: #991b1b; padding: 8px 12px; border-radius: 8px; font-size: 11px; color: #fca5a5; }
+  .compare-after { flex: 1; background: #064e3b; padding: 8px 12px; border-radius: 8px; font-size: 11px; color: #6ee7b7; }
+  .compare-arrow { font-size: 18px; color: #9ca3af; }
+  .compare-label { font-size: 9px; font-weight: 600; margin-bottom: 4px; display: block; }
+
+  .note { text-align: center; font-size: 10px; color: #6b7280; margin-top: 6px; font-style: italic; }
+
+  .rule-box { max-width: 680px; margin: 16px auto; background: #1f2937; border-radius: 12px; padding: 16px; }
+  .rule-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .rule { display: flex; gap: 8px; margin-bottom: 5px; font-size: 11px; color: #d1d5db; }
+  .rule-icon { color: #10b981; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<h1>VoiceOS — Automatic Icon Labels</h1>
+<p class="subtitle">Any app with icon-only buttons gets text labels automatically</p>
+<p class="subtitle2">Labels derived from accessibility metadata (contentDescription, action labels, resource ID) &bull; Displayed in the active voice locale</p>
+
+<!-- ==================== MULTI-LANGUAGE SECTION ==================== -->
+<div class="section-title">Google Maps — 5 Languages</div>
+<div class="section-sub">Same icons, labels change with voice locale setting</div>
+
+<div class="row">
+
+  <!-- English -->
+  <div class="phone-wrap">
+    <div class="lang-tag">English (en-US)</div>
+    <div class="phone active">
+      <div class="status-bar maps"><span>5:58</span><span>Maps</span></div>
+      <div class="toolbar maps-tb">
+        <div class="icon-col">
+          <div class="icon-box maps">&#128269;</div>
+          <div class="voice-label">Search</div>
+        </div>
+        <div class="tb-title">Google Maps</div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#128100;</div>
+          <div class="voice-label">Profile</div>
+        </div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#9881;</div>
+          <div class="voice-label">Settings</div>
+        </div>
+      </div>
+      <div class="map-placeholder">Map View</div>
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#127968;</div><div class="voice-label">Explore</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128652;</div><div class="voice-label">Commute</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128278;</div><div class="voice-label">Saved</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#9733;</div><div class="voice-label">Updates</div></div></div>
+      </div>
+    </div>
+    <div class="note">Say "Search", "Commute", "Saved"</div>
+  </div>
+
+  <!-- Spanish -->
+  <div class="phone-wrap">
+    <div class="lang-tag">Espanol (es-ES)</div>
+    <div class="phone">
+      <div class="status-bar maps"><span>5:58</span><span>Maps</span></div>
+      <div class="toolbar maps-tb">
+        <div class="icon-col">
+          <div class="icon-box maps">&#128269;</div>
+          <div class="voice-label">Buscar</div>
+        </div>
+        <div class="tb-title">Google Maps</div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#128100;</div>
+          <div class="voice-label">Perfil</div>
+        </div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#9881;</div>
+          <div class="voice-label">Ajustes</div>
+        </div>
+      </div>
+      <div class="map-placeholder">Vista de Mapa</div>
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#127968;</div><div class="voice-label">Explorar</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128652;</div><div class="voice-label">Viaje</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128278;</div><div class="voice-label">Guardados</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#9733;</div><div class="voice-label">Novedades</div></div></div>
+      </div>
+    </div>
+    <div class="note">Di "Buscar", "Viaje", "Guardados"</div>
+  </div>
+
+  <!-- French -->
+  <div class="phone-wrap">
+    <div class="lang-tag">Francais (fr-FR)</div>
+    <div class="phone">
+      <div class="status-bar maps"><span>5:58</span><span>Maps</span></div>
+      <div class="toolbar maps-tb">
+        <div class="icon-col">
+          <div class="icon-box maps">&#128269;</div>
+          <div class="voice-label">Rechercher</div>
+        </div>
+        <div class="tb-title">Google Maps</div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#128100;</div>
+          <div class="voice-label">Profil</div>
+        </div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#9881;</div>
+          <div class="voice-label">Reglages</div>
+        </div>
+      </div>
+      <div class="map-placeholder">Vue Carte</div>
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#127968;</div><div class="voice-label">Explorer</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128652;</div><div class="voice-label">Trajet</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128278;</div><div class="voice-label">Enregistres</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#9733;</div><div class="voice-label">Actualites</div></div></div>
+      </div>
+    </div>
+    <div class="note">Dites "Rechercher", "Trajet", "Profil"</div>
+  </div>
+
+  <!-- German -->
+  <div class="phone-wrap">
+    <div class="lang-tag">Deutsch (de-DE)</div>
+    <div class="phone">
+      <div class="status-bar maps"><span>5:58</span><span>Maps</span></div>
+      <div class="toolbar maps-tb">
+        <div class="icon-col">
+          <div class="icon-box maps">&#128269;</div>
+          <div class="voice-label">Suchen</div>
+        </div>
+        <div class="tb-title">Google Maps</div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#128100;</div>
+          <div class="voice-label">Profil</div>
+        </div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#9881;</div>
+          <div class="voice-label">Einstellen</div>
+        </div>
+      </div>
+      <div class="map-placeholder">Kartenansicht</div>
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#127968;</div><div class="voice-label">Erkunden</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128652;</div><div class="voice-label">Pendeln</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128278;</div><div class="voice-label">Gespeichert</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#9733;</div><div class="voice-label">Neuigkeiten</div></div></div>
+      </div>
+    </div>
+    <div class="note">Sagen Sie "Suchen", "Pendeln", "Profil"</div>
+  </div>
+
+  <!-- Hindi -->
+  <div class="phone-wrap">
+    <div class="lang-tag">Hindi (hi-IN)</div>
+    <div class="phone">
+      <div class="status-bar maps"><span>5:58</span><span>Maps</span></div>
+      <div class="toolbar maps-tb">
+        <div class="icon-col">
+          <div class="icon-box maps">&#128269;</div>
+          <div class="voice-label" style="font-size:6px">&#2326;&#2379;&#2332;&#2375;&#2306;</div>
+        </div>
+        <div class="tb-title">Google Maps</div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#128100;</div>
+          <div class="voice-label" style="font-size:6px">&#2346;&#2381;&#2352;&#2379;&#2347;&#2364;&#2366;&#2311;&#2354;</div>
+        </div>
+        <div class="icon-col">
+          <div class="icon-box maps">&#9881;</div>
+          <div class="voice-label" style="font-size:6px">&#2360;&#2375;&#2335;&#2367;&#2306;&#2327;&#2381;&#2360;</div>
+        </div>
+      </div>
+      <div class="map-placeholder">&#2350;&#2366;&#2344;&#2330;&#2367;&#2340;&#2381;&#2352;</div>
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#127968;</div><div class="voice-label" style="font-size:5.5px">&#2326;&#2379;&#2332;&#2375;&#2306;</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128652;</div><div class="voice-label" style="font-size:5.5px">&#2351;&#2366;&#2340;&#2381;&#2352;&#2366;</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#128278;</div><div class="voice-label" style="font-size:5.5px">&#2360;&#2375;&#2357; &#2325;&#2367;&#2319;</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:12px">&#9733;</div><div class="voice-label" style="font-size:5.5px">&#2309;&#2346;&#2337;&#2375;&#2335;</div></div></div>
+      </div>
+    </div>
+    <div class="note">&#2348;&#2379;&#2354;&#2375;&#2306; "&#2326;&#2379;&#2332;&#2375;&#2306;", "&#2351;&#2366;&#2340;&#2381;&#2352;&#2366;"</div>
+  </div>
+</div>
+
+<!-- ==================== MUSIC PLAYER ==================== -->
+<div class="section-title">Music Player — Icon-Only Controls</div>
+<div class="section-sub">No text buttons at all — every control gets a voice label from metadata</div>
+
+<div class="row">
+  <!-- English player -->
+  <div class="phone-wrap">
+    <div class="lang-tag">English (en-US)</div>
+    <div class="phone">
+      <div class="status-bar dark"><span>5:58</span><span>Spotify</span></div>
+      <div class="toolbar player-tb">
+        <div class="icon-col">
+          <div class="icon-box dark">&#8595;</div>
+          <div class="voice-label">Minimize</div>
+        </div>
+        <div class="tb-spacer"></div>
+        <div class="tb-title dark" style="text-align:center">Now Playing</div>
+        <div class="tb-spacer"></div>
+        <div class="icon-col">
+          <div class="icon-box dark">&#8942;</div>
+          <div class="voice-label">More</div>
+        </div>
+      </div>
+      <div class="content-area dark" style="text-align:center;padding:16px">
+        <div style="width:120px;height:120px;background:#333;border-radius:8px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:40px">&#127925;</div>
+        <div style="color:#fff;font-size:13px;font-weight:600">Bohemian Rhapsody</div>
+        <div style="color:#999;font-size:10px">Queen</div>
+      </div>
+      <div style="background:#1a1a1a;padding:8px 16px">
+        <div style="height:3px;background:#333;border-radius:2px;position:relative"><div style="width:45%;height:100%;background:#1db954;border-radius:2px"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;color:#666;margin-top:2px"><span>2:14</span><span>5:55</span></div>
+      </div>
+      <div class="media-controls" style="background:#1a1a1a">
+        <div class="media-btn"><div class="icon-box dark" style="border-radius:50%">&#128256;</div><div class="voice-label">Shuffle</div></div>
+        <div class="media-btn"><div class="icon-box dark" style="border-radius:50%">&#9198;</div><div class="voice-label">Previous</div></div>
+        <div class="media-btn big"><div class="icon-box" style="width:40px;height:40px;font-size:20px;background:#1db954;color:#fff;border-radius:50%">&#9654;</div><div class="voice-label">Play</div></div>
+        <div class="media-btn"><div class="icon-box dark" style="border-radius:50%">&#9197;</div><div class="voice-label">Next</div></div>
+        <div class="media-btn"><div class="icon-box dark" style="border-radius:50%">&#128257;</div><div class="voice-label">Repeat</div></div>
+      </div>
+      <div style="background:#1a1a1a;display:flex;justify-content:center;gap:16px;padding:4px">
+        <div class="icon-col"><div class="icon-box dark" style="width:20px;height:20px;font-size:10px">&#128266;</div><div class="voice-label">Device</div></div>
+        <div class="icon-col"><div class="icon-box dark" style="width:20px;height:20px;font-size:10px">&#10084;</div><div class="voice-label">Like</div></div>
+        <div class="icon-col"><div class="icon-box dark" style="width:20px;height:20px;font-size:10px">&#128196;</div><div class="voice-label">Queue</div></div>
+        <div class="icon-col"><div class="icon-box dark" style="width:20px;height:20px;font-size:10px">&#8683;</div><div class="voice-label">Share</div></div>
+      </div>
+    </div>
+    <div class="note">Say "Play", "Next", "Shuffle", "Like"</div>
+  </div>
+
+  <!-- Spanish player -->
+  <div class="phone-wrap">
+    <div class="lang-tag">Espanol (es-ES)</div>
+    <div class="phone">
+      <div class="status-bar dark"><span>5:58</span><span>Spotify</span></div>
+      <div class="toolbar player-tb">
+        <div class="icon-col">
+          <div class="icon-box dark">&#8595;</div>
+          <div class="voice-label">Minimizar</div>
+        </div>
+        <div class="tb-spacer"></div>
+        <div class="tb-title dark" style="text-align:center">Reproduciendo</div>
+        <div class="tb-spacer"></div>
+        <div class="icon-col">
+          <div class="icon-box dark">&#8942;</div>
+          <div class="voice-label">Mas</div>
+        </div>
+      </div>
+      <div class="content-area dark" style="text-align:center;padding:16px">
+        <div style="width:120px;height:120px;background:#333;border-radius:8px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:40px">&#127925;</div>
+        <div style="color:#fff;font-size:13px;font-weight:600">Bohemian Rhapsody</div>
+        <div style="color:#999;font-size:10px">Queen</div>
+      </div>
+      <div style="background:#1a1a1a;padding:8px 16px">
+        <div style="height:3px;background:#333;border-radius:2px;position:relative"><div style="width:45%;height:100%;background:#1db954;border-radius:2px"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;color:#666;margin-top:2px"><span>2:14</span><span>5:55</span></div>
+      </div>
+      <div class="media-controls" style="background:#1a1a1a">
+        <div class="media-btn"><div class="icon-box dark" style="border-radius:50%">&#128256;</div><div class="voice-label">Aleatorio</div></div>
+        <div class="media-btn"><div class="icon-box dark" style="border-radius:50%">&#9198;</div><div class="voice-label">Anterior</div></div>
+        <div class="media-btn big"><div class="icon-box" style="width:40px;height:40px;font-size:20px;background:#1db954;color:#fff;border-radius:50%">&#9654;</div><div class="voice-label">Reproducir</div></div>
+        <div class="media-btn"><div class="icon-box dark" style="border-radius:50%">&#9197;</div><div class="voice-label">Siguiente</div></div>
+        <div class="media-btn"><div class="icon-box dark" style="border-radius:50%">&#128257;</div><div class="voice-label">Repetir</div></div>
+      </div>
+      <div style="background:#1a1a1a;display:flex;justify-content:center;gap:16px;padding:4px">
+        <div class="icon-col"><div class="icon-box dark" style="width:20px;height:20px;font-size:10px">&#128266;</div><div class="voice-label">Dispositivo</div></div>
+        <div class="icon-col"><div class="icon-box dark" style="width:20px;height:20px;font-size:10px">&#10084;</div><div class="voice-label">Me gusta</div></div>
+        <div class="icon-col"><div class="icon-box dark" style="width:20px;height:20px;font-size:10px">&#128196;</div><div class="voice-label">Cola</div></div>
+        <div class="icon-col"><div class="icon-box dark" style="width:20px;height:20px;font-size:10px">&#8683;</div><div class="voice-label">Compartir</div></div>
+      </div>
+    </div>
+    <div class="note">Di "Reproducir", "Siguiente", "Me gusta"</div>
+  </div>
+
+  <!-- Google Photos -->
+  <div class="phone-wrap">
+    <div class="lang-tag">Google Photos (en-US)</div>
+    <div class="phone">
+      <div class="status-bar photos"><span>5:58</span><span>Photos</span></div>
+      <div class="toolbar photos-tb">
+        <div class="icon-col">
+          <div class="icon-box photos">&#128269;</div>
+          <div class="voice-label">Search</div>
+        </div>
+        <div class="tb-title">Google Photos</div>
+        <div class="icon-col">
+          <div class="icon-box photos">&#128100;</div>
+          <div class="voice-label">Account</div>
+        </div>
+      </div>
+      <div class="photo-grid">
+        <div class="photo-cell"></div>
+        <div class="photo-cell"></div>
+        <div class="photo-cell"></div>
+        <div class="photo-cell"></div>
+        <div class="photo-cell"></div>
+        <div class="photo-cell"></div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:11px">&#128247;</div><div class="voice-label">Photos</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:11px">&#128218;</div><div class="voice-label">Albums</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:11px">&#128278;</div><div class="voice-label">Sharing</div></div></div>
+        <div class="nav-item"><div class="icon-col"><div class="icon-box light" style="width:20px;height:20px;font-size:11px">&#128218;</div><div class="voice-label">Library</div></div></div>
+      </div>
+    </div>
+    <div class="note">Say "Search", "Albums", "Library"</div>
+  </div>
+</div>
+
+<!-- ==================== BEFORE / AFTER ==================== -->
+<div class="compare-box">
+  <div class="compare-title">Before vs After — Label Quality</div>
+
+  <div class="compare-row">
+    <div class="compare-before"><span class="compare-label">Gmail (before)</span>, , , Google Cl</div>
+    <div class="compare-arrow">&rarr;</div>
+    <div class="compare-after"><span class="compare-label">Gmail (after)</span>Google Cloud</div>
+  </div>
+
+  <div class="compare-row">
+    <div class="compare-before"><span class="compare-label">Gmail (before)</span>Unread, , , Cha</div>
+    <div class="compare-arrow">&rarr;</div>
+    <div class="compare-after"><span class="compare-label">Gmail (after)</span>Chargebee</div>
+  </div>
+
+  <div class="compare-row">
+    <div class="compare-before"><span class="compare-label">Icons (before)</span>ImageButton</div>
+    <div class="compare-arrow">&rarr;</div>
+    <div class="compare-after"><span class="compare-label">Icons (after)</span>Archive</div>
+  </div>
+
+  <div class="compare-row">
+    <div class="compare-before"><span class="compare-label">Icons (before)</span>ic videocam</div>
+    <div class="compare-arrow">&rarr;</div>
+    <div class="compare-after"><span class="compare-label">Icons (after)</span>Camera</div>
+  </div>
+</div>
+
+<!-- ==================== RULES ==================== -->
+<div class="rule-box">
+  <div class="rule-title">Design Rules</div>
+  <div class="rule"><span class="rule-icon">&#10003;</span> Text labels auto-show under icon-only buttons in ANY app (not just target apps)</div>
+  <div class="rule"><span class="rule-icon">&#10003;</span> Labels derived from: contentDescription &rarr; action label &rarr; tooltip &rarr; cleaned resource ID</div>
+  <div class="rule"><span class="rule-icon">&#10003;</span> Labels display in the active voice locale (en/es/fr/de/hi)</div>
+  <div class="rule"><span class="rule-icon">&#10003;</span> Number badges only appear when user says "numbers on"</div>
+  <div class="rule"><span class="rule-icon">&#10003;</span> Email comma patterns cleaned: extract sender name from Gmail-style contentDescription</div>
+  <div class="rule"><span class="rule-icon">&#10003;</span> No labels on elements that already have visible text (buttons like "Reply", "Forward")</div>
+  <div class="rule"><span class="rule-icon">&#10003;</span> No labels on email body content (links inside HTML emails)</div>
+</div>
+
+</body>
+</html>
