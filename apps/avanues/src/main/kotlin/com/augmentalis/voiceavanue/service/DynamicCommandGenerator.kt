@@ -35,6 +35,7 @@ class DynamicCommandGenerator(resources: Resources) {
 
     private val screenCacheManager = ScreenCacheManager(resources)
     private var lastScreenHash: String = ""
+    private var lastPackageName: String = ""
 
     /**
      * Process the current screen and update overlay badges.
@@ -49,12 +50,29 @@ class DynamicCommandGenerator(resources: Resources) {
         isTargetApp: Boolean
     ) {
         try {
+            // Reset numbering on app change — numbers should restart from 1
+            val isAppChange = packageName != lastPackageName
+            if (isAppChange) {
+                Log.d(TAG, "App changed: $lastPackageName → $packageName, resetting overlay numbers")
+                lastPackageName = packageName
+                lastScreenHash = ""
+                OverlayStateManager.clearOverlayItems()
+            }
+
             // Generate screen hash for deduplication
             val screenHash = screenCacheManager.generateScreenHash(rootNode)
             if (screenHash == lastScreenHash) {
                 Log.v(TAG, "Screen unchanged, skipping overlay update")
                 return
             }
+
+            // Screen changed within same app — reset for non-list apps
+            // Target apps (Gmail, WhatsApp) preserve numbers for scroll stability
+            if (!isAppChange && !isTargetApp) {
+                Log.d(TAG, "Screen changed in non-target app $packageName, resetting overlay numbers")
+                OverlayStateManager.clearOverlayItems()
+            }
+
             lastScreenHash = screenHash
 
             // Extract elements
@@ -113,6 +131,7 @@ class DynamicCommandGenerator(resources: Resources) {
      */
     fun clearCache() {
         lastScreenHash = ""
+        lastPackageName = ""
         OverlayStateManager.clearOverlayItems()
     }
 }
