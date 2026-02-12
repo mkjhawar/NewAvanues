@@ -440,22 +440,46 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             voiceOSCore?.updateCommands(commands.map { it.phrase })
 
             // Update overlay badges from accessibility tree
-            try {
-                val root = rootInActiveWindow ?: return@launch
-                val packageName = root.packageName?.toString() ?: return@launch
-                val isTargetApp = OverlayStateManager.TARGET_APPS.contains(packageName)
+            refreshOverlayBadges()
+        }
+    }
 
-                // Browser-scope: clear web commands when foreground app is not the browser.
-                // Prevents web-scraped phrases from polluting grammar in other apps.
-                val isBrowser = packageName == applicationContext.packageName
-                if (!isBrowser) {
-                    BrowserVoiceOSCallback.clearActiveWebPhrases()
-                }
+    /**
+     * Called after scroll events settle (debounced 300ms).
+     *
+     * Bypasses the command generation pipeline to refresh overlay badges directly.
+     * Without this, scrolling in Gmail (or any app) would never update overlays because:
+     * - TYPE_VIEW_SCROLLED doesn't trigger handleScreenChange → onCommandsUpdated
+     * - Even TYPE_WINDOW_CONTENT_CHANGED gates on KMP fingerprint which may not change
+     */
+    override fun onScrollSettled(packageName: String) {
+        serviceScope.launch {
+            Log.d(TAG, "Scroll settled, refreshing overlay for $packageName")
+            refreshOverlayBadges()
+        }
+    }
 
-                dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating overlay", e)
+    /**
+     * Common overlay refresh logic used by both onCommandsUpdated (screen change)
+     * and onScrollSettled (scroll). Gets fresh rootInActiveWindow and runs
+     * DynamicCommandGenerator.processScreen().
+     */
+    private fun refreshOverlayBadges() {
+        try {
+            val root = rootInActiveWindow ?: return
+            val packageName = root.packageName?.toString() ?: return
+            val isTargetApp = OverlayStateManager.TARGET_APPS.contains(packageName)
+
+            // Browser-scope: clear web commands when foreground app is not the browser.
+            // Prevents web-scraped phrases from polluting grammar in other apps.
+            val isBrowser = packageName == applicationContext.packageName
+            if (!isBrowser) {
+                BrowserVoiceOSCallback.clearActiveWebPhrases()
             }
+
+            dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating overlay", e)
         }
     }
 
