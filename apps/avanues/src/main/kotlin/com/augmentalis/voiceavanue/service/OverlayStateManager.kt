@@ -172,49 +172,9 @@ object OverlayStateManager {
 
     fun clearOverlayItems() {
         if (_numberedOverlayItems.value.isNotEmpty()) {
-            avidToNumber.clear()
-            maxAssignedNumber = 0
             Log.d(TAG, "Clearing ${_numberedOverlayItems.value.size} overlay items")
             _numberedOverlayItems.value = emptyList()
             updateNumbersOverlayVisibility()
-        }
-    }
-
-    // Stable numbering for incremental updates
-    private val avidToNumber = linkedMapOf<String, Int>()
-    private var maxAssignedNumber = 0
-
-    fun updateNumberedOverlayItemsIncremental(newItems: List<NumberOverlayItem>) {
-        if (newItems.isEmpty()) {
-            _numberedOverlayItems.value = emptyList()
-            updateNumbersOverlayVisibility()
-            return
-        }
-
-        val sortedNewItems = newItems.sortedWith(compareBy<NumberOverlayItem>({ it.top }, { it.left }))
-        val finalItems = sortedNewItems.map { item ->
-            val number = avidToNumber[item.avid] ?: run {
-                maxAssignedNumber += 1
-                avidToNumber[item.avid] = maxAssignedNumber
-                maxAssignedNumber
-            }
-            item.copy(number = number)
-        }
-
-        _numberedOverlayItems.value = finalItems
-        updateNumbersOverlayVisibility()
-        trimCacheIfNeeded()
-    }
-
-    private fun trimCacheIfNeeded() {
-        if (avidToNumber.size <= 500) return
-        val removeCount = avidToNumber.size - 500
-        val iterator = avidToNumber.entries.iterator()
-        repeat(removeCount) {
-            if (iterator.hasNext()) {
-                iterator.next()
-                iterator.remove()
-            }
         }
     }
 

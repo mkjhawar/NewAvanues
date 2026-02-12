@@ -31,7 +31,10 @@ private const val TAG = "DynamicCommandGen"
  *
  * Screen caching uses ScreenCacheManager to avoid redundant extractions.
  */
-class DynamicCommandGenerator(resources: Resources) {
+class DynamicCommandGenerator(
+    resources: Resources,
+    private val numberingExecutor: OverlayNumberingExecutor
+) {
 
     private val screenCacheManager = ScreenCacheManager(resources)
     private var lastScreenHash: String = ""
@@ -49,13 +52,23 @@ class DynamicCommandGenerator(resources: Resources) {
         isTargetApp: Boolean
     ) {
         try {
-            // Generate screen hash for deduplication
+            // Executor handles app-change and screen-change reset logic
             val screenHash = screenCacheManager.generateScreenHash(rootNode)
-            if (screenHash == lastScreenHash) {
+            val isNewScreen = screenHash != lastScreenHash
+
+            val didReset = numberingExecutor.handleScreenContext(packageName, isTargetApp, isNewScreen)
+            if (didReset) {
+                Log.d(TAG, "Numbering reset for $packageName (app/screen change)")
+                lastScreenHash = ""
+            }
+
+            // Re-check hash after potential reset
+            val currentHash = if (didReset) screenCacheManager.generateScreenHash(rootNode) else screenHash
+            if (currentHash == lastScreenHash) {
                 Log.v(TAG, "Screen unchanged, skipping overlay update")
                 return
             }
-            lastScreenHash = screenHash
+            lastScreenHash = currentHash
 
             // Extract elements
             val elements = mutableListOf<ElementInfo>()
@@ -93,9 +106,10 @@ class DynamicCommandGenerator(resources: Resources) {
                 }
             }
 
-            // Update overlay with incremental numbering for stability
+            // Executor assigns per-container numbers, then simple setter
             if (overlayItems.isNotEmpty()) {
-                OverlayStateManager.updateNumberedOverlayItemsIncremental(overlayItems)
+                val numbered = numberingExecutor.assignNumbers(overlayItems)
+                OverlayStateManager.updateNumberedOverlayItems(numbered)
             } else {
                 OverlayStateManager.clearOverlayItems()
             }

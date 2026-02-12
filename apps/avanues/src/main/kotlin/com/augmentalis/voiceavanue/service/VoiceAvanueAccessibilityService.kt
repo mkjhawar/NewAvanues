@@ -29,6 +29,7 @@ import com.augmentalis.voiceoscore.CommandRegistry
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ServiceConfiguration
 import com.augmentalis.voiceoscore.SpeechEngine
+import com.augmentalis.voiceoscore.NumbersOverlayHandler
 import com.augmentalis.voiceoscore.WebCommandHandler
 import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceavanue.MainActivity
@@ -82,6 +83,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var voiceOSCore: VoiceOSCore? = null
     private var actionCoordinator: ActionCoordinator? = null
     private var boundsResolver: BoundsResolver? = null
+    private var overlayNumberingExecutor: OverlayNumberingExecutor? = null
     private var dynamicCommandGenerator: DynamicCommandGenerator? = null
     private var webCommandHandler: WebCommandHandler? = null
     private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
@@ -120,8 +122,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             Log.e(TAG, "Failed to start CommandOverlayService", e)
         }
 
-        // Initialize the dynamic command generator for overlay badges
-        dynamicCommandGenerator = DynamicCommandGenerator(resources)
+        // Initialize the numbering executor and dynamic command generator for overlay badges
+        val executor = OverlayNumberingExecutor()
+        overlayNumberingExecutor = executor
+        dynamicCommandGenerator = DynamicCommandGenerator(resources, executor)
 
         serviceScope.launch(Dispatchers.IO) {
             try {
@@ -156,6 +160,13 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 webCommandHandler = handler
                 voiceOSCore?.actionCoordinator?.registerHandler(handler)
                 Log.i(TAG, "WebCommandHandler registered with ActionCoordinator")
+
+                // Register NumbersOverlayHandler for "numbers on/off/auto" voice commands
+                overlayNumberingExecutor?.let { exec ->
+                    val numbersHandler = NumbersOverlayHandler(exec)
+                    voiceOSCore?.actionCoordinator?.registerHandler(numbersHandler)
+                    Log.i(TAG, "NumbersOverlayHandler registered with ActionCoordinator")
+                }
 
                 // Force screen refresh so dynamic commands register on VoiceOSCore's
                 // coordinator. Before init, commands were registered on a fallback
