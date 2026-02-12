@@ -11,5 +11,5 @@ package com.augmentalis.speechrecognition
  * Create iOS-specific speech recognition service.
  */
 actual fun createSpeechRecognitionService(): SpeechRecognitionService {
-    return IosSpeechService()
+    return IosSpeechRecognitionService()
 }
