@@ -59,9 +59,13 @@ StaticCommandRegistry._dbCommands   <- All consumers read from here
 6. `StaticCommandRegistry.all()` now returns DB-loaded commands
 7. `HelpCommandDataProvider` and `WebCommandHandler` automatically reflect DB content
 
-### Fallback Behavior
+### Fallback Behavior (REMOVED 260212)
 
-If the database is empty or not yet loaded (e.g., during the first few milliseconds of startup), `StaticCommandRegistry.all()` returns hardcoded English commands. Once `initialize()` is called with DB data, the hardcoded lists are bypassed entirely.
+**Prior to 260212**: If the database was empty or not yet loaded, `StaticCommandRegistry.all()` returned hardcoded English commands (~800 lines of fallback lists). Once `initialize()` was called with DB data, the hardcoded lists were bypassed.
+
+**Since 260212**: The hardcoded fallback has been completely removed. `StaticCommandRegistry.all()` now returns an empty list if the database is not yet initialized. This eliminates dual-source maintenance burden and enforces `.VOS → CommandLoader → SQLDelight` as the single source of truth.
+
+**CRITICAL**: `CommandLoader.seedFromAssets()` MUST complete before the voice pipeline starts. Services and UI components should verify `StaticCommandRegistry.all().isNotEmpty()` before attempting command resolution.
 
 ## 2. Command Pipeline (5-Layer)
 
@@ -332,8 +336,8 @@ On next app launch with version bump (change `requiredVersion` in CommandLoader)
 
 For development: call `CommandLoader.forceReload()` to reload immediately.
 
-### Step 4: Update Hardcoded Fallback (Optional)
-If the command should be available before DB loads, add a `StaticCommand` entry to the appropriate list in `StaticCommandRegistry.kt`. This is the fallback used during the brief window before `initialize()` is called.
+### Step 4: Update Hardcoded Fallback (DEPRECATED 260212)
+**REMOVED**: Hardcoded fallback lists no longer exist in `StaticCommandRegistry.kt`. All commands MUST be defined in VOS seed files. The registry returns an empty list until `initialize()` is called with DB data.
 
 ### Step 5: Add Handler Support
 
@@ -448,5 +452,5 @@ Verify the target STT engine (Vivoka/Whisper/Google) recognizes translated phras
 ---
 
 *Chapter 93 | Voice Command Pipeline & Localization Architecture*
-*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-11 (Multi-locale VOS support)*
+*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-12 (StaticCommandRegistry hardcoded fallback removed)*
 *Related: Chapter 03 (VoiceOSCore Deep Dive), Chapter 05 (WebAvanue Deep Dive), Chapter 94 (4-Tier Voice Enablement)*

@@ -55,6 +55,8 @@ Web files additionally include provenance metadata when exported:
 
 Version bump 2.0 → 2.1 forces DB reload on app upgrade.
 
+**CRITICAL (260212)**: VOS files are now the ONLY source of truth. The hardcoded fallback command lists (~800 lines) have been removed from `StaticCommandRegistry`. If the DB is not initialized, `StaticCommandRegistry.all()` returns an empty list. This enforces `.VOS → DB` as the single source and eliminates dual-source maintenance burden.
+
 ```kotlin
 companion object {
     const val FILE_EXTENSION_APP = ".app.vos"
@@ -422,3 +424,9 @@ interface SyncEntryPoint {
 3. `VosSyncViewModel.exportSuggestions()` exports pending suggestions as JSON
 4. Exported file uploaded via SFTP sync for review
 5. Approved suggestions merged into locale VOS files via GitHub PR workflow
+
+---
+
+*Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
+*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-12 (StaticCommandRegistry single source of truth)*
+*Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement)*
