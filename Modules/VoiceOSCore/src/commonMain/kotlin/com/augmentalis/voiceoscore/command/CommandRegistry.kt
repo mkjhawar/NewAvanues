@@ -23,7 +23,7 @@ import kotlin.concurrent.Volatile
  * - Caches lowercase phrases during registration to avoid repeated string operations
  * - Direct key lookup is O(1), partial match is O(n) but with cached labels
  *
- * IMPORTANT: Commands are keyed by PHRASE (not targetVuid) to allow multiple
+ * IMPORTANT: Commands are keyed by PHRASE (not targetAvid) to allow multiple
  * command types to coexist for the same element:
  * - Label commands: "Gmail", "Settings", "Arby's"
  * - Index commands (DynamicLists): "first", "second", "third"
@@ -50,7 +50,7 @@ class CommandRegistry {
      * Volatile ensures visibility of writes across threads.
      * All reads see a consistent snapshot; writes replace atomically.
      *
-     * Key: phrase.lowercase() - allows multiple commands per targetVuid
+     * Key: phrase.lowercase() - allows multiple commands per targetAvid
      * Value: QuantizedCommand
      */
     @Volatile
@@ -60,7 +60,7 @@ class CommandRegistry {
 
     /**
      * Update registry with new commands, replacing all existing.
-     * Commands with null targetVuid are ignored (cannot be executed).
+     * Commands with null targetAvid are ignored (cannot be executed).
      *
      * Thread-safe: Uses mutex to serialize writes.
      *
@@ -151,7 +151,7 @@ class CommandRegistry {
         oldKeys.forEach { updatedCommands.remove(it) }
 
         // Add new valid commands
-        val validCommands = newCommands.filter { it.targetVuid != null && it.phrase.isNotBlank() }
+        val validCommands = newCommands.filter { it.targetAvid != null && it.phrase.isNotBlank() }
         val newKeys = mutableSetOf<String>()
 
         for (cmd in validCommands) {
@@ -208,7 +208,7 @@ class CommandRegistry {
      * Replaces ALL commands regardless of source (clears sourceKeys).
      */
     private fun updateInternal(newCommands: List<QuantizedCommand>) {
-        val validCommands = newCommands.filter { it.targetVuid != null && it.phrase.isNotBlank() }
+        val validCommands = newCommands.filter { it.targetAvid != null && it.phrase.isNotBlank() }
         LoggingUtils.d("update: received ${newCommands.size} commands, ${validCommands.size} valid", TAG)
         if (validCommands.isNotEmpty()) {
             LoggingUtils.d("update: first 3 commands: ${validCommands.take(3).map { "'${it.phrase}'" }}", TAG)
@@ -274,29 +274,29 @@ class CommandRegistry {
     }
 
     /**
-     * Find command by target VUID.
-     * Searches through all commands since they're keyed by phrase, not VUID.
+     * Find command by target AVID.
+     * Searches through all commands since they're keyed by phrase, not AVID.
      *
      * Thread-safe: Reads from immutable snapshot.
      *
-     * @param vuid Target element VUID
+     * @param avid Target element AVID
      * @return First matching QuantizedCommand or null
      */
-    fun findByVuid(vuid: String): QuantizedCommand? {
-        return snapshot.commands.values.firstOrNull { it.targetVuid == vuid }
+    fun findByAvid(avid: String): QuantizedCommand? {
+        return snapshot.commands.values.firstOrNull { it.targetAvid == avid }
     }
 
     /**
-     * Find all commands targeting a specific VUID.
+     * Find all commands targeting a specific AVID.
      * Returns all command types (label, index, numeric) for that element.
      *
      * Thread-safe: Reads from immutable snapshot.
      *
-     * @param vuid Target element VUID
+     * @param avid Target element AVID
      * @return List of commands targeting this element
      */
-    fun findAllByVuid(vuid: String): List<QuantizedCommand> {
-        return snapshot.commands.values.filter { it.targetVuid == vuid }
+    fun findAllByAvid(avid: String): List<QuantizedCommand> {
+        return snapshot.commands.values.filter { it.targetAvid == avid }
     }
 
     /**
@@ -328,7 +328,7 @@ class CommandRegistry {
             withTimeout(5000L) {
                 mutex.withLock {
                     val toAdd = commands
-                        .filter { it.targetVuid != null && it.phrase.isNotBlank() }
+                        .filter { it.targetAvid != null && it.phrase.isNotBlank() }
 
                     if (toAdd.isEmpty()) return@withLock
 

@@ -34,13 +34,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Provides:
  * - Handler registration and lifecycle management
  * - Priority-based command routing
- * - Dynamic command support (screen-specific commands with VUIDs)
+ * - Dynamic command support (screen-specific commands with AVIDs)
  * - Fuzzy matching for voice input variations
  * - Performance metrics collection
  * - Voice command interpretation
  *
  * ## Execution Priority:
- * 1. Dynamic command lookup by VUID (fastest, most accurate)
+ * 1. Dynamic command lookup by AVID (fastest, most accurate)
  * 2. Dynamic command fuzzy match (handles voice variations)
  * 3. Static handler lookup (system commands)
  * 4. Voice interpreter fallback (legacy keyword mapping)
@@ -563,8 +563,8 @@ class ActionCoordinator(
      * Get all commands (static + dynamic) as QuantizedCommand for NLU/LLM.
      *
      * This provides a unified view of all available voice commands:
-     * - Static commands: System-wide commands (targetVuid = null)
-     * - Dynamic commands: Screen-specific element commands (targetVuid = element VUID)
+     * - Static commands: System-wide commands (targetAvid = null)
+     * - Dynamic commands: Screen-specific element commands (targetAvid = element AVID)
      *
      * The NLU/LLM can use this to:
      * - Understand available actions
@@ -630,7 +630,7 @@ class ActionCoordinator(
                 appendLine("(No screen-specific commands available)")
             } else {
                 dynamicCommands.forEach { cmd ->
-                    appendLine("- ${cmd.phrase}: ${cmd.actionType.name} -> VUID:${cmd.targetVuid}")
+                    appendLine("- ${cmd.phrase}: ${cmd.actionType.name} -> AVID:${cmd.targetAvid}")
                 }
             }
         }

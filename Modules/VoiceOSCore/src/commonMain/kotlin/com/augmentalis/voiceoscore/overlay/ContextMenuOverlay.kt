@@ -485,7 +485,7 @@ class ContextMenuOverlay(
      * Called when menu items or title are updated.
      * Platform implementations should refresh the menu display.
      */
-    protected open fun onMenuUpdated() {
+    protected fun onMenuUpdated() {
         // Platform implementations override this to refresh UI
     }
 
@@ -493,7 +493,7 @@ class ContextMenuOverlay(
      * Called when highlight state changes.
      * Platform implementations should update visual highlight.
      */
-    protected open fun onHighlightChanged() {
+    protected fun onHighlightChanged() {
         // Platform implementations override this to update highlight
     }
 

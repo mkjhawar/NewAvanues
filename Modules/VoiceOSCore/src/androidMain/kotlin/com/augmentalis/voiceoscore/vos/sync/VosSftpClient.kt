@@ -316,8 +316,8 @@ class VosSftpClient {
                 filename = entry.getString("filename"),
                 size = entry.getLong("size"),
                 uploadedAt = entry.getLong("uploadedAt"),
-                domain = entry.optString("domain", null),
-                locale = entry.optString("locale", null)
+                domain = entry.optString("domain").takeIf { it.isNotEmpty() },
+                locale = entry.optString("locale").takeIf { it.isNotEmpty() }
             )
         }
 
