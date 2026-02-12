@@ -190,6 +190,20 @@ class DynamicCommandGenerator(
     }
 
     /**
+     * Invalidate the screen hash so the next processScreen() always runs.
+     * Called after scroll to force overlay refresh — we KNOW content changed,
+     * no need to detect it via hash comparison.
+     *
+     * Unlike clearCache(), this does NOT clear overlay items or top-level signatures.
+     * Overlay items are preserved so the transition is smooth (old badges stay
+     * until new ones replace them). Top-level signatures are preserved so
+     * structural change ratio still works for navigation detection.
+     */
+    fun invalidateScreenHash() {
+        lastScreenHash = ""
+    }
+
+    /**
      * Clear cached state when switching apps.
      */
     fun clearCache() {

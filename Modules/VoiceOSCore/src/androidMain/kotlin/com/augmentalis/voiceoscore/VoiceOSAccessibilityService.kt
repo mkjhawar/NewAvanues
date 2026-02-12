@@ -254,18 +254,26 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      * which gates on KMP fingerprint and would block overlay updates on scroll.
      */
     private fun handleScrollEvent(event: AccessibilityEvent) {
-        val boundsResolver = getBoundsResolver() ?: return
-
-        // Extract scroll information from the event
-        val source = event.source ?: return
-        // Capture packageName NOW before event/source get recycled
+        // Capture packageName FIRST, before event gets recycled after onAccessibilityEvent returns
         val packageName = event.packageName?.toString() ?: currentPackageName ?: ""
+
+        // Schedule debounced overlay refresh BEFORE any early returns.
+        // Previous versions had getBoundsResolver() ?: return and event.source ?: return
+        // ABOVE this code, which prevented the scroll callback from ever firing.
+        pendingScrollRefreshJob?.cancel()
+        pendingScrollRefreshJob = serviceScope.launch {
+            kotlinx.coroutines.delay(scrollRefreshDebounceMs)
+            onScrollSettled(packageName)
+        }
+
+        // Update BoundsResolver with scroll position (optional, for click accuracy)
+        val boundsResolver = getBoundsResolver() ?: return
+        val source = event.source ?: return
         try {
             val resourceId = source.viewIdResourceName ?: ""
             val scrollX = event.scrollX
             val scrollY = event.scrollY
 
-            // Only update if we have valid scroll position
             if (scrollX >= 0 || scrollY >= 0) {
                 boundsResolver.updateScrollOffset(resourceId, scrollX, scrollY)
                 Log.v(TAG, "Scroll event: $resourceId -> ($scrollX, $scrollY)")
@@ -275,18 +283,6 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 source.recycle()
             }
-        }
-
-        // Schedule debounced overlay refresh after scroll settles.
-        // Uses onScrollSettled() callback instead of handleScreenChange() because:
-        // 1. handleScreenChange() gates on KMP fingerprint — overlay would never update
-        // 2. The AccessibilityEvent object is recycled after onAccessibilityEvent returns —
-        //    using it 300ms later in a coroutine would read stale/null fields
-        // 3. Overlay badges are independent of command generation and should update separately
-        pendingScrollRefreshJob?.cancel()
-        pendingScrollRefreshJob = serviceScope.launch {
-            kotlinx.coroutines.delay(scrollRefreshDebounceMs)
-            onScrollSettled(packageName)
         }
     }
 

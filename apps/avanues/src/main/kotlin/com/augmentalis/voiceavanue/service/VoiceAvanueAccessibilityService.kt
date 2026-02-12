@@ -455,6 +455,11 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     override fun onScrollSettled(packageName: String) {
         serviceScope.launch {
             Log.d(TAG, "Scroll settled, refreshing overlay for $packageName")
+            // Invalidate screen hash so processScreen() always runs after scroll.
+            // We KNOW content changed (user scrolled), so skip hash-based deduplication.
+            // Without this, the content-aware hash might still match if the depth limit
+            // is too shallow to reach actual text nodes inside RecyclerView children.
+            dynamicCommandGenerator?.invalidateScreenHash()
             refreshOverlayBadges()
         }
     }
