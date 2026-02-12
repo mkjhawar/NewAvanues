@@ -1,6 +1,8 @@
 // Author: Manoj Jhawar
 // Purpose: Comprehensive device information component with USB, camera, and peripheral detection
 
+@file:Suppress("DEPRECATION") // android.hardware.Camera — legacy API used for camera count detection
+
 package com.augmentalis.devicemanager
 
 import android.content.BroadcastReceiver
@@ -549,7 +551,7 @@ class DeviceInfo(private val context: Context) {
                             hasMicrophone = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                                 device.hasMicrophone()
                             } else false,
-                            hasVibrator = device.vibrator != null,
+                            hasVibrator = @Suppress("DEPRECATION") (device.vibrator != null),
                             isTouchpad = sources and InputDevice.SOURCE_TOUCHPAD != 0,
                             isTouchscreen = sources and InputDevice.SOURCE_TOUCHSCREEN != 0,
                             isKeyboard = sources and InputDevice.SOURCE_KEYBOARD != 0,

@@ -934,6 +934,7 @@ class WiFiManager(
     
     @SuppressLint("MissingPermission")
     private fun updateCurrentNetwork() {
+        @Suppress("DEPRECATION")
         val wifiInfo = wifiManager.connectionInfo
         wifiInfo?.let { info ->
             val network = WiFiNetwork(

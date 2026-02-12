@@ -151,6 +151,7 @@ class VideoManager(private val context: Context) {
         val camera = currentCameraDevice ?: return
         
         try {
+            @Suppress("DEPRECATION")
             camera.createCaptureSession(
                 listOf(surface),
                 object : CameraCaptureSession.StateCallback() {

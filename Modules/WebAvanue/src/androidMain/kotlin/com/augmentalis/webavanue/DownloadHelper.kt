@@ -78,7 +78,7 @@ object DownloadHelper {
                                 filename
                             )
 
-                            @Suppress("KotlinConstantConditions")
+                            @Suppress("SENSELESS_COMPARISON")
                             if (targetFile != null && targetFile.uri != null) {
                                 // Use the created file URI as destination
                                 setDestinationUri(targetFile.uri)

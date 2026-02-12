@@ -96,7 +96,7 @@ class AndroidScreenshotCapture(
         captureJob = null
     }
 
-    @Suppress("KotlinConstantConditions")
+    @Suppress("USELESS_IS_CHECK")
     override suspend fun saveScreenshot(
         data: ScreenshotData,
         filename: String?,

@@ -28,17 +28,4 @@ object AvidHelper {
     fun randomUtteranceAVID(): String = AvidGenerator.generateUtteranceAvid()
     fun randomDialogAVID(): String = AvidGenerator.generateDialogAvid()
 
-    // Legacy methods for backward compatibility
-    @Deprecated("Use specific type methods", ReplaceWith("randomMessageAVID()"))
-    fun randomAVID(): String = AvidGenerator.generate()
-
-    @Deprecated("Use randomMessageAVID() or randomConversationAVID()", ReplaceWith("randomMessageAVID()"))
-    fun randomVUID(): String = AvidGenerator.generate()
 }
-
-/**
- * Legacy VuidHelper - Deprecated
- * Use AvidHelper instead
- */
-@Deprecated("Use AvidHelper instead", ReplaceWith("AvidHelper"))
-typealias VuidHelper = AvidHelper

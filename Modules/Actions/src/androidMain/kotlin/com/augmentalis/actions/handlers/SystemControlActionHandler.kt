@@ -28,6 +28,7 @@ class BluetoothOnActionHandler : IntentActionHandler {
         return try {
             Log.d(TAG, "Turning Bluetooth on for utterance: '$utterance'")
 
+            @Suppress("DEPRECATION")
             val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
             if (bluetoothAdapter == null) {
@@ -76,6 +77,7 @@ class BluetoothOffActionHandler : IntentActionHandler {
         return try {
             Log.d(TAG, "Turning Bluetooth off for utterance: '$utterance'")
 
+            @Suppress("DEPRECATION")
             val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
             if (bluetoothAdapter == null) {

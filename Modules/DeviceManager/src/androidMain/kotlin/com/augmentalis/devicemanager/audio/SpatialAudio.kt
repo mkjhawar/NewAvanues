@@ -140,11 +140,12 @@ class SpatialAudio(private val context: Context) {
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val spatializer = audioManager.spatializer
+            @Suppress("SENSELESS_COMPARISON")
             if (spatializer != null && spatializer.isAvailable) {
                 // Check common spatial audio compatible devices
                 devices.add("Headphones")
                 devices.add("Earbuds")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && spatializer.isHeadTrackerAvailable) {
+                if (spatializer.isHeadTrackerAvailable) {
                     devices.add("Head-tracking capable devices")
                 }
             }

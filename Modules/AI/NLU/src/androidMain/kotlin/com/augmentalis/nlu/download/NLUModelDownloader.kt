@@ -84,6 +84,7 @@ class NLUModelDownloader(
     /**
      * Check if network is available
      */
+    @Suppress("DEPRECATION")
     private fun isNetworkAvailable(): Boolean {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE)
             as? android.net.ConnectivityManager

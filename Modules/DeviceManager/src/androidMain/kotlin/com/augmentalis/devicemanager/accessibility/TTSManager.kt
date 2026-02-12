@@ -415,6 +415,7 @@ class TTSManager(
             val params = hashMapOf(
                 TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID to request.utteranceId
             )
+            @Suppress("DEPRECATION")
             tts?.speak(request.text, request.queueMode, params)
         }
         return result == TextToSpeech.SUCCESS

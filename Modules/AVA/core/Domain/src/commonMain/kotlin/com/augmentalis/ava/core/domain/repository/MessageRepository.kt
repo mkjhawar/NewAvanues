@@ -12,14 +12,14 @@ interface MessageRepository {
     
     /**
      * Get all messages in a conversation
-     * @param conversationId Conversation VUID (Voice Universal Identifier)
+     * @param conversationId Conversation AVID (Avanues Voice ID)
      * @return Flow emitting messages ordered by timestamp
      */
     fun getMessagesForConversation(conversationId: String): Flow<List<Message>>
     
     /**
      * Get paginated messages (for infinite scroll)
-     * @param conversationId Conversation VUID (Voice Universal Identifier)
+     * @param conversationId Conversation AVID (Avanues Voice ID)
      * @param limit Number of messages to fetch
      * @param offset Starting offset
      * @return Result containing list of messages
@@ -39,7 +39,7 @@ interface MessageRepository {
     
     /**
      * Get messages by role (user/assistant/system)
-     * @param conversationId Conversation VUID (Voice Universal Identifier)
+     * @param conversationId Conversation AVID (Avanues Voice ID)
      * @param role Filter by role
      * @return Flow emitting filtered messages
      */
@@ -47,7 +47,7 @@ interface MessageRepository {
     
     /**
      * Count messages in conversation
-     * @param conversationId Conversation VUID (Voice Universal Identifier)
+     * @param conversationId Conversation AVID (Avanues Voice ID)
      * @return Message count
      */
     suspend fun getMessageCount(conversationId: String): Result<Int>
@@ -55,7 +55,7 @@ interface MessageRepository {
     /**
      * Get recent messages for context window (last N messages)
      * Used to provide conversation context to LLM
-     * @param conversationId Conversation VUID (Voice Universal Identifier)
+     * @param conversationId Conversation AVID (Avanues Voice ID)
      * @param limit Number of recent messages to fetch (default 10)
      * @return Result containing list of recent messages ordered by timestamp
      */

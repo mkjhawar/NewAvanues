@@ -12,6 +12,8 @@
  * - Enables conditional loading based on detected features
  */
 
+@file:Suppress("DEPRECATION") // android.hardware.Camera — legacy API used for camera count detection
+
 package com.augmentalis.devicemanager.deviceinfo.detection
 
 import android.Manifest
@@ -615,7 +617,7 @@ object DeviceDetector {
             heightPixels = display.heightPixels,
             densityDpi = display.densityDpi,
             density = display.density,
-            scaledDensity = display.scaledDensity,
+            scaledDensity = @Suppress("DEPRECATION") display.scaledDensity,
             xdpi = display.xdpi,
             ydpi = display.ydpi,
             refreshRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -696,7 +698,7 @@ object DeviceDetector {
                 else -> "Android"
             },
             requiresDisableSpeech = manufacturer.contains("realwear"),
-            displayName = Build.MANUFACTURER.capitalize(),
+            displayName = Build.MANUFACTURER.replaceFirstChar { it.uppercase() },
             logoPath = "logos/${manufacturer}.png"
         )
     }

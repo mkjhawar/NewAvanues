@@ -12,6 +12,17 @@ plugins {
 }
 
 kotlin {
+    // Suppress expect/actual class Beta warning (KT-61573)
+    targets.all {
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
+            }
+        }
+    }
+
     androidTarget {
         compilations.all {
             kotlinOptions {

@@ -96,6 +96,7 @@ object CustomAvidGenerator {
      */
     fun generate(prefix: String): String {
         validatePrefix(prefix)
+        @Suppress("DEPRECATION")
         val baseUuid = AvidGenerator.generate()
         return "$prefix-$baseUuid"
     }
@@ -112,6 +113,7 @@ object CustomAvidGenerator {
     fun generate(namespace: String, prefix: String): String {
         validateNamespace(namespace)
         validatePrefix(prefix)
+        @Suppress("DEPRECATION")
         val baseUuid = AvidGenerator.generate()
         return "$namespace.$prefix-$baseUuid"
     }

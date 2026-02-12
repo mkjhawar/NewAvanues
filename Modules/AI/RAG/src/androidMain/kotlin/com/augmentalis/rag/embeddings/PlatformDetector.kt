@@ -57,6 +57,7 @@ object PlatformDetector {
     /**
      * Check if installed from F-Droid
      */
+    @Suppress("DEPRECATION")
     private fun isFDroid(context: Context): Boolean {
         val installer = try {
             context.packageManager.getInstallerPackageName(context.packageName)
@@ -115,6 +116,7 @@ object PlatformDetector {
     /**
      * Get platform information for logging/debugging
      */
+    @Suppress("DEPRECATION")
     fun getPlatformInfo(context: Context): Map<String, String> {
         val platform = detectPlatform(context)
         val hasGPS = hasGooglePlayServices(context)

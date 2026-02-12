@@ -78,6 +78,7 @@ class IMUManager private constructor(
     // Sensor management
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
+    @Suppress("DEPRECATION")
     private var display: Display = (context.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay
     private var rotation: Int = display.rotation
     private val rotationMatrixBuffer = FloatArray(9)

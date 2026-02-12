@@ -250,7 +250,8 @@ class AvidServiceBinder(
         return try {
             // Parse JSON parameters
             val parameters = if (!parametersJson.isNullOrBlank()) {
-                gson.fromJson(parametersJson, Map::class.java) as? Map<String, Any> ?: emptyMap()
+                @Suppress("UNCHECKED_CAST")
+                (gson.fromJson(parametersJson, Map::class.java) as? Map<String, Any> ?: emptyMap())
             } else {
                 emptyMap()
             }
@@ -375,6 +376,3 @@ class AvidServiceBinder(
     }
 }
 
-// Backward compatibility alias
-@Deprecated("Use AvidServiceBinder instead", ReplaceWith("AvidServiceBinder"))
-typealias VuidServiceBinder = AvidServiceBinder

@@ -414,6 +414,7 @@ class ClickabilityDetector(
             val isChildClickable = child.isClickable
 
             // Recycle child node to prevent memory leaks
+            @Suppress("DEPRECATION")
             child.recycle()
 
             isChildClickable
