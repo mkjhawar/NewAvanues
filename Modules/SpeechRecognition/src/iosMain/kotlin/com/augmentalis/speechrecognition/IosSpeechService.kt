@@ -1,5 +1,5 @@
 /**
- * IosSpeechRecognitionService.kt - iOS speech recognition using Apple SFSpeechRecognizer
+ * IosSpeechService.kt - iOS speech recognition using Apple SFSpeechRecognizer
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  *
@@ -27,7 +27,7 @@ import platform.Speech.*
  * multi-locale switching, and partial results.
  */
 @OptIn(ExperimentalForeignApi::class)
-class IosSpeechRecognitionService : SpeechRecognitionService {
+class IosSpeechService : SpeechRecognitionService {
 
     companion object {
         private const val TAG = "IosSpeechService"
