@@ -125,6 +125,7 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
             }
         }
         if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
