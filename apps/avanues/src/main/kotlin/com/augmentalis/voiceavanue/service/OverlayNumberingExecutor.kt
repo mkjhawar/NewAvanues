@@ -33,10 +33,23 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
 
     /**
      * Handle screen context change. Resets numbering on app change,
-     * resets on screen change for non-target apps.
-     * Returns true if numbering was reset.
+     * resets on screen change for non-target apps, and resets on
+     * major navigation within target apps.
+     *
+     * @param packageName Current app package name
+     * @param isTargetApp Whether this app is in the TARGET_APPS list
+     * @param isNewScreen Whether the screen hash changed
+     * @param structuralChangeRatio 0.0-1.0 how much the top-level structure changed.
+     *        Used to distinguish scroll (low ratio) from major navigation (high ratio)
+     *        within target apps like Gmail (inbox → email detail).
+     * @return true if numbering was reset
      */
-    fun handleScreenContext(packageName: String, isTargetApp: Boolean, isNewScreen: Boolean): Boolean {
+    fun handleScreenContext(
+        packageName: String,
+        isTargetApp: Boolean,
+        isNewScreen: Boolean,
+        structuralChangeRatio: Float = 0f
+    ): Boolean {
         val isAppChange = packageName != lastPackageName
         var didReset = false
 
@@ -47,10 +60,22 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
         } else if (isNewScreen && !isTargetApp) {
             clearAllAssignmentsInternal()
             didReset = true
+        } else if (isNewScreen && isTargetApp && structuralChangeRatio > MAJOR_NAVIGATION_THRESHOLD) {
+            // Major navigation within a target app (e.g., Gmail inbox → email detail).
+            // The structural change ratio is high because the screen layout is fundamentally
+            // different, not just scrolled content. Reset numbering for the new screen.
+            clearAllAssignmentsInternal()
+            didReset = true
         }
 
         lastIsTargetApp = isTargetApp
         return didReset
+    }
+
+    companion object {
+        /** Threshold above which a screen change within a target app is considered
+         *  major navigation (not scroll). Gmail inbox → email detail typically exceeds 0.8. */
+        const val MAJOR_NAVIGATION_THRESHOLD = 0.6f
     }
 
     /**

@@ -63,6 +63,10 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
     private var pendingScreenChangeJob: Job? = null
     private var currentPackageName: String? = null
 
+    // Scroll-triggered overlay refresh: debounced screen refresh after scroll settles
+    private var pendingScrollRefreshJob: Job? = null
+    private val scrollRefreshDebounceMs = 300L
+
     // =========================================================================
     // Abstract methods - to be implemented by app-level service
     // =========================================================================
@@ -231,6 +235,12 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      *
      * When a scrollable container scrolls, we update BoundsResolver with
      * the new scroll position so click coordinates can be adjusted.
+     *
+     * Also schedules a debounced screen refresh so overlay badges update
+     * after scroll settles. Without this, TYPE_VIEW_SCROLLED alone never
+     * triggers processScreen — new content loaded by RecyclerView would
+     * only update if TYPE_WINDOW_CONTENT_CHANGED fires (which may be
+     * debounced away or not fire reliably for all scroll positions).
      */
     private fun handleScrollEvent(event: AccessibilityEvent) {
         val boundsResolver = getBoundsResolver() ?: return
@@ -252,6 +262,14 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 source.recycle()
             }
+        }
+
+        // Schedule debounced overlay refresh after scroll settles.
+        // Cancel-and-restart pattern: only the final scroll position triggers a refresh.
+        pendingScrollRefreshJob?.cancel()
+        pendingScrollRefreshJob = serviceScope.launch {
+            kotlinx.coroutines.delay(scrollRefreshDebounceMs)
+            handleScreenChange(event)
         }
     }
 
