@@ -10,7 +10,7 @@
 package com.augmentalis.speechrecognition
 
 import com.augmentalis.nlu.matching.CommandMatchingService
-import kotlinx.cinterop.*
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -26,11 +26,19 @@ import platform.Speech.*
  * for streaming speech-to-text. Supports on-device recognition (iOS 16+),
  * multi-locale switching, and partial results.
  */
+@OptIn(ExperimentalForeignApi::class)
 class IosSpeechRecognitionService : SpeechRecognitionService {
 
     companion object {
         private const val TAG = "IosSpeechService"
         private const val AUDIO_BUFFER_SIZE: UInt = 1024u
+
+        // SFSpeechRecognizerAuthorizationStatus raw values
+        // K/N 2.x maps NS_ENUM as a distinct type; cast to Long for comparison
+        private const val AUTH_NOT_DETERMINED = 0L
+        private const val AUTH_DENIED = 1L
+        private const val AUTH_RESTRICTED = 2L
+        private const val AUTH_AUTHORIZED = 3L
     }
 
     // State
@@ -87,7 +95,7 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
             if (speechRecognizer == null) {
                 logError(TAG, "SFSpeechRecognizer unavailable for locale: ${config.language}")
                 updateState(ServiceState.ERROR)
-                _errorFlow.emit(SpeechError.engineNotAvailable("Speech recognition unavailable for ${config.language}"))
+                _errorFlow.emit(SpeechError.modelError("Speech recognition unavailable for ${config.language}"))
                 return Result.failure(IllegalStateException("SFSpeechRecognizer unavailable"))
             }
 
@@ -111,31 +119,34 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
 
     /**
      * Request speech recognition authorization.
-     * Maps SFSpeechRecognizerAuthorizationStatus to SpeechError.
+     * Cast SFSpeechRecognizerAuthorizationStatus to Long for K/N 2.x compatibility
+     * (NS_ENUM is a distinct type, not directly comparable to Long constants).
      */
+    @Suppress("UNCHECKED_CAST")
     private suspend fun requestAuthorization() {
         suspendCancellableCoroutine<Unit> { cont ->
-            SFSpeechRecognizer.requestAuthorization { status ->
+            SFSpeechRecognizer.requestAuthorization { rawStatus ->
+                val status = (rawStatus as? Number)?.toLong() ?: -1L
                 when (status) {
-                    SFSpeechRecognizerAuthorizationStatusAuthorized -> {
+                    AUTH_AUTHORIZED -> {
                         logInfo(TAG, "Speech recognition authorized")
                         cont.resume(Unit) {}
                     }
-                    SFSpeechRecognizerAuthorizationStatusDenied -> {
+                    AUTH_DENIED -> {
                         logError(TAG, "Speech recognition denied by user")
                         scope.launch {
-                            _errorFlow.emit(SpeechError.permissionDenied("Speech recognition permission denied"))
+                            _errorFlow.emit(SpeechError.permissionError("Speech recognition permission denied"))
                         }
                         cont.resume(Unit) {}
                     }
-                    SFSpeechRecognizerAuthorizationStatusRestricted -> {
+                    AUTH_RESTRICTED -> {
                         logError(TAG, "Speech recognition restricted on this device")
                         scope.launch {
-                            _errorFlow.emit(SpeechError.permissionDenied("Speech recognition restricted"))
+                            _errorFlow.emit(SpeechError.permissionError("Speech recognition restricted"))
                         }
                         cont.resume(Unit) {}
                     }
-                    SFSpeechRecognizerAuthorizationStatusNotDetermined -> {
+                    AUTH_NOT_DETERMINED -> {
                         logInfo(TAG, "Speech recognition authorization not determined")
                         cont.resume(Unit) {}
                     }
@@ -156,12 +167,8 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
 
             // Configure audio session
             val audioSession = AVAudioSession.sharedInstance()
-            audioSession.setCategoryWithOptions(
-                AVAudioSessionCategoryRecord,
-                AVAudioSessionCategoryOptionDefaultToSpeaker,
-                null
-            )
-            audioSession.setActive(true, null)
+            audioSession.setCategory(AVAudioSessionCategoryRecord, error = null)
+            audioSession.setActive(true, error = null)
 
             // Create recognition request
             val request = SFSpeechAudioBufferRecognitionRequest()
@@ -204,18 +211,21 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
                 result?.let { speechResult ->
                     val text = speechResult.bestTranscription.formattedString
                     val isFinal = speechResult.isFinal()
-                    val confidence = speechResult.bestTranscription.segments.lastOrNull()
-                        ?.confidence ?: 0.0f
+
+                    // Get confidence from last segment (segments is NSArray of SFTranscriptionSegment)
+                    val segments = speechResult.bestTranscription.segments
+                    val lastSegment = segments.lastOrNull() as? SFTranscriptionSegment
+                    val segmentConfidence = lastSegment?.confidence ?: 0.0f
 
                     // Collect alternatives from other transcriptions
                     val alternatives = speechResult.transcriptions
-                        .drop(1) // Skip best transcription
-                        .map { (it as SFTranscription).formattedString }
+                        .drop(1)
+                        .mapNotNull { (it as? SFTranscription)?.formattedString }
 
                     scope.launch {
                         onRecognitionResult(
                             text = text,
-                            confidence = confidence,
+                            confidence = segmentConfidence,
                             isPartial = !isFinal,
                             alternatives = alternatives
                         )

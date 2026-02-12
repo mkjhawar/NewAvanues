@@ -74,7 +74,7 @@ struct BrowserView: View {
         .sheet(isPresented: $showTabSwitcher) {
             TabSwitcherView(tabManager: tabManager, isPresented: $showTabSwitcher)
         }
-        .onChange(of: coordinator.currentURL) { _, newURL in
+        .onChange(of: coordinator.currentURL) { newURL in
             if !isEditingAddress {
                 addressBarText = displayURL(newURL)
             }

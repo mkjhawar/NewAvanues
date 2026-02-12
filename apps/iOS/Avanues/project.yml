@@ -10,6 +10,7 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+    OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED: "YES"
     DEVELOPMENT_TEAM: ""
 
 targets:
@@ -25,16 +26,10 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
+        OTHER_LDFLAGS: ["$(inherited)", "-lsqlite3", "-lc++"]
     dependencies:
       - framework: ../../../Modules/AvanuesShared/build/cocoapods/framework/AvanuesShared.framework
         embed: true
-    preBuildScripts:
-      - name: "Build KMP Shared Framework"
-        script: |
-          cd "${SRCROOT}/../../.."
-          ./gradlew :Modules:AvanuesShared:podInstall \
-            -Pkotlin.mpp.enableNativeTargets=true
-        basedOnDependencyAnalysis: false
 
   AvanuesSafariExtension:
     type: app-extension
