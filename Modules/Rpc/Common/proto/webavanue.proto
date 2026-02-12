@@ -42,7 +42,7 @@ message ElementSelector {
     string css = 1;               // CSS selector
     string xpath = 2;             // XPath selector
     string text = 3;              // Text content match
-    string vuid = 4;              // VUID if available
+    string avid = 4;              // AVID if available
 }
 
 // Page element

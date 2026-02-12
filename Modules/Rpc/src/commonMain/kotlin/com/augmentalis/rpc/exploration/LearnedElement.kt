@@ -43,7 +43,7 @@ public class LearnedElement(
     label = WireField.Label.OMIT_IDENTITY,
     schemaIndex = 0,
   )
-  public val vuid: String = "",
+  public val avid: String = "",
   @field:WireField(
     tag = 2,
     adapter = "com.squareup.wire.ProtoAdapter#STRING",
@@ -105,7 +105,7 @@ public class LearnedElement(
     if (other === this) return true
     if (other !is LearnedElement) return false
     if (unknownFields != other.unknownFields) return false
-    if (vuid != other.vuid) return false
+    if (avid != other.avid) return false
     if (element_type != other.element_type) return false
     if (text != other.text) return false
     if (content_desc != other.content_desc) return false
@@ -119,7 +119,7 @@ public class LearnedElement(
     var result = super.hashCode
     if (result == 0) {
       result = unknownFields.hashCode()
-      result = result * 37 + vuid.hashCode()
+      result = result * 37 + avid.hashCode()
       result = result * 37 + element_type.hashCode()
       result = result * 37 + text.hashCode()
       result = result * 37 + content_desc.hashCode()
@@ -133,7 +133,7 @@ public class LearnedElement(
 
   override fun toString(): String {
     val result = mutableListOf<String>()
-    result += """vuid=${sanitize(vuid)}"""
+    result += """avid=${sanitize(avid)}"""
     result += """element_type=${sanitize(element_type)}"""
     result += """text=${sanitize(text)}"""
     result += """content_desc=${sanitize(content_desc)}"""
@@ -145,7 +145,7 @@ public class LearnedElement(
   }
 
   public fun copy(
-    vuid: String = this.vuid,
+    avid: String = this.avid,
     element_type: String = this.element_type,
     text: String = this.text,
     content_desc: String = this.content_desc,
@@ -153,7 +153,7 @@ public class LearnedElement(
     suggested_commands: List<String> = this.suggested_commands,
     confidence: Float = this.confidence,
     unknownFields: ByteString = this.unknownFields,
-  ): LearnedElement = LearnedElement(vuid, element_type, text, content_desc, bounds,
+  ): LearnedElement = LearnedElement(avid, element_type, text, content_desc, bounds,
       suggested_commands, confidence, unknownFields)
 
   public companion object {
@@ -168,8 +168,8 @@ public class LearnedElement(
     ) {
       override fun encodedSize(`value`: LearnedElement): Int {
         var size = value.unknownFields.size
-        if (value.vuid != "") {
-          size += ProtoAdapter.STRING.encodedSizeWithTag(1, value.vuid)
+        if (value.avid != "") {
+          size += ProtoAdapter.STRING.encodedSizeWithTag(1, value.avid)
         }
         if (value.element_type != "") {
           size += ProtoAdapter.STRING.encodedSizeWithTag(2, value.element_type)
@@ -191,8 +191,8 @@ public class LearnedElement(
       }
 
       override fun encode(writer: ProtoWriter, `value`: LearnedElement) {
-        if (value.vuid != "") {
-          ProtoAdapter.STRING.encodeWithTag(writer, 1, value.vuid)
+        if (value.avid != "") {
+          ProtoAdapter.STRING.encodeWithTag(writer, 1, value.avid)
         }
         if (value.element_type != "") {
           ProtoAdapter.STRING.encodeWithTag(writer, 2, value.element_type)
@@ -231,13 +231,13 @@ public class LearnedElement(
         if (value.element_type != "") {
           ProtoAdapter.STRING.encodeWithTag(writer, 2, value.element_type)
         }
-        if (value.vuid != "") {
-          ProtoAdapter.STRING.encodeWithTag(writer, 1, value.vuid)
+        if (value.avid != "") {
+          ProtoAdapter.STRING.encodeWithTag(writer, 1, value.avid)
         }
       }
 
       override fun decode(reader: ProtoReader): LearnedElement {
-        var vuid: String = ""
+        var avid: String = ""
         var element_type: String = ""
         var text: String = ""
         var content_desc: String = ""
@@ -246,7 +246,7 @@ public class LearnedElement(
         var confidence: Float = 0f
         val unknownFields = reader.forEachTag { tag ->
           when (tag) {
-            1 -> vuid = ProtoAdapter.STRING.decode(reader)
+            1 -> avid = ProtoAdapter.STRING.decode(reader)
             2 -> element_type = ProtoAdapter.STRING.decode(reader)
             3 -> text = ProtoAdapter.STRING.decode(reader)
             4 -> content_desc = ProtoAdapter.STRING.decode(reader)
@@ -257,7 +257,7 @@ public class LearnedElement(
           }
         }
         return LearnedElement(
-          vuid = vuid,
+          avid = avid,
           element_type = element_type,
           text = text,
           content_desc = content_desc,

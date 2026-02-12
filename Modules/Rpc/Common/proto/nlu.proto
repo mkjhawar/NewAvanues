@@ -92,7 +92,7 @@ message ParsedCommand {
     string original_text = 2;
     string action = 3;            // Normalized action
     repeated Slot parameters = 4;
-    string target_vuid = 5;       // Target element if identified
+    string target_avid = 5;       // Target element if identified
     float confidence = 6;
     repeated string alternatives = 7;  // Alternative interpretations
 }

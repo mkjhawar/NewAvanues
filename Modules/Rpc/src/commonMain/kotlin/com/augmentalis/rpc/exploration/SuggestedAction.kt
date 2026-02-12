@@ -44,7 +44,7 @@ public class SuggestedAction(
     label = WireField.Label.OMIT_IDENTITY,
     schemaIndex = 1,
   )
-  public val vuid: String = "",
+  public val avid: String = "",
   @field:WireField(
     tag = 3,
     adapter = "com.squareup.wire.ProtoAdapter#STRING",
@@ -81,7 +81,7 @@ public class SuggestedAction(
     if (other !is SuggestedAction) return false
     if (unknownFields != other.unknownFields) return false
     if (command != other.command) return false
-    if (vuid != other.vuid) return false
+    if (avid != other.avid) return false
     if (action_type != other.action_type) return false
     if (confidence != other.confidence) return false
     if (description != other.description) return false
@@ -93,7 +93,7 @@ public class SuggestedAction(
     if (result == 0) {
       result = unknownFields.hashCode()
       result = result * 37 + command.hashCode()
-      result = result * 37 + vuid.hashCode()
+      result = result * 37 + avid.hashCode()
       result = result * 37 + action_type.hashCode()
       result = result * 37 + confidence.hashCode()
       result = result * 37 + description.hashCode()
@@ -105,7 +105,7 @@ public class SuggestedAction(
   override fun toString(): String {
     val result = mutableListOf<String>()
     result += """command=${sanitize(command)}"""
-    result += """vuid=${sanitize(vuid)}"""
+    result += """avid=${sanitize(avid)}"""
     result += """action_type=${sanitize(action_type)}"""
     result += """confidence=$confidence"""
     result += """description=${sanitize(description)}"""
@@ -114,12 +114,12 @@ public class SuggestedAction(
 
   public fun copy(
     command: String = this.command,
-    vuid: String = this.vuid,
+    avid: String = this.avid,
     action_type: String = this.action_type,
     confidence: Float = this.confidence,
     description: String = this.description,
     unknownFields: ByteString = this.unknownFields,
-  ): SuggestedAction = SuggestedAction(command, vuid, action_type, confidence, description,
+  ): SuggestedAction = SuggestedAction(command, avid, action_type, confidence, description,
       unknownFields)
 
   public companion object {
@@ -137,8 +137,8 @@ public class SuggestedAction(
         if (value.command != "") {
           size += ProtoAdapter.STRING.encodedSizeWithTag(1, value.command)
         }
-        if (value.vuid != "") {
-          size += ProtoAdapter.STRING.encodedSizeWithTag(2, value.vuid)
+        if (value.avid != "") {
+          size += ProtoAdapter.STRING.encodedSizeWithTag(2, value.avid)
         }
         if (value.action_type != "") {
           size += ProtoAdapter.STRING.encodedSizeWithTag(3, value.action_type)
@@ -156,8 +156,8 @@ public class SuggestedAction(
         if (value.command != "") {
           ProtoAdapter.STRING.encodeWithTag(writer, 1, value.command)
         }
-        if (value.vuid != "") {
-          ProtoAdapter.STRING.encodeWithTag(writer, 2, value.vuid)
+        if (value.avid != "") {
+          ProtoAdapter.STRING.encodeWithTag(writer, 2, value.avid)
         }
         if (value.action_type != "") {
           ProtoAdapter.STRING.encodeWithTag(writer, 3, value.action_type)
@@ -182,8 +182,8 @@ public class SuggestedAction(
         if (value.action_type != "") {
           ProtoAdapter.STRING.encodeWithTag(writer, 3, value.action_type)
         }
-        if (value.vuid != "") {
-          ProtoAdapter.STRING.encodeWithTag(writer, 2, value.vuid)
+        if (value.avid != "") {
+          ProtoAdapter.STRING.encodeWithTag(writer, 2, value.avid)
         }
         if (value.command != "") {
           ProtoAdapter.STRING.encodeWithTag(writer, 1, value.command)
@@ -192,14 +192,14 @@ public class SuggestedAction(
 
       override fun decode(reader: ProtoReader): SuggestedAction {
         var command: String = ""
-        var vuid: String = ""
+        var avid: String = ""
         var action_type: String = ""
         var confidence: Float = 0f
         var description: String = ""
         val unknownFields = reader.forEachTag { tag ->
           when (tag) {
             1 -> command = ProtoAdapter.STRING.decode(reader)
-            2 -> vuid = ProtoAdapter.STRING.decode(reader)
+            2 -> avid = ProtoAdapter.STRING.decode(reader)
             3 -> action_type = ProtoAdapter.STRING.decode(reader)
             4 -> confidence = ProtoAdapter.FLOAT.decode(reader)
             5 -> description = ProtoAdapter.STRING.decode(reader)
@@ -208,7 +208,7 @@ public class SuggestedAction(
         }
         return SuggestedAction(
           command = command,
-          vuid = vuid,
+          avid = avid,
           action_type = action_type,
           confidence = confidence,
           description = description,

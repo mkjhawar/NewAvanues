@@ -1,4 +1,4 @@
-// vuid.proto - VUID element service definitions
+// avid.proto - AVID element service definitions
 //
 // Copyright (C) Manoj Jhawar, Intelligent Devices LLC
 // Created: 2025-12-28
@@ -7,14 +7,14 @@
 
 syntax = "proto3";
 
-package com.augmentalis.universalrpc.vuid;
+package com.augmentalis.universalrpc.avid;
 
-option java_package = "com.augmentalis.universalrpc.vuid";
+option java_package = "com.augmentalis.universalrpc.avid";
 option java_multiple_files = true;
 
-// VUID element data
-message VUIDElement {
-    string vuid = 1;              // Voice-addressable UID
+// AVID element data
+message AvidElement {
+    string avid = 1;              // Voice-addressable UID
     string package_name = 2;      // App package name
     string class_name = 3;        // Element class name
     string text = 4;              // Element text content
@@ -26,7 +26,7 @@ message VUIDElement {
     bool editable = 10;
     string resource_id = 11;
     int32 depth = 12;             // Hierarchy depth
-    repeated VUIDElement children = 13;
+    repeated AvidElement children = 13;
 }
 
 message Bounds {
@@ -37,11 +37,11 @@ message Bounds {
 }
 
 // Command result
-message VUIDCommandResult {
+message AvidCommandResult {
     string request_id = 1;
     bool success = 2;
     string message = 3;
-    VUIDElement element = 4;      // Target element if applicable
+    AvidElement element = 4;      // Target element if applicable
 }
 
 // Element query request
@@ -49,7 +49,7 @@ message ElementQueryRequest {
     string request_id = 1;
     string package_name = 2;
     oneof query {
-        string vuid = 3;          // Query by VUID
+        string avid = 3;          // Query by AVID
         string text = 4;          // Query by text
         Bounds bounds = 5;        // Query by bounds
         string resource_id = 6;   // Query by resource ID
@@ -70,41 +70,41 @@ message ScrapeResponse {
     bool success = 2;
     string package_name = 3;
     string activity_name = 4;
-    repeated VUIDElement elements = 5;
+    repeated AvidElement elements = 5;
     int64 timestamp = 6;
 }
 
 // Element action request
 message ElementActionRequest {
     string request_id = 1;
-    string vuid = 2;
+    string avid = 2;
     string action = 3;            // "click", "long_click", "set_text", "scroll"
     map<string, string> params = 4;
 }
 
 // Service definition
-service VUIDCreatorService {
+service AvidCreatorService {
     // Query element by various criteria
-    rpc QueryElement(ElementQueryRequest) returns (VUIDCommandResult);
+    rpc QueryElement(ElementQueryRequest) returns (AvidCommandResult);
 
     // Scrape current screen
     rpc ScrapeScreen(ScrapeRequest) returns (ScrapeResponse);
 
     // Execute action on element
-    rpc ExecuteAction(ElementActionRequest) returns (VUIDCommandResult);
+    rpc ExecuteAction(ElementActionRequest) returns (AvidCommandResult);
 
-    // Generate VUID for element
-    rpc GenerateVUID(GenerateVUIDRequest) returns (VUIDCommandResult);
+    // Generate AVID for element
+    rpc GenerateAvid(GenerateAvidRequest) returns (AvidCommandResult);
 
     // Stream screen changes
     rpc StreamScreenChanges(StreamScreenRequest) returns (stream ScrapeResponse);
 }
 
-message GenerateVUIDRequest {
+message GenerateAvidRequest {
     string request_id = 1;
     string package_name = 2;
     Bounds bounds = 3;
-    string hint = 4;              // Optional hint for VUID generation
+    string hint = 4;              // Optional hint for AVID generation
 }
 
 message StreamScreenRequest {

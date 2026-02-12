@@ -109,8 +109,6 @@ class ServiceRegistry {
         const val SERVICE_VOICE_CURSOR = "com.augmentalis.voicecursor"
         const val SERVICE_VOICE_RECOGNITION = "com.augmentalis.voicerecognition"
         const val SERVICE_AVID_CREATOR = "com.augmentalis.avidcreator"
-        @Deprecated("Use SERVICE_AVID_CREATOR", ReplaceWith("SERVICE_AVID_CREATOR"))
-        const val SERVICE_VUID_CREATOR = SERVICE_AVID_CREATOR
         const val SERVICE_EXPLORATION = "com.augmentalis.exploration"
         const val SERVICE_AVA = "com.augmentalis.ava"
         const val SERVICE_COCKPIT = "com.augmentalis.cockpit"

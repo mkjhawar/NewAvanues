@@ -12,7 +12,7 @@ package com.augmentalis.universalrpc.exploration;
 option java_package = "com.augmentalis.universalrpc.exploration";
 option java_multiple_files = true;
 
-import "vuid.proto";
+import "avid.proto";
 
 // Exploration state
 enum ExplorationState {
@@ -71,11 +71,11 @@ message LearnedScreen {
 
 // Learned element with generated commands
 message LearnedElement {
-    string vuid = 1;
+    string avid = 1;
     string element_type = 2;
     string text = 3;
     string content_desc = 4;
-    com.augmentalis.universalrpc.vuid.Bounds bounds = 5;
+    com.augmentalis.universalrpc.avid.Bounds bounds = 5;
     repeated string suggested_commands = 6;
     float confidence = 7;
 }
@@ -98,7 +98,7 @@ message JITLearnResult {
 
 message SuggestedAction {
     string command = 1;
-    string vuid = 2;
+    string avid = 2;
     string action_type = 3;
     float confidence = 4;
     string description = 5;
@@ -107,7 +107,7 @@ message SuggestedAction {
 // Element capture request
 message CaptureElementRequest {
     string request_id = 1;
-    com.augmentalis.universalrpc.vuid.Bounds bounds = 2;
+    com.augmentalis.universalrpc.avid.Bounds bounds = 2;
     string hint = 3;
 }
 

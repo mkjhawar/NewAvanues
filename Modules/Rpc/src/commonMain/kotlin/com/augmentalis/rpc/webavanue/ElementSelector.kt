@@ -72,7 +72,7 @@ public class ElementSelector(
     label = WireField.Label.OMIT_IDENTITY,
     schemaIndex = 3,
   )
-  public val vuid: String = "",
+  public val avid: String = "",
   unknownFields: ByteString = ByteString.EMPTY,
 ) : Message<ElementSelector, Nothing>(ADAPTER, unknownFields) {
   @Deprecated(
@@ -89,7 +89,7 @@ public class ElementSelector(
     if (css != other.css) return false
     if (xpath != other.xpath) return false
     if (text != other.text) return false
-    if (vuid != other.vuid) return false
+    if (avid != other.avid) return false
     return true
   }
 
@@ -100,7 +100,7 @@ public class ElementSelector(
       result = result * 37 + css.hashCode()
       result = result * 37 + xpath.hashCode()
       result = result * 37 + text.hashCode()
-      result = result * 37 + vuid.hashCode()
+      result = result * 37 + avid.hashCode()
       super.hashCode = result
     }
     return result
@@ -111,7 +111,7 @@ public class ElementSelector(
     result += """css=${sanitize(css)}"""
     result += """xpath=${sanitize(xpath)}"""
     result += """text=${sanitize(text)}"""
-    result += """vuid=${sanitize(vuid)}"""
+    result += """avid=${sanitize(avid)}"""
     return result.joinToString(prefix = "ElementSelector{", separator = ", ", postfix = "}")
   }
 
@@ -119,9 +119,9 @@ public class ElementSelector(
     css: String = this.css,
     xpath: String = this.xpath,
     text: String = this.text,
-    vuid: String = this.vuid,
+    avid: String = this.avid,
     unknownFields: ByteString = this.unknownFields,
-  ): ElementSelector = ElementSelector(css, xpath, text, vuid, unknownFields)
+  ): ElementSelector = ElementSelector(css, xpath, text, avid, unknownFields)
 
   public companion object {
     @JvmField
@@ -144,8 +144,8 @@ public class ElementSelector(
         if (value.text != "") {
           size += ProtoAdapter.STRING.encodedSizeWithTag(3, value.text)
         }
-        if (value.vuid != "") {
-          size += ProtoAdapter.STRING.encodedSizeWithTag(4, value.vuid)
+        if (value.avid != "") {
+          size += ProtoAdapter.STRING.encodedSizeWithTag(4, value.avid)
         }
         return size
       }
@@ -160,16 +160,16 @@ public class ElementSelector(
         if (value.text != "") {
           ProtoAdapter.STRING.encodeWithTag(writer, 3, value.text)
         }
-        if (value.vuid != "") {
-          ProtoAdapter.STRING.encodeWithTag(writer, 4, value.vuid)
+        if (value.avid != "") {
+          ProtoAdapter.STRING.encodeWithTag(writer, 4, value.avid)
         }
         writer.writeBytes(value.unknownFields)
       }
 
       override fun encode(writer: ReverseProtoWriter, `value`: ElementSelector) {
         writer.writeBytes(value.unknownFields)
-        if (value.vuid != "") {
-          ProtoAdapter.STRING.encodeWithTag(writer, 4, value.vuid)
+        if (value.avid != "") {
+          ProtoAdapter.STRING.encodeWithTag(writer, 4, value.avid)
         }
         if (value.text != "") {
           ProtoAdapter.STRING.encodeWithTag(writer, 3, value.text)
@@ -186,13 +186,13 @@ public class ElementSelector(
         var css: String = ""
         var xpath: String = ""
         var text: String = ""
-        var vuid: String = ""
+        var avid: String = ""
         val unknownFields = reader.forEachTag { tag ->
           when (tag) {
             1 -> css = ProtoAdapter.STRING.decode(reader)
             2 -> xpath = ProtoAdapter.STRING.decode(reader)
             3 -> text = ProtoAdapter.STRING.decode(reader)
-            4 -> vuid = ProtoAdapter.STRING.decode(reader)
+            4 -> avid = ProtoAdapter.STRING.decode(reader)
             else -> reader.readUnknownField(tag)
           }
         }
@@ -200,7 +200,7 @@ public class ElementSelector(
           css = css,
           xpath = xpath,
           text = text,
-          vuid = vuid,
+          avid = avid,
           unknownFields = unknownFields
         )
       }
