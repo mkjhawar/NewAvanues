@@ -113,6 +113,16 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
         return result
     }
 
+    /**
+     * Reset numbering for in-app navigation (activity/fragment transition).
+     * Called from the app-level service when TYPE_WINDOW_STATE_CHANGED fires
+     * within the same package. Clears all assignments so the next screen
+     * starts numbering from 1.
+     */
+    fun resetForNavigation() {
+        clearAllAssignmentsInternal()
+    }
+
     private fun clearAllAssignmentsInternal() {
         assignments.clear()
         nextNumbers.clear()

@@ -114,6 +114,21 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      */
     protected open fun onScrollSettled(packageName: String) {}
 
+    /**
+     * Called on TYPE_WINDOW_STATE_CHANGED within the same app (same package).
+     *
+     * This is a strong signal of in-app navigation (activity/fragment transition),
+     * as opposed to scroll or content update. App-level service should override
+     * this to clear overlay items immediately, preventing stale badges from
+     * persisting during the async screen extraction gap.
+     *
+     * NOT called on package changes (those are handled by the package-change path
+     * which already resets state).
+     *
+     * @param packageName The current app package name
+     */
+    protected open fun onInAppNavigation(packageName: String) {}
+
     // =========================================================================
     // AccessibilityService lifecycle
     // =========================================================================
@@ -219,6 +234,10 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         // For window state changes, process immediately
         if (forceImmediate) {
             pendingScreenChangeJob?.cancel()
+            // Signal in-app navigation so app-level service can clear overlays
+            // immediately. This fires only for same-package window state changes
+            // (package changes return early above).
+            onInAppNavigation(packageName ?: currentPackageName ?: "")
             handleScreenChange(event)
             lastEventProcessTime = now
             return

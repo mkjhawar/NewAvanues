@@ -30,10 +30,6 @@ object OverlayItemGenerator {
      * identifier that survives scroll recycling. Unlike bounds-based AVIDs, this
      * returns the same value for the same element even if its screen position changes
      * (e.g., after scrolling down and back up in a RecyclerView).
-     *
-     * For truly identical elements (same type, text, resourceId), this produces
-     * the same AVID — they'll share the same badge number, which is acceptable
-     * since the user would need disambiguation regardless.
      */
     private fun generateContentAvid(element: ElementInfo): String {
         val contentKey = buildString {
@@ -56,6 +52,28 @@ object OverlayItemGenerator {
     }
 
     /**
+     * Deduplicate AVIDs within a single overlay item list.
+     *
+     * When multiple elements share the same content-based AVID (e.g., three
+     * "Google Flights" emails with identical subject+sender), append an ordinal
+     * suffix so each gets a unique AVID → unique badge number.
+     *
+     * The ordinal is based on list order (top-to-bottom, which is the adapter
+     * order in a RecyclerView). This is stable across scroll because the adapter
+     * doesn't reorder items on scroll.
+     */
+    private fun deduplicateAvids(
+        items: List<OverlayStateManager.NumberOverlayItem>
+    ): List<OverlayStateManager.NumberOverlayItem> {
+        val seen = mutableMapOf<String, Int>()
+        return items.map { item ->
+            val count = seen.getOrDefault(item.avid, 0)
+            seen[item.avid] = count + 1
+            if (count == 0) item else item.copy(avid = "${item.avid}_$count")
+        }
+    }
+
+    /**
      * Generate overlay items from extracted elements for list-based apps.
      * Uses ElementExtractor.findTopLevelListItems for smart row detection.
      *
@@ -74,7 +92,7 @@ object OverlayItemGenerator {
 
         val topLevelItems = ElementExtractor.findTopLevelListItems(listItems, elements)
 
-        return topLevelItems.mapIndexed { index, element ->
+        val items = topLevelItems.mapIndexed { index, element ->
             val elementIndex = elements.indexOf(element)
             val label = labels[elementIndex] ?: element.contentDescription.take(20).ifBlank {
                 element.text.take(20)
@@ -90,6 +108,7 @@ object OverlayItemGenerator {
                 avid = generateContentAvid(element)
             )
         }
+        return deduplicateAvids(items)
     }
 
     /**
@@ -119,7 +138,7 @@ object OverlayItemGenerator {
             return emptyList()
         }
 
-        return clickableElements.mapIndexed { index, element ->
+        val items = clickableElements.mapIndexed { index, element ->
             val elementIndex = elements.indexOf(element)
             val label = labels[elementIndex] ?: element.text.take(20).ifBlank {
                 element.contentDescription.take(20)
@@ -135,5 +154,6 @@ object OverlayItemGenerator {
                 avid = generateContentAvid(element)
             )
         }
+        return deduplicateAvids(items)
     }
 }

@@ -452,6 +452,14 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
      * - TYPE_VIEW_SCROLLED doesn't trigger handleScreenChange → onCommandsUpdated
      * - Even TYPE_WINDOW_CONTENT_CHANGED gates on KMP fingerprint which may not change
      */
+    override fun onInAppNavigation(packageName: String) {
+        Log.d(TAG, "In-app navigation detected: $packageName, clearing overlay")
+        // Reset numbering so new screen starts from 1
+        overlayNumberingExecutor?.resetForNavigation()
+        // Clear overlay items + hash + signatures for fresh scan
+        dynamicCommandGenerator?.clearCache()
+    }
+
     override fun onScrollSettled(packageName: String) {
         serviceScope.launch {
             Log.d(TAG, "Scroll settled, refreshing overlay for $packageName")
