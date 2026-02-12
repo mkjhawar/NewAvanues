@@ -1,0 +1,77 @@
+name: Avanues
+options:
+  bundleIdPrefix: com.augmentalis
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  Avanues:
+    type: application
+    platform: iOS
+    sources:
+      - path: Avanues
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.augmentalis.avanues.ios
+        INFOPLIST_FILE: Avanues/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - framework: ../../../Modules/AvanuesShared/build/cocoapods/framework/AvanuesShared.framework
+        embed: true
+    preBuildScripts:
+      - name: "Build KMP Shared Framework"
+        script: |
+          cd "${SRCROOT}/../../.."
+          ./gradlew :Modules:AvanuesShared:podInstall \
+            -Pkotlin.mpp.enableNativeTargets=true
+        basedOnDependencyAnalysis: false
+
+  AvanuesSafariExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: AvanuesSafariExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.augmentalis.avanues.ios.safari-extension
+        INFOPLIST_FILE: AvanuesSafariExtension/Info.plist
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - target: Avanues
+
+  AvanuesTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AvanuesTests
+    dependencies:
+      - target: Avanues
+
+schemes:
+  Avanues:
+    build:
+      targets:
+        Avanues: all
+        AvanuesSafariExtension: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AvanuesTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

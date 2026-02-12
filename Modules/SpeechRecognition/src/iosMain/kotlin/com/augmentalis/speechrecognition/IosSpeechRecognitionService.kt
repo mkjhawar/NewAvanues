@@ -2,7 +2,7 @@
  * IosSpeechRecognitionService.kt - iOS speech recognition service implementation
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Claude (AI Assistant)
+ * Author: Manoj Jhawar
  * Created: 2026-01-18
  *
  * iOS-specific implementation of SpeechRecognitionService.

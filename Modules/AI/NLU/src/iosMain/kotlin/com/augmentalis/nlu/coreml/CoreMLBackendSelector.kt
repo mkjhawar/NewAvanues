@@ -1,6 +1,6 @@
 // filename: features/nlu/src/iosMain/kotlin/com/augmentalis/ava/features/nlu/coreml/CoreMLBackendSelector.kt
 // created: 2025-11-26
-// author: Claude Code
+// Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
 // Copyright (c) 2024-2025 Intelligent Devices LLC / Augmentalis
 // TCR: Placeholder for future Core ML implementation
 

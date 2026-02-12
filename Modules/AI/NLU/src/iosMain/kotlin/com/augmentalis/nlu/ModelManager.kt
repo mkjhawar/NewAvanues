@@ -1,6 +1,6 @@
 // filename: features/nlu/src/iosMain/kotlin/com/augmentalis/ava/features/nlu/ModelManager.kt
 // created: 2025-11-02
-// author: Claude Code
+// Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
 // © Augmentalis Inc, Intelligent Devices LLC
 // TCR: Phase 2 - iOS NLU with model management
 
