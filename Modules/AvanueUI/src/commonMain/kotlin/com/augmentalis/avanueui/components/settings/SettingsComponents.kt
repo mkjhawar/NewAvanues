@@ -36,6 +36,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -311,7 +312,7 @@ fun <T> SettingsDropdownRow(
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
-                    .menuAnchor()
+                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
                     .fillMaxWidth()
             )
 

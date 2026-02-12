@@ -271,6 +271,7 @@ object ApiCompatibility {
     /**
      * Get location provider with fallback
      */
+    @Suppress("DEPRECATION") // Criteria deprecated, no replacement for getBestProvider on older APIs
     fun getBestLocationProvider(context: Context): String? {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             ?: return null

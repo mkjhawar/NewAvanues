@@ -539,7 +539,6 @@ object TimePickerActions {
 
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -633,7 +632,6 @@ object TimePickerActions {
             }
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -650,7 +648,6 @@ object TimePickerActions {
             }
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -667,7 +664,6 @@ object TimePickerActions {
             }
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -684,7 +680,6 @@ object TimePickerActions {
             }
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -701,7 +696,6 @@ object TimePickerActions {
             }
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -718,7 +712,6 @@ object TimePickerActions {
             }
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -751,7 +744,6 @@ object TimePickerActions {
 
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -780,7 +772,6 @@ object TimePickerActions {
 
             return false
         } finally {
-            rootNode.recycle()
         }
     }
 
@@ -805,10 +796,8 @@ object TimePickerActions {
             val child = picker.getChild(i)
             if (child?.isEditable == true) {
                 val success = setNodeText(child, value.toString())
-                child.recycle()
                 if (success) return true
             }
-            child?.recycle()
         }
 
         return false

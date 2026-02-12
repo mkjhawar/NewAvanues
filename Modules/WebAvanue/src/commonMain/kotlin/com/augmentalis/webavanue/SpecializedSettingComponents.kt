@@ -31,7 +31,7 @@ fun ThemeSettingItem(
             readOnly = true,
             label = { Text("Theme") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
+            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -78,7 +78,7 @@ fun SearchEngineSettingItem(
                 readOnly = true,
                 label = { Text("Search Engine") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
+                modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
             )
             ExposedDropdownMenu(
                 expanded = expanded,
@@ -163,7 +163,7 @@ fun FontSizeSettingItem(
             readOnly = true,
             label = { Text("Font Size") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
+            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -223,7 +223,7 @@ fun NewTabPageSettingItem(
             readOnly = true,
             label = { Text("New Tab Page") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
+            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -266,7 +266,7 @@ fun XRPerformanceModeSettingItem(
             readOnly = true,
             label = { Text("Performance Mode") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth()
+            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,

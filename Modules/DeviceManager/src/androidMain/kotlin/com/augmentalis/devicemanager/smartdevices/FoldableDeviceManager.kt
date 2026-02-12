@@ -724,6 +724,7 @@ class FoldableDeviceManager(private val context: Context) {
     
     // ========== ORIENTATION STATE ==========
     
+    @Suppress("DEPRECATION") // defaultDisplay deprecated in API 30, but no universal replacement for API 28+
     private fun updateOrientationState() {
         val rotation = windowManager.defaultDisplay?.rotation ?: Surface.ROTATION_0
         val rotationDegrees = when (rotation) {
@@ -758,6 +759,7 @@ class FoldableDeviceManager(private val context: Context) {
         )
     }
     
+    @Suppress("DEPRECATION") // defaultDisplay deprecated in API 30, but no universal replacement for API 28+
     private fun getDeviceNaturalOrientation(): Orientation {
         val config = context.resources.configuration
         val rotation = windowManager.defaultDisplay?.rotation ?: Surface.ROTATION_0

@@ -2,7 +2,7 @@ package com.augmentalis.webavanue
 
 import com.augmentalis.voiceoscoreng.common.Bounds
 import com.augmentalis.voiceoscoreng.common.ElementInfo
-import com.augmentalis.avid.AvidGenerator
+import com.augmentalis.avid.AvidGlobalID
 import com.augmentalis.avid.TypeCode
 import com.augmentalis.voiceoscoreng.common.ElementFingerprint
 import com.augmentalis.voiceoscoreng.extraction.ElementParser
@@ -232,16 +232,16 @@ class WebAvanuePageExtractorTest {
     @Test
     fun avidGenerator_generatesValidAvidForWebElement() {
         // Test basic AVID generation
-        val avid = AvidGenerator.generate()
+        val avid = AvidGlobalID.generate()
 
         assertTrue(avid.isNotBlank())
-        assertTrue(AvidGenerator.isValid(avid), "Generated AVID should be valid")
+        assertTrue(AvidGlobalID.isValid(avid), "Generated AVID should be valid")
     }
 
     @Test
     fun avidGenerator_parsesGeneratedAvid() {
-        val avid = AvidGenerator.generate()
-        val parsed = AvidGenerator.parse(avid)
+        val avid = AvidGlobalID.generate()
+        val parsed = AvidGlobalID.parse(avid)
 
         assertNotNull(parsed, "Should parse generated AVID")
     }

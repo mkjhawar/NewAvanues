@@ -22,6 +22,10 @@ group = "com.augmentalis.rpc"
 version = "1.0.0"
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     androidTarget {
         compilations.all {
             kotlinOptions {

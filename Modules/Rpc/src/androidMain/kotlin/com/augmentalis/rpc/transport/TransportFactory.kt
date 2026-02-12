@@ -47,7 +47,7 @@ object TransportFactory {
             ServiceRegistry.SERVICE_VOICEOS -> VOICEOS
             ServiceRegistry.SERVICE_VOICE_CURSOR -> VOICE_CURSOR
             ServiceRegistry.SERVICE_VOICE_RECOGNITION -> VOICE_RECOGNITION
-            ServiceRegistry.SERVICE_VUID_CREATOR -> VUID_CREATOR
+            ServiceRegistry.SERVICE_AVID_CREATOR -> VUID_CREATOR
             ServiceRegistry.SERVICE_EXPLORATION -> EXPLORATION
             ServiceRegistry.SERVICE_AVA -> AVA
             ServiceRegistry.SERVICE_COCKPIT -> COCKPIT

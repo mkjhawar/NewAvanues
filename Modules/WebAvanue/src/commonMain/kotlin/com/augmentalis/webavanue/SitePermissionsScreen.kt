@@ -192,7 +192,7 @@ fun SitePermissionsScreen(
                             }
 
                             item {
-                                Divider()
+                                HorizontalDivider()
                             }
                         }
                     }

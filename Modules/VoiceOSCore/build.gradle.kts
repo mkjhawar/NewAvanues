@@ -19,6 +19,10 @@ plugins {
 // sqldelight = 2.0.1, androidx-core = 1.12.0, junit = 4.13.2
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     androidTarget {
         compilations.all {
             kotlinOptions {

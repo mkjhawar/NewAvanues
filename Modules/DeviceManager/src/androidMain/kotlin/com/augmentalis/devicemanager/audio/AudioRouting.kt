@@ -247,6 +247,7 @@ class AudioRouting(
     /**
      * Check if Bluetooth audio is connected with profile details
      */
+    @Suppress("DEPRECATION") // No non-deprecated alternative below API 31
     fun isBluetoothConnected(): Boolean {
         return audioManager.isBluetoothScoOn || audioManager.isBluetoothA2dpOn
     }
@@ -312,6 +313,7 @@ class AudioRouting(
      * COT: This allows dynamic switching between voice calls (SCO) and media (A2DP).
      * Useful for apps that need both voice input and media output capabilities.
      */
+    @Suppress("DEPRECATION") // No non-deprecated alternative below API 31
     fun switchBluetoothProfile(
         targetProfile: BluetoothProfile.Profile,
         deviceAddress: String? = null
@@ -437,6 +439,7 @@ class AudioRouting(
      * 3. User preferences and current app context
      * 4. Battery and performance considerations
      */
+    @Suppress("DEPRECATION") // No non-deprecated alternative below API 31
     private fun determineOptimalAudioRoute() {
         // COT: Priority order for audio routing decisions
         when {
@@ -511,6 +514,7 @@ class AudioRouting(
     /**
      * Check if specific Bluetooth profile is active
      */
+    @Suppress("DEPRECATION") // No non-deprecated alternative below API 31
     fun isBluetoothProfileActive(profile: Int): Boolean {
         return when (profile) {
             BluetoothProfile.A2DP -> audioManager.isBluetoothA2dpOn

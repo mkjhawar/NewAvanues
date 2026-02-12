@@ -102,15 +102,11 @@ object NodeFinder {
             checked = newChecked
 
             if (foundNode != null) {
-                // Found in child subtree, recycle intermediate child and return
-                if (child != foundNode) {
-                    child.recycle()
-                }
+                // Found in child subtree, return
                 return Pair(foundNode, checked)
             }
 
-            // Not found in this subtree, recycle child
-            child.recycle()
+            // Not found in this subtree
         }
 
         // Not found in this subtree
@@ -204,11 +200,6 @@ object NodeFinder {
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
             findNodesMatchingRecursive(child, predicate, matches)
-
-            // Only recycle if not added to matches
-            if (!matches.contains(child)) {
-                child.recycle()
-            }
         }
     }
 

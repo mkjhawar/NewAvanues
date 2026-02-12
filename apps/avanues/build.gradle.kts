@@ -88,6 +88,7 @@ android {
     kotlinOptions {
         jvmTarget = "17"
         freeCompilerArgs += listOf(
+            "-Xexpect-actual-classes",
             "-opt-in=kotlin.RequiresOptIn",
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
             "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi"
@@ -102,6 +103,7 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
         jniLibs {
             pickFirsts.add("**/libc++_shared.so")

@@ -529,7 +529,7 @@ private fun AddWebAppDialog(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryDropdown) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(),
+                            .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
                         shape = RoundedCornerShape(ShapeTokens.md)
                     )
 

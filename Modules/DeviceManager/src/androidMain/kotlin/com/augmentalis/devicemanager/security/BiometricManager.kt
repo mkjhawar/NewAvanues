@@ -95,6 +95,7 @@ class BiometricManager(
     
     // Biometric services
     private var biometricManager: AndroidBiometricManager? = null
+    @Suppress("DEPRECATION")
     private var fingerprintManager: FingerprintManager? = null
     // FaceManager API is not publicly available
     // private var faceManager: FaceManager? = null

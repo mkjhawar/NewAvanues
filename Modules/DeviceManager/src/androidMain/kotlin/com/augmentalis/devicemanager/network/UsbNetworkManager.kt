@@ -82,6 +82,7 @@ class UsbNetworkManager(
     /**
      * Check if USB tethering is active
      */
+    @Suppress("DEPRECATION") // allNetworks deprecated in API 31, no sync replacement
     fun isUsbTetheringActive(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val networks = connectivityManager.allNetworks
@@ -97,6 +98,7 @@ class UsbNetworkManager(
     /**
      * Get USB network information
      */
+    @Suppress("DEPRECATION") // allNetworks deprecated in API 31, no sync replacement
     fun getUsbNetworkInfo(): UsbNetworkInfo? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val networks = connectivityManager.allNetworks
@@ -200,6 +202,7 @@ class UsbNetworkManager(
     /**
      * Get USB interface names
      */
+    @Suppress("DEPRECATION") // allNetworks deprecated in API 31, no sync replacement
     fun getUsbInterfaces(): List<String> {
         val interfaces = mutableListOf<String>()
         try {
