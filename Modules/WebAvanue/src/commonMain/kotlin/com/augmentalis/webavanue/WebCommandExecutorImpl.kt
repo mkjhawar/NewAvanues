@@ -46,6 +46,13 @@ class WebCommandExecutorImpl : IWebCommandExecutor {
     }
 
     override suspend fun executeWebAction(action: WebAction): WebActionResult {
+        // RETRAIN_PAGE is a control command, not a JS action.
+        // It triggers a fresh DOM scrape via the static signal on BrowserVoiceOSCallback.
+        if (action.actionType == WebActionType.RETRAIN_PAGE) {
+            BrowserVoiceOSCallback.requestRetrain()
+            return WebActionResult(true, "Page retrain requested")
+        }
+
         val script = buildScript(action)
         val resultStr = jsExecutor.evaluateJavaScript(script)
             ?: return WebActionResult(false, "JavaScript execution returned null")
@@ -166,6 +173,10 @@ class WebCommandExecutorImpl : IWebCommandExecutor {
             WebActionType.COPY -> DOMScraperBridge.copyScript()
             WebActionType.CUT -> DOMScraperBridge.cutScript()
             WebActionType.PASTE -> DOMScraperBridge.pasteScript(action.text)
+
+            // RETRAIN_PAGE is intercepted in executeWebAction before buildScript is called.
+            // This branch exists only to satisfy Kotlin exhaustive when-expression checks.
+            WebActionType.RETRAIN_PAGE -> error("RETRAIN_PAGE should be intercepted before buildScript")
         }
     }
 

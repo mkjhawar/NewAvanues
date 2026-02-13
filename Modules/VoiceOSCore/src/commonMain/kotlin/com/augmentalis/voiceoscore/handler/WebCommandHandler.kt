@@ -179,6 +179,9 @@ class WebCommandHandler : BaseHandler() {
             CommandActionType.CLEAR_SELECTION -> WebActionType.CLEAR_SELECTION
             CommandActionType.HOVER_OUT -> WebActionType.HOVER_OUT
 
+            // Page retrain
+            CommandActionType.RETRAIN_PAGE -> WebActionType.RETRAIN_PAGE
+
             // Fallback: parse from phrase
             else -> resolveFromPhrase(command.phrase)
         }
@@ -195,6 +198,7 @@ class WebCommandHandler : BaseHandler() {
             normalized.startsWith("type") -> WebActionType.INPUT
             normalized.startsWith("toggle") -> WebActionType.TOGGLE
             normalized.startsWith("select") && !normalized.contains("all") -> WebActionType.SELECT
+            normalized == "retrain page" || normalized == "rescan page" || normalized == "rescan" -> WebActionType.RETRAIN_PAGE
             normalized == "go back" || normalized == "back" -> WebActionType.PAGE_BACK
             normalized == "go forward" || normalized == "forward" -> WebActionType.PAGE_FORWARD
             normalized == "refresh" || normalized == "reload" -> WebActionType.PAGE_REFRESH
