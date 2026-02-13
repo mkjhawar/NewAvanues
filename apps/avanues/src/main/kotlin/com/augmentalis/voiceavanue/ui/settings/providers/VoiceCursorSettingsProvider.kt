@@ -36,8 +36,8 @@ import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.ModuleAccent
 import com.augmentalis.foundation.settings.SearchableSettingEntry
 import com.augmentalis.foundation.settings.SettingsSection
-import com.augmentalis.voiceavanue.data.AvanuesSettings
-import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
+import com.augmentalis.foundation.settings.models.AvanuesSettings
+import com.augmentalis.foundation.settings.models.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.ui.settings.ComposableSettingsProvider
 import kotlinx.coroutines.launch
 import javax.inject.Inject
