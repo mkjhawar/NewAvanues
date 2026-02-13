@@ -9,8 +9,6 @@
  */
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.voiceoscore.QuantizedCommand
-
 /**
  * Handler for system-level actions.
  *
@@ -43,7 +41,7 @@ class SystemHandler(
         val normalizedAction = command.phrase.lowercase().trim()
 
         return when (normalizedAction) {
-            "go back", "back" -> {
+            "go back", "back", "navigate back", "previous screen" -> {
                 if (executor.goBack()) {
                     HandlerResult.success("Went back")
                 } else {
@@ -51,7 +49,7 @@ class SystemHandler(
                 }
             }
 
-            "go home", "home" -> {
+            "go home", "home", "navigate home", "open home" -> {
                 if (executor.goHome()) {
                     HandlerResult.success("Went home")
                 } else {
@@ -59,7 +57,7 @@ class SystemHandler(
                 }
             }
 
-            "show recents", "recents", "recent apps" -> {
+            "show recents", "recents", "recent apps", "show recent apps", "open recents" , "app switcher" -> {
                 if (executor.showRecents()) {
                     HandlerResult.success("Showing recent apps")
                 } else {
@@ -67,7 +65,7 @@ class SystemHandler(
                 }
             }
 
-            "show notifications", "notifications" -> {
+            "show notifications", "notifications", "notification panel" -> {
                 if (executor.showNotifications()) {
                     HandlerResult.success("Showing notifications")
                 } else {
