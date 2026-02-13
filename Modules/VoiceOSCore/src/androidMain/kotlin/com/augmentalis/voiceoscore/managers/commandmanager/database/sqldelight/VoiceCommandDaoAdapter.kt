@@ -307,6 +307,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
         synonyms = this.synonyms,
         description = this.description,
         category = this.category,
+        actionType = this.action,
         priority = this.priority.toInt(),
         isFallback = this.is_fallback == 1L,
         createdAt = this.created_at
