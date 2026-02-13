@@ -32,6 +32,10 @@ import com.augmentalis.voiceoscore.SpeechEngine
 import com.augmentalis.voiceoscore.NumbersOverlayHandler
 import com.augmentalis.voiceoscore.WebCommandHandler
 import com.augmentalis.voiceoscore.createForAndroid
+import com.augmentalis.voiceoscore.NumbersOverlayMode
+import com.augmentalis.voiceoscore.OverlayNumberingExecutor
+import com.augmentalis.voiceoscore.OverlayStateManager
+import com.augmentalis.voiceoscore.TARGET_APPS
 import com.augmentalis.voiceavanue.MainActivity
 import com.augmentalis.avanueui.theme.AvanueModuleAccents
 import com.augmentalis.avanueui.theme.ModuleAccent
@@ -302,7 +306,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                     VoiceControlCallbacks.onShowCommands = {
                         // Show numbered badges on all interactive elements
                         OverlayStateManager.setNumbersOverlayMode(
-                            OverlayStateManager.NumbersOverlayMode.ON
+                            NumbersOverlayMode.ON
                         )
                         Log.i(TAG, "Showing commands: numbers overlay set to ON")
                         true
@@ -310,10 +314,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                     VoiceControlCallbacks.onSetNumbersMode = { mode ->
                         try {
                             val overlayMode = when (mode.lowercase()) {
-                                "on" -> OverlayStateManager.NumbersOverlayMode.ON
-                                "off" -> OverlayStateManager.NumbersOverlayMode.OFF
-                                "auto" -> OverlayStateManager.NumbersOverlayMode.AUTO
-                                else -> OverlayStateManager.NumbersOverlayMode.AUTO
+                                "on" -> NumbersOverlayMode.ON
+                                "off" -> NumbersOverlayMode.OFF
+                                "auto" -> NumbersOverlayMode.AUTO
+                                else -> NumbersOverlayMode.AUTO
                             }
                             OverlayStateManager.setNumbersOverlayMode(overlayMode)
                             Log.i(TAG, "Numbers mode set to: $overlayMode")
@@ -490,7 +494,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         try {
             val root = rootInActiveWindow ?: return
             val packageName = root.packageName?.toString() ?: return
-            val isTargetApp = OverlayStateManager.TARGET_APPS.contains(packageName)
+            val isTargetApp = TARGET_APPS.contains(packageName)
 
             // Browser-scope: clear web commands when foreground app is not the browser.
             // Prevents web-scraped phrases from polluting grammar in other apps.

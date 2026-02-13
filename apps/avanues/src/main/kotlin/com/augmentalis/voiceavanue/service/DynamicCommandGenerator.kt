@@ -19,6 +19,10 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.ElementLabels
 import com.augmentalis.voiceoscore.HierarchyNode
+import com.augmentalis.voiceoscore.NumbersOverlayMode
+import com.augmentalis.voiceoscore.OverlayItemGenerator
+import com.augmentalis.voiceoscore.OverlayNumberingExecutor
+import com.augmentalis.voiceoscore.OverlayStateManager
 
 private const val TAG = "DynamicCommandGen"
 
@@ -113,7 +117,7 @@ class DynamicCommandGenerator(
                 OverlayItemGenerator.generateForListApp(elements, hierarchy, labels)
             } else {
                 // General app with overlay ON mode: number all clickable elements
-                if (OverlayStateManager.numbersOverlayMode.value == OverlayStateManager.NumbersOverlayMode.ON) {
+                if (OverlayStateManager.numbersOverlayMode.value == NumbersOverlayMode.ON) {
                     OverlayItemGenerator.generateForAllClickable(elements, labels)
                 } else {
                     emptyList()

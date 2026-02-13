@@ -1,15 +1,14 @@
 /**
  * OverlayStateManager.kt - Manages overlay-related state for command overlay service
  *
- * Migrated from VoiceOS OverlayService to Avanues consolidated app.
  * Singleton object: overlay state is shared across accessibility service and overlay service.
+ * KMP-compatible — StateFlows work identically on all platforms.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 
-package com.augmentalis.voiceavanue.service
+package com.augmentalis.voiceoscore
 
-import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,84 +20,11 @@ private const val TAG = "OverlayStateManager"
  *
  * Tracks numbered badge items, overlay modes, badge themes,
  * and per-app number preferences.
+ *
+ * Uses the canonical [NumbersOverlayMode] enum from NumbersOverlayHandler
+ * (ON/OFF/AUTO) — no duplicate enums.
  */
 object OverlayStateManager {
-
-    // ===== Enums =====
-
-    /**
-     * Numbers overlay mode:
-     * - ON: Always show numbers on all clickable elements
-     * - OFF: Never show numbers
-     * - AUTO: Show numbers only when there are list items
-     */
-    enum class NumbersOverlayMode {
-        ON, OFF, AUTO
-    }
-
-    /**
-     * Instruction bar mode:
-     * - ON: Always show instruction bar
-     * - OFF: Never show instruction bar
-     * - AUTO: Show briefly then fade out (default)
-     */
-    enum class InstructionBarMode {
-        ON, OFF, AUTO
-    }
-
-    /**
-     * Badge color themes for numbered badges.
-     */
-    enum class BadgeTheme(val backgroundColor: Long, val textColor: Long) {
-        GREEN(0xFF4CAF50, 0xFFFFFFFF),
-        BLUE(0xFF2196F3, 0xFFFFFFFF),
-        PURPLE(0xFF9C27B0, 0xFFFFFFFF),
-        ORANGE(0xFFFF9800, 0xFF000000),
-        RED(0xFFF44336, 0xFFFFFFFF),
-        TEAL(0xFF009688, 0xFFFFFFFF),
-        PINK(0xFFE91E63, 0xFFFFFFFF)
-    }
-
-    /**
-     * Per-app numbers mode preference.
-     */
-    enum class AppNumbersPreference {
-        ASK, ALWAYS, AUTO, NEVER
-    }
-
-    /**
-     * Data for displaying numbered badges on screen elements.
-     */
-    data class NumberOverlayItem(
-        val number: Int,
-        val label: String,
-        val left: Int,
-        val top: Int,
-        val right: Int,
-        val bottom: Int,
-        val avid: String
-    )
-
-    // ===== Target Apps =====
-
-    val TARGET_APPS = setOf(
-        "com.google.android.gm",
-        "com.microsoft.office.outlook",
-        "com.samsung.android.email.provider",
-        "com.google.android.apps.messaging",
-        "com.whatsapp",
-        "org.telegram.messenger",
-        "com.discord",
-        "com.Slack",
-        "com.twitter.android",
-        "com.instagram.android",
-        "com.facebook.katana",
-        "com.linkedin.android",
-        "com.todoist",
-        "com.google.android.keep",
-        "com.microsoft.todos",
-        "com.amazon.mShop.android.shopping"
-    )
 
     // ===== StateFlows =====
 
@@ -127,16 +53,12 @@ object OverlayStateManager {
 
     var preferenceCallback: PreferenceCallback? = null
 
-    interface PreferenceCallback {
-        fun saveAppNumbersPreference(packageName: String, preference: AppNumbersPreference)
-    }
-
     // ===== Numbers Overlay Methods =====
 
     fun setNumbersOverlayMode(mode: NumbersOverlayMode) {
         _numbersOverlayMode.value = mode
         updateNumbersOverlayVisibility()
-        Log.d(TAG, "Numbers overlay mode: $mode")
+        LoggingUtils.d("Numbers overlay mode: $mode", TAG)
     }
 
     fun cycleNumbersOverlayMode() {
@@ -159,20 +81,20 @@ object OverlayStateManager {
         }
 
         _showNumbersOverlayComputed.value = shouldShow
-        Log.d(TAG, "Numbers overlay: mode=$mode, hasItems=$hasItems, showing=$shouldShow")
+        LoggingUtils.d("Numbers overlay: mode=$mode, hasItems=$hasItems, showing=$shouldShow", TAG)
     }
 
     fun updateNumberedOverlayItems(items: List<NumberOverlayItem>) {
         _numberedOverlayItems.value = items
         updateNumbersOverlayVisibility()
         if (items.isNotEmpty()) {
-            Log.d(TAG, "Numbered overlay: ${items.size} items for voice selection")
+            LoggingUtils.d("Numbered overlay: ${items.size} items for voice selection", TAG)
         }
     }
 
     fun clearOverlayItems() {
         if (_numberedOverlayItems.value.isNotEmpty()) {
-            Log.d(TAG, "Clearing ${_numberedOverlayItems.value.size} overlay items")
+            LoggingUtils.d("Clearing ${_numberedOverlayItems.value.size} overlay items", TAG)
             _numberedOverlayItems.value = emptyList()
             updateNumbersOverlayVisibility()
         }
@@ -182,14 +104,14 @@ object OverlayStateManager {
 
     fun setInstructionBarMode(mode: InstructionBarMode) {
         _instructionBarMode.value = mode
-        Log.d(TAG, "Instruction bar mode: $mode")
+        LoggingUtils.d("Instruction bar mode: $mode", TAG)
     }
 
     // ===== Badge Theme =====
 
     fun setBadgeTheme(theme: BadgeTheme) {
         _badgeTheme.value = theme
-        Log.d(TAG, "Badge theme: $theme")
+        LoggingUtils.d("Badge theme: $theme", TAG)
     }
 
     fun cycleBadgeTheme() {
@@ -204,7 +126,7 @@ object OverlayStateManager {
     fun showAppDetectionDialogFor(packageName: String, appName: String) {
         _currentDetectedAppName.value = appName
         _showAppDetectionDialog.value = packageName
-        Log.d(TAG, "Showing app detection dialog for: $appName ($packageName)")
+        LoggingUtils.d("Showing app detection dialog for: $appName ($packageName)", TAG)
     }
 
     fun dismissAppDetectionDialog() {
@@ -226,7 +148,7 @@ object OverlayStateManager {
             AppNumbersPreference.NEVER -> setNumbersOverlayMode(NumbersOverlayMode.OFF)
             AppNumbersPreference.ASK -> { /* No change */ }
         }
-        Log.d(TAG, "App detection response for $packageName: $preference")
+        LoggingUtils.d("App detection response for $packageName: $preference", TAG)
 
         if (preference != AppNumbersPreference.NEVER) {
             onExplore?.invoke()

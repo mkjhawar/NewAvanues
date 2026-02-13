@@ -2,11 +2,12 @@
  * OverlayNumberingExecutor.kt - Per-container numbering executor for overlay badges
  *
  * Implements the KMP NumbersOverlayExecutor interface with per-container scoping.
- * Lives at the app layer so it can access OverlayStateManager for rendering.
+ * Now lives in KMP commonMain alongside OverlayStateManager, enabling direct
+ * calls without mode-mapping indirection.
  *
- * Replaces the flat global avidToNumber map that was in OverlayStateManager with
- * per-container stable numbering. Each scroll container gets its own number sequence,
- * enabling multi-scroll-area screens to have independent numbering.
+ * Replaces the flat global avidToNumber map with per-container stable numbering.
+ * Each scroll container gets its own number sequence, enabling multi-scroll-area
+ * screens to have independent numbering.
  *
  * Also centralizes screen transition logic (reset on app change, preserve on scroll)
  * that was previously scattered across DynamicCommandGenerator and OverlayStateManager.
@@ -14,10 +15,7 @@
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 
-package com.augmentalis.voiceavanue.service
-
-import com.augmentalis.voiceoscore.NumbersOverlayExecutor
-import com.augmentalis.voiceoscore.NumbersOverlayMode
+package com.augmentalis.voiceoscore
 
 class OverlayNumberingExecutor : NumbersOverlayExecutor {
 
@@ -41,7 +39,7 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
      * @param isNewScreen Whether the screen hash changed
      * @param structuralChangeRatio 0.0-1.0 how much the top-level structure changed.
      *        Used to distinguish scroll (low ratio) from major navigation (high ratio)
-     *        within target apps like Gmail (inbox → email detail).
+     *        within target apps like Gmail (inbox -> email detail).
      * @return true if numbering was reset
      */
     fun handleScreenContext(
@@ -61,7 +59,7 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
             clearAllAssignmentsInternal()
             didReset = true
         } else if (isNewScreen && isTargetApp && structuralChangeRatio > MAJOR_NAVIGATION_THRESHOLD) {
-            // Major navigation within a target app (e.g., Gmail inbox → email detail).
+            // Major navigation within a target app (e.g., Gmail inbox -> email detail).
             // The structural change ratio is high because the screen layout is fundamentally
             // different, not just scrolled content. Reset numbering for the new screen.
             clearAllAssignmentsInternal()
@@ -81,20 +79,20 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
 
     companion object {
         /** Threshold above which a screen change within a target app is considered
-         *  major navigation (not scroll). Fragment transitions like list → detail
+         *  major navigation (not scroll). Fragment transitions like list -> detail
          *  typically exceed 0.7; lowered to 0.4 to catch subtler transitions. */
         const val MAJOR_NAVIGATION_THRESHOLD = 0.4f
     }
 
     /**
      * Assign numbers to overlay items based on visual position.
-     * Always assigns 1-N sorted by top→left, so numbers match on-screen order
+     * Always assigns 1-N sorted by top->left, so numbers match on-screen order
      * regardless of which items were previously visible (no sticky mapping).
      */
     fun assignNumbers(
-        items: List<OverlayStateManager.NumberOverlayItem>,
+        items: List<NumberOverlayItem>,
         containerAvid: String? = null
-    ): List<OverlayStateManager.NumberOverlayItem> {
+    ): List<NumberOverlayItem> {
         if (items.isEmpty()) return emptyList()
 
         val containerId = containerAvid ?: "root"
@@ -143,22 +141,16 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
 
     // ===== NumbersOverlayExecutor interface (suspend, for voice commands) =====
 
+    // No more mode-mapping! OverlayStateManager now uses the same
+    // KMP NumbersOverlayMode enum, so we pass through directly.
+
     override suspend fun setNumbersMode(mode: NumbersOverlayMode): Boolean {
-        val mapped = when (mode) {
-            NumbersOverlayMode.ON -> OverlayStateManager.NumbersOverlayMode.ON
-            NumbersOverlayMode.OFF -> OverlayStateManager.NumbersOverlayMode.OFF
-            NumbersOverlayMode.AUTO -> OverlayStateManager.NumbersOverlayMode.AUTO
-        }
-        OverlayStateManager.setNumbersOverlayMode(mapped)
+        OverlayStateManager.setNumbersOverlayMode(mode)
         return true
     }
 
     override suspend fun getCurrentMode(): NumbersOverlayMode {
-        return when (OverlayStateManager.numbersOverlayMode.value) {
-            OverlayStateManager.NumbersOverlayMode.ON -> NumbersOverlayMode.ON
-            OverlayStateManager.NumbersOverlayMode.OFF -> NumbersOverlayMode.OFF
-            OverlayStateManager.NumbersOverlayMode.AUTO -> NumbersOverlayMode.AUTO
-        }
+        return OverlayStateManager.numbersOverlayMode.value
     }
 
     override suspend fun getOrAssignNumber(avid: String, scrollContainerAvid: String?): Int {
