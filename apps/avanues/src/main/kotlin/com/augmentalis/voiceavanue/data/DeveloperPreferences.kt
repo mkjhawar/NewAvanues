@@ -17,6 +17,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.augmentalis.foundation.settings.models.DeveloperSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -52,36 +53,7 @@ object DeveloperPreferencesKeys {
     val DEVELOPER_MODE_ACTIVATED = booleanPreferencesKey("dev_mode_activated")
 }
 
-/**
- * Developer settings state with defaults.
- */
-data class DeveloperSettings(
-    // Voice Timings
-    val sttTimeoutMs: Long = 10000L,
-    val endOfSpeechDelayMs: Long = 1500L,
-    val partialResultIntervalMs: Long = 300L,
-    val confidenceThreshold: Float = 0.45f,
-
-    // Feature Flags
-    val debugMode: Boolean = true,
-    val verboseLogging: Boolean = false,
-    val debugOverlay: Boolean = false,
-    val scannerVerbosity: Int = 0,
-    val autoStartListening: Boolean = false,
-    val synonymsEnabled: Boolean = true,
-
-    // Engine Selection
-    val sttEngine: String = "VIVOKA",
-    val voiceLanguage: String = "en-US",
-
-    // Timing / Debounce
-    val contentChangeDebounceMs: Long = 300L,
-    val scrollEventDebounceMs: Long = 150L,
-    val screenChangeDelayMs: Long = 200L,
-
-    // Activation
-    val developerModeActivated: Boolean = false
-)
+// DeveloperSettings data class now in Foundation: com.augmentalis.foundation.settings.models.DeveloperSettings
 
 /**
  * Repository for developer preferences.

@@ -14,7 +14,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesKeys
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
-import com.augmentalis.voiceavanue.data.DeveloperSettings
+import com.augmentalis.foundation.settings.models.DeveloperSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
