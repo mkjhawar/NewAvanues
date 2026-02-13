@@ -15,17 +15,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.foundation.util.HashUtils
 import com.augmentalis.voiceoscore.Bounds
 import com.augmentalis.voiceoscore.ElementInfo
-
-/**
- * Hierarchy node for tracking parent-child relationships in the accessibility tree.
- */
-data class HierarchyNode(
-    val index: Int,
-    val depth: Int,
-    val parentIndex: Int?,
-    val childCount: Int,
-    val className: String
-)
+import com.augmentalis.voiceoscore.HierarchyNode
 
 /**
  * Information about a duplicate element found during extraction.
@@ -142,76 +132,6 @@ object ElementExtractor {
         }
     }
 
-    fun findTopLevelListItems(
-        listItems: List<ElementInfo>,
-        allElements: List<ElementInfo>
-    ): List<ElementInfo> {
-        val emailRows = listItems.filter { element ->
-            val hasValidBounds = !(element.bounds.left == 0 && element.bounds.top == 0 &&
-                    element.bounds.right == 0 && element.bounds.bottom == 0)
-            if (!hasValidBounds) return@filter false
-
-            val isActionable = element.isClickable || element.isLongClickable
-            if (!isActionable) return@filter false
-
-            val content = element.contentDescription.ifBlank { element.text }
-            val looksLikeEmailRow = content.startsWith("Unread,") ||
-                    content.startsWith("Starred,") ||
-                    content.startsWith("Read,") ||
-                    (content.contains(",") && content.length > 30)
-
-            val height = element.bounds.bottom - element.bounds.top
-            val reasonableHeight = height in 60..300
-
-            looksLikeEmailRow && reasonableHeight
-        }
-
-        return emailRows
-            .groupBy { it.listIndex }
-            .mapNotNull { (_, elements) -> elements.firstOrNull() }
-            .sortedBy { it.bounds.top }
-    }
-
-    fun deriveElementLabels(
-        elements: List<ElementInfo>,
-        hierarchy: List<HierarchyNode>
-    ): Map<Int, String> {
-        val labels = mutableMapOf<Int, String>()
-
-        elements.forEachIndexed { index, element ->
-            var label: String? = when {
-                element.text.isNotBlank() -> element.text.take(30)
-                element.contentDescription.isNotBlank() -> element.contentDescription.take(30)
-                element.resourceId.isNotBlank() -> element.resourceId.substringAfterLast("/").replace("_", " ")
-                else -> null
-            }
-
-            if (label == null) {
-                val node = hierarchy.getOrNull(index)
-                if (node != null && node.childCount > 0) {
-                    for (childIdx in (index + 1) until minOf(index + 10, elements.size)) {
-                        val childNode = hierarchy.getOrNull(childIdx) ?: continue
-                        if (childNode.depth <= node.depth) break
-                        if (childNode.depth == node.depth + 1) {
-                            val childElement = elements[childIdx]
-                            if (childElement.text.isNotBlank()) {
-                                label = childElement.text.take(30)
-                                break
-                            }
-                            if (childElement.contentDescription.isNotBlank()) {
-                                label = childElement.contentDescription.take(30)
-                                break
-                            }
-                        }
-                    }
-                }
-            }
-
-            labels[index] = label ?: element.className.substringAfterLast(".")
-        }
-
-        return labels
-    }
 }
 
 fun AccessibilityNodeInfo.isPerformClickable(): Boolean {

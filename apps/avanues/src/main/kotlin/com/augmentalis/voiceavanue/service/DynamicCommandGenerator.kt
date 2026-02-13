@@ -17,6 +17,8 @@ import android.content.res.Resources
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.ElementLabels
+import com.augmentalis.voiceoscore.HierarchyNode
 
 private const val TAG = "DynamicCommandGen"
 
@@ -103,7 +105,7 @@ class DynamicCommandGenerator(
             }
 
             // Derive labels for all elements
-            val labels = ElementExtractor.deriveElementLabels(elements, hierarchy)
+            val labels = ElementLabels.deriveElementLabels(elements, hierarchy)
 
             // Generate overlay items based on app type
             val overlayItems = if (isTargetApp) {

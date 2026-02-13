@@ -11,6 +11,8 @@ package com.augmentalis.voiceavanue.service
 
 import android.util.Log
 import com.augmentalis.voiceoscore.ElementInfo
+import com.augmentalis.voiceoscore.ElementLabels
+import com.augmentalis.voiceoscore.HierarchyNode
 
 private const val TAG = "OverlayItemGenerator"
 
@@ -68,17 +70,13 @@ object OverlayItemGenerator {
         val listItems = elements.filter { it.listIndex >= 0 }
         if (listItems.isEmpty()) return emptyList()
 
-        val topLevelItems = ElementExtractor.findTopLevelListItems(listItems, elements)
+        val topLevelItems = ElementLabels.findTopLevelListItems(listItems, elements)
 
         val items = topLevelItems.mapIndexed { index, element ->
             val elementIndex = elements.indexOf(element)
-            val label = labels[elementIndex] ?: element.contentDescription.take(20).ifBlank {
-                element.text.take(20)
-            }
-
             OverlayStateManager.NumberOverlayItem(
                 number = index + 1,
-                label = label,
+                label = labels[elementIndex] ?: "",
                 left = element.bounds.left,
                 top = element.bounds.top,
                 right = element.bounds.right,
@@ -118,13 +116,9 @@ object OverlayItemGenerator {
 
         val items = clickableElements.mapIndexed { index, element ->
             val elementIndex = elements.indexOf(element)
-            val label = labels[elementIndex] ?: element.text.take(20).ifBlank {
-                element.contentDescription.take(20)
-            }
-
             OverlayStateManager.NumberOverlayItem(
                 number = index + 1,
-                label = label,
+                label = labels[elementIndex] ?: "",
                 left = element.bounds.left,
                 top = element.bounds.top,
                 right = element.bounds.right,
