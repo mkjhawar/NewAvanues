@@ -4,6 +4,10 @@
  * Migrated from VoiceOS to Avanues consolidated app.
  * Caches screen layouts to avoid redundant rescanning.
  *
+ * Pure algorithms (text normalization, hash assembly, ScreenInfo creation)
+ * are in KMP: ScreenHashAssembler.kt. This file contains only the Android-specific
+ * AccessibilityNodeInfo signature collection.
+ *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 
@@ -11,7 +15,7 @@ package com.augmentalis.voiceavanue.service
 
 import android.content.res.Resources
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.foundation.util.HashUtils
+import com.augmentalis.voiceoscore.ScreenHashAssembler
 import com.augmentalis.voiceoscore.ScreenInfo
 
 private const val TAG = "ScreenCacheManager"
@@ -34,28 +38,18 @@ class ScreenCacheManager(private val resources: Resources) {
      * Gmail inbox list → email detail view).
      */
     fun generateScreenHash(rootNode: AccessibilityNodeInfo): String {
-        val elements = mutableListOf<String>()
+        val signatures = mutableListOf<String>()
         val contentDigest = mutableListOf<String>()
-        collectElementSignatures(rootNode, elements, contentDigest = contentDigest, maxDepth = 8)
+        collectElementSignatures(rootNode, signatures, contentDigest = contentDigest, maxDepth = 8)
 
         val displayMetrics = resources.displayMetrics
-        val dimensionKey = "${displayMetrics.widthPixels}x${displayMetrics.heightPixels}"
-
-        // Hybrid hash: structural signature + content digest from scrollable areas
-        val contentKey = if (contentDigest.isNotEmpty()) {
-            val first5 = contentDigest.take(5).joinToString(",")
-            val last5 = contentDigest.takeLast(5).joinToString(",")
-            "|ct${contentDigest.size}:$first5:$last5"
-        } else ""
-
-        val signature = "$dimensionKey|${elements.sorted().joinToString("|")}$contentKey"
-        return HashUtils.calculateHash(signature).take(16)
+        return ScreenHashAssembler.assembleScreenHash(
+            signatures = signatures,
+            contentDigest = contentDigest,
+            screenWidth = displayMetrics.widthPixels,
+            screenHeight = displayMetrics.heightPixels
+        )
     }
-
-    // Regex patterns for normalizing dynamic text content in hashes
-    private val timePattern = Regex("\\d+:\\d+\\s*(am|pm)?", RegexOption.IGNORE_CASE)
-    private val relativeTimePattern = Regex("\\d+\\s*(min|hour|day|week)s?\\s*ago", RegexOption.IGNORE_CASE)
-    private val countPattern = Regex("\\(\\d+\\)")
 
     /**
      * Collects structural element signatures AND content digest for hashing.
@@ -98,11 +92,7 @@ class ScreenCacheManager(private val resources: Resources) {
         if (isInsideScrollable && contentDigest.size < 30) {
             val text = node.text?.toString()?.take(30)
             if (!text.isNullOrBlank()) {
-                val normalized = text
-                    .replace(timePattern, "[T]")
-                    .replace(relativeTimePattern, "[RT]")
-                    .replace(countPattern, "[N]")
-                    .trim()
+                val normalized = ScreenHashAssembler.normalizeText(text)
                 if (normalized.isNotBlank() && normalized.length > 2) {
                     contentDigest.add(normalized)
                 }
@@ -124,6 +114,7 @@ class ScreenCacheManager(private val resources: Resources) {
 
     /**
      * Create a new ScreenInfo from exploration results.
+     * Delegates to KMP ScreenHashAssembler for cross-platform consistency.
      */
     fun createScreenInfo(
         hash: String,
@@ -134,15 +125,13 @@ class ScreenCacheManager(private val resources: Resources) {
         commandCount: Int,
         isCached: Boolean
     ): ScreenInfo {
-        return ScreenInfo(
+        return ScreenHashAssembler.createScreenInfo(
             hash = hash,
             packageName = packageName,
             activityName = activityName,
-            appVersion = "",
             elementCount = elementCount,
             actionableCount = actionableCount,
             commandCount = commandCount,
-            scannedAt = System.currentTimeMillis(),
             isCached = isCached
         )
     }
