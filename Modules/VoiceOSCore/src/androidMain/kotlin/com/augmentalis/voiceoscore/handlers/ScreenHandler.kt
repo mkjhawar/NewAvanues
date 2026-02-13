@@ -11,7 +11,9 @@ package com.augmentalis.voiceoscore.handlers
 import android.accessibilityservice.AccessibilityService
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
+import android.content.Intent
 import android.hardware.camera2.CameraManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.provider.Settings
@@ -91,10 +93,14 @@ class ScreenHandler(
     private fun adjustBrightness(delta: Int): HandlerResult {
         return try {
             val context = service.applicationContext
+            if (!Settings.System.canWrite(context)) {
+                return requestWriteSettingsPermission(context, "brightness")
+            }
             val current = Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
             val newValue = (current + delta).coerceIn(0, 255)
             Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, newValue)
-            val label = if (delta > 0) "Brightness increased" else "Brightness decreased"
+            val percentage = (newValue * 100 / 255)
+            val label = if (delta > 0) "Brightness increased to $percentage%" else "Brightness decreased to $percentage%"
             HandlerResult.success(label)
         } catch (e: Exception) {
             Log.e(TAG, "Brightness adjustment failed", e)
@@ -157,6 +163,9 @@ class ScreenHandler(
     private fun toggleRotation(): HandlerResult {
         return try {
             val context = service.applicationContext
+            if (!Settings.System.canWrite(context)) {
+                return requestWriteSettingsPermission(context, "rotation")
+            }
             val current = Settings.System.getInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0)
             val newValue = if (current == 0) 1 else 0
             Settings.System.putInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, newValue)
@@ -190,6 +199,25 @@ class ScreenHandler(
             // Fallback: open then close notification shade
             service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
             HandlerResult.success("Notification shade opened")
+        }
+    }
+
+    /**
+     * Launch the system "Modify System Settings" permission screen for this app.
+     * Called when Settings.System.canWrite() returns false.
+     */
+    private fun requestWriteSettingsPermission(context: Context, feature: String): HandlerResult {
+        return try {
+            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Log.w(TAG, "WRITE_SETTINGS not granted, opening permission screen for $feature")
+            HandlerResult.failure("Please grant 'Modify System Settings' permission to adjust $feature")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open WRITE_SETTINGS permission screen", e)
+            HandlerResult.failure("Cannot adjust $feature: permission not granted")
         }
     }
 }
