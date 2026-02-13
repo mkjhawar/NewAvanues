@@ -5,6 +5,10 @@
  * Handles element extraction, hierarchy tracking, deduplication,
  * and dynamic container detection.
  *
+ * Pure algorithms (container classification, deduplication model, element hashing)
+ * are in KMP: ElementClassification.kt. This file contains only the Android-specific
+ * AccessibilityNodeInfo tree traversal.
+ *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 
@@ -12,37 +16,18 @@ package com.augmentalis.voiceavanue.service
 
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
-import com.augmentalis.foundation.util.HashUtils
 import com.augmentalis.voiceoscore.Bounds
+import com.augmentalis.voiceoscore.DuplicateInfo
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.HierarchyNode
-
-/**
- * Information about a duplicate element found during extraction.
- */
-data class DuplicateInfo(
-    val hash: String,
-    val element: ElementInfo,
-    val firstSeenIndex: Int
-)
+import com.augmentalis.voiceoscore.calculateElementHash
+import com.augmentalis.voiceoscore.isDynamicContainer
 
 /**
  * Extracts UI elements from accessibility tree.
  * Single Responsibility: Extract and process accessibility nodes.
  */
 object ElementExtractor {
-
-    private val dynamicContainerTypes = setOf(
-        "RecyclerView", "ListView", "GridView",
-        "ViewPager", "ViewPager2",
-        "ScrollView", "HorizontalScrollView", "NestedScrollView",
-        "LazyColumn", "LazyRow", "LazyVerticalGrid", "LazyHorizontalGrid"
-    )
-
-    fun isDynamicContainer(className: String): Boolean {
-        val simpleName = className.substringAfterLast(".")
-        return dynamicContainerTypes.any { simpleName.contains(it, ignoreCase = true) }
-    }
 
     fun extractElements(
         node: AccessibilityNodeInfo,
@@ -85,8 +70,7 @@ object ElementExtractor {
             listIndex = if (isInDynamic && !isContainer) listIndex else -1
         )
 
-        val hashInput = "${element.className}|${element.resourceId}|${element.text}"
-        val hash = HashUtils.calculateHash(hashInput).take(16)
+        val hash = calculateElementHash(element)
 
         if (seenHashes.contains(hash)) {
             duplicates.add(
@@ -94,8 +78,7 @@ object ElementExtractor {
                     hash = hash,
                     element = element,
                     firstSeenIndex = elements.indexOfFirst { e ->
-                        val h = HashUtils.calculateHash("${e.className}|${e.resourceId}|${e.text}").take(16)
-                        h == hash
+                        calculateElementHash(e) == hash
                     }
                 )
             )

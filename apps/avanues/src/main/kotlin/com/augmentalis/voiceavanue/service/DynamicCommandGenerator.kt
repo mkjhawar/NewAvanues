@@ -16,6 +16,7 @@ package com.augmentalis.voiceavanue.service
 import android.content.res.Resources
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
+import com.augmentalis.voiceoscore.DuplicateInfo
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.ElementLabels
 import com.augmentalis.voiceoscore.HierarchyNode
