@@ -206,6 +206,55 @@ sealed class CursorInput {
 }
 
 /**
+ * Overlay window specification — KMP-shared sizing and positioning.
+ *
+ * Platforms use this to create a correctly-sized overlay that covers only the
+ * cursor dot + dwell ring. The overlay is repositioned as the cursor moves,
+ * preventing full-screen overlays that block touch events.
+ *
+ * @param sizePx Overlay width & height in pixels (square)
+ * @param centerOffsetPx Half-size; subtract from cursor position to get top-left origin
+ */
+data class CursorOverlaySpec(
+    val sizePx: Int,
+    val centerOffsetPx: Int
+) {
+    companion object {
+        /**
+         * Compute overlay dimensions from cursor config and display density.
+         *
+         * @param config Cursor configuration (radius, stroke widths)
+         * @param displayDensity Platform display density (1.0 = mdpi, 2.0 = xhdpi, 3.0 = xxhdpi)
+         * @return Spec with pixel-scaled overlay size
+         */
+        fun fromConfig(config: CursorConfig, displayDensity: Float = 1f): CursorOverlaySpec {
+            val scaledRadius = config.cursorRadius * displayDensity
+            val dwellRingExtra = (8f + config.dwellRingStrokeWidth) * displayDensity
+            val borderExtra = config.borderStrokeWidth * displayDensity
+            // Total radius = cursor dot + dwell ring gap + dwell ring stroke + border
+            val totalRadius = scaledRadius + dwellRingExtra + borderExtra
+            // Add margin for anti-aliasing
+            val margin = 4f * displayDensity
+            val sizePx = ((totalRadius + margin) * 2f).toInt().coerceAtLeast(1)
+            return CursorOverlaySpec(
+                sizePx = sizePx,
+                centerOffsetPx = sizePx / 2
+            )
+        }
+    }
+
+    /**
+     * Compute overlay top-left position for a given cursor position.
+     */
+    fun overlayOrigin(cursorX: Float, cursorY: Float): CursorPosition {
+        return CursorPosition(
+            x = cursorX - centerOffsetPx,
+            y = cursorY - centerOffsetPx
+        )
+    }
+}
+
+/**
  * Cursor action result
  */
 @Serializable

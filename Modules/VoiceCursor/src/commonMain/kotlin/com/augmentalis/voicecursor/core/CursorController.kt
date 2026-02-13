@@ -53,7 +53,8 @@ class CursorController(
     private var onDwellEndCallback: (() -> Unit)? = null
 
     /**
-     * Initialize with screen dimensions
+     * Initialize with screen dimensions.
+     * Automatically centers the cursor on screen and sets it visible.
      */
     fun initialize(width: Float, height: Float) {
         screenWidth = width
@@ -61,6 +62,11 @@ class CursorController(
         if (_config.dwellClickEnabled) {
             gazeManager.enable()
         }
+        // Auto-center cursor so it appears at screen center on all platforms
+        _state.value = CursorState(
+            position = CursorPosition(screenWidth / 2f, screenHeight / 2f),
+            isVisible = true
+        )
     }
 
     /**

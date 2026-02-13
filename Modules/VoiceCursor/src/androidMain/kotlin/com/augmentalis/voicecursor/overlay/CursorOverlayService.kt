@@ -1,9 +1,17 @@
 /**
  * CursorOverlayService.kt - Cursor overlay foreground service
  *
- * Creates an Android system overlay window and renders a cursor using
- * VoiceCursor module's CursorController for position tracking and
- * GazeClickManager for dwell-click support.
+ * Creates a SMALL, positioned Android system overlay window that tracks the
+ * cursor position. Unlike a full-screen overlay, this tiny window only covers
+ * the cursor dot area, preventing touch blocking on Android 12+ where
+ * TYPE_APPLICATION_OVERLAY with MATCH_PARENT blocks "untrusted touches".
+ *
+ * Architecture:
+ * - KMP CursorController manages position/state (shared with iOS/Desktop)
+ * - KMP CursorOverlaySpec computes overlay sizing (shared logic)
+ * - This service handles Android-specific WindowManager overlay
+ * - CursorOverlayView draws the cursor dot + dwell ring at view center
+ * - WindowManager.updateViewLayout() repositions the overlay on each frame
  *
  * Input source: Other services (e.g., AccessibilityService, Gaze module)
  * call updateCursorInput() to feed position data to the controller.
@@ -21,13 +29,13 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
@@ -37,8 +45,8 @@ import com.augmentalis.voicecursor.core.CursorAction
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.CursorController
 import com.augmentalis.voicecursor.core.CursorInput
+import com.augmentalis.voicecursor.core.CursorOverlaySpec
 import com.augmentalis.voicecursor.core.CursorState
-import com.augmentalis.voicecursor.core.FilterStrength
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -56,8 +64,11 @@ class CursorOverlayService : Service() {
     private var cursorController: CursorController? = null
     private var overlayView: CursorOverlayView? = null
     private var windowManager: WindowManager? = null
+    private var overlayLayoutParams: WindowManager.LayoutParams? = null
+    private var overlaySpec: CursorOverlaySpec? = null
     private var clickDispatcher: ClickDispatcher? = null
     private var launchIntent: PendingIntent? = null
+    private var displayDensity: Float = 1f
 
     override fun onCreate() {
         super.onCreate()
@@ -77,10 +88,12 @@ class CursorOverlayService : Service() {
         }
 
         instance = this
+        displayDensity = resources.displayMetrics.density
         initializeCursorController()
         createOverlayWindow()
         observeCursorState()
 
+        Log.i(TAG, "Cursor Overlay Service started (density=$displayDensity)")
         return START_STICKY
     }
 
@@ -92,6 +105,7 @@ class CursorOverlayService : Service() {
         val config = buildConfigFromAccent()
 
         cursorController = CursorController(config).apply {
+            // initialize() auto-centers cursor on screen
             initialize(screenWidth, screenHeight)
 
             onClick { position ->
@@ -125,34 +139,92 @@ class CursorOverlayService : Service() {
         )
     }
 
+    /**
+     * Create a small, positioned overlay window that covers only the cursor area.
+     *
+     * Uses KMP CursorOverlaySpec for sizing (shared logic), then creates an
+     * Android-specific WindowManager overlay. The overlay is repositioned
+     * via updateViewLayout() as the cursor moves.
+     *
+     * Key flags:
+     * - FLAG_NOT_FOCUSABLE: Doesn't steal keyboard focus
+     * - FLAG_NOT_TOUCHABLE: Touches pass through to apps below
+     * - FLAG_LAYOUT_NO_LIMITS: Allows positioning near screen edges
+     */
     private fun createOverlayWindow() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-        val layoutParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
+        val config = cursorController?.getConfig() ?: CursorConfig()
+        val spec = CursorOverlaySpec.fromConfig(config, displayDensity)
+        overlaySpec = spec
+
+        // Initial position: cursor center (set by CursorController.initialize())
+        val state = cursorController?.state?.value ?: CursorState()
+        val origin = spec.overlayOrigin(state.position.x, state.position.y)
+
+        val params = WindowManager.LayoutParams(
+            spec.sizePx,
+            spec.sizePx,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
-        )
-
-        overlayView = CursorOverlayView(this).also { view ->
-            cursorController?.let { controller ->
-                view.applyConfig(controller.getConfig())
-            }
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = origin.x.toInt()
+            y = origin.y.toInt()
         }
-        windowManager?.addView(overlayView, layoutParams)
+        overlayLayoutParams = params
 
-        Log.i(TAG, "Overlay window created")
+        overlayView = CursorOverlayView(this, displayDensity).also { view ->
+            view.applyConfig(config, displayDensity)
+        }
+        windowManager?.addView(overlayView, params)
+
+        Log.i(TAG, "Overlay window created (${spec.sizePx}x${spec.sizePx}px)")
     }
 
+    /**
+     * Observe cursor state and reposition the overlay window on each update.
+     */
     private fun observeCursorState() {
         serviceScope.launch {
             cursorController?.state?.collect { state ->
                 overlayView?.updateCursorState(state)
+                repositionOverlay(state)
             }
+        }
+    }
+
+    /**
+     * Reposition the small overlay window to track the cursor position.
+     * Called on every state change from the CursorController.
+     */
+    private fun repositionOverlay(state: CursorState) {
+        val params = overlayLayoutParams ?: return
+        val spec = overlaySpec ?: return
+        val view = overlayView ?: return
+
+        if (!state.isVisible) {
+            if (view.visibility != View.GONE) {
+                view.visibility = View.GONE
+            }
+            return
+        }
+
+        if (view.visibility != View.VISIBLE) {
+            view.visibility = View.VISIBLE
+        }
+
+        val origin = spec.overlayOrigin(state.position.x, state.position.y)
+        params.x = origin.x.toInt()
+        params.y = origin.y.toInt()
+
+        try {
+            windowManager?.updateViewLayout(view, params)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to reposition overlay", e)
         }
     }
 
@@ -182,11 +254,19 @@ class CursorOverlayService : Service() {
 
     /**
      * Update cursor configuration from settings.
-     * Propagates color/size config to both the controller and overlay view.
+     * Propagates color/size config to both the controller and overlay view,
+     * and recalculates overlay sizing.
      */
     fun updateConfig(config: CursorConfig) {
         cursorController?.updateConfig(config)
-        overlayView?.applyConfig(config)
+        overlayView?.applyConfig(config, displayDensity)
+        // Recalculate overlay size for new config
+        val newSpec = CursorOverlaySpec.fromConfig(config, displayDensity)
+        overlaySpec = newSpec
+        overlayLayoutParams?.let { params ->
+            params.width = newSpec.sizePx
+            params.height = newSpec.sizePx
+        }
     }
 
     /**
@@ -195,6 +275,7 @@ class CursorOverlayService : Service() {
      */
     fun setClickDispatcher(dispatcher: ClickDispatcher) {
         clickDispatcher = dispatcher
+        Log.d(TAG, "ClickDispatcher set")
     }
 
     /**
@@ -204,6 +285,13 @@ class CursorOverlayService : Service() {
     fun setLaunchIntent(intent: PendingIntent) {
         launchIntent = intent
     }
+
+    /**
+     * Get the CursorController for this service.
+     * Used by external components (e.g., CursorActions) to wire voice commands
+     * to the same controller the overlay observes.
+     */
+    fun getCursorController(): CursorController? = cursorController
 
     /**
      * Perform a click at the current cursor position.
@@ -240,6 +328,8 @@ class CursorOverlayService : Service() {
             }
         }
         overlayView = null
+        overlayLayoutParams = null
+        overlaySpec = null
 
         cursorController?.dispose()
         cursorController = null
@@ -294,18 +384,24 @@ class CursorOverlayService : Service() {
  * Custom View that renders the cursor dot and dwell progress ring.
  * Uses Canvas for efficient drawing — no Compose overhead for this always-on overlay.
  *
+ * Draws at the VIEW CENTER, not at screen coordinates. The parent service
+ * repositions the overlay window to track the cursor, so this view always
+ * renders at its center point.
+ *
  * All visual properties (colors, sizes, strokes) are driven by CursorConfig
  * via [applyConfig]. No hardcoded colors — everything comes from the config,
  * which in turn reads from AvanueModuleAccents for theme integration.
  */
-internal class CursorOverlayView(context: Context) : View(context) {
+internal class CursorOverlayView(
+    context: Context,
+    private val density: Float = 1f
+) : View(context) {
 
-    private var cursorX = 0f
-    private var cursorY = 0f
     private var isVisible = false
     private var isDwelling = false
     private var dwellProgress = 0f
     private var cursorRadius = 12f
+    private var dwellRingGap = 8f
 
     private val cursorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -320,33 +416,40 @@ internal class CursorOverlayView(context: Context) : View(context) {
         strokeCap = Paint.Cap.ROUND
     }
 
+    // Outer glow for visibility on any background
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        color = 0x66000000.toInt() // Semi-transparent black shadow
+    }
+
     init {
-        // Apply defaults matching CursorConfig defaults
-        applyConfig(CursorConfig())
+        applyConfig(CursorConfig(), density)
     }
 
     /**
-     * Apply all visual properties from the cursor config.
+     * Apply all visual properties from the cursor config, density-scaled.
      * Safe to call from any thread (posts invalidate).
      */
-    fun applyConfig(config: CursorConfig) {
-        cursorRadius = config.cursorRadius
+    fun applyConfig(config: CursorConfig, displayDensity: Float) {
+        cursorRadius = config.cursorRadius * displayDensity
+        dwellRingGap = 8f * displayDensity
 
         cursorPaint.color = config.color.toInt()
         cursorPaint.alpha = config.cursorAlpha
 
         cursorBorderPaint.color = config.borderColor.toInt()
-        cursorBorderPaint.strokeWidth = config.borderStrokeWidth
+        cursorBorderPaint.strokeWidth = config.borderStrokeWidth * displayDensity
 
         dwellPaint.color = config.dwellRingColor.toInt()
-        dwellPaint.strokeWidth = config.dwellRingStrokeWidth
+        dwellPaint.strokeWidth = config.dwellRingStrokeWidth * displayDensity
+
+        glowPaint.strokeWidth = 2f * displayDensity
 
         postInvalidate()
     }
 
     fun updateCursorState(state: CursorState) {
-        cursorX = state.position.x
-        cursorY = state.position.y
         isVisible = state.isVisible
         dwellProgress = state.dwellProgress
         isDwelling = state.isDwellInProgress
@@ -363,15 +466,19 @@ internal class CursorOverlayView(context: Context) : View(context) {
 
         if (!isVisible) return
 
+        // Draw at view center — the overlay window is repositioned to track cursor
+        val cx = width / 2f
+        val cy = height / 2f
+
         // Draw dwell progress ring
         if (isDwelling && dwellProgress > 0f) {
             val sweepAngle = dwellProgress * 360f
-            val dwellRadius = cursorRadius + 8f
+            val dwellRadius = cursorRadius + dwellRingGap
             canvas.drawArc(
-                cursorX - dwellRadius,
-                cursorY - dwellRadius,
-                cursorX + dwellRadius,
-                cursorY + dwellRadius,
+                cx - dwellRadius,
+                cy - dwellRadius,
+                cx + dwellRadius,
+                cy + dwellRadius,
                 -90f,
                 sweepAngle,
                 false,
@@ -379,8 +486,11 @@ internal class CursorOverlayView(context: Context) : View(context) {
             )
         }
 
+        // Draw outer glow for visibility on any background
+        canvas.drawCircle(cx, cy, cursorRadius + cursorBorderPaint.strokeWidth, glowPaint)
+
         // Draw cursor dot
-        canvas.drawCircle(cursorX, cursorY, cursorRadius, cursorPaint)
-        canvas.drawCircle(cursorX, cursorY, cursorRadius, cursorBorderPaint)
+        canvas.drawCircle(cx, cy, cursorRadius, cursorPaint)
+        canvas.drawCircle(cx, cy, cursorRadius, cursorBorderPaint)
     }
 }
