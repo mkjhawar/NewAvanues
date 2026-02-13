@@ -54,8 +54,17 @@ internal class IOSSpeechEngineFactory : ISpeechEngineFactory {
     }
 
     override fun createEngine(engine: SpeechEngine): Result<ISpeechEngine> {
-        // TODO: Implement actual engine creation
-        return Result.failure(UnsupportedOperationException("Engine $engine not yet implemented on iOS"))
+        return when (engine) {
+            SpeechEngine.APPLE_SPEECH -> Result.success(AppleSpeechEngineAdapter())
+            SpeechEngine.WHISPER,
+            SpeechEngine.GOOGLE_CLOUD,
+            SpeechEngine.AZURE -> Result.failure(
+                UnsupportedOperationException("Engine $engine not yet implemented on iOS")
+            )
+            else -> Result.failure(
+                UnsupportedOperationException("Engine $engine is not available on iOS")
+            )
+        }
     }
 
     override fun getRecommendedEngine(): SpeechEngine {
