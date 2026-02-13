@@ -30,6 +30,8 @@ import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ServiceConfiguration
 import com.augmentalis.voiceoscore.SpeechEngine
 import com.augmentalis.voiceoscore.NumbersOverlayHandler
+import com.augmentalis.voiceoscore.StaticCommandRegistry
+import com.augmentalis.voiceoscore.CommandCategory
 import com.augmentalis.voiceoscore.WebCommandHandler
 import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.NumbersOverlayMode
@@ -227,10 +229,22 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                         wch.setExecutor(executor)
                                     }
 
-                                    Log.d(TAG, "Web commands dual-path: ${phrases.size} phrases, ${quantizedWebCommands.size} quantized")
+                                    // Register static BROWSER + WEB_GESTURE commands with source="web"
+                                    // so ActionCoordinator routes them to WebCommandHandler when browser
+                                    // is active. Uses separate source tag "web_static" for independent
+                                    // lifecycle from DOM-scraped commands ("web").
+                                    val browserStaticCmds = StaticCommandRegistry.byCategoryAsQuantized(CommandCategory.BROWSER)
+                                    val gestureStaticCmds = StaticCommandRegistry.byCategoryAsQuantized(CommandCategory.WEB_GESTURE)
+                                    val webStaticCommands = (browserStaticCmds + gestureStaticCmds).map { cmd ->
+                                        cmd.copy(metadata = cmd.metadata + mapOf("source" to "web"))
+                                    }
+                                    voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("web_static", webStaticCommands)
+
+                                    Log.d(TAG, "Web commands dual-path: ${phrases.size} phrases, ${quantizedWebCommands.size} quantized, ${webStaticCommands.size} static")
                                 } else if (phrases.isEmpty()) {
                                     // Clear web commands when leaving browser (preserves accessibility commands)
                                     voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web")
+                                    voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web_static")
                                     webCommandHandler?.setExecutor(null)
                                 }
                             } catch (e: Exception) {

@@ -172,8 +172,17 @@ class ActionCoordinator(
         val startTime = currentTimeMillis()
         LoggingUtils.d("processCommand: phrase='${command.phrase}', actionType=${command.actionType}, bounds=${command.metadata["bounds"]}", TAG)
 
-        // Find handler
-        val handler = handlerRegistry.findHandler(command)
+        // Find handler — web-source commands bypass priority-based routing.
+        // Without this bypass, SystemHandler (priority 1) or AndroidGestureHandler
+        // (priority 2) steal overlapping phrases ("go back", "swipe up") before
+        // WebCommandHandler (BROWSER, priority 11) gets a chance.
+        val handler = if (command.metadata["source"] == "web") {
+            handlerRegistry.getHandlersForCategory(ActionCategory.BROWSER)
+                .firstOrNull { it.canHandle(command) }
+                ?: handlerRegistry.findHandler(command)  // Fallback to priority scan
+        } else {
+            handlerRegistry.findHandler(command)
+        }
         LoggingUtils.d("findHandler result: ${handler?.let { it::class.simpleName } ?: "null"}", TAG)
         if (handler == null) {
             val result = HandlerResult.failure("No handler found for: ${command.phrase}")
@@ -420,6 +429,16 @@ class ActionCoordinator(
         // ═══════════════════════════════════════════════════════════════════
         LoggingUtils.d("Dynamic command registry size: ${commandRegistry.size}", TAG)
         if (commandRegistry.size > 0) {
+            // Pre-check: Full-phrase match for web-source commands.
+            // Web static commands ("go back", "swipe up") are registered as dynamic
+            // commands with source="web" when browser is active. This catches them
+            // before extractVerbAndTarget short-circuits on StaticCommandRegistry.
+            val webFullPhraseMatch = commandRegistry.findByPhrase(normalizedText)
+            if (webFullPhraseMatch != null && webFullPhraseMatch.metadata["source"] == "web") {
+                LoggingUtils.d("Web full-phrase match: '${webFullPhraseMatch.phrase}'", TAG)
+                return processCommand(webFullPhraseMatch)
+            }
+
             // Extract verb and target from voice input
             // e.g., "click 4" -> verb="click", target="4"
             val (verb, target) = extractVerbAndTarget(normalizedText)
