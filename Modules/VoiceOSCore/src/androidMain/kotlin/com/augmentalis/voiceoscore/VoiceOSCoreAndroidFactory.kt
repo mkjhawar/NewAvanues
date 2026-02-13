@@ -157,6 +157,17 @@ internal class AndroidSystemExecutor(
             false
         }
     }
+
+    override suspend fun openAppDrawer(): Boolean {
+        Log.d(TAG, "Executing openAppDrawer")
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            // GLOBAL_ACTION_ALL_APPS available on API 30+ (Android 11)
+            service.performGlobalAction(14) // AccessibilityService.GLOBAL_ACTION_ALL_APPS = 14
+        } else {
+            // Fallback: open home first, which many launchers follow with app drawer swipe
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+        }
+    }
 }
 
 /**
@@ -176,9 +187,10 @@ internal class AndroidGestureHandler(
     override val category: ActionCategory = ActionCategory.NAVIGATION
 
     override val supportedActions: List<String> = listOf(
-        "tap", "click", "press", "select",
+        "tap", "click", "press",
         "long press", "long click", "hold",
         "scroll up", "scroll down", "scroll left", "scroll right",
+        "page up", "page down",
         "swipe up", "swipe down", "swipe left", "swipe right",
         // Advanced gestures (parallel to web gesture commands)
         "double tap", "double click",
@@ -187,7 +199,7 @@ internal class AndroidGestureHandler(
         "flick up", "flick down", "flick left", "flick right",
         "throw", "toss",
         "scale up", "scale down", "enlarge", "shrink",
-        "grab", "grab element", "lock", "lock element",
+        "grab", "grab element", "lock element",
         "release", "let go", "drop",
         "pan left", "pan right", "pan up", "pan down",
         "select word", "clear selection", "deselect",
@@ -202,9 +214,13 @@ internal class AndroidGestureHandler(
         Log.d(TAG, "AndroidGestureHandler.execute: phrase='$phrase', actionType=${command.actionType}")
 
         return try {
-            // First try phrase-based routing for scroll/swipe commands
-            // This handles commands that come in with EXECUTE actionType
+            // ═══════════════════════════════════════════════════════════════
+            // Phrase-based routing — handles commands arriving from the
+            // static handler path (actionType=EXECUTE) as well as
+            // scroll/swipe commands regardless of actionType.
+            // ═══════════════════════════════════════════════════════════════
             when {
+                // ── Scroll ──────────────────────────────────────────────
                 phrase.startsWith("scroll down") || phrase.startsWith("swipe up") -> {
                     val success = dispatcher.scroll("down")
                     return if (success) HandlerResult.success("Scrolled down")
@@ -224,6 +240,116 @@ internal class AndroidGestureHandler(
                     val success = dispatcher.scroll("right")
                     return if (success) HandlerResult.success("Scrolled right")
                            else HandlerResult.failure("Failed to scroll right")
+                }
+
+                // ── Page scroll (bigger gesture) ────────────────────────
+                phrase == "page up" -> {
+                    val success = dispatcher.scroll("up")
+                    return if (success) HandlerResult.success("Page up")
+                           else HandlerResult.failure("Failed to page up")
+                }
+                phrase == "page down" -> {
+                    val success = dispatcher.scroll("down")
+                    return if (success) HandlerResult.success("Page down")
+                           else HandlerResult.failure("Failed to page down")
+                }
+
+                // ── Tap/Click (standalone — screen center) ──────────────
+                phrase == "tap" || phrase == "click" || phrase == "press" -> {
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.tap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    return if (success) HandlerResult.success("Tapped")
+                           else HandlerResult.failure("Failed to tap")
+                }
+
+                // ── Long press (standalone — screen center) ─────────────
+                phrase in listOf("long press", "long click", "hold") -> {
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.longPress(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    return if (success) HandlerResult.success("Long pressed")
+                           else HandlerResult.failure("Failed to long press")
+                }
+
+                // ── Double tap (standalone — screen center) ─────────────
+                phrase in listOf("double tap", "double click") -> {
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.doubleTap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    return if (success) HandlerResult.success("Double tapped")
+                           else HandlerResult.failure("Failed to double tap")
+                }
+
+                // ── Zoom ────────────────────────────────────────────────
+                phrase in listOf("zoom in", "pinch out", "pinch to zoom in") -> {
+                    val success = dispatcher.pinch(1.5f)
+                    return if (success) HandlerResult.success("Zoomed in")
+                           else HandlerResult.failure("Failed to zoom in")
+                }
+                phrase in listOf("zoom out", "pinch in", "pinch to zoom out") -> {
+                    val success = dispatcher.pinch(0.5f)
+                    return if (success) HandlerResult.success("Zoomed out")
+                           else HandlerResult.failure("Failed to zoom out")
+                }
+                phrase == "reset zoom" -> {
+                    val success = dispatcher.pinch(1.0f)
+                    return if (success) HandlerResult.success("Reset zoom")
+                           else HandlerResult.failure("Failed to reset zoom")
+                }
+
+                // ── Scale ───────────────────────────────────────────────
+                phrase in listOf("scale up", "enlarge") -> {
+                    val success = dispatcher.pinch(1.5f)
+                    return if (success) HandlerResult.success("Scaled up")
+                           else HandlerResult.failure("Failed to scale up")
+                }
+                phrase in listOf("scale down", "shrink") -> {
+                    val success = dispatcher.pinch(0.5f)
+                    return if (success) HandlerResult.success("Scaled down")
+                           else HandlerResult.failure("Failed to scale down")
+                }
+
+                // ── Fling / Flick / Throw ───────────────────────────────
+                phrase.startsWith("fling") || phrase.startsWith("flick") ||
+                phrase == "throw" || phrase == "toss" -> {
+                    val direction = extractDirectionFromPhrase(phrase) ?: "down"
+                    val success = dispatcher.fling(direction)
+                    return if (success) HandlerResult.success("Flung $direction")
+                           else HandlerResult.failure("Failed to fling $direction")
+                }
+
+                // ── Grab / Release ──────────────────────────────────────
+                phrase in listOf("grab", "grab element", "lock element") -> {
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.longPress(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    return if (success) HandlerResult.success("Grabbed element")
+                           else HandlerResult.failure("Failed to grab")
+                }
+                phrase in listOf("release", "let go", "drop") -> {
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.tap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    return if (success) HandlerResult.success("Released")
+                           else HandlerResult.failure("Failed to release")
+                }
+
+                // ── Pan ─────────────────────────────────────────────────
+                phrase.startsWith("pan ") -> {
+                    val direction = extractDirectionFromPhrase(phrase) ?: "down"
+                    val success = dispatcher.scroll(direction)
+                    return if (success) HandlerResult.success("Panned $direction")
+                           else HandlerResult.failure("Failed to pan $direction")
+                }
+
+                // ── Select word / Clear selection ───────────────────────
+                phrase == "select word" -> {
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.doubleTap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    return if (success) HandlerResult.success("Selected word")
+                           else HandlerResult.failure("Failed to select word")
+                }
+                phrase in listOf("clear selection", "deselect") -> {
+                    val metrics = service.resources.displayMetrics
+                    val success = dispatcher.tap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    return if (success) HandlerResult.success("Selection cleared")
+                           else HandlerResult.failure("Failed to clear selection")
                 }
             }
 

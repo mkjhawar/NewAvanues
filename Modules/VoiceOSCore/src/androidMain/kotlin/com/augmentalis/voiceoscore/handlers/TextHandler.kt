@@ -9,7 +9,6 @@
 package com.augmentalis.voiceoscore.handlers
 
 import android.accessibilityservice.AccessibilityService
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
@@ -89,22 +88,18 @@ class TextHandler(
 
     private fun performUndo(node: AccessibilityNodeInfo?): HandlerResult {
         if (node == null) return HandlerResult.failure("No text field focused")
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            try {
-                // ACTION_IME_ENTER can be used as a proxy; actual undo is limited
-                val success = node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)
-                HandlerResult.success("Undo attempted")
-            } catch (e: Exception) {
-                HandlerResult.failure("Undo not supported: ${e.message}")
-            }
-        } else {
-            HandlerResult.failure("Undo requires Android 13+", recoverable = true)
-        }
+        return HandlerResult.failure(
+            "Undo not available via Android accessibility API",
+            recoverable = true
+        )
     }
 
     private fun performRedo(node: AccessibilityNodeInfo?): HandlerResult {
-        // Android accessibility does not have a native redo action
-        return HandlerResult.failure("Redo not available via accessibility", recoverable = true)
+        if (node == null) return HandlerResult.failure("No text field focused")
+        return HandlerResult.failure(
+            "Redo not available via Android accessibility API",
+            recoverable = true
+        )
     }
 
     private fun performDelete(node: AccessibilityNodeInfo?): HandlerResult {

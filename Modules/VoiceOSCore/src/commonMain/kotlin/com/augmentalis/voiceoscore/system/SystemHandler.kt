@@ -25,13 +25,14 @@ class SystemHandler(
     override val category: ActionCategory = ActionCategory.SYSTEM
 
     override val supportedActions: List<String> = listOf(
-        "go back", "back",
-        "go home", "home",
-        "show recents", "recents", "recent apps",
-        "show notifications", "notifications",
+        "go back", "back", "navigate back", "previous screen",
+        "go home", "home", "navigate home", "open home",
+        "show recents", "recents", "recent apps", "show recent apps", "open recents", "app switcher",
+        "show notifications", "notifications", "notification panel",
         "quick settings",
         "power menu", "power dialog",
-        "lock screen", "lock"
+        "lock screen", "lock",
+        "open app drawer", "app drawer", "all apps"
     )
 
     override suspend fun execute(
@@ -97,6 +98,14 @@ class SystemHandler(
                 }
             }
 
+            "open app drawer", "app drawer", "all apps" -> {
+                if (executor.openAppDrawer()) {
+                    HandlerResult.success("Opening app drawer")
+                } else {
+                    HandlerResult.failure("Could not open app drawer")
+                }
+            }
+
             else -> HandlerResult.notHandled()
         }
     }
@@ -113,4 +122,5 @@ interface SystemExecutor {
     suspend fun showQuickSettings(): Boolean
     suspend fun showPowerMenu(): Boolean
     suspend fun lockScreen(): Boolean
+    suspend fun openAppDrawer(): Boolean
 }
