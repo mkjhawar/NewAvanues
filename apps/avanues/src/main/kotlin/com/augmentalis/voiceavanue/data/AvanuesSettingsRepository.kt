@@ -20,9 +20,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import com.augmentalis.avanueui.theme.AppearanceMode
-import com.augmentalis.avanueui.theme.AvanueColorPalette
-import com.augmentalis.avanueui.theme.MaterialMode
+import com.augmentalis.foundation.settings.SettingsMigration
+import com.augmentalis.foundation.settings.models.AvanuesSettings
+import com.augmentalis.foundation.settings.models.PersistedSynonym
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,42 +30,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
-
-/**
- * All Avanues app-level settings, persisted to DataStore.
- */
-data class AvanuesSettings(
-    val cursorEnabled: Boolean = false,
-    val dwellClickEnabled: Boolean = true,
-    val dwellClickDelayMs: Float = 1500f,
-    val cursorSmoothing: Boolean = true,
-    val voiceFeedback: Boolean = true,
-    val autoStartOnBoot: Boolean = false,
-    val themePalette: String = AvanueColorPalette.DEFAULT.name,
-    val themeStyle: String = MaterialMode.DEFAULT.name,
-    val themeAppearance: String = AppearanceMode.DEFAULT.name,
-
-    // Voice command locale (e.g., "en-US", "es-ES")
-    val voiceLocale: String = "en-US",
-
-    // VoiceCursor appearance
-    val cursorSize: Int = 48,
-    val cursorSpeed: Int = 8,
-    val showCoordinates: Boolean = false,
-    val cursorAccentOverride: Long? = null,  // null = use theme, else custom ARGB
-
-    // VOS Sync (Developer)
-    val vosSyncEnabled: Boolean = false,
-    val vosSftpHost: String = "",
-    val vosSftpPort: Int = 22,
-    val vosSftpUsername: String = "",
-    val vosSftpRemotePath: String = "/vos",
-    val vosSftpKeyPath: String = "",
-    val vosLastSyncTime: Long? = null,
-    val vosSftpHostKeyMode: String = "no",
-    val vosAutoSyncEnabled: Boolean = false,
-    val vosSyncIntervalHours: Int = 4
-)
 
 @Singleton
 class AvanuesSettingsRepository @Inject constructor(
@@ -112,34 +76,14 @@ class AvanuesSettingsRepository @Inject constructor(
         private val KEY_DISABLED_COMMANDS = stringSetPreferencesKey("vcm_disabled_commands")
         private val KEY_USER_SYNONYMS = stringPreferencesKey("vcm_user_synonyms")
 
-        /**
-         * Migrate old theme_variant to new palette string.
-         * OCEAN→LUNA, SUNSET→SOL, LIQUID→HYDRA
-         */
-        private fun migrateVariantToPalette(variant: String?): String = when {
-            variant.equals("OCEAN", ignoreCase = true) -> "LUNA"
-            variant.equals("SUNSET", ignoreCase = true) -> "SOL"
-            variant.equals("LIQUID", ignoreCase = true) -> "HYDRA"
-            else -> AvanueColorPalette.DEFAULT.name
-        }
-
-        /**
-         * Migrate old theme_variant to new style string.
-         * OCEAN→GLASS, SUNSET→GLASS, LIQUID→WATER
-         */
-        private fun migrateVariantToStyle(variant: String?): String = when {
-            variant.equals("OCEAN", ignoreCase = true) -> "GLASS"
-            variant.equals("SUNSET", ignoreCase = true) -> "GLASS"
-            variant.equals("LIQUID", ignoreCase = true) -> "WATER"
-            else -> MaterialMode.DEFAULT.name
-        }
+        // Migration functions now in Foundation: SettingsMigration
     }
 
     val settings: Flow<AvanuesSettings> = context.avanuesDataStore.data.map { prefs ->
         // Migration: if new keys don't exist, derive from old theme_variant
         val oldVariant = prefs[KEY_THEME_VARIANT]
-        val palette = prefs[KEY_THEME_PALETTE] ?: migrateVariantToPalette(oldVariant)
-        val style = prefs[KEY_THEME_STYLE] ?: migrateVariantToStyle(oldVariant)
+        val palette = prefs[KEY_THEME_PALETTE] ?: SettingsMigration.migrateVariantToPalette(oldVariant)
+        val style = prefs[KEY_THEME_STYLE] ?: SettingsMigration.migrateVariantToStyle(oldVariant)
 
         AvanuesSettings(
             cursorEnabled = prefs[KEY_CURSOR_ENABLED] ?: false,
@@ -150,7 +94,7 @@ class AvanuesSettingsRepository @Inject constructor(
             autoStartOnBoot = prefs[KEY_AUTO_START_ON_BOOT] ?: false,
             themePalette = palette,
             themeStyle = style,
-            themeAppearance = prefs[KEY_THEME_APPEARANCE] ?: AppearanceMode.DEFAULT.name,
+            themeAppearance = prefs[KEY_THEME_APPEARANCE] ?: AvanuesSettings.DEFAULT_THEME_APPEARANCE,
             voiceLocale = prefs[KEY_VOICE_LOCALE] ?: "en-US",
             cursorSize = prefs[KEY_CURSOR_SIZE] ?: 48,
             cursorSpeed = prefs[KEY_CURSOR_SPEED] ?: 8,
@@ -374,11 +318,4 @@ class AvanuesSettingsRepository @Inject constructor(
     }
 }
 
-/**
- * Persisted user synonym: canonical verb → list of alternatives.
- * AVU unit type: SYN (Synonym mapping).
- */
-data class PersistedSynonym(
-    val canonical: String,
-    val synonyms: List<String>
-)
+// PersistedSynonym now in Foundation: com.augmentalis.foundation.settings.models.PersistedSynonym

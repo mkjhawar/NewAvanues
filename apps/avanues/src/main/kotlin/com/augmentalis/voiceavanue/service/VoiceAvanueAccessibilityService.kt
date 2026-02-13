@@ -43,7 +43,7 @@ import com.augmentalis.avanueui.theme.AvanueModuleAccents
 import com.augmentalis.avanueui.theme.ModuleAccent
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
-import com.augmentalis.voiceavanue.data.DeveloperSettings
+import com.augmentalis.foundation.settings.models.DeveloperSettings
 import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength

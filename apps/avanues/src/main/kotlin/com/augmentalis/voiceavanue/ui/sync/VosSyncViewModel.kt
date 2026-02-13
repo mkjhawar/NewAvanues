@@ -16,8 +16,8 @@ import com.augmentalis.database.dto.PhraseSuggestionDTO
 import com.augmentalis.database.dto.VosFileRegistryDTO
 import com.augmentalis.database.repositories.IPhraseSuggestionRepository
 import com.augmentalis.database.repositories.IVosFileRegistryRepository
-import com.augmentalis.voiceavanue.data.AvanuesSettings
-import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
+import com.augmentalis.foundation.settings.models.AvanuesSettings
+import com.augmentalis.foundation.settings.models.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.SftpCredentialStore
 import com.augmentalis.voiceoscore.vos.sync.SftpAuthMode
 import com.augmentalis.voiceoscore.vos.sync.SftpResult
