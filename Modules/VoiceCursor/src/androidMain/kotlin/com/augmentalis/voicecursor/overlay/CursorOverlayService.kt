@@ -47,6 +47,8 @@ import com.augmentalis.voicecursor.core.CursorController
 import com.augmentalis.voicecursor.core.CursorInput
 import com.augmentalis.voicecursor.core.CursorOverlaySpec
 import com.augmentalis.voicecursor.core.CursorState
+import com.augmentalis.devicemanager.imu.IMUManager
+import com.augmentalis.voicecursor.input.toCursorInputFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -287,6 +289,27 @@ class CursorOverlayService : Service() {
     }
 
     /**
+     * Start head tracking via IMU. Connects the IMU orientation flow
+     * to the CursorController for continuous cursor movement.
+     *
+     * The flow pipeline: IMUManager.orientationFlow → toCursorInputFlow() → CursorController.update()
+     * CursorController handles delta computation, dead zone, tangent displacement, and filtering.
+     */
+    fun startIMUTracking(imuManager: IMUManager) {
+        stopIMUTracking()
+        val controller = cursorController ?: return
+        controller.connectInputFlow(imuManager.toCursorInputFlow(), serviceScope)
+        Log.i(TAG, "IMU head tracking connected to cursor controller")
+    }
+
+    /**
+     * Stop head tracking and disconnect the IMU flow from the cursor controller.
+     */
+    fun stopIMUTracking() {
+        cursorController?.disconnectInputFlow()
+    }
+
+    /**
      * Get the CursorController for this service.
      * Used by external components (e.g., CursorActions) to wire voice commands
      * to the same controller the overlay observes.
@@ -318,6 +341,7 @@ class CursorOverlayService : Service() {
 
     override fun onDestroy() {
         instance = null
+        stopIMUTracking()
         super.onDestroy()
 
         overlayView?.let { view ->

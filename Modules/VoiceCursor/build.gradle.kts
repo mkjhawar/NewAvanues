@@ -76,6 +76,9 @@ kotlin {
 
                 // AvanueUI — for AvanueModuleAccents (theme-aware cursor colors)
                 implementation(project(":Modules:AvanueUI"))
+
+                // DeviceManager — for IMUManager (head tracking → cursor movement)
+                implementation(project(":Modules:DeviceManager"))
             }
         }
 

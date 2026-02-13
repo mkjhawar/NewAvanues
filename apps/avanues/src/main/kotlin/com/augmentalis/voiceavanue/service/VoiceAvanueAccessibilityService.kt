@@ -45,6 +45,8 @@ import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.voiceavanue.data.DeveloperSettings
 import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
+import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetector
+import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
@@ -95,6 +97,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var webCommandCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var cursorSettingsJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
+    private var imuManager: IMUManager? = null  // Lazy-init when cursor enabled
 
     override fun getActionCoordinator(): ActionCoordinator {
         // Prefer VoiceOSCore's coordinator — it has handlers registered
@@ -404,6 +407,12 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                 }
                             }
                         } else if (!settings.cursorEnabled) {
+                            // Stop IMU tracking before stopping cursor service
+                            imuManager?.let { imu ->
+                                CursorOverlayService.getInstance()?.stopIMUTracking()
+                                imu.stopIMUTracking("VoiceCursor")
+                                Log.i(TAG, "IMU head tracking stopped (cursor disabled)")
+                            }
                             CursorOverlayService.getInstance()?.let {
                                 applicationContext.stopService(Intent(applicationContext, CursorOverlayService::class.java))
                                 Log.i(TAG, "CursorOverlayService stopped via settings toggle")
@@ -448,6 +457,26 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                             cursorService.updateConfig(config)
                             // Ensure ClickDispatcher is set so "cursor click" voice command works
                             cursorService.setClickDispatcher(AccessibilityClickDispatcher())
+
+                            // Wire IMU head tracking to cursor (lazy-init IMUManager once)
+                            if (imuManager == null) {
+                                try {
+                                    val caps = DeviceDetector.getCapabilities(applicationContext)
+                                    val imu = IMUManager.getInstance(applicationContext)
+                                    imu.injectCapabilities(caps)
+                                    imuManager = imu
+                                    Log.i(TAG, "IMUManager initialized with device capabilities")
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to initialize IMUManager", e)
+                                }
+                            }
+                            imuManager?.let { imu ->
+                                if (imu.startIMUTracking("VoiceCursor")) {
+                                    cursorService.startIMUTracking(imu)
+                                } else {
+                                    Log.w(TAG, "IMU tracking start failed (no sensors?)")
+                                }
+                            }
                         }
                     }
                 }
@@ -541,6 +570,14 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         // Cancel cursor settings collection
         cursorSettingsJob?.cancel()
         cursorSettingsJob = null
+
+        // Stop IMU head tracking
+        imuManager?.let { imu ->
+            CursorOverlayService.getInstance()?.stopIMUTracking()
+            imu.stopIMUTracking("VoiceCursor")
+            Log.i(TAG, "IMU head tracking stopped (service destroy)")
+        }
+        imuManager = null
 
         // Stop overlay service
         try {
