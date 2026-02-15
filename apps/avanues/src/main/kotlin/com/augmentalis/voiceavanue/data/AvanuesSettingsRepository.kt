@@ -142,8 +142,9 @@ class AvanuesSettingsRepository @Inject constructor(
         prefs[KEY_CURSOR_SIZE] = s.cursorSize
         prefs[KEY_CURSOR_SPEED] = s.cursorSpeed
         prefs[KEY_SHOW_COORDINATES] = s.showCoordinates
-        if (s.cursorAccentOverride != null) {
-            prefs[KEY_CURSOR_ACCENT_OVERRIDE] = s.cursorAccentOverride
+        val accentOverride = s.cursorAccentOverride
+        if (accentOverride != null) {
+            prefs[KEY_CURSOR_ACCENT_OVERRIDE] = accentOverride
         } else {
             prefs.remove(KEY_CURSOR_ACCENT_OVERRIDE)
         }
@@ -153,8 +154,9 @@ class AvanuesSettingsRepository @Inject constructor(
         prefs[KEY_VOS_SFTP_USERNAME] = s.vosSftpUsername
         prefs[KEY_VOS_SFTP_REMOTE_PATH] = s.vosSftpRemotePath
         prefs[KEY_VOS_SFTP_KEY_PATH] = s.vosSftpKeyPath
-        if (s.vosLastSyncTime != null) {
-            prefs[KEY_VOS_LAST_SYNC_TIME] = s.vosLastSyncTime
+        val lastSyncTime = s.vosLastSyncTime
+        if (lastSyncTime != null) {
+            prefs[KEY_VOS_LAST_SYNC_TIME] = lastSyncTime
         } else {
             prefs.remove(KEY_VOS_LAST_SYNC_TIME)
         }
