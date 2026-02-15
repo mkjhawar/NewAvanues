@@ -28,8 +28,12 @@ interface ISettingsStore<T> {
      * Emits the current value immediately, then emits again whenever
      * any setting changes. Implementations should handle migration
      * from legacy formats transparently.
+     *
+     * Declared as a property (not a function) so that implementing classes
+     * can use `override val settings` — preserving idiomatic Kotlin property
+     * syntax and backward compatibility with existing callers.
      */
-    fun settings(): Flow<T>
+    val settings: Flow<T>
 
     /**
      * Atomically update settings.
