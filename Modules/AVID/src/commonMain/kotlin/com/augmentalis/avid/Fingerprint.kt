@@ -31,9 +31,14 @@ object Fingerprint {
     }
 
     /**
-     * Generate deterministic hash for a UI element
+     * Generate deterministic hash for a UI element.
+     *
+     * Includes packageName in the hash so the same UI element in different apps
+     * produces different AVIDs. This is critical for VOS export/import portability
+     * and cross-device command sharing.
      *
      * @param type Element type (button, input, etc.)
+     * @param packageName App package name for scoping
      * @param resourceId Android resource ID (if available)
      * @param name Element name or text
      * @param contentDesc Accessibility content description
@@ -41,11 +46,13 @@ object Fingerprint {
      */
     fun forElement(
         type: String,
+        packageName: String = "",
         resourceId: String? = null,
         name: String? = null,
         contentDesc: String? = null
     ): String {
         val input = buildString {
+            if (packageName.isNotBlank()) append("$packageName|")
             append(type)
             resourceId?.let { append("|$it") }
             name?.let { append("|$it") }

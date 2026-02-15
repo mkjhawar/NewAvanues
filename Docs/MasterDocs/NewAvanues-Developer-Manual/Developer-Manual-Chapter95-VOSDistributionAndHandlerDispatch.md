@@ -157,25 +157,26 @@ class VosFileImporter(registry: IVosFileRegistryRepository, commandDao: VoiceCom
 
 ### Problem Solved
 
-VOS seed files defined 107 commands across 11 categories, but only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 91 commands silently returned `HandlerResult.notHandled()`.
+VOS seed files defined 107+ commands across 11 categories, but originally only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 7 new handlers were added in v2.1, bringing the total to 11. Only **BrowserHandler** (47 web commands) remains unimplemented — it will delegate to the existing `WebCommandHandler`/`IWebCommandExecutor` pipeline.
 
-### Handler Coverage (11 Handlers)
+### Handler Coverage (11 of 12 Handlers)
 
-| Handler | Category | Commands | Key API |
-|---------|----------|----------|---------|
-| AndroidGestureHandler | GESTURE | scroll, tap, swipe, pinch | GestureDescription API |
-| SystemHandler | SYSTEM/NAV | back, home, recents, split screen | performGlobalAction() |
-| AppHandler | APP_LAUNCH | open browser/camera/gallery/etc. | Intent + PackageManager |
-| AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService |
-| **MediaHandler** | MEDIA | play, pause, next, prev, volume | AudioManager + KeyEvent |
-| **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight | Settings.System + CameraManager |
-| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions |
-| **InputHandler** | INPUT | show/hide keyboard | SoftKeyboardController |
-| **AppControlHandler** | APP | close app, exit, quit | GLOBAL_ACTION_BACK + HOME |
-| **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal |
-| **VoiceControlHandler** | UI | mute/wake, dictation, help, numbers | VoiceControlCallbacks |
+| Handler | Category | Commands | Key API | Status |
+|---------|----------|----------|---------|--------|
+| AndroidGestureHandler | GESTURE | scroll, tap, swipe, pinch | GestureDescription API | v1.0 |
+| SystemHandler | SYSTEM/NAV | back, home, recents, split screen | performGlobalAction() | v1.0 |
+| AppHandler | APP_LAUNCH | open browser/camera/gallery/etc. | Intent + PackageManager | v1.0 |
+| AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService | v1.0 |
+| **MediaHandler** | MEDIA | play, pause, next, prev, volume | AudioManager + KeyEvent | v2.1 |
+| **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight | Settings.System + CameraManager | v2.1 |
+| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions | v2.1 |
+| **InputHandler** | INPUT | show/hide keyboard | SoftKeyboardController | v2.1 |
+| **AppControlHandler** | APP | close app, exit, quit | GLOBAL_ACTION_BACK + HOME | v2.1 |
+| **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal | v2.1 |
+| **VoiceControlHandler** | UI | mute/wake, dictation, help, numbers | VoiceControlCallbacks | v2.1 |
+| ~~BrowserHandler~~ | BROWSER | 47 web commands | WebCommandHandler/IWebCommandExecutor | **PENDING** |
 
-Bold = new in v2.1.
+Bold = new in v2.1. BrowserHandler is the only remaining gap.
 
 ### Factory Registration
 

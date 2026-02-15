@@ -62,7 +62,10 @@ class IMUManager private constructor(
     // This allows DeviceDetector to provide capabilities without circular dependencies
     private var deviceCapabilities: DeviceDetector.DeviceCapabilities? = null
 
-    private var mLastAccuracy = 0
+    // Initialize to ACCURACY_LOW so sensor events flow immediately after registerListener().
+    // The default value 0 (SENSOR_STATUS_UNRELIABLE) would block ALL events until
+    // onAccuracyChanged fires, which on some devices (RealWear smart glasses) may be delayed.
+    private var mLastAccuracy = SensorManager.SENSOR_STATUS_ACCURACY_LOW
 
     /**
      * Inject device capabilities for sensor availability checks

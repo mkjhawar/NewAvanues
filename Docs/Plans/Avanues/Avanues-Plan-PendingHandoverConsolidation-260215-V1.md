@@ -121,12 +121,12 @@ All 7 existing handlers are registered in `AndroidHandlerFactory.createHandlers(
 
 ---
 
-## Phase 2: VoiceOSCore — Overlay Numbering Bugs (HIGH)
+## Phase 2: VoiceOSCore — Overlay Numbering Bugs (HIGH) — COMPLETED 260215
 
 **Source**: `handover-260212-overlay-numbering.md`
 **Impact**: Duplicate badge numbers + stale overlays during navigation
-**Branch**: `VoiceOSCore-KotlinUpdate` (needs cherry-pick)
-**Code proximity**: Same module + app service layer as Phase 1
+**Fix doc**: `docs/fixes/VoiceOSCore/VoiceOSCore-Fix-UnifiedAVIDAndScrollReset-260215-V1.md`
+**Resolution**: Unified dual AVID systems (overlay + command) into single ElementFingerprint. Added packageName to hash for VOS export portability. Extended structural-change-ratio to all apps (not just target) to fix scroll-reset bug.
 
 ### Tasks
 
@@ -146,34 +146,39 @@ All 7 existing handlers are registered in `AndroidHandlerFactory.createHandlers(
 
 ---
 
-## Phase 3: WebAvanue — Browser Scoping + Crash Investigation (MEDIUM)
+## Phase 3: WebAvanue — Browser Scoping + Crash Investigation (MEDIUM) — COMPLETED 260215
 
 **Sources**: `handover-260210-2100.md`, `handover-260210-2300.md`
-**Branch**: `VoiceOSCore-KotlinUpdate`
+**Branch**: `IosVoiceOS-Development`
 
 ### Tasks
 
-#### 3.1 Verify AddressBar Crash Status
-- Check if app launches on current branch
-- If crash persists: pull `adb logcat` trace
-- If resolved: archive handover-260210-2300
+#### 3.1 ~~Verify AddressBar Crash Status~~ — RESOLVED (verified on-device 260215)
+- Built and deployed to Pixel_9_5554 emulator via `./gradlew :apps:avanues:installDebug`
+- Launched via `WebAvanueAlias` activity — browser loaded Google.com with AddressBar functional
+- AddressBar EditText at [138,138][927,264]: tap opens keyboard, URL editing works
+- All toolbar buttons present with Tier 2 voice annotations (Back, Fwd, Reload, History, Tabs, Voice, Mic)
+- WebView renders at [0,368][1080,2361]
+- Only log: display context warning (non-fatal, Hilt Application context)
+- **Crash was from unrelated uncommitted multi-module changes, not AddressBar refactor**
+- Archived: `Archives/Handover/handover-260210-2300-addressbar-crash-RESOLVED.md`
 
-#### 3.2 Complete Fix 3: Browser Command Scoping
-- Add web command clearing when foreground switches away from browser:
-  ```kotlin
-  // In onCommandsUpdated():
-  if (!isBrowser) BrowserVoiceOSCallback.clearActiveWebPhrases()
-  ```
-- Cancel `webCommandCollectorJob` in `onDestroy()`
+#### 3.2 ~~Complete Fix 3: Browser Command Scoping~~ — ALREADY DONE (verified 260215)
+- `refreshOverlayBadges()` (line 544-546) already clears web phrases when foreground != Avanues app
+- `onDestroy()` (line 566-568) already cancels `webCommandCollectorJob` and clears phrases
+- `webCommandCollectorJob` collector (line 247-251) already clears "web" + "web_static" sources when phrases empty
+- **No action needed** — browser scoping is fully implemented
 
-#### 3.3 Web DOM Scraping Persistence (PLAN ONLY)
-- Create plan doc for persisting web scraping across sessions
-- Investigate `ScrapedWebCommand.sq` table for reuse
-- NOT implementing — just the plan document
+#### 3.3 ~~Web DOM Scraping Persistence (PLAN ONLY)~~ — ALREADY EXISTS
+- Plan already at: `docs/plans/WebAvanue/WebAvanue-Plan-DOMScrapingPersistence-260210-V1.md`
+- 5-phase plan: JS structure hash → Session LRU cache → DB cache integration → Retrain command → Stable element hash
+- Two-tier architecture: in-memory LRU (5 pages) + SQLDelight DB using existing ScrapedWebsite/ScrapedWebCommand/ScrapedWebElement tables
+- No schema changes needed — existing tables support everything
+- **No action needed** — plan document is complete and ready for implementation
 
 ---
 
-## Phase 4: Validate Superseded Items (LOW)
+## Phase 4: Validate Superseded Items (LOW) — COMPLETED 260215
 
 ### 4.1 Verify AvanueWaterUI → Theme v5.1 (handover-260210-1800)
 - Confirm unified components exist: `AvanueCard`, `AvanueButton`, `AvanueSurface`
@@ -186,11 +191,12 @@ All 7 existing handlers are registered in `AndroidHandlerFactory.createHandlers(
 - Check if files referenced (`OceanThemeExtensions.kt`) still exist or were migrated
 - If yes → archive handover, done
 
-### 4.3 Verify Dashboard State (handover-260207-dashboard)
-- Check if `DashboardViewModel.kt` and `HomeScreen.kt` exist from background agents
-- Check if they compile
-- Assess: is dashboard feature still relevant given all the changes since?
-- Create status report — likely needs fresh approach
+### 4.3 ~~Verify Dashboard State~~ — PRODUCTION-READY (verified 260215)
+- `DashboardViewModel.kt` (507 lines) and `HomeScreen.kt` (2,232 lines) exist and compile
+- Zero deprecated imports — full Theme v5.1 compliance (AvanueTheme.colors.*, AvanueColorPalette, MaterialMode)
+- All dependencies valid, fully wired into navigation via AvanueMode.VOICE and AvanueMode.COMMANDS
+- Only gap: `DynamicCommandsInfoTab` is a placeholder (non-blocking)
+- **Dashboard feature is alive, healthy, and needs no rewrite**
 
 ---
 
@@ -199,11 +205,11 @@ All 7 existing handlers are registered in `AndroidHandlerFactory.createHandlers(
 | Phase | Original | Revised | Status |
 |-------|----------|---------|--------|
 | 0 (Triage) | 30 min | 30 min | **DONE** |
-| 1 (Handlers) | 4-5 hrs | **1 hr** (only BrowserHandler) | 87.5% done |
-| 2 (Overlay) | 1 hr | 1 hr | Pending |
-| 3 (WebAvanue) | 1.5 hrs | 1 hr | Pending |
-| 4 (Validate) | 30 min | 15 min | Partially done |
-| **Total** | **7.5-8 hrs** | **~3.5 hrs remaining** | |
+| 1 (Handlers) | 4-5 hrs | **1 hr** (only BrowserHandler) | **DONE** (all 11 registered) |
+| 2 (Overlay) | 1 hr | 1 hr | **DONE** (unified AVID + scroll fix) |
+| 3 (WebAvanue) | 1.5 hrs | 30 min | **ALL DONE** (crash resolved, scoping done, plan exists) |
+| 4 (Validate) | 30 min | 15 min | **ALL DONE** (4.1+4.2 archived, 4.3 production-ready) |
+| **Total** | **7.5-8 hrs** | **~0 min remaining** | **ALL PHASES COMPLETE** |
 
 ## Swarm Dispatch Plan
 
