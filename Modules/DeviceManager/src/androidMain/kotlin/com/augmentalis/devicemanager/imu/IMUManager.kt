@@ -4,15 +4,14 @@
 package com.augmentalis.devicemanager.imu
 
 import android.content.Context
-import android.content.Context.WINDOW_SERVICE
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.hardware.display.DisplayManager
 import android.util.Log
 import android.view.Display
 import android.view.Surface
-import android.view.WindowManager
 import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,8 +80,11 @@ class IMUManager private constructor(
     // Sensor management
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
-    @Suppress("DEPRECATION")
-    private var display: Display = (context.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay
+    // Use DisplayManager instead of WindowManager.defaultDisplay to avoid
+    // "Tried to obtain display from a Context not associated with one" on Android 11+
+    // when this singleton is created with applicationContext.
+    private var display: Display = (context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager)
+        .getDisplay(Display.DEFAULT_DISPLAY)
     private var rotation: Int = display.rotation
     private val rotationMatrixBuffer = FloatArray(9)
     private val adjustedRotationMatrixBuffer = FloatArray(9)
