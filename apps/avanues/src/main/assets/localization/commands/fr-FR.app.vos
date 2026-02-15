@@ -8,7 +8,6 @@
     "media": "MEDIA",
     "sys": "SYSTEM",
     "voice": "VOICE_CONTROL",
-    "app": "APP_LAUNCH",
     "acc": "ACCESSIBILITY",
     "text": "TEXT",
     "input": "INPUT",
@@ -53,14 +52,6 @@
     "voice_cursor_show": "CURSOR_SHOW",
     "voice_cursor_hide": "CURSOR_HIDE",
     "voice_cursor_click": "CURSOR_CLICK",
-    "app_browser": "OPEN_APP",
-    "app_camera": "OPEN_APP",
-    "app_gallery": "OPEN_APP",
-    "app_calc": "OPEN_APP",
-    "app_calendar": "OPEN_APP",
-    "app_phone": "OPEN_APP",
-    "app_messages": "OPEN_APP",
-    "app_contacts": "OPEN_APP",
     "acc_click": "CLICK",
     "acc_long_click": "LONG_CLICK",
     "acc_zoom_in": "ZOOM_IN",
@@ -76,34 +67,17 @@
     "text_delete": "DELETE",
     "input_show_kb": "SHOW_KEYBOARD",
     "input_hide_kb": "HIDE_KEYBOARD",
-    "appctl_close": "CLOSE_APP"
+    "appctl_close": "CLOSE_APP",
+    "acc_double_tap": "DOUBLE_CLICK",
+    "acc_swipe_left": "SWIPE_LEFT",
+    "acc_swipe_right": "SWIPE_RIGHT",
+    "acc_swipe_up": "SWIPE_UP",
+    "acc_swipe_down": "SWIPE_DOWN",
+    "acc_stroke_start": "STROKE_START",
+    "acc_stroke_end": "STROKE_END",
+    "acc_erase": "ERASE"
   },
-  "meta_map": {
-    "app_browser": {
-      "app_type": "browser"
-    },
-    "app_camera": {
-      "app_type": "camera"
-    },
-    "app_gallery": {
-      "app_type": "gallery"
-    },
-    "app_calc": {
-      "app_type": "calculator"
-    },
-    "app_calendar": {
-      "app_type": "calendar"
-    },
-    "app_phone": {
-      "app_type": "phone"
-    },
-    "app_messages": {
-      "app_type": "messages"
-    },
-    "app_contacts": {
-      "app_type": "contacts"
-    }
-  },
+  "meta_map": {},
   "commands": [
     [
       "nav_back",
@@ -456,82 +430,6 @@
       "Cliquer a la position du curseur"
     ],
     [
-      "app_browser",
-      "ouvrir le navigateur",
-      [
-        "navigateur",
-        "ouvrir internet"
-      ],
-      "Ouvrir le navigateur web"
-    ],
-    [
-      "app_camera",
-      "ouvrir l'appareil photo",
-      [
-        "camera",
-        "prendre une photo",
-        "photo"
-      ],
-      "Ouvrir l'appareil photo"
-    ],
-    [
-      "app_gallery",
-      "ouvrir la galerie",
-      [
-        "galerie",
-        "photos",
-        "mes photos"
-      ],
-      "Ouvrir la galerie photo"
-    ],
-    [
-      "app_calc",
-      "ouvrir la calculatrice",
-      [
-        "calculatrice",
-        "calculette"
-      ],
-      "Ouvrir la calculatrice"
-    ],
-    [
-      "app_calendar",
-      "ouvrir le calendrier",
-      [
-        "calendrier",
-        "agenda"
-      ],
-      "Ouvrir le calendrier"
-    ],
-    [
-      "app_phone",
-      "ouvrir le telephone",
-      [
-        "telephone",
-        "appeler",
-        "composer"
-      ],
-      "Ouvrir le telephone"
-    ],
-    [
-      "app_messages",
-      "ouvrir les messages",
-      [
-        "messages",
-        "sms",
-        "textos"
-      ],
-      "Ouvrir l'application de messages"
-    ],
-    [
-      "app_contacts",
-      "ouvrir les contacts",
-      [
-        "contacts",
-        "repertoire"
-      ],
-      "Ouvrir les contacts"
-    ],
-    [
       "acc_click",
       "cliquer",
       [
@@ -677,6 +575,14 @@
         "quitter"
       ],
       "Fermer l'application en cours"
-    ]
+    ],
+    ["acc_double_tap", "double tap", ["double clic", "double appui"], "Double-tap sur un element"],
+    ["acc_swipe_left", "balayer a gauche", [], "Balayer vers la gauche sur l'ecran"],
+    ["acc_swipe_right", "balayer a droite", [], "Balayer vers la droite sur l'ecran"],
+    ["acc_swipe_up", "balayer vers le haut", [], "Balayer vers le haut sur l'ecran"],
+    ["acc_swipe_down", "balayer vers le bas", [], "Balayer vers le bas sur l'ecran"],
+    ["acc_stroke_start", "commencer a dessiner", ["dessiner", "debut de trait"], "Commencer un trait de dessin (annotation)"],
+    ["acc_stroke_end", "arreter de dessiner", ["fin de dessin", "fin de trait"], "Terminer le trait de dessin (annotation)"],
+    ["acc_erase", "gomme", ["mode gomme", "activer la gomme"], "Activer le mode gomme (annotation)"]
   ]
 }

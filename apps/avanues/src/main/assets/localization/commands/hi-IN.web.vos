@@ -52,7 +52,24 @@
     "gesture_reset_zoom": "RESET_ZOOM",
     "gesture_select_word": "SELECT_WORD",
     "gesture_clear_sel": "CLEAR_SELECTION",
-    "gesture_hover_out": "HOVER_OUT"
+    "gesture_hover_out": "HOVER_OUT",
+    "browser_zoom_in": "ZOOM_IN",
+    "browser_zoom_out": "ZOOM_OUT",
+    "browser_scroll_up": "SCROLL_UP",
+    "browser_scroll_down": "SCROLL_DOWN",
+    "browser_scroll_left": "SCROLL_LEFT",
+    "browser_scroll_right": "SCROLL_RIGHT",
+    "browser_long_press": "LONG_CLICK",
+    "browser_tap": "TAP",
+    "browser_focus": "FOCUS",
+    "gesture_hover": "HOVER",
+    "gesture_drag_left": "DRAG",
+    "gesture_drag_right": "DRAG",
+    "gesture_drag_up": "DRAG",
+    "gesture_drag_down": "DRAG",
+    "gesture_stroke_start": "STROKE_START",
+    "gesture_stroke_end": "STROKE_END",
+    "gesture_erase": "ERASE"
   },
   "meta_map": {
     "browser_rotate_left": {
@@ -108,6 +125,18 @@
     },
     "gesture_scale_down": {
       "factor": "0.67"
+    },
+    "gesture_drag_left": {
+      "direction": "left"
+    },
+    "gesture_drag_right": {
+      "direction": "right"
+    },
+    "gesture_drag_up": {
+      "direction": "up"
+    },
+    "gesture_drag_down": {
+      "direction": "down"
     }
   },
   "commands": [
@@ -519,6 +548,137 @@
         "mouse leave"
       ],
       "Element par hover band karo"
+    ],
+    [
+      "browser_zoom_in",
+      "ज़ूम इन",
+      [
+        "बड़ा करो",
+        "ज़ूम करो"
+      ],
+      "पेज को ज़ूम इन करें"
+    ],
+    [
+      "browser_zoom_out",
+      "ज़ूम आउट",
+      [
+        "छोटा करो"
+      ],
+      "पेज को ज़ूम आउट करें"
+    ],
+    [
+      "browser_scroll_up",
+      "ऊपर स्क्रॉल करो",
+      [
+        "पेज ऊपर"
+      ],
+      "पेज को ऊपर स्क्रॉल करें"
+    ],
+    [
+      "browser_scroll_down",
+      "नीचे स्क्रॉल करो",
+      [
+        "पेज नीचे"
+      ],
+      "पेज को नीचे स्क्रॉल करें"
+    ],
+    [
+      "browser_scroll_left",
+      "बाएं स्क्रॉल करो",
+      [],
+      "पेज को बाएं स्क्रॉल करें"
+    ],
+    [
+      "browser_scroll_right",
+      "दाएं स्क्रॉल करो",
+      [],
+      "पेज को दाएं स्क्रॉल करें"
+    ],
+    [
+      "browser_long_press",
+      "लंबा दबाओ",
+      [
+        "लॉन्ग प्रेस",
+        "दबाए रखो"
+      ],
+      "एलिमेंट को लंबे समय तक दबाएं"
+    ],
+    [
+      "browser_tap",
+      "टैप करो",
+      [
+        "यहां टैप करो",
+        "छुओ"
+      ],
+      "एलिमेंट पर टैप करें"
+    ],
+    [
+      "browser_focus",
+      "फ़ोकस करो",
+      [
+        "ध्यान दो"
+      ],
+      "एलिमेंट पर फ़ोकस करें"
+    ],
+    [
+      "gesture_hover",
+      "होवर करो",
+      [
+        "ऊपर रखो",
+        "माउस ऊपर"
+      ],
+      "एलिमेंट पर होवर करें"
+    ],
+    [
+      "gesture_drag_left",
+      "बाएं खींचो",
+      [],
+      "एलिमेंट को बाएं खींचें"
+    ],
+    [
+      "gesture_drag_right",
+      "दाएं खींचो",
+      [],
+      "एलिमेंट को दाएं खींचें"
+    ],
+    [
+      "gesture_drag_up",
+      "ऊपर खींचो",
+      [],
+      "एलिमेंट को ऊपर खींचें"
+    ],
+    [
+      "gesture_drag_down",
+      "नीचे खींचो",
+      [],
+      "एलिमेंट को नीचे खींचें"
+    ],
+    [
+      "gesture_stroke_start",
+      "ड्रॉइंग शुरू करो",
+      [
+        "ड्रॉ करो",
+        "स्ट्रोक शुरू करो"
+      ],
+      "ड्रॉइंग स्ट्रोक शुरू करें"
+    ],
+    [
+      "gesture_stroke_end",
+      "ड्रॉइंग बंद करो",
+      [
+        "ड्रॉइंग खत्म करो",
+        "स्ट्रोक बंद करो"
+      ],
+      "वर्तमान ड्रॉइंग स्ट्रोक समाप्त करें"
+    ],
+    [
+      "gesture_erase",
+      "इरेज़र",
+      [
+        "इरेज़ मोड",
+        "मिटाने वाला"
+      ],
+      "ड्रॉइंग के लिए इरेज़र मोड चालू करें"
     ]
   ]
 }

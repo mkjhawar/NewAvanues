@@ -739,9 +739,14 @@ object DOMScraperBridge {
 
     fun scrollPageScript(direction: String): String = """
 (function() {
-    const amount = window.innerHeight * 0.85;
-    const dy = '$direction' === 'up' ? -amount : amount;
-    window.scrollBy({ top: dy, behavior: 'smooth' });
+    const vAmount = window.innerHeight * 0.85;
+    const hAmount = window.innerWidth * 0.85;
+    let dx = 0, dy = 0;
+    if ('$direction' === 'up') dy = -vAmount;
+    else if ('$direction' === 'down') dy = vAmount;
+    else if ('$direction' === 'left') dx = -hAmount;
+    else if ('$direction' === 'right') dx = hAmount;
+    window.scrollBy({ top: dy, left: dx, behavior: 'smooth' });
     return JSON.stringify({ success: true, message: 'Scrolled $direction' });
 })();
 """
@@ -1236,6 +1241,85 @@ object DOMScraperBridge {
         }
     }
     const result = window.AvanuesGestures.hoverOut(x, y);
+    return JSON.stringify(result);
+})();
+"""
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Directional Drag Script
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun dragDirectionScript(selector: String, direction: String, distance: String = "100"): String = """
+(function() {
+    const el = '$selector' ? document.querySelector('$selector')
+        : (window._avanuesGrabbed ? window._avanuesGrabbed.element : null);
+    if (el) {
+        const rect = el.getBoundingClientRect();
+        const startX = rect.left + rect.width / 2;
+        const startY = rect.top + rect.height / 2;
+        const dist = parseInt('$distance', 10);
+        let endX = startX, endY = startY;
+        if ('$direction' === 'left') endX -= dist;
+        else if ('$direction' === 'right') endX += dist;
+        else if ('$direction' === 'up') endY -= dist;
+        else if ('$direction' === 'down') endY += dist;
+        el.dispatchEvent(new DragEvent('dragstart', { clientX: startX, clientY: startY, bubbles: true }));
+        el.dispatchEvent(new DragEvent('drag', { clientX: endX, clientY: endY, bubbles: true }));
+        el.dispatchEvent(new DragEvent('dragend', { clientX: endX, clientY: endY, bubbles: true }));
+        return JSON.stringify({ success: true, message: 'Dragged $direction ' + dist + 'px' });
+    }
+    return JSON.stringify({ success: false, message: 'No element to drag — use grab first or target a selector' });
+})();
+"""
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Drawing/Annotation Scripts (delegates to AvanuesGestures)
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun strokeStartScript(selector: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.strokeStart(x, y);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun strokeEndScript(): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.strokeEnd();
+    return JSON.stringify(result);
+})();
+"""
+
+    fun eraseScript(selector: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.erase(x, y);
     return JSON.stringify(result);
 })();
 """

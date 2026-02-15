@@ -362,6 +362,11 @@ class ActionCoordinator(
             CommandActionType.CLEAR_SELECTION -> "clear selection"
             CommandActionType.HOVER_OUT -> "hover out"
 
+            // Drawing/annotation actions
+            CommandActionType.STROKE_START -> "start drawing"
+            CommandActionType.STROKE_END -> "stop drawing"
+            CommandActionType.ERASE -> "eraser"
+
             // Default for custom/unknown
             CommandActionType.CUSTOM -> "tap $target"
             CommandActionType.MACRO -> "not implemented"

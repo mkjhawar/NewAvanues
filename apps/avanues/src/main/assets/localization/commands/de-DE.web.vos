@@ -52,7 +52,24 @@
     "gesture_reset_zoom": "RESET_ZOOM",
     "gesture_select_word": "SELECT_WORD",
     "gesture_clear_sel": "CLEAR_SELECTION",
-    "gesture_hover_out": "HOVER_OUT"
+    "gesture_hover_out": "HOVER_OUT",
+    "browser_zoom_in": "ZOOM_IN",
+    "browser_zoom_out": "ZOOM_OUT",
+    "browser_scroll_up": "SCROLL_UP",
+    "browser_scroll_down": "SCROLL_DOWN",
+    "browser_scroll_left": "SCROLL_LEFT",
+    "browser_scroll_right": "SCROLL_RIGHT",
+    "browser_long_press": "LONG_CLICK",
+    "browser_tap": "TAP",
+    "browser_focus": "FOCUS",
+    "gesture_hover": "HOVER",
+    "gesture_drag_left": "DRAG",
+    "gesture_drag_right": "DRAG",
+    "gesture_drag_up": "DRAG",
+    "gesture_drag_down": "DRAG",
+    "gesture_stroke_start": "STROKE_START",
+    "gesture_stroke_end": "STROKE_END",
+    "gesture_erase": "ERASE"
   },
   "meta_map": {
     "browser_rotate_left": {
@@ -108,7 +125,11 @@
     },
     "gesture_scale_down": {
       "factor": "0.67"
-    }
+    },
+    "gesture_drag_left": { "direction": "left" },
+    "gesture_drag_right": { "direction": "right" },
+    "gesture_drag_up": { "direction": "up" },
+    "gesture_drag_down": { "direction": "down" }
   },
   "commands": [
     [
@@ -524,6 +545,23 @@
         "Zeiger weg"
       ],
       "Hovern ueber Element beenden"
-    ]
+    ],
+    ["browser_zoom_in", "hineinzoomen", ["vergrößern", "zoom näher"], "In die Seite hineinzoomen"],
+    ["browser_zoom_out", "herauszoomen", ["verkleinern"], "Aus der Seite herauszoomen"],
+    ["browser_scroll_up", "nach oben scrollen", ["Seite hoch"], "Die Seite nach oben scrollen"],
+    ["browser_scroll_down", "nach unten scrollen", ["Seite runter"], "Die Seite nach unten scrollen"],
+    ["browser_scroll_left", "nach links scrollen", [], "Die Seite nach links scrollen"],
+    ["browser_scroll_right", "nach rechts scrollen", [], "Die Seite nach rechts scrollen"],
+    ["browser_long_press", "lang drücken", ["langer Klick", "gedrückt halten"], "Lang auf ein Element drücken"],
+    ["browser_tap", "tippen", ["hier tippen", "antippen"], "Auf ein Element tippen"],
+    ["browser_focus", "fokussieren", ["Fokus setzen"], "Ein Element fokussieren"],
+    ["gesture_hover", "schweben", ["darüber schweben", "Maus darüber"], "Über ein Element schweben"],
+    ["gesture_drag_left", "nach links ziehen", [], "Element nach links ziehen"],
+    ["gesture_drag_right", "nach rechts ziehen", [], "Element nach rechts ziehen"],
+    ["gesture_drag_up", "nach oben ziehen", [], "Element nach oben ziehen"],
+    ["gesture_drag_down", "nach unten ziehen", [], "Element nach unten ziehen"],
+    ["gesture_stroke_start", "zeichnen starten", ["zeichnen", "Strich beginnen"], "Einen Zeichenstrich beginnen"],
+    ["gesture_stroke_end", "zeichnen beenden", ["Zeichnung beenden", "Strich beenden"], "Den aktuellen Zeichenstrich beenden"],
+    ["gesture_erase", "Radierer", ["Radiermodus", "Radierer aktivieren"], "Den Radiermodus zum Zeichnen umschalten"]
   ]
 }

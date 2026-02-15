@@ -52,7 +52,24 @@
     "gesture_reset_zoom": "RESET_ZOOM",
     "gesture_select_word": "SELECT_WORD",
     "gesture_clear_sel": "CLEAR_SELECTION",
-    "gesture_hover_out": "HOVER_OUT"
+    "gesture_hover_out": "HOVER_OUT",
+    "browser_zoom_in": "ZOOM_IN",
+    "browser_zoom_out": "ZOOM_OUT",
+    "browser_scroll_up": "SCROLL_UP",
+    "browser_scroll_down": "SCROLL_DOWN",
+    "browser_scroll_left": "SCROLL_LEFT",
+    "browser_scroll_right": "SCROLL_RIGHT",
+    "browser_long_press": "LONG_CLICK",
+    "browser_tap": "TAP",
+    "browser_focus": "FOCUS",
+    "gesture_hover": "HOVER",
+    "gesture_drag_left": "DRAG",
+    "gesture_drag_right": "DRAG",
+    "gesture_drag_up": "DRAG",
+    "gesture_drag_down": "DRAG",
+    "gesture_stroke_start": "STROKE_START",
+    "gesture_stroke_end": "STROKE_END",
+    "gesture_erase": "ERASE"
   },
   "meta_map": {
     "browser_rotate_left": {
@@ -108,6 +125,18 @@
     },
     "gesture_scale_down": {
       "factor": "0.67"
+    },
+    "gesture_drag_left": {
+      "direction": "left"
+    },
+    "gesture_drag_right": {
+      "direction": "right"
+    },
+    "gesture_drag_up": {
+      "direction": "up"
+    },
+    "gesture_drag_down": {
+      "direction": "down"
     }
   },
   "commands": [
@@ -498,6 +527,137 @@
         "mouse leave"
       ],
       "Stop hovering over element"
+    ],
+    [
+      "browser_zoom_in",
+      "zoom in",
+      [
+        "zoom closer",
+        "magnify"
+      ],
+      "Zoom into the page"
+    ],
+    [
+      "browser_zoom_out",
+      "zoom out",
+      [
+        "zoom away"
+      ],
+      "Zoom out of the page"
+    ],
+    [
+      "browser_scroll_up",
+      "scroll up",
+      [
+        "page up"
+      ],
+      "Scroll the page up"
+    ],
+    [
+      "browser_scroll_down",
+      "scroll down",
+      [
+        "page down"
+      ],
+      "Scroll the page down"
+    ],
+    [
+      "browser_scroll_left",
+      "scroll left",
+      [],
+      "Scroll the page left"
+    ],
+    [
+      "browser_scroll_right",
+      "scroll right",
+      [],
+      "Scroll the page right"
+    ],
+    [
+      "browser_long_press",
+      "long press",
+      [
+        "long click",
+        "press and hold"
+      ],
+      "Long press on an element"
+    ],
+    [
+      "browser_tap",
+      "tap",
+      [
+        "tap here",
+        "tap on"
+      ],
+      "Tap on an element"
+    ],
+    [
+      "browser_focus",
+      "focus",
+      [
+        "focus on"
+      ],
+      "Focus on an element"
+    ],
+    [
+      "gesture_hover",
+      "hover",
+      [
+        "hover over",
+        "mouse over"
+      ],
+      "Hover over an element"
+    ],
+    [
+      "gesture_drag_left",
+      "drag left",
+      [],
+      "Drag element left"
+    ],
+    [
+      "gesture_drag_right",
+      "drag right",
+      [],
+      "Drag element right"
+    ],
+    [
+      "gesture_drag_up",
+      "drag up",
+      [],
+      "Drag element up"
+    ],
+    [
+      "gesture_drag_down",
+      "drag down",
+      [],
+      "Drag element down"
+    ],
+    [
+      "gesture_stroke_start",
+      "start drawing",
+      [
+        "draw",
+        "begin stroke"
+      ],
+      "Begin a drawing stroke"
+    ],
+    [
+      "gesture_stroke_end",
+      "stop drawing",
+      [
+        "finish drawing",
+        "end stroke"
+      ],
+      "End the current drawing stroke"
+    ],
+    [
+      "gesture_erase",
+      "eraser",
+      [
+        "erase mode",
+        "toggle eraser"
+      ],
+      "Toggle eraser mode for drawing"
     ]
   ]
 }
