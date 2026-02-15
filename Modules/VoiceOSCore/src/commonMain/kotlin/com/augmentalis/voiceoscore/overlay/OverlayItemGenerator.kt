@@ -5,7 +5,11 @@
  * NumberOverlayItem instances for display as numbered badges.
  *
  * Pure Kotlin logic — no platform dependencies. Uses ElementLabels (KMP)
- * for list-item detection and hashCode() for AVID generation.
+ * for list-item detection and ElementFingerprint for unified AVID generation.
+ *
+ * AVIDs are now unified with the command system (ElementFingerprint):
+ * Format: {TypeCode}:{hash8} (e.g., "BTN:a3f2e1c9")
+ * Hash includes packageName for cross-app uniqueness and VOS export portability.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -24,46 +28,20 @@ private const val TAG = "OverlayItemGenerator"
 object OverlayItemGenerator {
 
     /**
-     * Generate a content-based AVID for an element.
-     *
-     * Uses className + resourceId + text + contentDescription to create a stable
-     * identifier that survives scroll recycling. Unlike bounds-based AVIDs, this
-     * returns the same value for the same element even if its screen position changes
-     * (e.g., after scrolling down and back up in a RecyclerView).
-     */
-    private fun generateContentAvid(element: ElementInfo): String {
-        val contentKey = buildString {
-            append(element.className.substringAfterLast("."))
-            if (element.resourceId.isNotBlank()) {
-                append("|")
-                append(element.resourceId.substringAfterLast("/"))
-            }
-            if (element.text.isNotBlank()) {
-                append("|")
-                append(element.text.take(120))
-            }
-            if (element.contentDescription.isNotBlank()) {
-                append("|")
-                append(element.contentDescription.take(120))
-            }
-        }
-        val hash = contentKey.hashCode().toUInt().toString(16).padStart(8, '0')
-        return "dyn_$hash"
-    }
-
-    /**
      * Generate overlay items from extracted elements for list-based apps.
      * Uses ElementLabels.findTopLevelListItems for smart row detection.
      *
      * @param elements All extracted elements
      * @param hierarchy Hierarchy information
      * @param labels Derived labels map (index -> label)
+     * @param packageName App package name (included in AVID hash for cross-app uniqueness)
      * @return List of NumberOverlayItem ready for display
      */
     fun generateForListApp(
         elements: List<ElementInfo>,
         hierarchy: List<HierarchyNode>,
-        labels: Map<Int, String>
+        labels: Map<Int, String>,
+        packageName: String = ""
     ): List<NumberOverlayItem> {
         val listItems = elements.filter { it.listIndex >= 0 }
         if (listItems.isEmpty()) return emptyList()
@@ -79,7 +57,7 @@ object OverlayItemGenerator {
                 top = element.bounds.top,
                 right = element.bounds.right,
                 bottom = element.bounds.bottom,
-                avid = generateContentAvid(element)
+                avid = ElementFingerprint.fromElementInfo(element, packageName)
             )
         }
         return items
@@ -91,11 +69,13 @@ object OverlayItemGenerator {
      *
      * @param elements All extracted elements
      * @param labels Derived labels map
+     * @param packageName App package name (included in AVID hash for cross-app uniqueness)
      * @return List of NumberOverlayItem
      */
     fun generateForAllClickable(
         elements: List<ElementInfo>,
-        labels: Map<Int, String>
+        labels: Map<Int, String>,
+        packageName: String = ""
     ): List<NumberOverlayItem> {
         val clickableElements = elements.filter { element ->
             (element.isClickable || element.isLongClickable) &&
@@ -121,7 +101,7 @@ object OverlayItemGenerator {
                 top = element.bounds.top,
                 right = element.bounds.right,
                 bottom = element.bounds.bottom,
-                avid = generateContentAvid(element)
+                avid = ElementFingerprint.fromElementInfo(element, packageName)
             )
         }
         return items

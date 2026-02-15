@@ -613,9 +613,10 @@ Examples:
 ### Using ElementFingerprint
 
 ```kotlin
-import com.augmentalis.voiceoscoreng.common.ElementFingerprint
+import com.augmentalis.voiceoscore.ElementFingerprint
 
 // Generate fingerprint for UI element
+// packageName is included in the hash for cross-app uniqueness and VOS export portability
 val fingerprint = ElementFingerprint.generate(
     className = "android.widget.Button",
     packageName = "com.example.app",
@@ -768,7 +769,7 @@ val isValid = VUIDGenerator.isValidVUID(vuid)
 val components = VUIDGenerator.parseVUID(vuid)
 
 // NEW (ElementFingerprint for UI elements)
-import com.augmentalis.voiceoscoreng.common.ElementFingerprint
+import com.augmentalis.voiceoscore.ElementFingerprint
 val fingerprint = ElementFingerprint.generate(className, packageName, resourceId, text, contentDesc)
 val typeCode = ElementFingerprint.getTypeCode(className)
 val isValid = ElementFingerprint.isValid(fingerprint)

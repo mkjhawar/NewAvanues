@@ -38,6 +38,7 @@ object ElementFingerprint {
         val typeCode = TypeCode.fromTypeName(className)
         val hash = Fingerprint.forElement(
             type = className,
+            packageName = packageName,
             resourceId = resourceId.ifBlank { null },
             name = text.ifBlank { null },
             contentDesc = contentDesc.ifBlank { null }

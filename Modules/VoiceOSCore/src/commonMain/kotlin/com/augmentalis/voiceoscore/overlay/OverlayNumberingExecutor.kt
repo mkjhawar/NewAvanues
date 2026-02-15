@@ -30,16 +30,19 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
     // ===== Non-suspend methods for DynamicCommandGenerator =====
 
     /**
-     * Handle screen context change. Resets numbering on app change,
-     * resets on screen change for non-target apps, and resets on
-     * major navigation within target apps.
+     * Handle screen context change. Resets numbering on app change and
+     * on major navigation (high structural change ratio). Preserves numbering
+     * on scroll (low structural change ratio).
+     *
+     * Uses structural-change-ratio universally for ALL apps (target and non-target)
+     * to distinguish scroll from navigation. Previously, non-target apps always
+     * reset on isNewScreen, causing scroll to clear overlay badges.
      *
      * @param packageName Current app package name
      * @param isTargetApp Whether this app is in the TARGET_APPS list
      * @param isNewScreen Whether the screen hash changed
      * @param structuralChangeRatio 0.0-1.0 how much the top-level structure changed.
-     *        Used to distinguish scroll (low ratio) from major navigation (high ratio)
-     *        within target apps like Gmail (inbox -> email detail).
+     *        Low ratio (~0.1-0.3) = scroll. High ratio (~0.7-0.9) = navigation.
      * @return true if numbering was reset
      */
     fun handleScreenContext(
@@ -52,19 +55,18 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
         var didReset = false
 
         if (isAppChange) {
+            // Always reset on app switch
             lastPackageName = packageName
             clearAllAssignmentsInternal()
             didReset = true
-        } else if (isNewScreen && !isTargetApp) {
-            clearAllAssignmentsInternal()
-            didReset = true
-        } else if (isNewScreen && isTargetApp && structuralChangeRatio > MAJOR_NAVIGATION_THRESHOLD) {
-            // Major navigation within a target app (e.g., Gmail inbox -> email detail).
-            // The structural change ratio is high because the screen layout is fundamentally
-            // different, not just scrolled content. Reset numbering for the new screen.
+        } else if (isNewScreen && structuralChangeRatio > MAJOR_NAVIGATION_THRESHOLD) {
+            // Major navigation (high structural change) — reset for ALL app types.
+            // Scroll events produce low ratios (same toolbar/RecyclerView structure)
+            // while navigation produces high ratios (fundamentally different layout).
             clearAllAssignmentsInternal()
             didReset = true
         }
+        // isNewScreen with low structuralChangeRatio = scroll → preserve numbering
 
         // Immediately clear stale overlay badges on screen/app transition.
         // Without this, old badges persist during the async element extraction gap
@@ -78,9 +80,10 @@ class OverlayNumberingExecutor : NumbersOverlayExecutor {
     }
 
     companion object {
-        /** Threshold above which a screen change within a target app is considered
-         *  major navigation (not scroll). Fragment transitions like list -> detail
-         *  typically exceed 0.7; lowered to 0.4 to catch subtler transitions. */
+        /** Threshold above which a screen change is considered major navigation
+         *  (not scroll). Fragment transitions like list -> detail typically exceed
+         *  0.7; lowered to 0.4 to catch subtler transitions. Applied uniformly to
+         *  both target apps (Gmail, etc.) and general apps with overlay ON. */
         const val MAJOR_NAVIGATION_THRESHOLD = 0.4f
     }
 

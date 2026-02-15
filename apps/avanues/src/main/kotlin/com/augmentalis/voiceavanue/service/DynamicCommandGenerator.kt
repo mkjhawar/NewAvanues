@@ -68,8 +68,10 @@ class DynamicCommandGenerator(
             val screenHash = screenCacheManager.generateScreenHash(rootNode)
             val isNewScreen = screenHash != lastScreenHash
 
-            // Calculate structural change ratio for target app major navigation detection
-            val structuralChangeRatio = if (isNewScreen && isTargetApp) {
+            // Calculate structural change ratio for ALL apps to distinguish scroll from navigation.
+            // Previously only computed for target apps, causing non-target apps with overlay ON
+            // to reset numbering on every scroll (Bug: always reset on isNewScreen && !isTargetApp).
+            val structuralChangeRatio = if (isNewScreen) {
                 calculateStructuralChangeRatio(rootNode)
             } else 0f
 
@@ -113,13 +115,14 @@ class DynamicCommandGenerator(
             val labels = ElementLabels.deriveElementLabels(elements, hierarchy)
 
             // Generate overlay items based on app type
+            // packageName included in AVID hash for cross-app uniqueness and VOS export portability
             val overlayItems = if (isTargetApp) {
                 // List-based app: find list items and number them
-                OverlayItemGenerator.generateForListApp(elements, hierarchy, labels)
+                OverlayItemGenerator.generateForListApp(elements, hierarchy, labels, packageName)
             } else {
                 // General app with overlay ON mode: number all clickable elements
                 if (OverlayStateManager.numbersOverlayMode.value == NumbersOverlayMode.ON) {
-                    OverlayItemGenerator.generateForAllClickable(elements, labels)
+                    OverlayItemGenerator.generateForAllClickable(elements, labels, packageName)
                 } else {
                     emptyList()
                 }
