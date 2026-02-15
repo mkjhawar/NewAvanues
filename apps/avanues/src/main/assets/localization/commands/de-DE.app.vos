@@ -8,7 +8,6 @@
     "media": "MEDIA",
     "sys": "SYSTEM",
     "voice": "VOICE_CONTROL",
-    "app": "APP_LAUNCH",
     "acc": "ACCESSIBILITY",
     "text": "TEXT",
     "input": "INPUT",
@@ -53,14 +52,6 @@
     "voice_cursor_show": "CURSOR_SHOW",
     "voice_cursor_hide": "CURSOR_HIDE",
     "voice_cursor_click": "CURSOR_CLICK",
-    "app_browser": "OPEN_APP",
-    "app_camera": "OPEN_APP",
-    "app_gallery": "OPEN_APP",
-    "app_calc": "OPEN_APP",
-    "app_calendar": "OPEN_APP",
-    "app_phone": "OPEN_APP",
-    "app_messages": "OPEN_APP",
-    "app_contacts": "OPEN_APP",
     "acc_click": "CLICK",
     "acc_long_click": "LONG_CLICK",
     "acc_zoom_in": "ZOOM_IN",
@@ -76,34 +67,17 @@
     "text_delete": "DELETE",
     "input_show_kb": "SHOW_KEYBOARD",
     "input_hide_kb": "HIDE_KEYBOARD",
-    "appctl_close": "CLOSE_APP"
+    "appctl_close": "CLOSE_APP",
+    "acc_double_tap": "DOUBLE_CLICK",
+    "acc_swipe_left": "SWIPE_LEFT",
+    "acc_swipe_right": "SWIPE_RIGHT",
+    "acc_swipe_up": "SWIPE_UP",
+    "acc_swipe_down": "SWIPE_DOWN",
+    "acc_stroke_start": "STROKE_START",
+    "acc_stroke_end": "STROKE_END",
+    "acc_erase": "ERASE"
   },
-  "meta_map": {
-    "app_browser": {
-      "app_type": "browser"
-    },
-    "app_camera": {
-      "app_type": "camera"
-    },
-    "app_gallery": {
-      "app_type": "gallery"
-    },
-    "app_calc": {
-      "app_type": "calculator"
-    },
-    "app_calendar": {
-      "app_type": "calendar"
-    },
-    "app_phone": {
-      "app_type": "phone"
-    },
-    "app_messages": {
-      "app_type": "messages"
-    },
-    "app_contacts": {
-      "app_type": "contacts"
-    }
-  },
+  "meta_map": {},
   "commands": [
     [
       "nav_back",
@@ -469,81 +443,6 @@
       "An Cursorposition klicken"
     ],
     [
-      "app_browser",
-      "Browser oeffnen",
-      [
-        "Browser",
-        "Webbrowser oeffnen"
-      ],
-      "Webbrowser oeffnen"
-    ],
-    [
-      "app_camera",
-      "Kamera oeffnen",
-      [
-        "Kamera",
-        "Foto machen"
-      ],
-      "Kamera oeffnen"
-    ],
-    [
-      "app_gallery",
-      "Galerie oeffnen",
-      [
-        "Galerie",
-        "Fotos",
-        "Bilder"
-      ],
-      "Fotogalerie oeffnen"
-    ],
-    [
-      "app_calc",
-      "Taschenrechner oeffnen",
-      [
-        "Taschenrechner",
-        "Rechner"
-      ],
-      "Taschenrechner oeffnen"
-    ],
-    [
-      "app_calendar",
-      "Kalender oeffnen",
-      [
-        "Kalender",
-        "Termine"
-      ],
-      "Kalender oeffnen"
-    ],
-    [
-      "app_phone",
-      "Telefon oeffnen",
-      [
-        "Telefon",
-        "Waehltasten",
-        "anrufen"
-      ],
-      "Telefon-App oeffnen"
-    ],
-    [
-      "app_messages",
-      "Nachrichten oeffnen",
-      [
-        "Nachrichten",
-        "SMS",
-        "Mitteilungen"
-      ],
-      "Nachrichten-App oeffnen"
-    ],
-    [
-      "app_contacts",
-      "Kontakte oeffnen",
-      [
-        "Kontakte",
-        "Adressbuch"
-      ],
-      "Kontakte oeffnen"
-    ],
-    [
       "acc_click",
       "klicken",
       [
@@ -691,6 +590,14 @@
         "beenden"
       ],
       "Aktuelle App schliessen"
-    ]
+    ],
+    ["acc_double_tap", "Doppeltippen", ["Doppelklick"], "Doppeltippen auf ein Element"],
+    ["acc_swipe_left", "nach links wischen", [], "Auf dem Bildschirm nach links wischen"],
+    ["acc_swipe_right", "nach rechts wischen", [], "Auf dem Bildschirm nach rechts wischen"],
+    ["acc_swipe_up", "nach oben wischen", [], "Auf dem Bildschirm nach oben wischen"],
+    ["acc_swipe_down", "nach unten wischen", [], "Auf dem Bildschirm nach unten wischen"],
+    ["acc_stroke_start", "zeichnen starten", ["zeichnen", "Strich beginnen"], "Einen Zeichenstrich beginnen (Anmerkung)"],
+    ["acc_stroke_end", "zeichnen beenden", ["Zeichnung beenden", "Strich beenden"], "Den Zeichenstrich beenden (Anmerkung)"],
+    ["acc_erase", "Radierer", ["Radiermodus", "Radierer aktivieren"], "Den Radiermodus umschalten (Anmerkung)"]
   ]
 }

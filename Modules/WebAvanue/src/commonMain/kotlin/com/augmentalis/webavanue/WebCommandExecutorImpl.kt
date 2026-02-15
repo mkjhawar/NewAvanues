@@ -109,13 +109,22 @@ class WebCommandExecutorImpl : IWebCommandExecutor {
                 action.params["direction"] ?: "right",
                 action.params["angle"] ?: "90"
             )
-            WebActionType.DRAG -> DOMScraperBridge.dragScript(
-                selector,
-                action.params["endX"] ?: "0",
-                action.params["endY"] ?: "0"
-            )
+            WebActionType.DRAG -> {
+                val direction = action.params["direction"]
+                if (direction != null) {
+                    DOMScraperBridge.dragDirectionScript(selector, direction)
+                } else {
+                    DOMScraperBridge.dragScript(
+                        selector,
+                        action.params["endX"] ?: "0",
+                        action.params["endY"] ?: "0"
+                    )
+                }
+            }
             WebActionType.ZOOM_IN -> DOMScraperBridge.zoomScript(selector, "in")
             WebActionType.ZOOM_OUT -> DOMScraperBridge.zoomScript(selector, "out")
+            WebActionType.SCROLL_PAGE_LEFT -> DOMScraperBridge.scrollPageScript("left")
+            WebActionType.SCROLL_PAGE_RIGHT -> DOMScraperBridge.scrollPageScript("right")
 
             // ═══════════════════════════════════════════════════════════════
             // Advanced Gesture Actions
@@ -165,6 +174,13 @@ class WebCommandExecutorImpl : IWebCommandExecutor {
             WebActionType.SELECT_WORD -> DOMScraperBridge.selectWordScript(selector)
             WebActionType.CLEAR_SELECTION -> DOMScraperBridge.clearSelectionScript()
             WebActionType.HOVER_OUT -> DOMScraperBridge.hoverOutScript(selector)
+
+            // ═══════════════════════════════════════════════════════════════
+            // Drawing/Annotation Actions
+            // ═══════════════════════════════════════════════════════════════
+            WebActionType.STROKE_START -> DOMScraperBridge.strokeStartScript(selector)
+            WebActionType.STROKE_END -> DOMScraperBridge.strokeEndScript()
+            WebActionType.ERASE -> DOMScraperBridge.eraseScript(selector)
 
             // ═══════════════════════════════════════════════════════════════
             // Text/Clipboard Actions

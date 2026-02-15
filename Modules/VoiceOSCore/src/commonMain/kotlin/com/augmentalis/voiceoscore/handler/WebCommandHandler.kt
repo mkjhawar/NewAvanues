@@ -152,6 +152,8 @@ class WebCommandHandler : BaseHandler() {
             // Existing scroll directions map to page scroll in web context
             CommandActionType.SCROLL_UP -> WebActionType.SCROLL_PAGE_UP
             CommandActionType.SCROLL_DOWN -> WebActionType.SCROLL_PAGE_DOWN
+            CommandActionType.SCROLL_LEFT -> WebActionType.SCROLL_PAGE_LEFT
+            CommandActionType.SCROLL_RIGHT -> WebActionType.SCROLL_PAGE_RIGHT
 
             // Text/clipboard
             CommandActionType.SELECT_ALL -> WebActionType.SELECT_ALL
@@ -181,6 +183,11 @@ class WebCommandHandler : BaseHandler() {
 
             // Page retrain
             CommandActionType.RETRAIN_PAGE -> WebActionType.RETRAIN_PAGE
+
+            // Drawing/annotation
+            CommandActionType.STROKE_START -> WebActionType.STROKE_START
+            CommandActionType.STROKE_END -> WebActionType.STROKE_END
+            CommandActionType.ERASE -> WebActionType.ERASE
 
             // Fallback: parse from phrase
             else -> resolveFromPhrase(command.phrase)
@@ -223,9 +230,21 @@ class WebCommandHandler : BaseHandler() {
             normalized.startsWith("double") -> WebActionType.DOUBLE_CLICK
             normalized == "hover out" || normalized == "stop hovering" -> WebActionType.HOVER_OUT
             normalized.startsWith("hover") -> WebActionType.HOVER
-            normalized == "zoom in" -> WebActionType.ZOOM_IN
-            normalized == "zoom out" -> WebActionType.ZOOM_OUT
+            normalized == "scroll up" || normalized == "page up" -> WebActionType.SCROLL_PAGE_UP
+            normalized == "scroll down" || normalized == "page down" -> WebActionType.SCROLL_PAGE_DOWN
+            normalized == "scroll left" -> WebActionType.SCROLL_PAGE_LEFT
+            normalized == "scroll right" -> WebActionType.SCROLL_PAGE_RIGHT
+            normalized == "zoom in" || normalized == "zoom closer" || normalized == "magnify" -> WebActionType.ZOOM_IN
+            normalized == "zoom out" || normalized == "zoom away" -> WebActionType.ZOOM_OUT
             normalized == "reset zoom" -> WebActionType.RESET_ZOOM
+            normalized == "long click" || normalized == "press and hold" -> WebActionType.LONG_PRESS
+            normalized == "mouse over" -> WebActionType.HOVER
+            normalized == "tap here" -> WebActionType.CLICK
+            normalized == "focus on" -> WebActionType.FOCUS
+            normalized.startsWith("drag ") -> WebActionType.DRAG
+            normalized == "start drawing" || normalized == "begin stroke" || normalized == "draw" -> WebActionType.STROKE_START
+            normalized == "stop drawing" || normalized == "finish drawing" || normalized == "end stroke" -> WebActionType.STROKE_END
+            normalized == "eraser" || normalized == "erase mode" || normalized == "toggle eraser" -> WebActionType.ERASE
             normalized == "pan" || normalized.startsWith("pan ") -> WebActionType.PAN
             normalized == "tilt" || normalized.startsWith("tilt ") -> WebActionType.TILT
             normalized == "orbit" || normalized.startsWith("orbit ") -> WebActionType.ORBIT
@@ -298,6 +317,16 @@ class WebCommandHandler : BaseHandler() {
                 when {
                     normalized.contains("up") -> mapOf("factor" to "1.5")
                     normalized.contains("down") -> mapOf("factor" to "0.67")
+                    else -> null
+                }
+            }
+            WebActionType.DRAG -> {
+                val dist = "100"
+                when {
+                    normalized.contains("left") -> mapOf("direction" to "left", "endX" to "-$dist", "endY" to "0")
+                    normalized.contains("right") -> mapOf("direction" to "right", "endX" to dist, "endY" to "0")
+                    normalized.contains("up") -> mapOf("direction" to "up", "endX" to "0", "endY" to "-$dist")
+                    normalized.contains("down") -> mapOf("direction" to "down", "endX" to "0", "endY" to dist)
                     else -> null
                 }
             }

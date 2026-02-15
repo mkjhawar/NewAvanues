@@ -52,7 +52,24 @@
     "gesture_reset_zoom": "RESET_ZOOM",
     "gesture_select_word": "SELECT_WORD",
     "gesture_clear_sel": "CLEAR_SELECTION",
-    "gesture_hover_out": "HOVER_OUT"
+    "gesture_hover_out": "HOVER_OUT",
+    "browser_zoom_in": "ZOOM_IN",
+    "browser_zoom_out": "ZOOM_OUT",
+    "browser_scroll_up": "SCROLL_UP",
+    "browser_scroll_down": "SCROLL_DOWN",
+    "browser_scroll_left": "SCROLL_LEFT",
+    "browser_scroll_right": "SCROLL_RIGHT",
+    "browser_long_press": "LONG_CLICK",
+    "browser_tap": "TAP",
+    "browser_focus": "FOCUS",
+    "gesture_hover": "HOVER",
+    "gesture_drag_left": "DRAG",
+    "gesture_drag_right": "DRAG",
+    "gesture_drag_up": "DRAG",
+    "gesture_drag_down": "DRAG",
+    "gesture_stroke_start": "STROKE_START",
+    "gesture_stroke_end": "STROKE_END",
+    "gesture_erase": "ERASE"
   },
   "meta_map": {
     "browser_rotate_left": {
@@ -108,7 +125,11 @@
     },
     "gesture_scale_down": {
       "factor": "0.67"
-    }
+    },
+    "gesture_drag_left": { "direction": "left" },
+    "gesture_drag_right": { "direction": "right" },
+    "gesture_drag_up": { "direction": "up" },
+    "gesture_drag_down": { "direction": "down" }
   },
   "commands": [
     [
@@ -527,6 +548,23 @@
         "mouse leave"
       ],
       "Dejar de apuntar sobre el elemento"
-    ]
+    ],
+    ["browser_zoom_in", "acercar zoom", ["ampliar", "zoom más cerca"], "Acercar el zoom de la página"],
+    ["browser_zoom_out", "alejar zoom", ["reducir zoom"], "Alejar el zoom de la página"],
+    ["browser_scroll_up", "desplazar arriba", ["página arriba"], "Desplazar la página hacia arriba"],
+    ["browser_scroll_down", "desplazar abajo", ["página abajo"], "Desplazar la página hacia abajo"],
+    ["browser_scroll_left", "desplazar izquierda", [], "Desplazar la página a la izquierda"],
+    ["browser_scroll_right", "desplazar derecha", [], "Desplazar la página a la derecha"],
+    ["browser_long_press", "pulsación larga", ["clic largo", "mantener pulsado"], "Pulsación larga en un elemento"],
+    ["browser_tap", "tocar", ["tocar aquí", "pulsar"], "Tocar un elemento"],
+    ["browser_focus", "enfocar", ["enfocar en"], "Enfocar un elemento"],
+    ["gesture_hover", "apuntar", ["apuntar sobre", "pasar el ratón"], "Apuntar sobre un elemento"],
+    ["gesture_drag_left", "arrastrar izquierda", [], "Arrastrar el elemento a la izquierda"],
+    ["gesture_drag_right", "arrastrar derecha", [], "Arrastrar el elemento a la derecha"],
+    ["gesture_drag_up", "arrastrar arriba", [], "Arrastrar el elemento hacia arriba"],
+    ["gesture_drag_down", "arrastrar abajo", [], "Arrastrar el elemento hacia abajo"],
+    ["gesture_stroke_start", "empezar a dibujar", ["dibujar", "iniciar trazo"], "Iniciar un trazo de dibujo"],
+    ["gesture_stroke_end", "dejar de dibujar", ["terminar dibujo", "fin de trazo"], "Terminar el trazo de dibujo actual"],
+    ["gesture_erase", "borrador", ["modo borrador", "activar borrador"], "Activar el modo borrador para dibujar"]
   ]
 }

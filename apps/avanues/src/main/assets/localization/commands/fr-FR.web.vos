@@ -52,7 +52,24 @@
     "gesture_reset_zoom": "RESET_ZOOM",
     "gesture_select_word": "SELECT_WORD",
     "gesture_clear_sel": "CLEAR_SELECTION",
-    "gesture_hover_out": "HOVER_OUT"
+    "gesture_hover_out": "HOVER_OUT",
+    "browser_zoom_in": "ZOOM_IN",
+    "browser_zoom_out": "ZOOM_OUT",
+    "browser_scroll_up": "SCROLL_UP",
+    "browser_scroll_down": "SCROLL_DOWN",
+    "browser_scroll_left": "SCROLL_LEFT",
+    "browser_scroll_right": "SCROLL_RIGHT",
+    "browser_long_press": "LONG_CLICK",
+    "browser_tap": "TAP",
+    "browser_focus": "FOCUS",
+    "gesture_hover": "HOVER",
+    "gesture_drag_left": "DRAG",
+    "gesture_drag_right": "DRAG",
+    "gesture_drag_up": "DRAG",
+    "gesture_drag_down": "DRAG",
+    "gesture_stroke_start": "STROKE_START",
+    "gesture_stroke_end": "STROKE_END",
+    "gesture_erase": "ERASE"
   },
   "meta_map": {
     "browser_rotate_left": {
@@ -108,7 +125,11 @@
     },
     "gesture_scale_down": {
       "factor": "0.67"
-    }
+    },
+    "gesture_drag_left": { "direction": "left" },
+    "gesture_drag_right": { "direction": "right" },
+    "gesture_drag_up": { "direction": "up" },
+    "gesture_drag_down": { "direction": "down" }
   },
   "commands": [
     [
@@ -525,6 +546,23 @@
         "ne plus survoler"
       ],
       "Arreter de survoler l'element"
-    ]
+    ],
+    ["browser_zoom_in", "zoomer", ["zoom avant", "agrandir"], "Zoomer sur la page"],
+    ["browser_zoom_out", "dezoomer", ["zoom arriere"], "Dezoomer la page"],
+    ["browser_scroll_up", "defiler vers le haut", ["page haut"], "Defiler la page vers le haut"],
+    ["browser_scroll_down", "defiler vers le bas", ["page bas"], "Defiler la page vers le bas"],
+    ["browser_scroll_left", "defiler a gauche", [], "Defiler la page vers la gauche"],
+    ["browser_scroll_right", "defiler a droite", [], "Defiler la page vers la droite"],
+    ["browser_long_press", "appui long", ["clic long", "maintenir appuye"], "Appui long sur un element"],
+    ["browser_tap", "toucher", ["toucher ici", "appuyer"], "Toucher un element"],
+    ["browser_focus", "focaliser", ["focaliser sur"], "Focaliser un element"],
+    ["gesture_hover", "survoler", ["passer au-dessus", "survol"], "Survoler un element"],
+    ["gesture_drag_left", "glisser a gauche", [], "Glisser l'element vers la gauche"],
+    ["gesture_drag_right", "glisser a droite", [], "Glisser l'element vers la droite"],
+    ["gesture_drag_up", "glisser vers le haut", [], "Glisser l'element vers le haut"],
+    ["gesture_drag_down", "glisser vers le bas", [], "Glisser l'element vers le bas"],
+    ["gesture_stroke_start", "commencer a dessiner", ["dessiner", "debut de trait"], "Commencer un trait de dessin"],
+    ["gesture_stroke_end", "arreter de dessiner", ["fin de dessin", "fin de trait"], "Terminer le trait de dessin actuel"],
+    ["gesture_erase", "gomme", ["mode gomme", "activer la gomme"], "Activer le mode gomme pour dessiner"]
   ]
 }

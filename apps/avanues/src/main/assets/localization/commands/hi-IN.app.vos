@@ -8,7 +8,6 @@
     "media": "MEDIA",
     "sys": "SYSTEM",
     "voice": "VOICE_CONTROL",
-    "app": "APP_LAUNCH",
     "acc": "ACCESSIBILITY",
     "text": "TEXT",
     "input": "INPUT",
@@ -53,14 +52,6 @@
     "voice_cursor_show": "CURSOR_SHOW",
     "voice_cursor_hide": "CURSOR_HIDE",
     "voice_cursor_click": "CURSOR_CLICK",
-    "app_browser": "OPEN_APP",
-    "app_camera": "OPEN_APP",
-    "app_gallery": "OPEN_APP",
-    "app_calc": "OPEN_APP",
-    "app_calendar": "OPEN_APP",
-    "app_phone": "OPEN_APP",
-    "app_messages": "OPEN_APP",
-    "app_contacts": "OPEN_APP",
     "acc_click": "CLICK",
     "acc_long_click": "LONG_CLICK",
     "acc_zoom_in": "ZOOM_IN",
@@ -76,34 +67,17 @@
     "text_delete": "DELETE",
     "input_show_kb": "SHOW_KEYBOARD",
     "input_hide_kb": "HIDE_KEYBOARD",
-    "appctl_close": "CLOSE_APP"
+    "appctl_close": "CLOSE_APP",
+    "acc_double_tap": "DOUBLE_CLICK",
+    "acc_swipe_left": "SWIPE_LEFT",
+    "acc_swipe_right": "SWIPE_RIGHT",
+    "acc_swipe_up": "SWIPE_UP",
+    "acc_swipe_down": "SWIPE_DOWN",
+    "acc_stroke_start": "STROKE_START",
+    "acc_stroke_end": "STROKE_END",
+    "acc_erase": "ERASE"
   },
-  "meta_map": {
-    "app_browser": {
-      "app_type": "browser"
-    },
-    "app_camera": {
-      "app_type": "camera"
-    },
-    "app_gallery": {
-      "app_type": "gallery"
-    },
-    "app_calc": {
-      "app_type": "calculator"
-    },
-    "app_calendar": {
-      "app_type": "calendar"
-    },
-    "app_phone": {
-      "app_type": "phone"
-    },
-    "app_messages": {
-      "app_type": "messages"
-    },
-    "app_contacts": {
-      "app_type": "contacts"
-    }
-  },
+  "meta_map": {},
   "commands": [
     [
       "nav_back",
@@ -471,81 +445,6 @@
       "Cursor position par click karo"
     ],
     [
-      "app_browser",
-      "browser kholo",
-      [
-        "browser",
-        "web browser kholo"
-      ],
-      "Web browser kholo"
-    ],
-    [
-      "app_camera",
-      "camera kholo",
-      [
-        "camera",
-        "photo lo"
-      ],
-      "Camera kholo"
-    ],
-    [
-      "app_gallery",
-      "gallery kholo",
-      [
-        "gallery",
-        "photos",
-        "tasveerein"
-      ],
-      "Photo gallery kholo"
-    ],
-    [
-      "app_calc",
-      "calculator kholo",
-      [
-        "calculator",
-        "ganit"
-      ],
-      "Calculator kholo"
-    ],
-    [
-      "app_calendar",
-      "calendar kholo",
-      [
-        "calendar",
-        "tareekh"
-      ],
-      "Calendar kholo"
-    ],
-    [
-      "app_phone",
-      "phone kholo",
-      [
-        "phone",
-        "dialer",
-        "call karo"
-      ],
-      "Phone dialer kholo"
-    ],
-    [
-      "app_messages",
-      "messages kholo",
-      [
-        "messages",
-        "sms",
-        "sandesh"
-      ],
-      "Messages app kholo"
-    ],
-    [
-      "app_contacts",
-      "contacts kholo",
-      [
-        "contacts",
-        "sampark"
-      ],
-      "Contacts kholo"
-    ],
-    [
       "acc_click",
       "click karo",
       [
@@ -693,6 +592,65 @@
         "quit karo"
       ],
       "Current app band karo"
+    ],
+    [
+      "acc_double_tap",
+      "डबल टैप",
+      [
+        "डबल क्लिक"
+      ],
+      "एलिमेंट पर डबल टैप करें"
+    ],
+    [
+      "acc_swipe_left",
+      "बाएं स्वाइप करो",
+      [],
+      "स्क्रीन पर बाएं स्वाइप करें"
+    ],
+    [
+      "acc_swipe_right",
+      "दाएं स्वाइप करो",
+      [],
+      "स्क्रीन पर दाएं स्वाइप करें"
+    ],
+    [
+      "acc_swipe_up",
+      "ऊपर स्वाइप करो",
+      [],
+      "स्क्रीन पर ऊपर स्वाइप करें"
+    ],
+    [
+      "acc_swipe_down",
+      "नीचे स्वाइप करो",
+      [],
+      "स्क्रीन पर नीचे स्वाइप करें"
+    ],
+    [
+      "acc_stroke_start",
+      "ड्रॉइंग शुरू करो",
+      [
+        "ड्रॉ करो",
+        "स्ट्रोक शुरू करो"
+      ],
+      "ड्रॉइंग स्ट्रोक शुरू करें (एनोटेशन)"
+    ],
+    [
+      "acc_stroke_end",
+      "ड्रॉइंग बंद करो",
+      [
+        "ड्रॉइंग खत्म करो",
+        "स्ट्रोक बंद करो"
+      ],
+      "ड्रॉइंग स्ट्रोक समाप्त करें (एनोटेशन)"
+    ],
+    [
+      "acc_erase",
+      "इरेज़र",
+      [
+        "इरेज़ मोड",
+        "मिटाने वाला"
+      ],
+      "इरेज़र मोड चालू करें (एनोटेशन)"
     ]
   ]
 }

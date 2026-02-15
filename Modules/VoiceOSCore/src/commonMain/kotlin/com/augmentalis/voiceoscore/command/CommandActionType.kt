@@ -372,6 +372,19 @@ enum class CommandActionType {
     /** Hover out (mouse leave) */
     HOVER_OUT,
 
+    // ═══════════════════════════════════════════════════════════════════
+    // Drawing/Annotation Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Begin a drawing stroke at cursor position */
+    STROKE_START,
+
+    /** End the current drawing stroke */
+    STROKE_END,
+
+    /** Toggle eraser mode at cursor position */
+    ERASE,
+
     /** Custom/specialized action */
     CUSTOM,
 
@@ -448,7 +461,12 @@ enum class CommandActionType {
         DOUBLE_CLICK, HOVER,
         PAN, TILT, ORBIT, ROTATE_X, ROTATE_Y, ROTATE_Z,
         PINCH, FLING, THROW, SCALE,
-        RESET_ZOOM, SELECT_WORD, CLEAR_SELECTION, HOVER_OUT
+        RESET_ZOOM, SELECT_WORD, CLEAR_SELECTION, HOVER_OUT,
+        // Dual-purpose: also handled by web pipeline when browser active
+        ZOOM_IN, ZOOM_OUT, SCROLL_UP, SCROLL_DOWN, SCROLL_LEFT, SCROLL_RIGHT,
+        TAP, LONG_CLICK, FOCUS,
+        // Drawing/annotation
+        STROKE_START, STROKE_END, ERASE
     )
 
     companion object {
