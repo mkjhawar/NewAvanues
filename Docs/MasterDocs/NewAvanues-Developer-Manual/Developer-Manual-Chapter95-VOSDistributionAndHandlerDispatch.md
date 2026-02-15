@@ -356,7 +356,7 @@ interface SyncEntryPoint {
 
 #### Security Hardening
 
-- **SftpCredentialStore**: `EncryptedSharedPreferences` with `MasterKey.AES256_GCM` for SFTP password and SSH key passphrase. Fallback to regular SharedPreferences if hardware keystore unavailable.
+- **SftpCredentialStore**: `EncryptedSharedPreferences` with `MasterKey.AES256_GCM` for SFTP password and SSH key passphrase. Fallback to regular SharedPreferences if hardware keystore unavailable. Implements `ICredentialStore` from Foundation KMP (see Chapter 96).
 - **Configurable host key checking**: `hostKeyChecking` parameter on `VosSftpClient.connect()` supporting:
   - `"no"` — Accept all keys (dev/testing)
   - `"accept-new"` — Trust on first connect, reject changes
@@ -374,7 +374,7 @@ interface SyncEntryPoint {
 - **Constraints**: Requires network connectivity + not low battery
 - **Backoff**: Exponential, 30s initial delay, 3 max retries
 - **Scheduling**: Configurable interval (1/2/4/8/12/24 hours) via `PeriodicWorkRequestBuilder`
-- **Auth**: Reads from `SftpCredentialStore` + `AvanuesSettingsRepository`
+- **Auth**: Reads from `SftpCredentialStore` (ICredentialStore) + `AvanuesSettingsRepository` (ISettingsStore — see Chapter 96)
 
 | DataStore Key | Type | Default | Purpose |
 |--------------|------|---------|---------|

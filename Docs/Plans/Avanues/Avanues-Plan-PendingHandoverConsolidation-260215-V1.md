@@ -20,26 +20,27 @@ Check which items are superseded before planning. This is correct for items that
 
 ---
 
-## Phase 0: Triage — Verify Superseded Items (30 min)
+## Phase 0: Triage — Verify Superseded Items (30 min) — COMPLETED 260215
 
-Before implementation, verify whether 3 potentially-stale handovers need work:
+Verified 3 potentially-stale handovers:
 
-| # | Handover | Likely Status | Verification |
-|---|----------|---------------|-------------|
-| 5 | AvanueWaterUI unified components | **SUPERSEDED** by Theme v5.1 | Check if `AvanueCard`, `AvanueButton`, `AvanueSurface` exist with `MaterialMode` switching |
-| 6 | Glass transparency fix | **SUPERSEDED** by Theme v5.1 surfaces | Check if AvanueTheme has solid surface colors, glass modifier has luminance-adaptive logic |
-| 3 | AddressBar crash | **LIKELY RESOLVED** | Check if app launches on current branch/commit. Crash was from uncommitted multi-module changes that have since been committed |
+| # | Handover | Result | Action Taken |
+|---|----------|--------|-------------|
+| 5 | AvanueWaterUI unified components | **CONFIRMED SUPERSEDED** | Unified components exist (`AvanueCard`, `AvanueButton`, `AvanueSurface`) with `MaterialMode` switching. Archived to `Archives/Handover/` |
+| 6 | Glass transparency fix | **CONFIRMED SUPERSEDED** | Theme v5.1 replaced all glass surfaces. `OceanThemeExtensions.kt` no longer exists. Archived to `Archives/Handover/` |
+| 3 | AddressBar crash | **DEFERRED** to Phase 3.1 | Needs device verification |
+| 7 | Dashboard | **PARTIAL** | UI exists (2700+ lines HomeScreen), but needs assessment if still relevant |
 
-**If superseded → archive the handover, no implementation needed.**
-**If still needed → add to Phase 3 or 4.**
+**Total archived this session: 11 handovers** (9 completed + 2 superseded)
 
 ---
 
-## Phase 1: VoiceOSCore — Static Command Handlers (CRITICAL)
+## Phase 1: VoiceOSCore — Static Command Handlers (CRITICAL) — 87.5% ALREADY DONE
 
 **Source**: `handover-260211-static-command-dispatch.md`
-**Impact**: 91/109 voice commands silently fail (83% failure rate)
-**Branch**: `VoiceOSCore-KotlinUpdate` (needs cherry-pick to `IosVoiceOS-Development`)
+**Impact**: ~~91/109 voice commands silently fail~~ Only BrowserHandler missing (47 web commands)
+**Discovery (260215)**: 7 of 8 handlers ALREADY EXIST with full implementations
+**Branch**: Both branches synced via merge `4dea5af0`
 
 ### Tasks
 
@@ -99,6 +100,24 @@ Before implementation, verify whether 3 potentially-stale handovers need work:
 - Test all 107 VOS commands
 
 **Swarm opportunity**: Tasks 1.2-1.9 (8 handlers) are independent — can be swarm-dispatched.
+
+### Handler Discovery (260215)
+
+| Handler | Commands | Status |
+|---------|----------|--------|
+| MediaHandler | 13 | DONE |
+| ScreenHandler | 20 | DONE |
+| TextHandler | 8 | DONE |
+| InputHandler | 6 | DONE |
+| AppControlHandler | 4 | DONE |
+| ReadingHandler | 7 | DONE |
+| VoiceControlHandler | 18 | DONE |
+| **BrowserHandler** | **47** | **MISSING** |
+| **Total** | **76 / 123** | **7/8 handlers** |
+
+All 7 existing handlers are registered in `AndroidHandlerFactory.createHandlers()` (11 total: 4 pre-existing + 7 new). Only BrowserHandler needs to be created — it delegates to existing `WebCommandHandler`/`IWebCommandExecutor`.
+
+**Revised Phase 1 effort: ~1 hr** (just BrowserHandler + integration test)
 
 ---
 
@@ -175,16 +194,16 @@ Before implementation, verify whether 3 potentially-stale handovers need work:
 
 ---
 
-## Estimated Effort
+## Estimated Effort (Revised 260215)
 
-| Phase | Sequential | Swarm | Savings |
-|-------|-----------|-------|---------|
-| 0 (Triage) | 30 min | 15 min | 50% |
-| 1 (Handlers) | 4-5 hrs | 1.5-2 hrs | 60% |
-| 2 (Overlay) | 1 hr | 1 hr | 0% (sequential deps) |
-| 3 (WebAvanue) | 1.5 hrs | 1 hr | 33% |
-| 4 (Validate) | 30 min | 15 min | 50% |
-| **Total** | **7.5-8 hrs** | **4-5 hrs** | **40%** |
+| Phase | Original | Revised | Status |
+|-------|----------|---------|--------|
+| 0 (Triage) | 30 min | 30 min | **DONE** |
+| 1 (Handlers) | 4-5 hrs | **1 hr** (only BrowserHandler) | 87.5% done |
+| 2 (Overlay) | 1 hr | 1 hr | Pending |
+| 3 (WebAvanue) | 1.5 hrs | 1 hr | Pending |
+| 4 (Validate) | 30 min | 15 min | Partially done |
+| **Total** | **7.5-8 hrs** | **~3.5 hrs remaining** | |
 
 ## Swarm Dispatch Plan
 
@@ -192,9 +211,12 @@ Before implementation, verify whether 3 potentially-stale handovers need work:
 **Parallel Group B** (Phase 0 + Phase 4): triage/validation agents
 **Sequential**: Phase 2 (overlay), Phase 3 (WebAvanue)
 
-## Branch Strategy
+## Branch Strategy (Updated 260215)
 
-All work on `IosVoiceOS-Development`. Items from other branches need the relevant code checked/cherry-picked first. The `VoiceOSCore-KotlinUpdate` branch has overlay commits and investigation docs that may need to be merged.
+All work on `IosVoiceOS-Development`. Branches are now synced:
+- `IosVoiceOS-Development` → `VoiceOSCore-KotlinUpdate` via merge `4dea5af0` + `44422099`
+- Both pushed to origin
+- No more cherry-pick needed — future sync is just `git merge IosVoiceOS-Development` from KotlinUpdate
 
 ---
 

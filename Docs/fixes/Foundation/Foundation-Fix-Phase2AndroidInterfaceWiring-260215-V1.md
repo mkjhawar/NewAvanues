@@ -1,12 +1,15 @@
-# Foundation Phase 1 Completion: Interface Wiring
+# Foundation Phase 2: Android Interface Wiring
 
 **Date**: 2026-02-15
 **Branch**: `IosVoiceOS-Development`
 **Status**: Complete, build verified
+**Commits**: `260e1287`, `04cbea5e`, `69104fca`
 
 ## Summary
 
-Wired existing Android implementations to Foundation KMP interfaces, and created two new platform abstraction interfaces (`IPermissionChecker`, `IFileSystem`). This completes Phase 1 of the KMP Settings Abstraction initiative.
+Wired existing Android implementations to Foundation KMP interfaces, and created two new platform abstraction interfaces (`IPermissionChecker`, `IFileSystem`). This completes Phase 2 of the KMP Settings Abstraction initiative (Phase 1 was model extraction on 260213).
+
+**See also:** Developer Manual Chapter 96 — KMP Foundation Platform Abstractions
 
 ## Changes Made
 
@@ -62,7 +65,12 @@ Wired existing Android implementations to Foundation KMP interfaces, and created
 - Kept individual `updateXxx()` methods alongside `update(block)` → callers that only toggle one setting don't pay for full-object serialization
 - `DeveloperPreferencesRepository.update(key, value)` renamed to `updateKey` → avoids JVM method signature confusion with interface `update(block)`
 
-## Next Steps (Phase 2)
+## Next Steps (Phase 3 — DONE)
+Phase 3 (iOS + Desktop implementations) was completed same day. See:
+- Fix doc: `docs/fixes/Foundation/Foundation-Fix-Phase3PlatformImplementations-260215-V1.md`
+- Developer Manual: Chapter 96 — KMP Foundation Platform Abstractions
+
+### Future Work
 Per audit doc: `Docs/Analysis/VoiceOSCore/VoiceOSCore-Analysis-KMPMigrationAudit-260213-V1.md`
 - Create Android `actual` implementations of `IPermissionChecker`, `IFileSystem`
 - Move OverlayStateManager, DynamicCommandGenerator to VoiceOSCore commonMain
