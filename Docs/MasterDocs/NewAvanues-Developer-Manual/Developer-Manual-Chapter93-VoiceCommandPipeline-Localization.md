@@ -368,7 +368,7 @@ All locale files contain 107 commands with identical `command_id`, `category_map
 Settings UI (VoiceControlSettingsProvider)
     -> SettingsDropdownRow (5 locales)
     -> AvanuesSettingsRepository.updateVoiceLocale(locale)
-    -> DataStore write: "voice_command_locale" key
+    -> DataStore write: "voice_command_locale" key  (see Ch96: ISettingsStore<T>)
         |
         v
 VoiceAvanueAccessibilityService (collectLatest observer)
