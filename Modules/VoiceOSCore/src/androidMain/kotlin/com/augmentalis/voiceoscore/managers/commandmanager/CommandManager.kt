@@ -9,6 +9,9 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.augmentalis.voiceoscore.*
+import com.augmentalis.voiceoscore.command.LocalizedVerb
+import com.augmentalis.voiceoscore.command.LocalizedVerbProvider
+import com.augmentalis.voiceoscore.command.SynonymRegistry
 import com.augmentalis.voiceoscore.managers.commandmanager.actions.*
 import com.augmentalis.rpc.RpcEncoder
 import com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
@@ -493,6 +496,25 @@ class CommandManager(private val context: Context) {
 
             StaticCommandRegistry.initialize(staticCommands)
             Log.i(TAG, "✅ StaticCommandRegistry populated from DB: ${staticCommands.size} commands (locale: $locale)")
+
+            // Extract localized action verbs from verb-type commands (acc_click, acc_long_click).
+            // These provide locale-aware verb extraction for dynamic commands.
+            // E.g., es-ES acc_click → ["pulsar", "clic", "tocar"] → canonical "click"
+            val localizedVerbs = mutableListOf<LocalizedVerb>()
+            for ((commandId, mapping) in LocalizedVerbProvider.VERB_COMMAND_MAP) {
+                val (canonicalVerb, actionType) = mapping
+                val verbCommand = staticCommands.find { it.id == commandId }
+                if (verbCommand != null) {
+                    verbCommand.phrases.forEach { phrase ->
+                        localizedVerbs.add(LocalizedVerb(phrase.lowercase(), canonicalVerb, actionType))
+                    }
+                }
+            }
+            if (localizedVerbs.isNotEmpty()) {
+                LocalizedVerbProvider.updateVerbs(localizedVerbs)
+                SynonymRegistry.addLocalizedVerbs(localizedVerbs)
+                Log.i(TAG, "✅ LocalizedVerbProvider populated: ${localizedVerbs.size} verbs from VOS (locale: $locale)")
+            }
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to populate StaticCommandRegistry from DB", e)

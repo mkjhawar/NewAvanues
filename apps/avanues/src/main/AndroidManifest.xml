@@ -57,6 +57,20 @@
     <!-- WiFi control for voice commands (pre-Android 10 direct toggle) -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
+    <!-- System settings modification for brightness/rotation voice commands -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Bluetooth control for voice commands -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- WiFi control for voice commands (pre-Android 10 direct toggle) -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

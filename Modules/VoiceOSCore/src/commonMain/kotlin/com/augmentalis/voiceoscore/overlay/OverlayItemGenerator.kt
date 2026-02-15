@@ -1,18 +1,16 @@
 /**
  * OverlayItemGenerator.kt - Generates overlay items from extracted elements
  *
- * Converts ElementInfo data from accessibility extraction into
+ * Converts ElementInfo data from accessibility/DOM extraction into
  * NumberOverlayItem instances for display as numbered badges.
+ *
+ * Pure Kotlin logic — no platform dependencies. Uses ElementLabels (KMP)
+ * for list-item detection and hashCode() for AVID generation.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 
-package com.augmentalis.voiceavanue.service
-
-import android.util.Log
-import com.augmentalis.voiceoscore.ElementInfo
-import com.augmentalis.voiceoscore.ElementLabels
-import com.augmentalis.voiceoscore.HierarchyNode
+package com.augmentalis.voiceoscore
 
 private const val TAG = "OverlayItemGenerator"
 
@@ -22,9 +20,6 @@ private const val TAG = "OverlayItemGenerator"
  * Strategies:
  * - For list apps (Gmail, WhatsApp, etc.): Uses findTopLevelListItems to identify rows
  * - For general apps: Numbers all clickable elements with valid bounds
- *
- * All label text comes from the labels map produced by [ElementLabels.deriveElementLabels].
- * No label derivation happens in this class — single source of truth is KMP.
  */
 object OverlayItemGenerator {
 
@@ -58,18 +53,18 @@ object OverlayItemGenerator {
 
     /**
      * Generate overlay items from extracted elements for list-based apps.
-     * Uses [ElementLabels.findTopLevelListItems] for smart row detection.
+     * Uses ElementLabels.findTopLevelListItems for smart row detection.
      *
      * @param elements All extracted elements
      * @param hierarchy Hierarchy information
-     * @param labels Derived labels map (index -> label) from [ElementLabels.deriveElementLabels]
+     * @param labels Derived labels map (index -> label)
      * @return List of NumberOverlayItem ready for display
      */
     fun generateForListApp(
         elements: List<ElementInfo>,
         hierarchy: List<HierarchyNode>,
         labels: Map<Int, String>
-    ): List<OverlayStateManager.NumberOverlayItem> {
+    ): List<NumberOverlayItem> {
         val listItems = elements.filter { it.listIndex >= 0 }
         if (listItems.isEmpty()) return emptyList()
 
@@ -77,8 +72,7 @@ object OverlayItemGenerator {
 
         val items = topLevelItems.mapIndexed { index, element ->
             val elementIndex = elements.indexOf(element)
-
-            OverlayStateManager.NumberOverlayItem(
+            NumberOverlayItem(
                 number = index + 1,
                 label = labels[elementIndex] ?: "",
                 left = element.bounds.left,
@@ -96,13 +90,13 @@ object OverlayItemGenerator {
      * Used for general apps that aren't list-based.
      *
      * @param elements All extracted elements
-     * @param labels Derived labels map from [ElementLabels.deriveElementLabels]
+     * @param labels Derived labels map
      * @return List of NumberOverlayItem
      */
     fun generateForAllClickable(
         elements: List<ElementInfo>,
         labels: Map<Int, String>
-    ): List<OverlayStateManager.NumberOverlayItem> {
+    ): List<NumberOverlayItem> {
         val clickableElements = elements.filter { element ->
             (element.isClickable || element.isLongClickable) &&
                     element.isEnabled &&
@@ -114,14 +108,13 @@ object OverlayItemGenerator {
         }
 
         if (clickableElements.size > 50) {
-            Log.d(TAG, "Too many clickable elements (${clickableElements.size}), skipping overlay")
+            LoggingUtils.d("Too many clickable elements (${clickableElements.size}), skipping overlay", TAG)
             return emptyList()
         }
 
         val items = clickableElements.mapIndexed { index, element ->
             val elementIndex = elements.indexOf(element)
-
-            OverlayStateManager.NumberOverlayItem(
+            NumberOverlayItem(
                 number = index + 1,
                 label = labels[elementIndex] ?: "",
                 left = element.bounds.left,
@@ -132,45 +125,5 @@ object OverlayItemGenerator {
             )
         }
         return items
-    }
-
-    /**
-     * Generate text-label-only overlay items for icon-only interactive elements.
-     * Layer 1 of the two-layer overlay — always displayed regardless of numbers mode.
-     *
-     * Uses [ElementLabels.isIconOnlyElement] for classification and the pre-derived
-     * labels map for label text. Labels are truncated to 15 chars for icon context.
-     *
-     * @param elements All extracted elements
-     * @param labels Derived labels map from [ElementLabels.deriveElementLabels]
-     * @return List of IconLabelItem for icon-only elements
-     */
-    fun generateIconLabels(
-        elements: List<ElementInfo>,
-        labels: Map<Int, String>
-    ): List<OverlayStateManager.IconLabelItem> {
-        val iconElements = elements.filter { ElementLabels.isIconOnlyElement(it) }
-
-        if (iconElements.size > 30) {
-            Log.d(TAG, "Too many icon elements (${iconElements.size}), skipping labels")
-            return emptyList()
-        }
-
-        return iconElements.mapNotNull { element ->
-            val elementIndex = elements.indexOf(element)
-            val label = (labels[elementIndex] ?: "").take(15)
-
-            // Skip meaningless or too-short labels
-            if (label.isBlank() || label.length < 2) return@mapNotNull null
-
-            OverlayStateManager.IconLabelItem(
-                label = label,
-                left = element.bounds.left,
-                top = element.bounds.top,
-                right = element.bounds.right,
-                bottom = element.bounds.bottom,
-                avid = generateContentAvid(element)
-            )
-        }
     }
 }

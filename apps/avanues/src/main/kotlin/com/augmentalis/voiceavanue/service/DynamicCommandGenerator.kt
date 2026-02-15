@@ -20,6 +20,10 @@ import com.augmentalis.voiceoscore.DuplicateInfo
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.ElementLabels
 import com.augmentalis.voiceoscore.HierarchyNode
+import com.augmentalis.voiceoscore.NumbersOverlayMode
+import com.augmentalis.voiceoscore.OverlayItemGenerator
+import com.augmentalis.voiceoscore.OverlayNumberingExecutor
+import com.augmentalis.voiceoscore.OverlayStateManager
 
 private const val TAG = "DynamicCommandGen"
 
@@ -114,32 +118,23 @@ class DynamicCommandGenerator(
                 OverlayItemGenerator.generateForListApp(elements, hierarchy, labels)
             } else {
                 // General app with overlay ON mode: number all clickable elements
-                if (OverlayStateManager.numbersOverlayMode.value == OverlayStateManager.NumbersOverlayMode.ON) {
+                if (OverlayStateManager.numbersOverlayMode.value == NumbersOverlayMode.ON) {
                     OverlayItemGenerator.generateForAllClickable(elements, labels)
                 } else {
                     emptyList()
                 }
             }
 
-            // Layer 2: Executor assigns per-container numbers for badge overlay
+            // Executor assigns per-container numbers, then simple setter
             if (overlayItems.isNotEmpty()) {
                 val numbered = numberingExecutor.assignNumbers(overlayItems)
                 OverlayStateManager.updateNumberedOverlayItems(numbered)
             } else {
-                OverlayStateManager.updateNumberedOverlayItems(emptyList())
-                OverlayStateManager.updateNumbersOverlayVisibility()
-            }
-
-            // Layer 1: Generate text labels for icon-only elements (always on, any app)
-            val iconLabels = OverlayItemGenerator.generateIconLabels(elements, labels)
-            if (iconLabels.isNotEmpty()) {
-                OverlayStateManager.updateIconLabelItems(iconLabels)
-            } else {
-                OverlayStateManager.clearIconLabelItems()
+                OverlayStateManager.clearOverlayItems()
             }
 
             val actionableCount = elements.count { it.isClickable || it.isLongClickable || it.isScrollable }
-            Log.d(TAG, "Processed $packageName: ${elements.size} elements, $actionableCount actionable, ${overlayItems.size} badges, ${iconLabels.size} icon labels")
+            Log.d(TAG, "Processed $packageName: ${elements.size} elements, $actionableCount actionable, ${overlayItems.size} overlay items")
 
         } catch (e: Exception) {
             Log.e(TAG, "Error processing screen for $packageName", e)

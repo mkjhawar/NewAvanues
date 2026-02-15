@@ -75,6 +75,11 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.augmentalis.voiceoscore.BadgeTheme
+import com.augmentalis.voiceoscore.InstructionBarMode
+import com.augmentalis.voiceoscore.NumberOverlayItem
+import com.augmentalis.voiceoscore.NumbersOverlayMode
+import com.augmentalis.voiceoscore.OverlayStateManager
 import com.augmentalis.voiceavanue.MainActivity
 
 private const val TAG = "CommandOverlayService"
@@ -247,53 +252,35 @@ class CommandOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
 
 @Composable
 private fun NumbersOverlayContent() {
-    val showNumbersOverlay by OverlayStateManager.showNumbersOverlayComputed.collectAsState()
-    val numberedItems by OverlayStateManager.numberedOverlayItems.collectAsState()
-    val iconLabels by OverlayStateManager.iconLabelItems.collectAsState()
+    val showOverlay by OverlayStateManager.showNumbersOverlayComputed.collectAsState()
+    val items by OverlayStateManager.numberedOverlayItems.collectAsState()
+    val mode by OverlayStateManager.numbersOverlayMode.collectAsState()
 
-    // Nothing to render at all
-    if (!showNumbersOverlay && iconLabels.isEmpty()) return
+    if (!showOverlay) return
+    if (mode == NumbersOverlayMode.AUTO && items.isEmpty()) return
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Transparent)
     ) {
-        // Layer 1: Icon text labels (always on when present).
-        // Skip labels for elements that already have a number badge to avoid redundancy.
-        val numberedAvids = if (showNumbersOverlay) {
-            numberedItems.map { it.avid }.toSet()
-        } else {
-            emptySet()
-        }
-        iconLabels.forEach { item ->
-            if (item.avid !in numberedAvids) {
-                key("label_${item.avid}") {
-                    IconLabelOverlay(item)
-                }
+        items.forEach { item ->
+            key(item.avid) {
+                NumberBadge(item)
             }
         }
 
-        // Layer 2: Number badges (user-toggled / AUTO for target apps)
-        if (showNumbersOverlay) {
-            numberedItems.forEach { item ->
-                key(item.avid) {
-                    NumberBadge(item)
-                }
-            }
-
-            if (numberedItems.isNotEmpty()) {
-                NumbersInstructionPanel(
-                    itemCount = numberedItems.size,
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
-            }
+        if (items.isNotEmpty()) {
+            NumbersInstructionPanel(
+                itemCount = items.size,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }
 
 @Composable
-private fun NumberBadge(item: OverlayStateManager.NumberOverlayItem) {
+private fun NumberBadge(item: NumberOverlayItem) {
     val theme by OverlayStateManager.badgeTheme.collectAsState()
     val density = LocalDensity.current
 
@@ -341,50 +328,13 @@ private fun NumberBadge(item: OverlayStateManager.NumberOverlayItem) {
     }
 }
 
-/**
- * Renders a text label below an icon-only element (Layer 1).
- * Centered horizontally under the element, positioned just below it.
- */
-@Composable
-private fun IconLabelOverlay(item: OverlayStateManager.IconLabelItem) {
-    val density = LocalDensity.current
-
-    // Center horizontally under the element, position at bottom edge
-    val centerXPx = (item.left + item.right) / 2
-    val bottomYPx = item.bottom
-
-    // Estimate label width to center it (approx 5px per character at 9sp)
-    val estimatedLabelWidthPx = (item.label.length * 5).coerceAtMost(100)
-    val offsetXPx = (centerXPx - estimatedLabelWidthPx / 2).coerceAtLeast(0)
-    val offsetXDp = with(density) { offsetXPx.toDp() }
-    val offsetYDp = with(density) { (bottomYPx + 2).toDp() }
-
-    Box(modifier = Modifier.offset(x = offsetXDp, y = offsetYDp)) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(3.dp))
-                .background(Color(0xDD1A1A2E))
-                .padding(horizontal = 5.dp, vertical = 1.dp)
-        ) {
-            Text(
-                text = item.label,
-                color = Color(0xFFE0E0FF),
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
 @Composable
 private fun NumbersInstructionPanel(
     itemCount: Int,
     modifier: Modifier = Modifier
 ) {
     val mode by OverlayStateManager.instructionBarMode.collectAsState()
-    if (mode == OverlayStateManager.InstructionBarMode.OFF) return
+    if (mode == InstructionBarMode.OFF) return
 
     var visible by remember { mutableStateOf(true) }
     val alpha by animateFloatAsState(
@@ -394,7 +344,7 @@ private fun NumbersInstructionPanel(
     )
 
     LaunchedEffect(mode, itemCount) {
-        if (mode == OverlayStateManager.InstructionBarMode.AUTO) {
+        if (mode == InstructionBarMode.AUTO) {
             visible = true
             kotlinx.coroutines.delay(3000)
             visible = false

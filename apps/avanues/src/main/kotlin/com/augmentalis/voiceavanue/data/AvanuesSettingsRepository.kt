@@ -13,6 +13,8 @@
 package com.augmentalis.voiceavanue.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -20,6 +22,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.augmentalis.foundation.settings.ISettingsStore
 import com.augmentalis.foundation.settings.SettingsMigration
 import com.augmentalis.foundation.settings.models.AvanuesSettings
 import com.augmentalis.foundation.settings.models.PersistedSynonym
@@ -34,7 +37,7 @@ import javax.inject.Singleton
 @Singleton
 class AvanuesSettingsRepository @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : ISettingsStore<AvanuesSettings> {
 
     companion object {
         private val KEY_CURSOR_ENABLED = booleanPreferencesKey("cursor_enabled")
@@ -79,13 +82,25 @@ class AvanuesSettingsRepository @Inject constructor(
         // Migration functions now in Foundation: SettingsMigration
     }
 
-    val settings: Flow<AvanuesSettings> = context.avanuesDataStore.data.map { prefs ->
+    override val settings: Flow<AvanuesSettings> = context.avanuesDataStore.data.map { prefs ->
+        readFromPreferences(prefs)
+    }
+
+    override suspend fun update(block: (AvanuesSettings) -> AvanuesSettings) {
+        context.avanuesDataStore.edit { prefs ->
+            val current = readFromPreferences(prefs)
+            val updated = block(current)
+            writeToPreferences(prefs, updated)
+        }
+    }
+
+    private fun readFromPreferences(prefs: Preferences): AvanuesSettings {
         // Migration: if new keys don't exist, derive from old theme_variant
         val oldVariant = prefs[KEY_THEME_VARIANT]
         val palette = prefs[KEY_THEME_PALETTE] ?: SettingsMigration.migrateVariantToPalette(oldVariant)
         val style = prefs[KEY_THEME_STYLE] ?: SettingsMigration.migrateVariantToStyle(oldVariant)
 
-        AvanuesSettings(
+        return AvanuesSettings(
             cursorEnabled = prefs[KEY_CURSOR_ENABLED] ?: false,
             dwellClickEnabled = prefs[KEY_DWELL_CLICK_ENABLED] ?: true,
             dwellClickDelayMs = prefs[KEY_DWELL_CLICK_DELAY] ?: 1500f,
@@ -111,6 +126,43 @@ class AvanuesSettingsRepository @Inject constructor(
             vosAutoSyncEnabled = prefs[KEY_VOS_AUTO_SYNC_ENABLED] ?: false,
             vosSyncIntervalHours = prefs[KEY_VOS_SYNC_INTERVAL_HOURS] ?: 4
         )
+    }
+
+    private fun writeToPreferences(prefs: MutablePreferences, s: AvanuesSettings) {
+        prefs[KEY_CURSOR_ENABLED] = s.cursorEnabled
+        prefs[KEY_DWELL_CLICK_ENABLED] = s.dwellClickEnabled
+        prefs[KEY_DWELL_CLICK_DELAY] = s.dwellClickDelayMs
+        prefs[KEY_CURSOR_SMOOTHING] = s.cursorSmoothing
+        prefs[KEY_VOICE_FEEDBACK] = s.voiceFeedback
+        prefs[KEY_AUTO_START_ON_BOOT] = s.autoStartOnBoot
+        prefs[KEY_THEME_PALETTE] = s.themePalette
+        prefs[KEY_THEME_STYLE] = s.themeStyle
+        prefs[KEY_THEME_APPEARANCE] = s.themeAppearance
+        prefs[KEY_VOICE_LOCALE] = s.voiceLocale
+        prefs[KEY_CURSOR_SIZE] = s.cursorSize
+        prefs[KEY_CURSOR_SPEED] = s.cursorSpeed
+        prefs[KEY_SHOW_COORDINATES] = s.showCoordinates
+        val accentOverride = s.cursorAccentOverride
+        if (accentOverride != null) {
+            prefs[KEY_CURSOR_ACCENT_OVERRIDE] = accentOverride
+        } else {
+            prefs.remove(KEY_CURSOR_ACCENT_OVERRIDE)
+        }
+        prefs[KEY_VOS_SYNC_ENABLED] = s.vosSyncEnabled
+        prefs[KEY_VOS_SFTP_HOST] = s.vosSftpHost
+        prefs[KEY_VOS_SFTP_PORT] = s.vosSftpPort
+        prefs[KEY_VOS_SFTP_USERNAME] = s.vosSftpUsername
+        prefs[KEY_VOS_SFTP_REMOTE_PATH] = s.vosSftpRemotePath
+        prefs[KEY_VOS_SFTP_KEY_PATH] = s.vosSftpKeyPath
+        val lastSyncTime = s.vosLastSyncTime
+        if (lastSyncTime != null) {
+            prefs[KEY_VOS_LAST_SYNC_TIME] = lastSyncTime
+        } else {
+            prefs.remove(KEY_VOS_LAST_SYNC_TIME)
+        }
+        prefs[KEY_VOS_SFTP_HOST_KEY_MODE] = s.vosSftpHostKeyMode
+        prefs[KEY_VOS_AUTO_SYNC_ENABLED] = s.vosAutoSyncEnabled
+        prefs[KEY_VOS_SYNC_INTERVAL_HOURS] = s.vosSyncIntervalHours
     }
 
     suspend fun updateCursorEnabled(enabled: Boolean) {

@@ -16,6 +16,7 @@ import com.augmentalis.voiceoscore.CommandError
 import com.augmentalis.voiceoscore.CommandResult
 import com.augmentalis.voiceoscore.CommandSource
 import com.augmentalis.voiceoscore.ErrorCode
+import com.augmentalis.voiceoscore.command.LocalizedVerbProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -212,15 +213,14 @@ class ActionCoordinator(
     /**
      * Known action verbs that can prefix a command.
      * User says: "click 4" or "tap Submit" or just "4"
+     *
+     * Populated from [LocalizedVerbProvider] which includes:
+     * - Built-in English verbs (always available)
+     * - Locale-specific verbs from VOS files (after VOS load)
+     * Already sorted by length descending for longest-match-first extraction.
      */
-    private val actionVerbs = listOf(
-        "click", "tap", "press", "select", "choose", "pick",
-        "long click", "long press", "hold",
-        "double tap", "double click",
-        "scroll", "swipe",
-        "focus", "type",
-        "hover", "grab", "drag", "rotate"
-    )
+    private val actionVerbs: List<String>
+        get() = LocalizedVerbProvider.getActionVerbs()
 
     /**
      * Convert CommandActionType to a verb phrase for handler routing.
@@ -383,8 +383,9 @@ class ActionCoordinator(
     private fun extractVerbAndTarget(voiceInput: String): Pair<String?, String?> {
         val normalized = voiceInput.lowercase().trim()
 
-        // Try to match action verbs (longest first to match "long press" before "press")
-        for (verb in actionVerbs.sortedByDescending { it.length }) {
+        // Try to match action verbs (longest first to match "long press" before "press").
+        // actionVerbs from LocalizedVerbProvider is pre-sorted by length descending.
+        for (verb in actionVerbs) {
             if (normalized.startsWith("$verb ")) {
                 val target = normalized.removePrefix("$verb ").trim()
                 return if (target.isNotBlank()) Pair(verb, target) else Pair(null, null)
@@ -456,10 +457,15 @@ class ActionCoordinator(
                         return processCommand(exactMatch)
                     }
 
-                    // Native commands: rewrite phrase for gesture handler routing
-                    // e.g., "click 4" → "tap 4", or just "4" → "tap 4" via actionTypeToPhrase
-                    val actionPhrase = verb?.let { normalizedText }
-                        ?: actionTypeToPhrase(exactMatch.actionType, target)
+                    // Native commands: rewrite phrase for gesture handler routing.
+                    // Localized verbs are normalized to canonical English so handlers
+                    // always receive English phrases (e.g., "pulsar 4" → "click 4").
+                    val actionPhrase = if (verb != null) {
+                        val canonical = LocalizedVerbProvider.canonicalVerbFor(verb)
+                        "$canonical $target"
+                    } else {
+                        actionTypeToPhrase(exactMatch.actionType, target)
+                    }
                     val actionCommand = exactMatch.copy(phrase = actionPhrase)
                     LoggingUtils.d("Dynamic command match! phrase='$actionPhrase', actionType=${exactMatch.actionType}, bounds=${exactMatch.metadata["bounds"]}", TAG)
                     return processCommand(actionCommand)
@@ -478,8 +484,12 @@ class ActionCoordinator(
                         if (matched.metadata["source"] == "web") {
                             return processCommand(matched)
                         }
-                        val actionPhrase = verb?.let { normalizedText }
-                            ?: actionTypeToPhrase(matched.actionType, target)
+                        val actionPhrase = if (verb != null) {
+                            val canonical = LocalizedVerbProvider.canonicalVerbFor(verb)
+                            "$canonical $target"
+                        } else {
+                            actionTypeToPhrase(matched.actionType, target)
+                        }
                         val cmd = matched.copy(phrase = actionPhrase)
                         return processCommand(cmd)
                     }
@@ -489,8 +499,12 @@ class ActionCoordinator(
                             if (matched.metadata["source"] == "web") {
                                 return processCommand(matched)
                             }
-                            val actionPhrase = verb?.let { normalizedText }
-                                ?: actionTypeToPhrase(matched.actionType, target)
+                            val actionPhrase = if (verb != null) {
+                                val canonical = LocalizedVerbProvider.canonicalVerbFor(verb)
+                                "$canonical $target"
+                            } else {
+                                actionTypeToPhrase(matched.actionType, target)
+                            }
                             val cmd = matched.copy(phrase = actionPhrase)
                             return processCommand(cmd)
                         }

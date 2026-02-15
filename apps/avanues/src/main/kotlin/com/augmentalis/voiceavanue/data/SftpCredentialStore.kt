@@ -12,6 +12,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.augmentalis.foundation.settings.ICredentialStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,7 +26,7 @@ import javax.inject.Singleton
 @Singleton
 class SftpCredentialStore @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : ICredentialStore {
     private val prefs: SharedPreferences by lazy {
         try {
             // Attempt to create encrypted preferences with hardware-backed keystore
@@ -99,6 +100,25 @@ class SftpCredentialStore @Inject constructor(
         val hasPassword = prefs.getString(KEY_PASSWORD, "")?.isNotEmpty() == true
         val hasPassphrase = prefs.getString(KEY_PASSPHRASE, "")?.isNotEmpty() == true
         return hasPassword || hasPassphrase
+    }
+
+    // ==================== ICredentialStore interface ====================
+
+    override suspend fun store(key: String, value: String) {
+        prefs.edit().putString(key, value).apply()
+    }
+
+    override suspend fun retrieve(key: String): String? {
+        val value = prefs.getString(key, null)
+        return if (value.isNullOrEmpty()) null else value
+    }
+
+    override suspend fun delete(key: String) {
+        prefs.edit().remove(key).apply()
+    }
+
+    override suspend fun hasCredential(key: String): Boolean {
+        return prefs.contains(key) && !prefs.getString(key, "").isNullOrEmpty()
     }
 
     companion object {
