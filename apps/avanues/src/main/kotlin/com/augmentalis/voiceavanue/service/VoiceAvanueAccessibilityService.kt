@@ -61,6 +61,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
@@ -402,6 +403,19 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                     val intent = Intent(applicationContext, CursorOverlayService::class.java)
                                     applicationContext.startForegroundService(intent)
                                     Log.i(TAG, "CursorOverlayService started via settings toggle")
+                                    // Wait for service onStartCommand() to set the singleton instance.
+                                    // startForegroundService() is async — without this wait, the IMU
+                                    // wiring block below would be skipped because getInstance() is still null.
+                                    var waitMs = 0
+                                    while (CursorOverlayService.getInstance() == null && waitMs < 2000) {
+                                        delay(100)
+                                        waitMs += 100
+                                    }
+                                    if (CursorOverlayService.getInstance() != null) {
+                                        Log.i(TAG, "CursorOverlayService ready after ${waitMs}ms")
+                                    } else {
+                                        Log.w(TAG, "CursorOverlayService not ready after ${waitMs}ms — IMU wiring will be skipped")
+                                    }
                                 } catch (e: Exception) {
                                     Log.e(TAG, "Failed to start CursorOverlayService", e)
                                 }
@@ -453,7 +467,8 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                             dwellRingColor = accentArgb
                         )
 
-                        CursorOverlayService.getInstance()?.let { cursorService ->
+                        val cursorService = CursorOverlayService.getInstance()
+                        if (cursorService != null) {
                             cursorService.updateConfig(config)
                             // Ensure ClickDispatcher is set so "cursor click" voice command works
                             cursorService.setClickDispatcher(AccessibilityClickDispatcher())
@@ -462,6 +477,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                             if (imuManager == null) {
                                 try {
                                     val caps = DeviceDetector.getCapabilities(applicationContext)
+                                    Log.i(TAG, "DeviceDetector sensors: accel=${caps.sensors.hasAccelerometer}, gyro=${caps.sensors.hasGyroscope}, mag=${caps.sensors.hasMagnetometer}")
                                     val imu = IMUManager.getInstance(applicationContext)
                                     imu.injectCapabilities(caps)
                                     imuManager = imu
@@ -471,12 +487,16 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                 }
                             }
                             imuManager?.let { imu ->
-                                if (imu.startIMUTracking("VoiceCursor")) {
+                                val started = imu.startIMUTracking("VoiceCursor")
+                                if (started) {
                                     cursorService.startIMUTracking(imu)
+                                    Log.i(TAG, "IMU head tracking connected to cursor — pipeline active")
                                 } else {
-                                    Log.w(TAG, "IMU tracking start failed (no sensors?)")
+                                    Log.w(TAG, "IMU tracking start failed — check DeviceDetector capabilities and sensor availability")
                                 }
                             }
+                        } else {
+                            Log.w(TAG, "CursorOverlayService.getInstance() is null — IMU wiring skipped")
                         }
                     }
                 }
