@@ -191,12 +191,13 @@ Files without `category_map`/`action_map`/`meta_map` still work:
 - Action stored as command_id in DB (resolved at runtime via `VoiceCommandEntity.resolvedAction`)
 - No metadata for v1.0 commands
 
-### Parser: ArrayJsonParser
-Located at `VoiceOSCore/src/androidMain/.../loader/ArrayJsonParser.kt`
-- `parseCommandsJson(jsonString, isFallback)` -> `ParseResult.Success` or `ParseResult.Error`
-- Reads `category_map`, `action_map`, `meta_map` via `optJSONObject()`
-- `resolveCategory()`: uses categoryMap if v2.0, falls back to prefix for v1.0
-- Produces `List<VoiceCommandEntity>` with `actionType` and `metadata` fields
+### Parser: VosParser (KMP)
+Located at `VoiceOSCore/src/commonMain/.../loader/VosParser.kt`
+- `VosParser.parse(content, isFallback)` → `VosParseResult.Success` or `VosParseResult.Error`
+- Auto-detects format: `{` → JSON v2.1, `#`/`VOS:` → compact v3.0
+- Compiled maps as companion constants: `CATEGORY_MAP` (10), `ACTION_MAP` (124), `META_MAP` (22)
+- Produces `List<VosParsedCommand>` — mapped to `VoiceCommandEntity` via `toEntity()` extension
+- **Replaces ArrayJsonParser** (DELETED 260216) which was Android-only and supported only v2.1 JSON
 
 ## 4. Gesture Commands
 
@@ -452,5 +453,5 @@ Verify the target STT engine (Vivoka/Whisper/Google) recognizes translated phras
 ---
 
 *Chapter 93 | Voice Command Pipeline & Localization Architecture*
-*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-12 (StaticCommandRegistry hardcoded fallback removed)*
-*Related: Chapter 03 (VoiceOSCore Deep Dive), Chapter 05 (WebAvanue Deep Dive), Chapter 94 (4-Tier Voice Enablement)*
+*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-16 (Parser section updated: VosParser KMP replaces deleted ArrayJsonParser)*
+*Related: Chapter 03 (VoiceOSCore Deep Dive), Chapter 05 (WebAvanue Deep Dive), Chapter 94 (4-Tier Voice Enablement), Chapter 95 (VOS Distribution)*

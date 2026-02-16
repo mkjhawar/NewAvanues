@@ -98,9 +98,9 @@ companion object {
 
 | Parser | Package | Format | Status |
 |--------|---------|--------|--------|
-| `VosParser` | commonMain (KMP) | v2.1 JSON + v3.0 compact | **Active** — primary parser |
-| `ArrayJsonParser` | androidMain | v2.1 JSON only | **Deprecated** — kept for reference |
-| `UnifiedJSONParser` | androidMain | `commands-all.json` (unified segments format) | Separate format, not VOS |
+| `VosParser` | commonMain (KMP) | v2.1 JSON + v3.0 compact | **Active** — sole parser, auto-detects format |
+| ~~`ArrayJsonParser`~~ | ~~androidMain~~ | ~~v2.1 JSON only~~ | **DELETED 260216** — replaced by VosParser |
+| ~~`UnifiedJSONParser`~~ | ~~androidMain~~ | ~~`commands-all.json`~~ | **DELETED 260216** — parsed non-existent file, zero callers |
 
 ## 2. VOS File Registry
 
@@ -564,5 +564,5 @@ interface SyncEntryPoint {
 ---
 
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing)*
+*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement), Chapter 96 (KMP Foundation)*
