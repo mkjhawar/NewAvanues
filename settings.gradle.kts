@@ -134,6 +134,18 @@ include(":Modules:WebAvanue")            // Merged flat structure: data + UI in 
 // KMP iOS Umbrella Module - Re-exports shared modules as single iOS framework via CocoaPods
 include(":Modules:AvanuesShared")
 
+// Cockpit — Multi-window display & session management (KMP)
+include(":Modules:Cockpit")
+
+// Avanue Content Modules — Standalone KMP viewers/editors used by Cockpit and other apps
+include(":Modules:PDFAvanue")               // KMP PDF viewer (PdfRenderer + PDFKit + PDFBox)
+include(":Modules:ImageAvanue")             // KMP image viewer with zoom/pan/gallery
+include(":Modules:VideoAvanue")             // KMP video player (Media3 + AVPlayer)
+include(":Modules:NoteAvanue")              // KMP rich notes with attachments + voice transcription
+include(":Modules:CameraAvanue")            // KMP camera capture/preview (CameraX + AVCaptureSession)
+include(":Modules:RemoteCast")              // KMP screen casting/sharing (MediaProjection + ReplayKit)
+include(":Modules:AnnotationAvanue")        // KMP whiteboard/signature/drawing canvas
+
 // Rpc - Cross-platform RPC module
 include(":Modules:Rpc")                  // Root module with KMP + Wire
 

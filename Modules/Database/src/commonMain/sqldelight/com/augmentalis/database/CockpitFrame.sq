@@ -1,0 +1,69 @@
+-- Cockpit frame — a single window within a session.
+-- Each frame displays one content type with independent position and state.
+-- contentData stores JSON-serialized FrameContent variant data.
+
+CREATE TABLE CockpitFrame (
+    id TEXT NOT NULL PRIMARY KEY,
+    sessionId TEXT NOT NULL,
+    contentType TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    posX REAL NOT NULL DEFAULT 0.0,
+    posY REAL NOT NULL DEFAULT 0.0,
+    width REAL NOT NULL DEFAULT 400.0,
+    height REAL NOT NULL DEFAULT 300.0,
+    zOrder INTEGER NOT NULL DEFAULT 0,
+    isMinimized INTEGER NOT NULL DEFAULT 0,
+    isMaximized INTEGER NOT NULL DEFAULT 0,
+    isVisible INTEGER NOT NULL DEFAULT 1,
+    contentData TEXT NOT NULL DEFAULT '{}',
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    FOREIGN KEY (sessionId) REFERENCES CockpitSession(id) ON DELETE CASCADE
+);
+
+-- Indexes
+CREATE INDEX idx_cockpit_frame_session ON CockpitFrame(sessionId);
+CREATE INDEX idx_cockpit_frame_zorder ON CockpitFrame(sessionId, zOrder);
+
+-- Queries
+
+getBySession:
+SELECT * FROM CockpitFrame WHERE sessionId = ? ORDER BY zOrder ASC;
+
+getById:
+SELECT * FROM CockpitFrame WHERE id = ?;
+
+insert:
+INSERT OR REPLACE INTO CockpitFrame(
+    id, sessionId, contentType, title,
+    posX, posY, width, height, zOrder,
+    isMinimized, isMaximized, isVisible,
+    contentData, createdAt, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updatePosition:
+UPDATE CockpitFrame SET posX = ?, posY = ?, updatedAt = ? WHERE id = ?;
+
+updateSize:
+UPDATE CockpitFrame SET width = ?, height = ?, updatedAt = ? WHERE id = ?;
+
+updateZOrder:
+UPDATE CockpitFrame SET zOrder = ?, updatedAt = ? WHERE id = ?;
+
+updateVisibility:
+UPDATE CockpitFrame SET isVisible = ?, isMinimized = ?, isMaximized = ?, updatedAt = ? WHERE id = ?;
+
+updateContent:
+UPDATE CockpitFrame SET contentData = ?, updatedAt = ? WHERE id = ?;
+
+updateTitle:
+UPDATE CockpitFrame SET title = ?, updatedAt = ? WHERE id = ?;
+
+delete:
+DELETE FROM CockpitFrame WHERE id = ?;
+
+deleteBySession:
+DELETE FROM CockpitFrame WHERE sessionId = ?;
+
+countBySession:
+SELECT COUNT(*) FROM CockpitFrame WHERE sessionId = ?;

@@ -83,6 +83,12 @@ dokka = "1.9.10"
 # Ktor (HTTP client for KMP)
 ktor = "2.3.7"
 
+# Image Loading
+coil = "2.6.0"
+
+# Video/Media Playback
+media3 = "1.2.1"
+
 # SFTP
 jsch = "0.2.16"
 
@@ -231,6 +237,14 @@ grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpc-kotlin-stub = { module = "io.grpc:grpc-kotlin-stub", version.ref = "grpc-kotlin" }
 protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
 protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
+
+# Image Loading (Coil)
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+
+# Video/Media Playback (Media3)
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
 
 # SFTP
 jsch = { module = "com.github.mwiede:jsch", version.ref = "jsch" }
