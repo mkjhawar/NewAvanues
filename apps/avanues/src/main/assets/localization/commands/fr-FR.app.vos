@@ -1,588 +1,66 @@
-{
-  "version": "2.1",
-  "locale": "fr-FR",
-  "fallback": "en-US",
-  "domain": "app",
-  "category_map": {
-    "nav": "NAVIGATION",
-    "media": "MEDIA",
-    "sys": "SYSTEM",
-    "voice": "VOICE_CONTROL",
-    "acc": "ACCESSIBILITY",
-    "text": "TEXT",
-    "input": "INPUT",
-    "appctl": "APP_CONTROL"
-  },
-  "action_map": {
-    "nav_back": "BACK",
-    "nav_home": "HOME",
-    "nav_recent": "RECENT_APPS",
-    "nav_drawer": "APP_DRAWER",
-    "nav_scroll_down": "SCROLL_DOWN",
-    "nav_scroll_up": "SCROLL_UP",
-    "nav_scroll_left": "SCROLL_LEFT",
-    "nav_scroll_right": "SCROLL_RIGHT",
-    "media_play": "MEDIA_PLAY",
-    "media_pause": "MEDIA_PAUSE",
-    "media_next": "MEDIA_NEXT",
-    "media_prev": "MEDIA_PREVIOUS",
-    "media_vol_up": "VOLUME_UP",
-    "media_vol_down": "VOLUME_DOWN",
-    "media_mute": "VOLUME_MUTE",
-    "sys_settings": "OPEN_SETTINGS",
-    "sys_notifications": "NOTIFICATIONS",
-    "sys_clear_notif": "CLEAR_NOTIFICATIONS",
-    "sys_screenshot": "SCREENSHOT",
-    "sys_flash_on": "FLASHLIGHT_ON",
-    "sys_flash_off": "FLASHLIGHT_OFF",
-    "sys_bright_up": "BRIGHTNESS_UP",
-    "sys_bright_down": "BRIGHTNESS_DOWN",
-    "sys_lock": "LOCK_SCREEN",
-    "sys_rotate": "ROTATE_SCREEN",
-    "sys_wifi": "TOGGLE_WIFI",
-    "sys_bluetooth": "TOGGLE_BLUETOOTH",
-    "voice_mute": "VOICE_MUTE",
-    "voice_wake": "VOICE_WAKE",
-    "voice_dict_start": "DICTATION_START",
-    "voice_dict_stop": "DICTATION_STOP",
-    "voice_help": "SHOW_COMMANDS",
-    "voice_num_on": "NUMBERS_ON",
-    "voice_num_off": "NUMBERS_OFF",
-    "voice_num_auto": "NUMBERS_AUTO",
-    "voice_cursor_show": "CURSOR_SHOW",
-    "voice_cursor_hide": "CURSOR_HIDE",
-    "voice_cursor_click": "CURSOR_CLICK",
-    "acc_click": "CLICK",
-    "acc_long_click": "LONG_CLICK",
-    "acc_zoom_in": "ZOOM_IN",
-    "acc_zoom_out": "ZOOM_OUT",
-    "acc_read": "READ_SCREEN",
-    "acc_stop_read": "STOP_READING",
-    "text_select_all": "SELECT_ALL",
-    "text_copy": "COPY",
-    "text_paste": "PASTE",
-    "text_cut": "CUT",
-    "text_undo": "UNDO",
-    "text_redo": "REDO",
-    "text_delete": "DELETE",
-    "input_show_kb": "SHOW_KEYBOARD",
-    "input_hide_kb": "HIDE_KEYBOARD",
-    "appctl_close": "CLOSE_APP",
-    "acc_double_tap": "DOUBLE_CLICK",
-    "acc_swipe_left": "SWIPE_LEFT",
-    "acc_swipe_right": "SWIPE_RIGHT",
-    "acc_swipe_up": "SWIPE_UP",
-    "acc_swipe_down": "SWIPE_DOWN",
-    "acc_stroke_start": "STROKE_START",
-    "acc_stroke_end": "STROKE_END",
-    "acc_erase": "ERASE"
-  },
-  "meta_map": {},
-  "commands": [
-    [
-      "nav_back",
-      "retour",
-      [
-        "revenir",
-        "en arriere",
-        "page precedente"
-      ],
-      "Revenir a l'ecran precedent"
-    ],
-    [
-      "nav_home",
-      "accueil",
-      [
-        "aller a l'accueil",
-        "ecran d'accueil",
-        "bureau"
-      ],
-      "Aller a l'ecran d'accueil"
-    ],
-    [
-      "nav_recent",
-      "applis recentes",
-      [
-        "applications recentes",
-        "recents",
-        "basculer appli"
-      ],
-      "Afficher les applications recentes"
-    ],
-    [
-      "nav_drawer",
-      "tiroir d'applis",
-      [
-        "toutes les applis",
-        "liste des applis"
-      ],
-      "Ouvrir le tiroir d'applications"
-    ],
-    [
-      "nav_scroll_down",
-      "defiler vers le bas",
-      [
-        "descendre"
-      ],
-      "Defiler vers le bas"
-    ],
-    [
-      "nav_scroll_up",
-      "defiler vers le haut",
-      [
-        "monter"
-      ],
-      "Defiler vers le haut"
-    ],
-    [
-      "nav_scroll_left",
-      "defiler a gauche",
-      [],
-      "Defiler vers la gauche"
-    ],
-    [
-      "nav_scroll_right",
-      "defiler a droite",
-      [],
-      "Defiler vers la droite"
-    ],
-    [
-      "media_play",
-      "lire la musique",
-      [
-        "lecture",
-        "reprendre",
-        "jouer"
-      ],
-      "Lire ou reprendre le media"
-    ],
-    [
-      "media_pause",
-      "mettre en pause",
-      [
-        "pause",
-        "arreter la musique"
-      ],
-      "Mettre le media en pause"
-    ],
-    [
-      "media_next",
-      "chanson suivante",
-      [
-        "morceau suivant",
-        "piste suivante",
-        "suivant"
-      ],
-      "Piste suivante"
-    ],
-    [
-      "media_prev",
-      "chanson precedente",
-      [
-        "morceau precedent",
-        "piste precedente",
-        "precedent"
-      ],
-      "Piste precedente"
-    ],
-    [
-      "media_vol_up",
-      "monter le volume",
-      [
-        "plus fort",
-        "volume plus"
-      ],
-      "Augmenter le volume"
-    ],
-    [
-      "media_vol_down",
-      "baisser le volume",
-      [
-        "moins fort",
-        "volume moins",
-        "plus bas"
-      ],
-      "Baisser le volume"
-    ],
-    [
-      "media_mute",
-      "couper le son",
-      [
-        "muet",
-        "silence",
-        "mode silencieux"
-      ],
-      "Couper le son"
-    ],
-    [
-      "sys_settings",
-      "ouvrir les parametres",
-      [
-        "parametres",
-        "reglages",
-        "configuration"
-      ],
-      "Ouvrir les parametres du systeme"
-    ],
-    [
-      "sys_notifications",
-      "afficher les notifications",
-      [
-        "notifications",
-        "panneau de notifications"
-      ],
-      "Afficher les notifications"
-    ],
-    [
-      "sys_clear_notif",
-      "effacer les notifications",
-      [
-        "supprimer les notifications"
-      ],
-      "Effacer toutes les notifications"
-    ],
-    [
-      "sys_screenshot",
-      "capture d'ecran",
-      [
-        "screenshot",
-        "capturer l'ecran"
-      ],
-      "Prendre une capture d'ecran"
-    ],
-    [
-      "sys_flash_on",
-      "allumer la lampe",
-      [
-        "lampe torche",
-        "torche",
-        "lampe on"
-      ],
-      "Allumer la lampe torche"
-    ],
-    [
-      "sys_flash_off",
-      "eteindre la lampe",
-      [
-        "lampe off",
-        "torche off"
-      ],
-      "Eteindre la lampe torche"
-    ],
-    [
-      "sys_bright_up",
-      "plus de luminosite",
-      [
-        "augmenter la luminosite",
-        "plus lumineux",
-        "ecran plus clair"
-      ],
-      "Augmenter la luminosite de l'ecran"
-    ],
-    [
-      "sys_bright_down",
-      "moins de luminosite",
-      [
-        "baisser la luminosite",
-        "plus sombre",
-        "ecran plus sombre"
-      ],
-      "Baisser la luminosite de l'ecran"
-    ],
-    [
-      "sys_lock",
-      "verrouiller l'ecran",
-      [
-        "verrouiller le telephone",
-        "verrouiller"
-      ],
-      "Verrouiller l'ecran"
-    ],
-    [
-      "sys_rotate",
-      "pivoter l'ecran",
-      [
-        "rotation",
-        "changer l'orientation"
-      ],
-      "Basculer la rotation de l'ecran"
-    ],
-    [
-      "sys_wifi",
-      "basculer le wifi",
-      [
-        "wifi on",
-        "wifi off",
-        "activer le wifi",
-        "desactiver le wifi"
-      ],
-      "Activer ou desactiver le WiFi"
-    ],
-    [
-      "sys_bluetooth",
-      "basculer le bluetooth",
-      [
-        "bluetooth on",
-        "bluetooth off",
-        "activer le bluetooth",
-        "desactiver le bluetooth"
-      ],
-      "Activer ou desactiver le Bluetooth"
-    ],
-    [
-      "voice_mute",
-      "couper la voix",
-      [
-        "arreter l'ecoute",
-        "voix off"
-      ],
-      "Desactiver la reconnaissance vocale"
-    ],
-    [
-      "voice_wake",
-      "activer la voix",
-      [
-        "ecouter",
-        "voix on",
-        "commencer l'ecoute"
-      ],
-      "Activer la reconnaissance vocale"
-    ],
-    [
-      "voice_dict_start",
-      "commencer la dictee",
-      [
-        "dictee",
-        "mode saisie"
-      ],
-      "Demarrer le mode dictee"
-    ],
-    [
-      "voice_dict_stop",
-      "arreter la dictee",
-      [
-        "fin de dictee",
-        "mode commande"
-      ],
-      "Arreter le mode dictee"
-    ],
-    [
-      "voice_help",
-      "afficher les commandes",
-      [
-        "qu'est-ce que je peux dire",
-        "aide",
-        "commandes disponibles"
-      ],
-      "Afficher les commandes disponibles"
-    ],
-    [
-      "voice_num_on",
-      "numeros actifs",
-      [
-        "afficher les numeros",
-        "numeros toujours"
-      ],
-      "Toujours afficher les numeros sur les elements"
-    ],
-    [
-      "voice_num_off",
-      "numeros inactifs",
-      [
-        "masquer les numeros",
-        "pas de numeros"
-      ],
-      "Ne jamais afficher les numeros"
-    ],
-    [
-      "voice_num_auto",
-      "numeros auto",
-      [
-        "numeros automatiques",
-        "auto numeros"
-      ],
-      "Afficher les numeros uniquement pour les listes"
-    ],
-    [
-      "voice_cursor_show",
-      "afficher le curseur",
-      [
-        "curseur on",
-        "activer le curseur"
-      ],
-      "Afficher le curseur vocal"
-    ],
-    [
-      "voice_cursor_hide",
-      "masquer le curseur",
-      [
-        "curseur off",
-        "desactiver le curseur"
-      ],
-      "Masquer le curseur vocal"
-    ],
-    [
-      "voice_cursor_click",
-      "clic curseur",
-      [
-        "cliquer ici"
-      ],
-      "Cliquer a la position du curseur"
-    ],
-    [
-      "acc_click",
-      "cliquer",
-      [
-        "appuyer",
-        "toucher",
-        "taper"
-      ],
-      "Cliquer sur un element nomme ou numerote"
-    ],
-    [
-      "acc_long_click",
-      "appui long",
-      [
-        "clic long",
-        "maintenir",
-        "rester appuye"
-      ],
-      "Appui long sur un element"
-    ],
-    [
-      "acc_zoom_in",
-      "zoomer",
-      [
-        "agrandir",
-        "zoom avant",
-        "rapprocher"
-      ],
-      "Zoomer"
-    ],
-    [
-      "acc_zoom_out",
-      "dezoomer",
-      [
-        "reduire",
-        "zoom arriere",
-        "eloigner"
-      ],
-      "Dezoomer"
-    ],
-    [
-      "acc_read",
-      "lire l'ecran",
-      [
-        "lire a voix haute",
-        "lis-moi ca",
-        "lire la page"
-      ],
-      "Lire le contenu de l'ecran a voix haute"
-    ],
-    [
-      "acc_stop_read",
-      "arreter la lecture",
-      [
-        "stop",
-        "tais-toi",
-        "silence"
-      ],
-      "Arreter la lecture a voix haute"
-    ],
-    [
-      "text_select_all",
-      "tout selectionner",
-      [
-        "selectionner tout"
-      ],
-      "Selectionner tout le texte"
-    ],
-    [
-      "text_copy",
-      "copier",
-      [
-        "copier ca",
-        "copier le texte"
-      ],
-      "Copier la selection dans le presse-papiers"
-    ],
-    [
-      "text_paste",
-      "coller",
-      [
-        "coller le texte"
-      ],
-      "Coller depuis le presse-papiers"
-    ],
-    [
-      "text_cut",
-      "couper",
-      [
-        "couper le texte"
-      ],
-      "Couper la selection dans le presse-papiers"
-    ],
-    [
-      "text_undo",
-      "annuler",
-      [
-        "defaire",
-        "revenir en arriere"
-      ],
-      "Annuler la derniere action"
-    ],
-    [
-      "text_redo",
-      "retablir",
-      [
-        "refaire"
-      ],
-      "Retablir la derniere action annulee"
-    ],
-    [
-      "text_delete",
-      "supprimer",
-      [
-        "effacer",
-        "enlever"
-      ],
-      "Supprimer le texte selectionne"
-    ],
-    [
-      "input_show_kb",
-      "afficher le clavier",
-      [
-        "ouvrir le clavier",
-        "clavier"
-      ],
-      "Afficher le clavier virtuel"
-    ],
-    [
-      "input_hide_kb",
-      "masquer le clavier",
-      [
-        "fermer le clavier",
-        "cacher le clavier"
-      ],
-      "Masquer le clavier virtuel"
-    ],
-    [
-      "appctl_close",
-      "fermer l'appli",
-      [
-        "fermer",
-        "quitter l'appli",
-        "quitter"
-      ],
-      "Fermer l'application en cours"
-    ],
-    ["acc_double_tap", "double tap", ["double clic", "double appui"], "Double-tap sur un element"],
-    ["acc_swipe_left", "balayer a gauche", [], "Balayer vers la gauche sur l'ecran"],
-    ["acc_swipe_right", "balayer a droite", [], "Balayer vers la droite sur l'ecran"],
-    ["acc_swipe_up", "balayer vers le haut", [], "Balayer vers le haut sur l'ecran"],
-    ["acc_swipe_down", "balayer vers le bas", [], "Balayer vers le bas sur l'ecran"],
-    ["acc_stroke_start", "commencer a dessiner", ["dessiner", "debut de trait"], "Commencer un trait de dessin (annotation)"],
-    ["acc_stroke_end", "arreter de dessiner", ["fin de dessin", "fin de trait"], "Terminer le trait de dessin (annotation)"],
-    ["acc_erase", "gomme", ["mode gomme", "activer la gomme"], "Activer le mode gomme (annotation)"]
-  ]
-}
+# VOS v3.0 — fr-FR app commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:fr-FR:en-US:app
+
+nav_back|retour|revenir,en arriere,page precedente|Revenir a l'ecran precedent
+nav_home|accueil|aller a l'accueil,ecran d'accueil,bureau|Aller a l'ecran d'accueil
+nav_recent|applis recentes|applications recentes,recents,basculer appli|Afficher les applications recentes
+nav_drawer|tiroir d'applis|toutes les applis,liste des applis|Ouvrir le tiroir d'applications
+nav_scroll_down|defiler vers le bas|descendre|Defiler vers le bas
+nav_scroll_up|defiler vers le haut|monter|Defiler vers le haut
+nav_scroll_left|defiler a gauche||Defiler vers la gauche
+nav_scroll_right|defiler a droite||Defiler vers la droite
+media_play|lire la musique|lecture,reprendre,jouer|Lire ou reprendre le media
+media_pause|mettre en pause|pause,arreter la musique|Mettre le media en pause
+media_next|chanson suivante|morceau suivant,piste suivante,suivant|Piste suivante
+media_prev|chanson precedente|morceau precedent,piste precedente,precedent|Piste precedente
+media_vol_up|monter le volume|plus fort,volume plus|Augmenter le volume
+media_vol_down|baisser le volume|moins fort,volume moins,plus bas|Baisser le volume
+media_mute|couper le son|muet,silence,mode silencieux|Couper le son
+sys_settings|ouvrir les parametres|parametres,reglages,configuration|Ouvrir les parametres du systeme
+sys_notifications|afficher les notifications|notifications,panneau de notifications|Afficher les notifications
+sys_clear_notif|effacer les notifications|supprimer les notifications|Effacer toutes les notifications
+sys_screenshot|capture d'ecran|screenshot,capturer l'ecran|Prendre une capture d'ecran
+sys_flash_on|allumer la lampe|lampe torche,torche,lampe on|Allumer la lampe torche
+sys_flash_off|eteindre la lampe|lampe off,torche off|Eteindre la lampe torche
+sys_bright_up|plus de luminosite|augmenter la luminosite,plus lumineux,ecran plus clair|Augmenter la luminosite de l'ecran
+sys_bright_down|moins de luminosite|baisser la luminosite,plus sombre,ecran plus sombre|Baisser la luminosite de l'ecran
+sys_lock|verrouiller l'ecran|verrouiller le telephone,verrouiller|Verrouiller l'ecran
+sys_rotate|pivoter l'ecran|rotation,changer l'orientation|Basculer la rotation de l'ecran
+sys_wifi|basculer le wifi|wifi on,wifi off,activer le wifi,desactiver le wifi|Activer ou desactiver le WiFi
+sys_bluetooth|basculer le bluetooth|bluetooth on,bluetooth off,activer le bluetooth,desactiver le bluetooth|Activer ou desactiver le Bluetooth
+voice_mute|couper la voix|arreter l'ecoute,voix off|Desactiver la reconnaissance vocale
+voice_wake|activer la voix|ecouter,voix on,commencer l'ecoute|Activer la reconnaissance vocale
+voice_dict_start|commencer la dictee|dictee,mode saisie|Demarrer le mode dictee
+voice_dict_stop|arreter la dictee|fin de dictee,mode commande|Arreter le mode dictee
+voice_help|afficher les commandes|qu'est-ce que je peux dire,aide,commandes disponibles|Afficher les commandes disponibles
+voice_num_on|numeros actifs|afficher les numeros,numeros toujours|Toujours afficher les numeros sur les elements
+voice_num_off|numeros inactifs|masquer les numeros,pas de numeros|Ne jamais afficher les numeros
+voice_num_auto|numeros auto|numeros automatiques,auto numeros|Afficher les numeros uniquement pour les listes
+voice_cursor_show|afficher le curseur|curseur on,activer le curseur|Afficher le curseur vocal
+voice_cursor_hide|masquer le curseur|curseur off,desactiver le curseur|Masquer le curseur vocal
+voice_cursor_click|clic curseur|cliquer ici|Cliquer a la position du curseur
+acc_click|cliquer|appuyer,toucher,taper|Cliquer sur un element nomme ou numerote
+acc_long_click|appui long|clic long,maintenir,rester appuye|Appui long sur un element
+acc_zoom_in|zoomer|agrandir,zoom avant,rapprocher|Zoomer
+acc_zoom_out|dezoomer|reduire,zoom arriere,eloigner|Dezoomer
+acc_read|lire l'ecran|lire a voix haute,lis-moi ca,lire la page|Lire le contenu de l'ecran a voix haute
+acc_stop_read|arreter la lecture|stop,tais-toi,silence|Arreter la lecture a voix haute
+text_select_all|tout selectionner|selectionner tout|Selectionner tout le texte
+text_copy|copier|copier ca,copier le texte|Copier la selection dans le presse-papiers
+text_paste|coller|coller le texte|Coller depuis le presse-papiers
+text_cut|couper|couper le texte|Couper la selection dans le presse-papiers
+text_undo|annuler|defaire,revenir en arriere|Annuler la derniere action
+text_redo|retablir|refaire|Retablir la derniere action annulee
+text_delete|supprimer|effacer,enlever|Supprimer le texte selectionne
+input_show_kb|afficher le clavier|ouvrir le clavier,clavier|Afficher le clavier virtuel
+input_hide_kb|masquer le clavier|fermer le clavier,cacher le clavier|Masquer le clavier virtuel
+appctl_close|fermer l'appli|fermer,quitter l'appli,quitter|Fermer l'application en cours
+acc_double_tap|double tap|double clic,double appui|Double-tap sur un element
+acc_swipe_left|balayer a gauche||Balayer vers la gauche sur l'ecran
+acc_swipe_right|balayer a droite||Balayer vers la droite sur l'ecran
+acc_swipe_up|balayer vers le haut||Balayer vers le haut sur l'ecran
+acc_swipe_down|balayer vers le bas||Balayer vers le bas sur l'ecran
+acc_stroke_start|commencer a dessiner|dessiner,debut de trait|Commencer un trait de dessin (annotation)
+acc_stroke_end|arreter de dessiner|fin de dessin,fin de trait|Terminer le trait de dessin (annotation)
+acc_erase|gomme|mode gomme,activer la gomme|Activer le mode gomme (annotation)
