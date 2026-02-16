@@ -1,0 +1,36 @@
+-- Cockpit workflow step — sequential step in a guided procedure.
+-- Links a step to a specific frame for instructional workflows.
+
+CREATE TABLE CockpitWorkflowStep (
+    id TEXT NOT NULL PRIMARY KEY,
+    sessionId TEXT NOT NULL,
+    frameId TEXT NOT NULL,
+    stepNumber INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY (sessionId) REFERENCES CockpitSession(id) ON DELETE CASCADE
+);
+
+-- Indexes
+CREATE INDEX idx_cockpit_workflow_session ON CockpitWorkflowStep(sessionId, stepNumber);
+
+-- Queries
+
+getBySession:
+SELECT * FROM CockpitWorkflowStep WHERE sessionId = ? ORDER BY stepNumber ASC;
+
+insert:
+INSERT OR REPLACE INTO CockpitWorkflowStep(id, sessionId, frameId, stepNumber, name, description)
+VALUES (?, ?, ?, ?, ?, ?);
+
+updateStep:
+UPDATE CockpitWorkflowStep SET name = ?, description = ?, frameId = ? WHERE id = ?;
+
+updateStepNumber:
+UPDATE CockpitWorkflowStep SET stepNumber = ? WHERE id = ?;
+
+delete:
+DELETE FROM CockpitWorkflowStep WHERE id = ?;
+
+deleteBySession:
+DELETE FROM CockpitWorkflowStep WHERE sessionId = ?;

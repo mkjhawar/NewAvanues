@@ -1,0 +1,29 @@
+-- Cockpit pinned frame — PiP overlay that persists across session switches.
+
+CREATE TABLE CockpitPinnedFrame (
+    frameId TEXT NOT NULL PRIMARY KEY,
+    sourceSessionId TEXT NOT NULL,
+    pipX REAL NOT NULL DEFAULT 0.8,
+    pipY REAL NOT NULL DEFAULT 0.1,
+    pipScale REAL NOT NULL DEFAULT 0.25,
+    opacity REAL NOT NULL DEFAULT 1.0,
+    FOREIGN KEY (sourceSessionId) REFERENCES CockpitSession(id) ON DELETE CASCADE
+);
+
+-- Queries
+
+getAll:
+SELECT * FROM CockpitPinnedFrame;
+
+insert:
+INSERT OR REPLACE INTO CockpitPinnedFrame(frameId, sourceSessionId, pipX, pipY, pipScale, opacity)
+VALUES (?, ?, ?, ?, ?, ?);
+
+updatePosition:
+UPDATE CockpitPinnedFrame SET pipX = ?, pipY = ?, pipScale = ? WHERE frameId = ?;
+
+delete:
+DELETE FROM CockpitPinnedFrame WHERE frameId = ?;
+
+deleteAll:
+DELETE FROM CockpitPinnedFrame;

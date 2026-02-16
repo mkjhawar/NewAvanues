@@ -1,0 +1,49 @@
+-- Cockpit session — a named collection of frames with a layout mode.
+-- Each session preserves its own frame arrangement independently.
+
+CREATE TABLE CockpitSession (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    layoutMode TEXT NOT NULL DEFAULT 'FREEFORM',
+    selectedFrameId TEXT,
+    isDefault INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+);
+
+-- Indexes
+CREATE INDEX idx_cockpit_session_updated ON CockpitSession(updatedAt);
+CREATE INDEX idx_cockpit_session_default ON CockpitSession(isDefault);
+
+-- Queries
+
+getAll:
+SELECT * FROM CockpitSession ORDER BY updatedAt DESC;
+
+getById:
+SELECT * FROM CockpitSession WHERE id = ?;
+
+getDefault:
+SELECT * FROM CockpitSession WHERE isDefault = 1 LIMIT 1;
+
+insert:
+INSERT OR REPLACE INTO CockpitSession(id, name, layoutMode, selectedFrameId, isDefault, createdAt, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+updateName:
+UPDATE CockpitSession SET name = ?, updatedAt = ? WHERE id = ?;
+
+updateLayoutMode:
+UPDATE CockpitSession SET layoutMode = ?, updatedAt = ? WHERE id = ?;
+
+updateSelectedFrame:
+UPDATE CockpitSession SET selectedFrameId = ?, updatedAt = ? WHERE id = ?;
+
+delete:
+DELETE FROM CockpitSession WHERE id = ?;
+
+deleteAll:
+DELETE FROM CockpitSession;
+
+count:
+SELECT COUNT(*) FROM CockpitSession;
