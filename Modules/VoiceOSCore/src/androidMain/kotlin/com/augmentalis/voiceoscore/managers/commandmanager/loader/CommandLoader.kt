@@ -1,27 +1,36 @@
 /**
- * CommandLoader.kt - Load voice commands from JSON into database
- * 
+ * CommandLoader.kt - Load voice commands from VOS files into database
+ *
  * Purpose: Load commands with automatic English fallback
  * Strategy:
  * 1. ALWAYS load English first (is_fallback = true)
  * 2. Then load user's system locale (if different)
  * 3. Resolution: user locale → English fallback → null
+ *
+ * Uses VosParser (commonMain KMP) which auto-detects format:
+ * - v2.1 JSON: legacy format with embedded maps
+ * - v3.0 Compact: pipe-delimited with compiled maps
  */
 
 package com.augmentalis.voiceoscore.managers.commandmanager.loader
 
 import android.content.Context
 import android.util.Log
+import com.augmentalis.voiceoscore.loader.VosParsedCommand
+import com.augmentalis.voiceoscore.loader.VosParseResult
+import com.augmentalis.voiceoscore.loader.VosParser
 import com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.DatabaseVersionDaoAdapter
 import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.DatabaseVersionEntity
 import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
+import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity
 import java.io.FileNotFoundException
 import java.util.Locale
 
 /**
- * Loader for voice command JSON files with English fallback support
- * Version 2: Added persistence check to avoid reloading on every app restart
+ * Loader for VOS command files with English fallback support.
+ * v3: Uses VosParser (KMP) with auto-detection of JSON v2.1 and compact v3.0.
+ * v2: Added persistence check to avoid reloading on every app restart.
  */
 class CommandLoader(
     private val context: Context,
@@ -64,7 +73,7 @@ class CommandLoader(
 
             // 0. CHECK if database already loaded with correct version
             val existingVersion = versionDao.getVersion()
-            val requiredVersion = "2.1" // v2.1: domain-split .app.vos + .web.vos files
+            val requiredVersion = "3.0" // v3.0: compact pipe-delimited format with compiled maps
 
             if (existingVersion != null && existingVersion.jsonVersion == requiredVersion) {
                 val commandCount = commandDao.getCommandCount(FALLBACK_LOCALE)
@@ -78,7 +87,7 @@ class CommandLoader(
                 }
             }
 
-            Log.i(TAG, "Loading commands from JSON (version: $requiredVersion)...")
+            Log.i(TAG, "Loading commands from VOS files (version: $requiredVersion)...")
 
             // 1. ALWAYS load English first (fallback)
             val englishResult = loadLocale(FALLBACK_LOCALE, isFallback = true)
@@ -149,7 +158,7 @@ class CommandLoader(
             }
 
             // Load both domain files (.app.vos + .web.vos) and merge
-            val allCommands = mutableListOf<com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity>()
+            val allCommands = mutableListOf<VoiceCommandEntity>()
 
             // Load app domain commands
             val appFile = "$COMMANDS_PATH/$locale$FILE_EXTENSION_APP"
@@ -161,11 +170,11 @@ class CommandLoader(
             }
 
             if (appString != null) {
-                val appResult = ArrayJsonParser.parseCommandsJson(appString, isFallback)
-                if (appResult is ArrayJsonParser.ParseResult.Success) {
-                    allCommands.addAll(appResult.commands)
+                val appResult = VosParser.parse(appString, isFallback)
+                if (appResult is VosParseResult.Success) {
+                    allCommands.addAll(appResult.commands.map { it.toEntity() })
                     Log.d(TAG, "Loaded ${appResult.commands.size} app commands for $locale")
-                } else if (appResult is ArrayJsonParser.ParseResult.Error) {
+                } else if (appResult is VosParseResult.Error) {
                     Log.e(TAG, "Failed to parse app VOS for $locale: ${appResult.message}")
                 }
             }
@@ -180,11 +189,11 @@ class CommandLoader(
             }
 
             if (webString != null) {
-                val webResult = ArrayJsonParser.parseCommandsJson(webString, isFallback)
-                if (webResult is ArrayJsonParser.ParseResult.Success) {
-                    allCommands.addAll(webResult.commands)
+                val webResult = VosParser.parse(webString, isFallback)
+                if (webResult is VosParseResult.Success) {
+                    allCommands.addAll(webResult.commands.map { it.toEntity() })
                     Log.d(TAG, "Loaded ${webResult.commands.size} web commands for $locale")
-                } else if (webResult is ArrayJsonParser.ParseResult.Error) {
+                } else if (webResult is VosParseResult.Error) {
                     Log.e(TAG, "Failed to parse web VOS for $locale: ${webResult.message}")
                 }
             }
@@ -316,9 +325,26 @@ class CommandLoader(
             val commandCount: Int,
             val locales: List<String>
         ) : LoadResult()
-        
+
         data class LocaleNotFound(val locale: String) : LoadResult()
-        
+
         data class Error(val message: String) : LoadResult()
     }
+
+    /**
+     * Map KMP [VosParsedCommand] to Android [VoiceCommandEntity].
+     * Converts synonyms from List<String> to JSON array string for DB storage.
+     */
+    private fun VosParsedCommand.toEntity() = VoiceCommandEntity(
+        id = id,
+        locale = locale,
+        primaryText = primaryText,
+        synonyms = VosParser.synonymsToJson(synonyms),
+        description = description,
+        category = category,
+        actionType = actionType,
+        metadata = metadata,
+        priority = 50,
+        isFallback = isFallback
+    )
 }

@@ -1,13 +1,14 @@
 /**
  * VosFileImporter.kt - Imports .app.vos and .web.vos files into the voice command DB
  *
- * Parses VOS files using ArrayJsonParser, deduplicates by content hash via the
- * VOS file registry, and batch-inserts commands using VoiceCommandDaoAdapter.
+ * Parses VOS files using VosParser (KMP, auto-detects JSON v2.1 and compact v3.0),
+ * deduplicates by content hash via the VOS file registry, and batch-inserts
+ * commands using VoiceCommandDaoAdapter.
  *
  * Usage:
  *   val importer = VosFileImporter(registry, commandDao)
  *   val result = importer.importFromFile("/path/to/google.com.web.vos")
- *   val result = importer.importFromContent(vosJsonString, "downloaded")
+ *   val result = importer.importFromContent(vosContent, "downloaded")
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -16,9 +17,11 @@ package com.augmentalis.voiceoscore.vos
 import android.util.Log
 import com.augmentalis.database.dto.VosFileRegistryDTO
 import com.augmentalis.database.repositories.IVosFileRegistryRepository
+import com.augmentalis.voiceoscore.loader.VosParsedCommand
+import com.augmentalis.voiceoscore.loader.VosParseResult
+import com.augmentalis.voiceoscore.loader.VosParser
 import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
 import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity
-import com.augmentalis.voiceoscore.managers.commandmanager.loader.ArrayJsonParser
 import java.io.File
 import java.security.MessageDigest
 
@@ -110,31 +113,31 @@ class VosFileImporter(
             )
         }
 
-        // Parse VOS JSON
-        val parseResult = ArrayJsonParser.parseCommandsJson(content, isFallback = false)
-        if (parseResult is ArrayJsonParser.ParseResult.Error) {
+        // Parse VOS file (auto-detects JSON v2.1 or compact v3.0)
+        val parseResult = VosParser.parse(content, isFallback = false)
+        if (parseResult is VosParseResult.Error) {
             Log.e(TAG, "Parse failed: ${parseResult.message}")
             return ImportResult(success = false, errorMessage = "Parse error: ${parseResult.message}")
         }
 
-        val parsed = parseResult as ArrayJsonParser.ParseResult.Success
-        val commands = parsed.commands
+        val parsed = parseResult as VosParseResult.Success
+        val entities = parsed.commands.map { it.toEntity() }
 
-        if (commands.isEmpty()) {
+        if (entities.isEmpty()) {
             return ImportResult(success = false, errorMessage = "No commands in VOS file")
         }
 
         // Batch insert into commands DB
         val insertedIds = try {
-            commandDao.insertBatch(commands)
+            commandDao.insertBatch(entities)
         } catch (e: Exception) {
             Log.e(TAG, "Batch insert failed", e)
             return ImportResult(success = false, errorMessage = "Insert error: ${e.message}")
         }
 
-        // Determine file type and fileId from content
-        val fileType = detectFileType(fileName, content)
-        val fileId = detectFileId(fileName, parsed.locale, content)
+        // Determine file type and fileId from parsed result or filename
+        val fileType = detectFileType(fileName, parsed.domain)
+        val fileId = detectFileId(fileName, parsed.locale, parsed.domain)
 
         // Register in VOS file registry
         val latestDto = registry.getLatestVersion(fileId, fileType)
@@ -147,7 +150,7 @@ class VosFileImporter(
             fileType = fileType,
             fileName = fileName ?: "$fileId.$fileType.vos",
             contentHash = hash,
-            commandCount = commands.size,
+            commandCount = entities.size,
             vosVersion = parsed.version,
             domain = if (fileType == "web") fileId else null,
             pageTitle = extractPageTitle(content),
@@ -170,40 +173,34 @@ class VosFileImporter(
             Log.w(TAG, "Registry insert failed (commands still imported): ${e.message}")
         }
 
-        Log.i(TAG, "Imported ${commands.size} commands from ${fileName ?: "content"} (type=$fileType, version=$nextVersion)")
+        Log.i(TAG, "Imported ${entities.size} commands from ${fileName ?: "content"} (type=$fileType, version=$nextVersion)")
 
         return ImportResult(
             success = true,
-            commandCount = commands.size,
+            commandCount = entities.size,
             insertedIds = insertedIds,
             contentHash = hash
         )
     }
 
     /**
-     * Detect file type from filename or content.
+     * Detect file type from filename or parsed domain.
      * Returns "app" or "web".
      */
-    private fun detectFileType(fileName: String?, content: String): String {
+    private fun detectFileType(fileName: String?, parsedDomain: String): String {
         if (fileName != null) {
             if (fileName.endsWith(".app.vos")) return "app"
             if (fileName.endsWith(".web.vos")) return "web"
         }
-        // Fall back to checking content for domain field
-        return try {
-            val json = org.json.JSONObject(content)
-            json.optString("domain", "app")
-        } catch (_: Exception) {
-            "app"
-        }
+        return parsedDomain
     }
 
     /**
-     * Detect fileId from filename, locale, or content.
+     * Detect fileId from filename, locale, or parsed domain.
      * For app files: locale (e.g., "en-US")
      * For web files: domain name (e.g., "google.com")
      */
-    private fun detectFileId(fileName: String?, locale: String, content: String): String {
+    private fun detectFileId(fileName: String?, locale: String, parsedDomain: String): String {
         if (fileName != null) {
             // "en-US.app.vos" → "en-US"
             if (fileName.endsWith(".app.vos")) {
@@ -214,13 +211,8 @@ class VosFileImporter(
                 return fileName.removeSuffix(".web.vos")
             }
         }
-        // Fall back to parsed locale or content domain
-        return try {
-            val json = org.json.JSONObject(content)
-            json.optString("source_domain", locale)
-        } catch (_: Exception) {
-            locale
-        }
+        // Fall back to locale (app domain) or domain (web domain)
+        return if (parsedDomain == "web") locale else locale
     }
 
     /**
@@ -257,4 +249,20 @@ class VosFileImporter(
         val hashBytes = digest.digest(content.toByteArray(Charsets.UTF_8))
         return hashBytes.joinToString("") { "%02x".format(it) }
     }
+
+    /**
+     * Map KMP [VosParsedCommand] to Android [VoiceCommandEntity].
+     */
+    private fun VosParsedCommand.toEntity() = VoiceCommandEntity(
+        id = id,
+        locale = locale,
+        primaryText = primaryText,
+        synonyms = VosParser.synonymsToJson(synonyms),
+        description = description,
+        category = category,
+        actionType = actionType,
+        metadata = metadata,
+        priority = 50,
+        isFallback = isFallback
+    )
 }
