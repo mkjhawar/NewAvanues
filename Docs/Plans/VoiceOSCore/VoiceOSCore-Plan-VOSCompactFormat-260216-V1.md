@@ -144,9 +144,11 @@ Exporter still writes v2.1 JSON (web-scraped files). Will be updated when compac
 |---|------|--------|--------|
 | 1 | `VosParser.kt` | Compiled maps, parseCompact(), auto-detection | `322653a7` |
 | 2 | 10x `.vos` files | JSON v2.1 → compact v3.0 | `322653a7` |
-| 3 | `CommandLoader.kt` | VosParser, version 3.0, toEntity() | (pending) |
-| 4 | `VosFileImporter.kt` | VosParser, simplified detect methods | (pending) |
-| 5 | `ArrayJsonParser.kt` | No change — kept as deprecated reference | — |
+| 3 | `CommandLoader.kt` | VosParser, version 3.0, toEntity() | `16db3040` |
+| 4 | `VosFileImporter.kt` | VosParser, simplified detect methods | `16db3040` |
+| 5 | ~~`ArrayJsonParser.kt`~~ | **DELETED** — zero callers after VosParser migration | `16db3040` |
+| 6 | ~~`UnifiedJSONParser.kt`~~ | **DELETED** — parsed non-existent file, zero callers | `16db3040` |
+| 7 | ~~`VOSCommandIngestion.kt`~~ | **DELETED** — replaced by CommandLoader, zero callers | `16db3040` |
 
 ## Verification
 
