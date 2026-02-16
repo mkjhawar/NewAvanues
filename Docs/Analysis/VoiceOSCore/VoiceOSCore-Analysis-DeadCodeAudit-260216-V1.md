@@ -24,7 +24,7 @@ Adapters for `LearnAppCore` and `JITLearning` modules that no longer exist in th
 | A2 | `learning/LearnAppCoreAdapter.kt` | 370 | `LearnAppCoreAdapter` | Bridge old `LearnAppCore.initialize()` / `process()` to VoiceOSCore | Only A1 |
 | A3 | `jit/JITLearningAdapter.kt` | 414 | `JITLearningAdapter` | Bridge old `JITLearning.learn()` / `predict()` to VoiceOSCore | Only A1 |
 
-**Verdict:** Safe to delete. Source modules don't exist. Migration is complete.
+**Verdict:** DELETED. Source modules don't exist. Zero external imports. `requiresMigration()` returns false. ExplorationBridge (target API) was never built.
 
 ---
 
@@ -95,7 +95,7 @@ Miscellaneous utilities and handlers with uncertain active status.
 
 | Category | Files | Lines | Recommendation |
 |----------|-------|-------|---------------|
-| A: Legacy Migration | 3 | 1,195 | DELETE — source modules don't exist |
+| A: Legacy Migration | 3 | 1,195 | **DELETED** — source modules don't exist, zero imports |
 | B: Framework Placeholders | 6 | 726 | DELETE — stubs, easily recreated |
 | C: Safety System | 4 | 1,084 | DECIDE — potentially valuable, but unintegrated |
 | D: Old Themes | 5 | 2,229 | DELETE — fully replaced by AvanueUI v5.1 |
@@ -108,7 +108,9 @@ Miscellaneous utilities and handlers with uncertain active status.
 
 | # | File | Decision | Date | Notes |
 |---|------|----------|------|-------|
-| A1-A3 | Migration adapters | REVIEW | 260216 | User wants to evaluate JIT learning/scraping code first |
+| A1 | MigrationGuide.kt | **DELETED** | 260216 | Zero imports, source modules don't exist, requiresMigration() returns false |
+| A2 | LearnAppCoreAdapter.kt | **DELETED** | 260216 | Zero imports, bridges non-existent LearnAppCore module |
+| A3 | JITLearningAdapter.kt | **DELETED** | 260216 | Zero imports, bridges non-existent JITLearning module, ExplorationBridge never built |
 | B1-B6 | Framework handlers | **KEEP** | 260216 | Preserved as future design reference |
 | C1 | SafetyManager | **KEEP** | 260216 | Potentially valuable for future safety features |
 | C2 | DangerDetector | **KEEP** | 260216 | Curated keyword lists worth preserving |
@@ -133,8 +135,8 @@ Miscellaneous utilities and handlers with uncertain active status.
 
 | Metric | Count |
 |--------|-------|
-| Files deleted | 14 |
-| Lines removed | ~4,693 |
+| Files deleted | 17 |
+| Lines removed | ~5,888 |
 | Files restored | 1 (ElementDisambiguator — active consumer found) |
 | Build status | SUCCESSFUL |
 
@@ -221,8 +223,8 @@ Voice Command → ActionCoordinator → [SafetyManager.checkElement()] → Handl
 
 | Metric | Count |
 |--------|-------|
-| Files deleted | 14 |
-| Lines removed | ~4,693 |
+| Files deleted | 17 |
+| Lines removed | ~5,888 |
 | Files restored | 1 (ElementDisambiguator — active consumer found) |
 | Build status | SUCCESSFUL |
 
