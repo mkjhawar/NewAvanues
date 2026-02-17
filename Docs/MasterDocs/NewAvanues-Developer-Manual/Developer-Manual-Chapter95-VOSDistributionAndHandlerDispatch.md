@@ -203,7 +203,7 @@ VOS seed files defined 107+ commands across 11 categories, but originally only 4
 | AndroidGestureHandler | GESTURE | scroll, tap, swipe, pinch | GestureDescription API | v1.0 |
 | SystemHandler | SYSTEM/NAV | back, home, recents, split screen | performGlobalAction() | v1.0 |
 | AppHandler | APP_LAUNCH | open browser/camera/gallery/etc. | Intent + PackageManager | v1.0 |
-| AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService | v1.0 |
+| AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService + IMUManager | v1.0 (IMU wiring v2.2) |
 | **MediaHandler** | MEDIA | play, pause, next, prev, volume | AudioManager + KeyEvent | v2.1 |
 | **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight | Settings.System + CameraManager | v2.1 |
 | **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions | v2.1 |
@@ -263,6 +263,29 @@ SYSTEM > NAVIGATION > APP > GAZE > GESTURE > UI > DEVICE > INPUT > MEDIA > ACCES
 ```
 
 The `ActionCoordinator` iterates handlers by category priority. First handler that returns `HandlerResult.success()` wins.
+
+### AndroidCursorHandler IMU Wiring (v2.2, 260217)
+
+When the user says "show cursor", `AndroidCursorHandler.showCursor()` starts `CursorOverlayService` then calls `wireServiceDependencies()` which:
+
+1. **CursorActions** — wires voice movement commands ("cursor up/down/left/right") to the service's CursorController
+2. **ClickDispatcher** — wires accessibility click dispatch for dwell-click at cursor position
+3. **IMU head tracking** — connects `IMUManager.orientationFlow` to `CursorController.connectInputFlow()` via `HeadTrackingBridge.toCursorInputFlow()`
+
+```kotlin
+// In wireServiceDependencies():
+val imuManager = IMUManager.getInstance(service.applicationContext)
+val imuStarted = imuManager.startIMUTracking("cursor_voice")
+if (imuStarted) {
+    svc.startIMUTracking(imuManager)  // connects flow to controller
+}
+```
+
+`hideCursor()` calls `stopIMUTracking("cursor_voice")` to release sensor resources. Consumer ID `"cursor_voice"` is independent from the Settings toggle path, allowing concurrent IMU consumers.
+
+**IMU pipeline**: `IMUManager.orientationFlow` → `HeadTrackingBridge.toCursorInputFlow()` → `CursorInput.HeadMovement(pitch, yaw, roll)` → `CursorController.connectInputFlow()` → `update()` → cursor position state.
+
+**Critical fix (260217)**: `IMUManager.startSensors()` gate condition was changed from `&&` (require both gyroscope AND magnetometer) to `||` (either sensor), matching the lazy `rotationSensor` property's OR logic. See fix doc: `Docs/fixes/VoiceOSCore/VoiceOSCore-Fix-CursorIMUHeadTrackingRegression-260217-V1.md`
 
 ## 5. Web Command Routing Architecture
 
