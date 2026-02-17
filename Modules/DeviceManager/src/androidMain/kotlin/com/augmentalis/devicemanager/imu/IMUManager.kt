@@ -255,7 +255,8 @@ class IMUManager private constructor(
             // This prevents unnecessary sensor queries and registration attempts
 
             // Priority 1: Rotation vector sensors (best for orientation)
-            if (caps?.hasGyroscope == true && caps.hasMagnetometer) {
+            // Gate must match lazy rotationSensor property: gyro OR mag (not AND)
+            if (caps?.hasGyroscope == true || caps?.hasMagnetometer == true) {
                 rotationSensor?.let { sensor ->
                     val success = sensorManager.registerListener(
                         this, sensor, SENSOR_DELAY_MICROS
