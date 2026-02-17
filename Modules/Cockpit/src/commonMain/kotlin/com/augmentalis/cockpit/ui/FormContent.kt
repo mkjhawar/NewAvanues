@@ -80,7 +80,7 @@ private val formJson = Json {
 @Composable
 fun FormContent(
     content: FrameContent.Form,
-    onContentStateChanged: (String) -> Unit = {},
+    onContentStateChanged: (FrameContent.Form) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -170,21 +170,21 @@ fun FormContent(
                             field = field,
                             onToggle = { checked ->
                                 fields[index] = field.copy(value = checked.toString())
-                                emitFieldsUpdate(fields, onContentStateChanged)
+                                emitFieldsUpdate(fields, content, onContentStateChanged)
                             }
                         )
                         "text" -> TextInputField(
                             field = field,
                             onValueChange = { newValue ->
                                 fields[index] = field.copy(value = newValue)
-                                emitFieldsUpdate(fields, onContentStateChanged)
+                                emitFieldsUpdate(fields, content, onContentStateChanged)
                             }
                         )
                         "number" -> TextInputField(
                             field = field,
                             onValueChange = { newValue ->
                                 fields[index] = field.copy(value = newValue)
-                                emitFieldsUpdate(fields, onContentStateChanged)
+                                emitFieldsUpdate(fields, content, onContentStateChanged)
                             }
                         )
                     }
@@ -197,7 +197,7 @@ fun FormContent(
         AvanueButton(
             onClick = {
                 fields.add(FormField(type = "checkbox", label = "New item", value = "false"))
-                emitFieldsUpdate(fields, onContentStateChanged)
+                emitFieldsUpdate(fields, content, onContentStateChanged)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -271,13 +271,16 @@ private fun TextInputField(
 
 private fun emitFieldsUpdate(
     fields: List<FormField>,
-    onContentStateChanged: (String) -> Unit
+    content: FrameContent.Form,
+    onContentStateChanged: (FrameContent.Form) -> Unit
 ) {
     val listSerializer = kotlinx.serialization.builtins.ListSerializer(FormField.serializer())
     val fieldsJson = formJson.encodeToString(listSerializer, fields)
     val completed = fields.count { it.type == "checkbox" && it.value == "true" }
     val total = fields.count { it.type == "checkbox" }
-    // Escape the JSON string for embedding as a nested JSON value
-    val escaped = fieldsJson.replace("\\", "\\\\").replace("\"", "\\\"")
-    onContentStateChanged("""{"fieldsJson":"$escaped","completedCount":$completed,"totalCount":$total}""")
+    onContentStateChanged(content.copy(
+        fieldsJson = fieldsJson,
+        completedCount = completed,
+        totalCount = total
+    ))
 }

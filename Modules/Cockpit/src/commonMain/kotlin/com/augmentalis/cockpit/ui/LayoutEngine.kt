@@ -640,38 +640,6 @@ private fun FullscreenLayout(
 }
 
 /**
- * Workflow layout — numbered steps with frame content shown vertically.
- */
-@Composable
-private fun WorkflowLayout(
-    frames: List<CockpitFrame>,
-    selectedFrameId: String?,
-    onFrameSelected: (String) -> Unit,
-    frameContent: @Composable (CockpitFrame) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.fillMaxSize().padding(8.dp)) {
-        frames.forEachIndexed { index, frame ->
-            FrameWindow(
-                frame = frame,
-                isSelected = frame.id == selectedFrameId,
-                isDraggable = false,
-                isResizable = false,
-                onSelect = { onFrameSelected(frame.id) },
-                onClose = {},
-                onMinimize = {},
-                onMaximize = {},
-                stepNumber = index + 1,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(vertical = 4.dp)
-            ) { frameContent(frame) }
-        }
-    }
-}
-
-/**
  * Row layout — frames arranged horizontally in equal-width columns.
  */
 @Composable

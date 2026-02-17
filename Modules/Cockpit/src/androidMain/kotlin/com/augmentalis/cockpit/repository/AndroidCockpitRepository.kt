@@ -14,6 +14,7 @@ import com.augmentalis.cockpit.model.WorkflowStep
 import com.augmentalis.database.VoiceOSDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -278,25 +279,15 @@ class AndroidCockpitRepository(
         val frames = getFrames(sessionId)
         val steps = getWorkflowSteps(sessionId)
 
-        json.encodeToString(
-            mapOf(
-                "session" to json.encodeToString(session),
-                "frames" to json.encodeToString(frames),
-                "steps" to json.encodeToString(steps)
-            )
-        )
+        json.encodeToString(SessionExport(session, frames, steps))
     }
 
     override suspend fun importSession(jsonData: String): CockpitSession? = withContext(Dispatchers.IO) {
         try {
-            val wrapper = json.decodeFromString<kotlin.collections.Map<String, String>>(jsonData)
-            val sessionJson = wrapper["session"] ?: return@withContext null
-            val framesJson = wrapper["frames"] ?: "[]"
-            val stepsJson = wrapper["steps"] ?: "[]"
-
-            val sourceSession = json.decodeFromString<CockpitSession>(sessionJson)
-            val sourceFrames = json.decodeFromString<List<CockpitFrame>>(framesJson)
-            val sourceSteps = json.decodeFromString<List<WorkflowStep>>(stepsJson)
+            val export = json.decodeFromString<SessionExport>(jsonData)
+            val sourceSession = export.session
+            val sourceFrames = export.frames
+            val sourceSteps = export.steps
 
             // Generate fresh IDs so the imported session doesn't collide with existing ones
             val now = kotlinx.datetime.Clock.System.now()

@@ -44,7 +44,7 @@ enum class LayoutMode {
         }
 
         /** Layouts that support spatial canvas overlay (head-tracking viewport) */
-        val SPATIAL_CAPABLE = setOf(FREEFORM, COCKPIT, MOSAIC, T_PANEL)
+        val SPATIAL_CAPABLE = setOf(FREEFORM, COCKPIT, MOSAIC, T_PANEL, SPATIAL_DICE)
 
         /** Content type IDs eligible for gallery filtering */
         val GALLERY_CONTENT_TYPES = setOf("image", "video", "camera", "screen_cast")

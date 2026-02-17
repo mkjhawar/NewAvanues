@@ -53,7 +53,7 @@ fun FreeformCanvas(
     }
 
     // Calculate snap guides from all visible frames
-    val snapEdges = remember(sortedFrames) {
+    val snapEdges = remember(sortedFrames, canvasWidth, canvasHeight) {
         buildSnapEdges(sortedFrames, canvasWidth, canvasHeight)
     }
 

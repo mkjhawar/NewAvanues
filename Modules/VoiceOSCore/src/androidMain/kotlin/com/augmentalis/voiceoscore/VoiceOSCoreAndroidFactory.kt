@@ -104,7 +104,8 @@ internal class AndroidHandlerFactory(
             ReadingHandler(service),
             VoiceControlHandler(service),
             // Wave 3: Module-specific handlers
-            NoteCommandHandler(service)
+            NoteCommandHandler(service),
+            CockpitCommandHandler(service)
         )
     }
 }

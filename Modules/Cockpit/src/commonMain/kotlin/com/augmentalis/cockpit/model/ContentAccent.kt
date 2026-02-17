@@ -50,7 +50,6 @@ enum class ContentAccent {
             "note", "voice_note" -> SUCCESS
             "camera" -> WARNING
             "screen_cast" -> SECONDARY
-            "annotation" -> INFO
             "external_app" -> INFO
             else -> TERTIARY
         }

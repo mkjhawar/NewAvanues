@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.map
 class AndroidSpatialOrientationSource(context: Context) : ISpatialOrientationSource {
 
     private val imuAPI = IMUPublicAPI(context)
-    private val activeConsumers = mutableSetOf<String>()
+    private val activeConsumers = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     override val orientationFlow: Flow<SpatialOrientation> =
         imuAPI.orientationFlow.map { orientation ->

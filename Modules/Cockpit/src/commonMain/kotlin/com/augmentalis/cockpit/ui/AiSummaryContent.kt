@@ -62,7 +62,7 @@ import com.augmentalis.cockpit.model.SummaryType
 fun AiSummaryContent(
     content: FrameContent.AiSummary,
     onGenerateSummary: () -> Unit = {},
-    onContentStateChanged: (String) -> Unit = {},
+    onContentStateChanged: (FrameContent.AiSummary) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -130,7 +130,7 @@ fun AiSummaryContent(
                             shape = RoundedCornerShape(16.dp)
                         )
                         .clickable {
-                            onContentStateChanged("""{"summaryType":"${type.name}"}""")
+                            onContentStateChanged(content.copy(summaryType = type))
                         }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
