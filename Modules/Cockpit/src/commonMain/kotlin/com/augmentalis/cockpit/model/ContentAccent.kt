@@ -51,6 +51,7 @@ enum class ContentAccent {
             "camera" -> WARNING
             "screen_cast" -> SECONDARY
             "annotation" -> INFO
+            "external_app" -> INFO
             else -> TERTIARY
         }
     }

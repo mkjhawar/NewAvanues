@@ -1,8 +1,13 @@
 package com.augmentalis.cockpit.ui
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
@@ -32,6 +38,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Minimize
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.StickyNote2
@@ -40,17 +47,18 @@ import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -204,43 +212,13 @@ fun FrameWindow(
                 Spacer(Modifier.width(2.dp))
             }
 
-            // Window controls
-            IconButton(
-                onClick = onMinimize,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    Icons.Default.Minimize,
-                    "Minimize",
-                    tint = colors.textPrimary.copy(alpha = 0.5f),
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-
-            IconButton(
-                onClick = onMaximize,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    if (frame.state.isMaximized) Icons.Default.FullscreenExit
-                    else Icons.Default.Fullscreen,
-                    if (frame.state.isMaximized) "Restore" else "Maximize",
-                    tint = colors.textPrimary.copy(alpha = 0.5f),
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-
-            IconButton(
-                onClick = onClose,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    "Close",
-                    tint = colors.error,
-                    modifier = Modifier.size(14.dp)
-                )
-            }
+            // Traffic light window controls (macOS style: red/yellow/green)
+            TrafficLights(
+                isMaximized = frame.state.isMaximized,
+                onClose = onClose,
+                onMinimize = onMinimize,
+                onMaximize = onMaximize
+            )
         }
 
         // Content area
@@ -274,6 +252,121 @@ fun FrameWindow(
                         modifier = Modifier.size(12.dp).align(Alignment.Center)
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * macOS-style traffic light window controls.
+ *
+ * Three colored dots in a horizontal row (red/yellow/green), each 12dp.
+ * On hover or press, a small icon (close/minimize/fullscreen) fades in
+ * inside the dot using [animateFloatAsState].
+ *
+ * Touch target is 24dp for accessibility compliance, with the visible
+ * dot centered within. Colors come from [AvanueTheme.colors] to adapt
+ * across all 32 theme combinations.
+ */
+@Composable
+private fun TrafficLights(
+    isMaximized: Boolean,
+    onClose: () -> Unit,
+    onMinimize: () -> Unit,
+    onMaximize: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = AvanueTheme.colors
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Red = Close (leftmost, macOS order)
+        TrafficDot(
+            dotColor = colors.error,
+            icon = Icons.Default.Close,
+            contentDescription = "Close",
+            onClick = onClose
+        )
+        // Yellow = Minimize
+        TrafficDot(
+            dotColor = colors.warning,
+            icon = Icons.Default.Minimize,
+            contentDescription = "Minimize",
+            onClick = onMinimize
+        )
+        // Green = Maximize/Restore
+        TrafficDot(
+            dotColor = colors.success,
+            icon = if (isMaximized) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+            contentDescription = if (isMaximized) "Restore" else "Maximize",
+            onClick = onMaximize
+        )
+    }
+}
+
+/**
+ * Single traffic light dot with hover/press icon reveal.
+ *
+ * The dot is a 12dp circle. When the pointer hovers or presses,
+ * the icon inside fades from 0% to 100% alpha. The 24dp clickable
+ * area ensures touch-friendly targets without enlarging the visual dot.
+ */
+@Composable
+private fun TrafficDot(
+    dotColor: Color,
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isHovered by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val iconAlpha by animateFloatAsState(
+        targetValue = if (isHovered || isPressed) 1f else 0f,
+        label = "trafficDotIcon"
+    )
+
+    Box(
+        modifier = modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        when (event.type) {
+                            PointerEventType.Enter -> isHovered = true
+                            PointerEventType.Exit -> isHovered = false
+                        }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        // Colored circle (12dp visible dot)
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(dotColor, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            // Icon revealed on hover/press
+            if (iconAlpha > 0f) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = Color.Black.copy(alpha = iconAlpha * 0.8f),
+                    modifier = Modifier.size(8.dp)
+                )
             }
         }
     }
@@ -316,6 +409,7 @@ fun contentTypeIcon(content: FrameContent): ImageVector = when (content) {
     is FrameContent.AiSummary -> Icons.Default.AutoAwesome
     is FrameContent.ScreenCast -> Icons.Default.Cast
     is FrameContent.Widget -> Icons.Default.Widgets
+    is FrameContent.ExternalApp -> Icons.Default.OpenInNew
 }
 
 /**

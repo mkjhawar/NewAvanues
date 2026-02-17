@@ -13,12 +13,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.annotationavanue.AnnotationCanvas
 import com.augmentalis.annotationavanue.SignatureCapture
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cameraavanue.CameraPreview
+import com.augmentalis.cockpit.AndroidExternalAppResolver
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.FrameContent
+import com.augmentalis.cockpit.ui.ExternalAppContent
 import com.augmentalis.imageavanue.ImageViewer
 import com.augmentalis.noteavanue.NoteEditor
 import com.augmentalis.pdfavanue.PdfViewer
@@ -159,6 +163,22 @@ fun ContentRenderer(
                 description = "Widget display — coming soon",
                 modifier = Modifier.fillMaxSize()
             )
+
+            is FrameContent.ExternalApp -> {
+                val context = LocalContext.current
+                val resolver = remember { AndroidExternalAppResolver(context) }
+                val status = remember(content.packageName) {
+                    resolver.resolveApp(content.packageName)
+                }
+                ExternalAppContent(
+                    content = content,
+                    status = status,
+                    onLaunchAdjacent = {
+                        resolver.launchAdjacent(content.packageName, content.activityName)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }

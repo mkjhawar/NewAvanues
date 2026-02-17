@@ -309,5 +309,6 @@ fun addFrameOptions(): List<Pair<String, FrameContent>> = listOf(
     "Voice Note" to FrameContent.VoiceNote(),
     "Whiteboard" to FrameContent.Whiteboard(),
     "Signature" to FrameContent.Signature(),
-    "Screen Cast" to FrameContent.ScreenCast()
+    "Screen Cast" to FrameContent.ScreenCast(),
+    "External App" to FrameContent.ExternalApp()
 )
