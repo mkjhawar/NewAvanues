@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Close
@@ -31,20 +31,20 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Minimize
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.StickyNote2
+import androidx.compose.material.icons.automirrored.filled.StickyNote2
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VideoLibrary
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -397,11 +397,11 @@ fun contentTypeIcon(content: FrameContent): ImageVector = when (content) {
     is FrameContent.Pdf -> Icons.Default.PictureAsPdf
     is FrameContent.Image -> Icons.Default.Image
     is FrameContent.Video -> Icons.Default.VideoLibrary
-    is FrameContent.Note -> Icons.Default.StickyNote2
+    is FrameContent.Note -> Icons.AutoMirrored.Filled.StickyNote2
     is FrameContent.Camera -> Icons.Default.PhotoCamera
     is FrameContent.VoiceNote -> Icons.Default.Mic
-    is FrameContent.Voice -> Icons.Default.VolumeUp
-    is FrameContent.Form -> Icons.Default.Assignment
+    is FrameContent.Voice -> Icons.AutoMirrored.Filled.VolumeUp
+    is FrameContent.Form -> Icons.AutoMirrored.Filled.Assignment
     is FrameContent.Signature -> Icons.Default.Draw
     is FrameContent.Map -> Icons.Default.Map
     is FrameContent.Whiteboard -> Icons.Default.Draw
@@ -409,15 +409,15 @@ fun contentTypeIcon(content: FrameContent): ImageVector = when (content) {
     is FrameContent.AiSummary -> Icons.Default.AutoAwesome
     is FrameContent.ScreenCast -> Icons.Default.Cast
     is FrameContent.Widget -> Icons.Default.Widgets
-    is FrameContent.ExternalApp -> Icons.Default.OpenInNew
+    is FrameContent.ExternalApp -> Icons.AutoMirrored.Filled.OpenInNew
 }
 
 /**
  * Returns a directional arrow icon for spatial position indication.
  */
 private fun spatialDirectionIcon(gridX: Int, gridY: Int): ImageVector = when {
-    gridX < 0 -> Icons.Default.KeyboardArrowLeft
-    gridX > 0 -> Icons.Default.KeyboardArrowRight
+    gridX < 0 -> Icons.AutoMirrored.Filled.KeyboardArrowLeft
+    gridX > 0 -> Icons.AutoMirrored.Filled.KeyboardArrowRight
     gridY < 0 -> Icons.Default.KeyboardArrowUp
     gridY > 0 -> Icons.Default.KeyboardArrowDown
     else -> Icons.Default.CropFree // center — shouldn't reach here if isSpatiallyLocked
