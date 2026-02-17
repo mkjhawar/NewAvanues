@@ -23,6 +23,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.voicecursor.core.ClickDispatcher
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
 import com.augmentalis.voiceoscore.managers.commandmanager.actions.CursorActions
@@ -128,6 +129,16 @@ class AndroidCursorHandler(
         // Wire ClickDispatcher for dwell-click and service-level click dispatch
         svc.setClickDispatcher(AccessibilityClickDispatcherImpl(service))
         Log.i(TAG, "ClickDispatcher wired to overlay service")
+
+        // Wire IMU head tracking so cursor follows head motion
+        val imuManager = IMUManager.getInstance(service.applicationContext)
+        val imuStarted = imuManager.startIMUTracking("cursor_voice")
+        if (imuStarted) {
+            svc.startIMUTracking(imuManager)
+            Log.i(TAG, "IMU head tracking wired to cursor controller")
+        } else {
+            Log.w(TAG, "IMU tracking not started — no sensors or capabilities not injected")
+        }
     }
 
     private fun hideCursor(): HandlerResult {
@@ -138,6 +149,9 @@ class AndroidCursorHandler(
         }
 
         return try {
+            // Stop IMU tracking before stopping the service to release sensor resources
+            IMUManager.getInstance(context).stopIMUTracking("cursor_voice")
+
             context.stopService(Intent(context, CursorOverlayService::class.java))
             Log.i(TAG, "CursorOverlayService stopped via voice command")
             HandlerResult.success("Cursor hidden")
