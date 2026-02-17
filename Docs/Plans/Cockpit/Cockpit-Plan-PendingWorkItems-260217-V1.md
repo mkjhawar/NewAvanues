@@ -1,5 +1,6 @@
 # Cockpit + VoiceOS — Pending Work Items Plan
 **Date:** 2026-02-17 | **Mode:** YOLO + CoT + ToT | **Branch:** IosVoiceOS-Development
+**Status:** ALL 5 ITEMS COMPLETE (260217)
 
 ---
 
@@ -7,11 +8,11 @@
 
 | # | Item | Module | Scope | Priority | Rationale |
 |---|------|--------|-------|----------|-----------|
-| 1 | Wire Spatial Canvas + LayoutModeResolver | Cockpit | ~80 lines changed, 3 files | P0 | Completes dead code — all components exist, just need wiring |
-| 2 | WorkflowSidebar | Cockpit | ~250 lines, 1 new + 2 modified | P1 | Extends Cockpit while context fresh |
-| 3 | Cursor IMU Fix | VoiceCursor | Investigation + fix | P1 | Regression — cursor renders but won't move |
-| 4 | VOS v3.0 Compact Format | VoiceOSCore | ~300 lines, plan exists | P2 | Performance optimization, independent |
-| 5 | 3rd-party App Support | Cockpit/App | Research + prototype | P3 | Future phase, Android 12L+ |
+| 1 | Wire Spatial Canvas + LayoutModeResolver | Cockpit | ~80 lines changed, 3 files | P0 | DONE `89137f7b` |
+| 2 | WorkflowSidebar | Cockpit | ~428 lines, 1 new + 1 modified | P1 | DONE `5f465a00` |
+| 3 | Cursor IMU Fix | VoiceCursor | 2 bugs fixed, 2 files | P1 | DONE `5709ca20` |
+| 4 | VOS v3.0 Compact Format | VoiceOSCore | Already implemented prior session | P2 | DONE `322653a7` + `16db3040` |
+| 5 | 3rd-party App Support | Cockpit/App | Research analysis doc | P3 | DONE `6c37d2a0` |
 
 **ToT Selected:** Cockpit-first (maximize code proximity), then VoiceOS modules.
 
