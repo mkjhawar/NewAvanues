@@ -17,7 +17,7 @@ VOS v2.0 shipped 107 commands as a single monolithic file per locale. Three prob
 | App | `.app.vos` | nav, media, sys, voice, app, acc, text, input, appctl | 62 | Locale-specific, crowd-sourceable |
 | Web | `.web.vos` | browser, gesture | 45 | Universal technical terms |
 
-### VOS v2.1 Format Changes
+### VOS v2.1 Format (Legacy JSON)
 
 New field `"domain"` in root JSON:
 
@@ -44,16 +44,44 @@ Web files additionally include provenance metadata when exported:
 }
 ```
 
+### VOS v3.0 Format (Current — Compact)
+
+v3.0 replaces the verbose JSON with a pipe-delimited text format. Three locale-independent maps (`CATEGORY_MAP`, `ACTION_MAP`, `META_MAP`) are compiled as Kotlin constants in `VosParser`, eliminating ~25 KB of per-file duplication.
+
+```
+# VOS v3.0 — en-US app commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:en-US:en-US:app
+
+nav_back|go back|navigate back,back,previous screen|Navigate to previous screen
+nav_home|go home|home,navigate home,open home|Go to home screen
+media_play|play music|play,resume|Play/resume media
+```
+
+**Header:** `VOS:{version}:{locale}:{fallback}:{domain}`
+
+**Command:** `{action_id}|{primary_phrase}|{synonyms_csv}|{description}`
+
+**Size reduction:** 57% average across all 10 seed files (128 KB → 55 KB).
+
+**Auto-detection:** `VosParser.parse()` detects format by first non-whitespace character: `{` = JSON v2.1, `#` or `VOS:` = compact v3.0. Both formats work indefinitely.
+
+**Compiled maps in VosParser:**
+- `CATEGORY_MAP`: 10 entries (prefix → CommandCategory)
+- `ACTION_MAP`: 124 entries (action_id → CommandActionType)
+- `META_MAP`: 22 entries (gesture direction/scale/factor metadata)
+
 ### CommandLoader Dual-File Loading
 
-`CommandLoader.loadLocale()` now:
+`CommandLoader.loadLocale()`:
 1. Opens `{locale}.app.vos` from assets
 2. Opens `{locale}.web.vos` from assets
-3. Parses both via `ArrayJsonParser.parseCommandsJson()`
-4. Merges command lists
-5. Single `insertBatch()` to DB
+3. Parses both via `VosParser.parse()` (auto-detects JSON v2.1 or compact v3.0)
+4. Maps `VosParsedCommand` → `VoiceCommandEntity` via `toEntity()`
+5. Merges command lists
+6. Single `insertBatch()` to DB
 
-Version bump 2.0 → 2.1 forces DB reload on app upgrade.
+Version `requiredVersion = "3.0"` — forces DB reload on app upgrade from v2.1.
 
 **CRITICAL (260212)**: VOS files are now the ONLY source of truth. The hardcoded fallback command lists (~800 lines) have been removed from `StaticCommandRegistry`. If the DB is not initialized, `StaticCommandRegistry.all()` returns an empty list. This enforces `.VOS → DB` as the single source and eliminates dual-source maintenance burden.
 
@@ -65,6 +93,14 @@ companion object {
 ```
 
 `getAvailableLocales()` scans `.app.vos` files and intersects with `.web.vos` to return only complete locale sets.
+
+### Parser Architecture
+
+| Parser | Package | Format | Status |
+|--------|---------|--------|--------|
+| `VosParser` | commonMain (KMP) | v2.1 JSON + v3.0 compact | **Active** — sole parser, auto-detects format |
+| ~~`ArrayJsonParser`~~ | ~~androidMain~~ | ~~v2.1 JSON only~~ | **DELETED 260216** — replaced by VosParser |
+| ~~`UnifiedJSONParser`~~ | ~~androidMain~~ | ~~`commands-all.json`~~ | **DELETED 260216** — parsed non-existent file, zero callers |
 
 ## 2. VOS File Registry
 
@@ -149,17 +185,18 @@ class VosFileImporter(registry: IVosFileRegistryRepository, commandDao: VoiceCom
 ```
 
 - Dedup by SHA-256 before parsing
-- Uses `ArrayJsonParser.parseCommandsJson()` for parsing
+- Uses `VosParser.parse()` for parsing (auto-detects JSON v2.1 or compact v3.0)
+- Maps `VosParsedCommand` → `VoiceCommandEntity` via `toEntity()`
 - Batch insert via `VoiceCommandDaoAdapter.insertBatch()`
-- Auto-detects file type (app/web) from filename or JSON `domain` field
+- Auto-detects file type (app/web) from filename or parsed `domain` from VosParseResult
 
 ## 4. Static Command Dispatch Architecture
 
 ### Problem Solved
 
-VOS seed files defined 107 commands across 11 categories, but only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 91 commands silently returned `HandlerResult.notHandled()`.
+VOS seed files defined 107+ commands across 11 categories, but originally only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 7 new handlers were added in v2.1, then NoteCommandHandler (v2.2) and CockpitCommandHandler (v2.3) brought the total to 13. All handler categories are fully covered.
 
-### Handler Coverage (11 Handlers)
+### Handler Coverage (13 of 13 Handlers)
 
 | Handler | Category | Commands | Key API | Status |
 |---------|----------|----------|---------|--------|
@@ -175,8 +212,10 @@ VOS seed files defined 107 commands across 11 categories, but only 4 handlers ex
 | **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal | v2.1 |
 | **VoiceControlHandler** | UI | mute/wake, dictation, help, numbers | VoiceControlCallbacks | v2.1 |
 | **WebCommandHandler** | BROWSER | 45 web commands | IWebCommandExecutor + DOMScraperBridge | v2.1 |
+| **NoteCommandHandler** | NOTE | 48 note commands (format, dictate, navigate) | INoteController + RichTextState | v2.2 |
+| **CockpitCommandHandler** | COCKPIT | 26 cockpit commands (frames, layouts, content) | Intent broadcast to CockpitViewModel | v2.3 |
 
-Bold = new in v2.1.
+Bold = new in v2.1+. All 13 handler categories are fully covered.
 
 ### Factory Registration
 
@@ -195,7 +234,9 @@ override fun createHandlers(): List<IHandler> {
         InputHandler(service),
         AppControlHandler(service),
         ReadingHandler(service),
-        VoiceControlHandler(service)
+        VoiceControlHandler(service),
+        NoteCommandHandler(service),
+        CockpitCommandHandler(service)
     )
 }
 ```
@@ -222,7 +263,7 @@ The accessibility service sets these callbacks during `onServiceReady()`. The ha
 
 `ActionCategory.PRIORITY_ORDER`:
 ```
-SYSTEM > NAVIGATION > APP > GAZE > GESTURE > UI > DEVICE > INPUT > MEDIA > ACCESSIBILITY > BROWSER > CUSTOM
+SYSTEM > NAVIGATION > APP > GAZE > GESTURE > UI > DEVICE > INPUT > MEDIA > ACCESSIBILITY > BROWSER > NOTE > COCKPIT > CUSTOM
 ```
 
 The `ActionCoordinator` iterates handlers by category priority. First handler that returns `HandlerResult.success()` wins.
@@ -352,10 +393,13 @@ The `RETRAIN_PAGE` action type triggers a fresh DOM scrape of the current web pa
 3. List phrases in `override val supportedActions: List<String>`
 4. Implement `override suspend fun execute(command, params): HandlerResult`
 5. Register in `AndroidHandlerFactory.createHandlers()`
-6. Add commands to appropriate VOS seed file (`.app.vos` or `.web.vos`)
-7. Bump VOS version in `CommandLoader` to force DB reload
+6. Add commands to appropriate VOS seed file (`.app.vos` or `.web.vos`) in v3.0 compact format
+7. If adding a new action_id prefix: add entry to `VosParser.CATEGORY_MAP`
+8. Add action_id → CommandActionType entry to `VosParser.ACTION_MAP`
+9. If the command has metadata (direction/scale/factor): add entry to `VosParser.META_MAP`
+10. Bump VOS version in `CommandLoader.requiredVersion` to force DB reload
 
-## 6. SFTP Sync (Phase B) — Implemented
+## 7. SFTP Sync (Phase B) — Implemented
 
 Phase B adds a network sync layer for distributing VOS files between devices and a central SFTP server. Hidden behind a developer toggle in Settings → System → "Developer: VOS Sync".
 
@@ -508,7 +552,7 @@ interface SyncEntryPoint {
 | `androidx.hilt:hilt-compiler` | 1.1.0 | @HiltWorker KSP processor |
 | `androidx.security:security-crypto` | latest | EncryptedSharedPreferences |
 
-## 7. Phase C Foundation: In-App Crowd-Sourcing
+## 8. Phase C Foundation: In-App Crowd-Sourcing
 
 ### PhraseSuggestion Database
 
@@ -547,5 +591,5 @@ interface SyncEntryPoint {
 ---
 
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-17 (IMU cursor wiring, web command routing)*
-*Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement)*
+*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted)*
+*Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement), Chapter 96 (KMP Foundation)*
