@@ -161,19 +161,20 @@ VOS seed files defined 107 commands across 11 categories, but only 4 handlers ex
 
 ### Handler Coverage (11 Handlers)
 
-| Handler | Category | Commands | Key API |
-|---------|----------|----------|---------|
-| AndroidGestureHandler | GESTURE | scroll, tap, swipe, pinch | GestureDescription API |
-| SystemHandler | SYSTEM/NAV | back, home, recents, split screen | performGlobalAction() |
-| AppHandler | APP_LAUNCH | open browser/camera/gallery/etc. | Intent + PackageManager |
-| AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService |
-| **MediaHandler** | MEDIA | play, pause, next, prev, volume | AudioManager + KeyEvent |
-| **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight | Settings.System + CameraManager |
-| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions |
-| **InputHandler** | INPUT | show/hide keyboard | SoftKeyboardController |
-| **AppControlHandler** | APP | close app, exit, quit | GLOBAL_ACTION_BACK + HOME |
-| **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal |
-| **VoiceControlHandler** | UI | mute/wake, dictation, help, numbers | VoiceControlCallbacks |
+| Handler | Category | Commands | Key API | Status |
+|---------|----------|----------|---------|--------|
+| AndroidGestureHandler | GESTURE | scroll, tap, swipe, pinch | GestureDescription API | v1.0 |
+| SystemHandler | SYSTEM/NAV | back, home, recents, split screen | performGlobalAction() | v1.0 |
+| AppHandler | APP_LAUNCH | open browser/camera/gallery/etc. | Intent + PackageManager | v1.0 |
+| AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService + IMUManager | v1.0 (IMU wiring v2.2) |
+| **MediaHandler** | MEDIA | play, pause, next, prev, volume | AudioManager + KeyEvent | v2.1 |
+| **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight | Settings.System + CameraManager | v2.1 |
+| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions | v2.1 |
+| **InputHandler** | INPUT | show/hide keyboard | SoftKeyboardController | v2.1 |
+| **AppControlHandler** | APP | close app, exit, quit | GLOBAL_ACTION_BACK + HOME | v2.1 |
+| **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal | v2.1 |
+| **VoiceControlHandler** | UI | mute/wake, dictation, help, numbers | VoiceControlCallbacks | v2.1 |
+| **WebCommandHandler** | BROWSER | 45 web commands | IWebCommandExecutor + DOMScraperBridge | v2.1 |
 
 Bold = new in v2.1.
 
@@ -226,7 +227,125 @@ SYSTEM > NAVIGATION > APP > GAZE > GESTURE > UI > DEVICE > INPUT > MEDIA > ACCES
 
 The `ActionCoordinator` iterates handlers by category priority. First handler that returns `HandlerResult.success()` wins.
 
-## 5. Adding New Handlers
+### AndroidCursorHandler IMU Wiring (v2.2, 260217)
+
+When the user says "show cursor", `AndroidCursorHandler.showCursor()` starts `CursorOverlayService` then calls `wireServiceDependencies()` which:
+
+1. **CursorActions** — wires voice movement commands ("cursor up/down/left/right") to the service's CursorController
+2. **ClickDispatcher** — wires accessibility click dispatch for dwell-click at cursor position
+3. **IMU head tracking** — connects `IMUManager.orientationFlow` to `CursorController.connectInputFlow()` via `HeadTrackingBridge.toCursorInputFlow()`
+
+```kotlin
+// In wireServiceDependencies():
+val imuManager = IMUManager.getInstance(service.applicationContext)
+val imuStarted = imuManager.startIMUTracking("cursor_voice")
+if (imuStarted) {
+    svc.startIMUTracking(imuManager)  // connects flow to controller
+}
+```
+
+`hideCursor()` calls `stopIMUTracking("cursor_voice")` to release sensor resources. Consumer ID `"cursor_voice"` is independent from the Settings toggle path, allowing concurrent IMU consumers.
+
+**IMU pipeline**: `IMUManager.orientationFlow` → `HeadTrackingBridge.toCursorInputFlow()` → `CursorInput.HeadMovement(pitch, yaw, roll)` → `CursorController.connectInputFlow()` → `update()` → cursor position state.
+
+**Critical fix (260217)**: `IMUManager.startSensors()` gate condition was changed from `&&` (require both gyroscope AND magnetometer) to `||` (either sensor), matching the lazy `rotationSensor` property's OR logic. See fix doc: `Docs/fixes/VoiceOSCore/VoiceOSCore-Fix-CursorIMUHeadTrackingRegression-260217-V1.md`
+
+## 5. Web Command Routing Architecture
+
+### Problem: 3 Routing Bugs Blocked 45 Static Web Commands
+
+Static BROWSER and WEB_GESTURE commands ("go back", "refresh page", "swipe up") are defined in `.web.vos` files and loaded into `StaticCommandRegistry` — but they were never routed to `WebCommandHandler` when the browser was active. Three interconnected bugs:
+
+**Bug 1 — Static web commands not in dynamic registry**: `webCommandCollectorJob` only registered DOM-scraped element commands via `updateDynamicCommandsBySource("web", ...)`. Static BROWSER/WEB_GESTURE commands from VOS files were never registered as dynamic commands, so `ActionCoordinator` didn't recognize them as web-destined.
+
+**Bug 2 — `extractVerbAndTarget` short-circuits**: When the user says "go back", `extractVerbAndTarget()` checks `StaticCommandRegistry.findByPhrase("go back")` → finds it (NAVIGATION category) → returns `(null, null)`. With `target == null`, dynamic command lookup is skipped entirely, and the command falls through to static handler matching.
+
+**Bug 3 — Priority-based handler stealing**: Even if Bugs 1+2 were fixed, `processCommand()` calls `handlerRegistry.findHandler(command)` which iterates by priority. `SystemHandler` (SYSTEM, priority 1) or `AndroidGestureHandler` (GESTURE, priority 5) steal overlapping phrases ("go back", "swipe up", "zoom in") before `WebCommandHandler` (BROWSER, priority 11) gets a chance.
+
+### Solution: 3-Layer Fix
+
+#### Layer 1: Web Pre-Check in `processVoiceCommand()` (ActionCoordinator)
+
+A full-phrase check for web-source commands runs **before** `extractVerbAndTarget()`:
+
+```kotlin
+// Before verb/target extraction:
+val webFullPhraseMatch = commandRegistry.findByPhrase(normalizedText)
+if (webFullPhraseMatch != null && webFullPhraseMatch.metadata["source"] == "web") {
+    return processCommand(webFullPhraseMatch)
+}
+```
+
+This catches "go back", "refresh page" etc. before they can be short-circuited by the static command check.
+
+#### Layer 2: Web Bypass in `processCommand()` (ActionCoordinator)
+
+For commands with `source="web"` metadata, priority-based `findHandler()` is bypassed. Instead, the BROWSER category handlers are queried directly:
+
+```kotlin
+val handler = if (command.metadata["source"] == "web") {
+    handlerRegistry.getHandlersForCategory(ActionCategory.BROWSER)
+        .firstOrNull { it.canHandle(command) }
+        ?: handlerRegistry.findHandler(command)  // Fallback
+} else {
+    handlerRegistry.findHandler(command)
+}
+```
+
+This ensures `WebCommandHandler` (BROWSER category) handles web commands even though `SystemHandler` (priority 1) could also match "go back".
+
+#### Layer 3: Register Static Web Commands as Dynamic (VoiceAvanueAccessibilityService)
+
+In `webCommandCollectorJob`, after registering DOM-scraped commands, static BROWSER + WEB_GESTURE commands are also registered with `source="web"` metadata:
+
+```kotlin
+val browserStaticCmds = StaticCommandRegistry.byCategoryAsQuantized(CommandCategory.BROWSER)
+val gestureStaticCmds = StaticCommandRegistry.byCategoryAsQuantized(CommandCategory.WEB_GESTURE)
+val webStaticCommands = (browserStaticCmds + gestureStaticCmds).map { cmd ->
+    cmd.copy(metadata = cmd.metadata + mapOf("source" to "web"))
+}
+voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("web_static", webStaticCommands)
+```
+
+**Source tag separation**: `"web_static"` keeps static web commands separate from DOM-scraped commands (`"web"`). When the browser closes (`phrases.isEmpty()`), both are cleared:
+
+```kotlin
+voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web")
+voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web_static")
+```
+
+### Context-Sensitive Command Behavior
+
+The same voice phrase routes to different handlers depending on context:
+
+| Phrase | Browser Active | Browser Inactive |
+|--------|---------------|-----------------|
+| "go back" | WebCommandHandler → browser back | SystemHandler → Android back |
+| "swipe up" | WebCommandHandler → JS scroll | AndroidGestureHandler → accessibility gesture |
+| "zoom in" | WebCommandHandler → JS zoom | ScreenHandler → display zoom |
+| "scroll down" | WebCommandHandler → JS scroll | AndroidGestureHandler → accessibility scroll |
+
+### RETRAIN_PAGE Command
+
+The `RETRAIN_PAGE` action type triggers a fresh DOM scrape of the current web page:
+
+1. **CommandActionType.RETRAIN_PAGE** → mapped in `WebCommandHandler.resolveWebActionType()`
+2. **WebActionType.RETRAIN_PAGE** → intercepted in `WebCommandExecutorImpl.executeWebAction()` before JS script generation
+3. **BrowserVoiceOSCallback.requestRetrain()** → signals the web engine to re-scrape
+4. Phrases: "retrain page", "rescan page", "rescan"
+
+### Files Involved
+
+| File | Role |
+|------|------|
+| `ActionCoordinator.kt` | Pre-check + bypass routing |
+| `VoiceAvanueAccessibilityService.kt` | Register/clear web_static commands |
+| `WebCommandHandler.kt` | Map phrases → WebActionType |
+| `WebCommandExecutorImpl.kt` | Execute JS or intercept RETRAIN_PAGE |
+| `IWebCommandExecutor.kt` | WebActionType enum definition |
+| `BrowserVoiceOSCallback.kt` | Bridge between service and WebView |
+
+## 6. Adding New Handlers
 
 1. Create handler class extending `BaseHandler` in `VoiceOSCore/src/androidMain/.../handlers/`
 2. Set `override val category: ActionCategory`
@@ -428,5 +547,5 @@ interface SyncEntryPoint {
 ---
 
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-12 (StaticCommandRegistry single source of truth)*
+*Author: VOS4 Development Team | Created: 2026-02-11 | Updated: 2026-02-17 (IMU cursor wiring, web command routing)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement)*

@@ -221,6 +221,8 @@ onFrameMaximize: (String) -> Unit
 
 **Visibility filtering:** Only frames where `state.isVisible && !state.isMinimized` are rendered.
 
+**WORKFLOW mode** delegates to `WorkflowSidebar` (see below) instead of inline layout.
+
 ### CommandBar (commonMain, 313 lines)
 
 Bottom-docked bar with animated chip transitions:
@@ -240,6 +242,47 @@ Bottom-docked bar with animated chip transitions:
 | `GalleryLayout` | `GalleryLayout.kt` (102 lines) | `LazyVerticalGrid` filtered to media content types, responsive columns |
 | `FreeformCanvas` | `FreeformCanvas.kt` | Drag/resize with snap-to-edge (12dp threshold), z-order management |
 | `FrameWindow` | `FrameWindow.kt` | Title bar with content-type icon, close/minimize/maximize, themed accent border, frame number badge, spatial lock indicator |
+| `WorkflowSidebar` | `WorkflowSidebar.kt` (428 lines) | Device-adaptive step navigation with 30/70 tablet split and phone bottom sheet |
+
+### WorkflowSidebar (commonMain, 428 lines)
+
+Provides a guided step-navigation UI for WORKFLOW layout mode. Adapts to device form factor:
+
+**Tablet/Desktop — 30/70 horizontal split:**
+```
+┌──────────┬────────────────────────┐
+│  Steps   │                        │
+│  1. ●    │   Active Frame         │
+│  2. ○    │   (FrameWindow)        │
+│  3. ○    │                        │
+│  4. ○    │                        │
+└──────────┴────────────────────────┘
+```
+
+**Phone — Bottom sheet overlay:**
+```
+┌────────────────────────────┐
+│   Active Frame             │
+│   (Full screen)            │
+│                            │
+├────────────────────────────┤
+│ Step 2 of 5  ● ● ○ ○ ○    │ ← collapsed peek (56dp)
+│ [Expandable step list]     │ ← expanded: full step rows
+└────────────────────────────┘
+```
+
+**Key composables:**
+
+| Composable | Purpose |
+|------------|---------|
+| `WorkflowSidebar` | Root — dispatches to tablet/phone layout based on `DisplayProfile` |
+| `WorkflowTabletLayout` | `Row` with 30% step panel + divider + 70% FrameWindow |
+| `WorkflowPhoneLayout` | `BottomSheetScaffold` with step dots peek + expandable list |
+| `StepListPanel` | `LazyColumn` with header + `StepRow` items |
+| `StepRow` | Number badge (circle) + title + state icon, animated colors |
+| `StepIndicatorDots` | Compact dot row for collapsed bottom sheet (max 10 visible) |
+
+**Step states:** `PENDING` (gray, 0.4 alpha), `ACTIVE` (primary, highlighted border), `COMPLETED` (success/green, checkmark icon)
 
 ### LayoutModeResolver (commonMain, 137 lines)
 
@@ -382,23 +425,43 @@ Backed by SQLDelight. Content serialized as JSON. Timestamps in ISO 8601.
 
 ### Android Entry Points
 
-**CockpitScreen.kt** (androidMain, 54 lines) — thin wrapper:
+**CockpitScreen.kt** (androidMain, ~90 lines) — creates spatial pipeline and delegates to KMP shell:
 
 ```kotlin
 @Composable
-fun CockpitScreen(
-    viewModel: CockpitViewModel,
-    onBack: () -> Unit
-) {
-    val session by viewModel.activeSession.collectAsState()
+fun CockpitScreen(viewModel: CockpitViewModel, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val displayProfile = AvanueTheme.displayProfile
+
+    // Device-adaptive layout filtering
+    val availableModes = remember(displayProfile) {
+        LayoutModeResolver.availableModes(displayProfile)
+    }
+
+    // Spatial head-tracking pipeline
+    val spatialSource = remember { AndroidSpatialOrientationSource(context) }
+    val spatialController = remember(screenWidthPx, screenHeightPx) {
+        SpatialViewportController(screenWidthPx, screenHeightPx)
+    }
+
+    // Lifecycle: connect on enter, disconnect on leave
+    DisposableEffect(spatialSource, spatialController) {
+        spatialController.connectToSource(spatialSource, scope)
+        onDispose { spatialController.disconnect(spatialSource) }
+    }
+
     CockpitScreenContent(
-        session = session,
-        onBack = onBack,
+        // ... session state + callbacks ...
+        spatialController = spatialController,
+        availableLayoutModes = availableModes,
         frameContent = { frame -> ContentRenderer(frame) }
-        // ... callbacks delegated to viewModel
     )
 }
 ```
+
+**CockpitScreenContent** (commonMain) conditionally wraps `LayoutEngine` with `SpatialCanvas` when `layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null`. Non-spatial modes render `LayoutEngine` directly.
+
+The `availableLayoutModes` parameter filters the CommandBar's layout picker to show only modes valid for the current device profile (e.g., phone users won't see SPATIAL_DICE).
 
 **CockpitEntryViewModel** (apps/avanues) — entry point from Hub dashboard.
 
@@ -463,17 +526,38 @@ fun CockpitScreen(
 
 ---
 
-## 11. Related Documentation
+## 11. 3rd-Party App Support (Research)
+
+Android's security model prevents non-system apps from visually embedding 3rd-party activities. The viable architecture for Cockpit is:
+
+| Scope | Approach | Viable |
+|-------|----------|--------|
+| **Own modules** (NoteAvanue, CameraAvanue, etc.) | ActivityEmbedding / Compose content slots | Yes — current approach |
+| **3rd-party apps** | `FLAG_ACTIVITY_LAUNCH_ADJACENT` + split-screen | Yes — OS manages split |
+| **Voice control across apps** | AccessibilityService overlay | Yes — already implemented |
+| **True 3rd-party embedding** | TaskOrganizer / VirtualDisplay | No — requires system UID |
+
+`FrameContent.ExternalApp(packageName, activityName, label)` is defined in the model but launches into OS split-screen rather than embedding within the Cockpit layout.
+
+See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdPartyApps-260217-V1.md`
+
+---
+
+## 12. Related Documentation
 
 | Document | Location |
 |----------|---------|
 | Implementation Plan | `Docs/Plans/Cockpit/Cockpit-Plan-SpatialVoiceRedesign-260217-V1.md` |
+| Pending Work Items Plan | `Docs/Plans/Cockpit/Cockpit-Plan-PendingWorkItems-260217-V1.md` |
+| ActivityEmbedding Research | `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdPartyApps-260217-V1.md` |
+| IMU Cursor Fix | `Docs/fixes/VoiceOSCore/VoiceOSCore-Fix-CursorIMUHeadTrackingRegression-260217-V1.md` |
 | AvanueUI Theme v5.1 | Chapter 91-92 (`Docs/MasterDocs/AvanueUI/`) |
 | Voice Enablement | Chapter 94 (`Docs/MasterDocs/NewAvanues-Developer-Manual/`) |
+| Handler Dispatch | Chapter 95 (`Docs/MasterDocs/NewAvanues-Developer-Manual/`) |
 | KMP Foundation | Chapter 96 (`Docs/MasterDocs/Foundation/`) |
 | Unified Settings | Chapter 90 (`Docs/AVA/ideacode/guides/`) |
 
 ---
 
 *Cockpit SpatialVoice Multi-Window System — Chapter 97*
-*NewAvanues Developer Manual*
+*NewAvanues Developer Manual — Updated 260217*
