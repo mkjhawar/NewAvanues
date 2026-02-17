@@ -281,6 +281,29 @@ sealed class FrameContent {
         override val typeId: String = TYPE_WIDGET
     }
 
+    // ── External App Integration ─────────────────────────────────────
+
+    /**
+     * External (3rd-party) app frame — launches an installed app alongside Cockpit.
+     *
+     * The Cockpit checks if the target app is installed and whether it supports
+     * activity embedding. If embedding is not supported, the app is launched
+     * adjacent (split-screen on Android) via FLAG_ACTIVITY_LAUNCH_ADJACENT.
+     *
+     * @param packageName Android package name (e.g. "com.google.android.apps.maps")
+     * @param activityName Optional launcher activity class name
+     * @param label User-visible name for the app in the frame title bar
+     */
+    @Serializable
+    @SerialName("external_app")
+    data class ExternalApp(
+        val packageName: String = "",
+        val activityName: String = "",
+        val label: String = "",
+    ) : FrameContent() {
+        override val typeId: String = TYPE_EXTERNAL_APP
+    }
+
     companion object {
         const val TYPE_WEB = "web"
         const val TYPE_PDF = "pdf"
@@ -298,6 +321,7 @@ sealed class FrameContent {
         const val TYPE_AI_SUMMARY = "ai_summary"
         const val TYPE_SCREEN_CAST = "screen_cast"
         const val TYPE_WIDGET = "widget"
+        const val TYPE_EXTERNAL_APP = "external_app"
 
         /** All type IDs for validation */
         val ALL_TYPES = listOf(
@@ -305,6 +329,7 @@ sealed class FrameContent {
             TYPE_VOICE_NOTE, TYPE_FORM, TYPE_SIGNATURE, TYPE_VOICE,
             TYPE_MAP, TYPE_WHITEBOARD, TYPE_TERMINAL,
             TYPE_AI_SUMMARY, TYPE_SCREEN_CAST, TYPE_WIDGET,
+            TYPE_EXTERNAL_APP,
         )
     }
 }

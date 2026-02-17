@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,11 +29,14 @@ import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.display.DisplayProfile
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cockpit.model.CockpitFrame
+import com.augmentalis.cockpit.model.PanelRole
+import kotlinx.coroutines.launch
 
 /**
  * Step state for visual indicators in the workflow sidebar.
@@ -56,19 +63,28 @@ enum class StepState {
 }
 
 /**
- * Workflow sidebar with step navigation.
+ * Workflow sidebar with step navigation and multi-pane support.
  *
- * Adapts to device form factor:
- * - **Tablet/Desktop**: 30/70 horizontal split — step list on left, active frame on right
- * - **Phone**: Bottom sheet overlay — active frame fills screen, step list in sheet
+ * Adapts to device form factor AND content composition:
  *
- * Each step shows a number badge, title, and state indicator (pending/active/completed).
- * Tapping a step switches to that frame.
+ * **2-panel mode** (no AUXILIARY frames):
+ * - Tablet/Desktop: 30/70 horizontal split — steps left, content right
+ * - Phone: Bottom sheet overlay — content fills screen, steps in sheet
+ *
+ * **3-panel mode** (when any frame has [PanelRole.AUXILIARY]):
+ * - Tablet/Desktop: 20/60/20 horizontal split — steps, content, auxiliary
+ * - Phone: Tab navigation with swipe — Steps | Content | Auxiliary
+ *
+ * Each panel gets its own [FrameWindow] with working traffic light controls.
+ * The 3-panel mode activates automatically when any frame has AUXILIARY role.
  *
  * @param frames All frames in workflow order
  * @param selectedFrameId Currently active frame
  * @param displayProfile Device profile for adaptive layout
  * @param onStepSelected Callback when user taps a step (passes frame ID)
+ * @param onFrameClose Callback when user closes a frame via traffic lights
+ * @param onFrameMinimize Callback when user minimizes a frame
+ * @param onFrameMaximize Callback when user maximizes/restores a frame
  * @param frameContent Composable lambda that renders the active frame's content
  */
 @Composable
@@ -77,35 +93,78 @@ fun WorkflowSidebar(
     selectedFrameId: String?,
     displayProfile: DisplayProfile,
     onStepSelected: (String) -> Unit,
+    onFrameClose: (String) -> Unit = {},
+    onFrameMinimize: (String) -> Unit = {},
+    onFrameMaximize: (String) -> Unit = {},
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val activeFrame = frames.firstOrNull { it.id == selectedFrameId } ?: frames.firstOrNull()
     val activeIndex = frames.indexOfFirst { it.id == selectedFrameId }.coerceAtLeast(0)
+    val hasAuxiliary = frames.any { it.panelRole == PanelRole.AUXILIARY }
+    val auxiliaryFrame = frames.firstOrNull { it.panelRole == PanelRole.AUXILIARY }
 
     if (displayProfile == DisplayProfile.PHONE) {
-        WorkflowPhoneLayout(
-            frames = frames,
-            activeFrame = activeFrame,
-            activeIndex = activeIndex,
-            onStepSelected = onStepSelected,
-            frameContent = frameContent,
-            modifier = modifier
-        )
+        if (hasAuxiliary && auxiliaryFrame != null) {
+            WorkflowPhoneTabLayout(
+                frames = frames,
+                activeFrame = activeFrame,
+                auxiliaryFrame = auxiliaryFrame,
+                activeIndex = activeIndex,
+                onStepSelected = onStepSelected,
+                onFrameClose = onFrameClose,
+                onFrameMinimize = onFrameMinimize,
+                onFrameMaximize = onFrameMaximize,
+                frameContent = frameContent,
+                modifier = modifier
+            )
+        } else {
+            WorkflowPhoneLayout(
+                frames = frames,
+                activeFrame = activeFrame,
+                activeIndex = activeIndex,
+                onStepSelected = onStepSelected,
+                onFrameClose = onFrameClose,
+                onFrameMinimize = onFrameMinimize,
+                onFrameMaximize = onFrameMaximize,
+                frameContent = frameContent,
+                modifier = modifier
+            )
+        }
     } else {
-        WorkflowTabletLayout(
-            frames = frames,
-            activeFrame = activeFrame,
-            activeIndex = activeIndex,
-            onStepSelected = onStepSelected,
-            frameContent = frameContent,
-            modifier = modifier
-        )
+        if (hasAuxiliary && auxiliaryFrame != null) {
+            WorkflowTriPanelLayout(
+                frames = frames,
+                activeFrame = activeFrame,
+                auxiliaryFrame = auxiliaryFrame,
+                activeIndex = activeIndex,
+                onStepSelected = onStepSelected,
+                onFrameClose = onFrameClose,
+                onFrameMinimize = onFrameMinimize,
+                onFrameMaximize = onFrameMaximize,
+                frameContent = frameContent,
+                modifier = modifier
+            )
+        } else {
+            WorkflowTabletLayout(
+                frames = frames,
+                activeFrame = activeFrame,
+                activeIndex = activeIndex,
+                onStepSelected = onStepSelected,
+                onFrameClose = onFrameClose,
+                onFrameMinimize = onFrameMinimize,
+                onFrameMaximize = onFrameMaximize,
+                frameContent = frameContent,
+                modifier = modifier
+            )
+        }
     }
 }
 
+// ── Tablet/Desktop Layouts ───────────────────────────────────────────
+
 /**
- * Tablet/Desktop: 30/70 horizontal split.
+ * Tablet/Desktop: 30/70 horizontal split (2-panel, no auxiliary).
  * Left panel = scrollable step list, right panel = active frame content.
  */
 @Composable
@@ -114,6 +173,9 @@ private fun WorkflowTabletLayout(
     activeFrame: CockpitFrame?,
     activeIndex: Int,
     onStepSelected: (String) -> Unit,
+    onFrameClose: (String) -> Unit,
+    onFrameMinimize: (String) -> Unit,
+    onFrameMaximize: (String) -> Unit,
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -133,12 +195,7 @@ private fun WorkflowTabletLayout(
         )
 
         // Divider
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(1.dp)
-                .background(colors.border.copy(alpha = 0.3f))
-        )
+        VerticalDivider()
 
         // Active frame content (70%)
         if (activeFrame != null) {
@@ -148,9 +205,9 @@ private fun WorkflowTabletLayout(
                 isDraggable = false,
                 isResizable = false,
                 onSelect = {},
-                onClose = {},
-                onMinimize = {},
-                onMaximize = {},
+                onClose = { onFrameClose(activeFrame.id) },
+                onMinimize = { onFrameMinimize(activeFrame.id) },
+                onMaximize = { onFrameMaximize(activeFrame.id) },
                 stepNumber = activeIndex + 1,
                 modifier = Modifier.weight(1f).fillMaxHeight().padding(4.dp)
             ) {
@@ -161,7 +218,92 @@ private fun WorkflowTabletLayout(
 }
 
 /**
+ * Tablet/Desktop: 20/60/20 horizontal split (3-panel with auxiliary).
+ *
+ * ```
+ * ┌──────────┬────────────────────────┬──────────┐
+ * │  Steps   │    Main Content        │ Auxiliary │
+ * │  (20%)   │    (60%)               │  (20%)   │
+ * │  1. ●    │    [Pictures]          │  Video   │
+ * │  2. ○    │    [Instructions]      │  Call    │
+ * │  3. ○    │                        │  Notes   │
+ * └──────────┴────────────────────────┴──────────┘
+ * ```
+ *
+ * Each of the 3 panels has its own FrameWindow with traffic lights.
+ */
+@Composable
+private fun WorkflowTriPanelLayout(
+    frames: List<CockpitFrame>,
+    activeFrame: CockpitFrame?,
+    auxiliaryFrame: CockpitFrame,
+    activeIndex: Int,
+    onStepSelected: (String) -> Unit,
+    onFrameClose: (String) -> Unit,
+    onFrameMinimize: (String) -> Unit,
+    onFrameMaximize: (String) -> Unit,
+    frameContent: @Composable (CockpitFrame) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = AvanueTheme.colors
+
+    Row(modifier = modifier.fillMaxSize()) {
+        // Left panel — Steps (20%)
+        StepListPanel(
+            frames = frames.filter { it.panelRole != PanelRole.AUXILIARY },
+            activeIndex = activeIndex,
+            onStepSelected = onStepSelected,
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(0.2f)
+                .background(colors.surface.copy(alpha = 0.5f))
+                .padding(8.dp)
+        )
+
+        VerticalDivider()
+
+        // Center panel — Main Content (60%)
+        if (activeFrame != null) {
+            FrameWindow(
+                frame = activeFrame,
+                isSelected = true,
+                isDraggable = false,
+                isResizable = false,
+                onSelect = {},
+                onClose = { onFrameClose(activeFrame.id) },
+                onMinimize = { onFrameMinimize(activeFrame.id) },
+                onMaximize = { onFrameMaximize(activeFrame.id) },
+                stepNumber = activeIndex + 1,
+                modifier = Modifier.weight(0.6f).fillMaxHeight().padding(4.dp)
+            ) {
+                frameContent(activeFrame)
+            }
+        }
+
+        VerticalDivider()
+
+        // Right panel — Auxiliary (20%)
+        FrameWindow(
+            frame = auxiliaryFrame,
+            isSelected = false,
+            isDraggable = false,
+            isResizable = false,
+            onSelect = {},
+            onClose = { onFrameClose(auxiliaryFrame.id) },
+            onMinimize = { onFrameMinimize(auxiliaryFrame.id) },
+            onMaximize = { onFrameMaximize(auxiliaryFrame.id) },
+            modifier = Modifier.weight(0.2f).fillMaxHeight().padding(4.dp)
+        ) {
+            frameContent(auxiliaryFrame)
+        }
+    }
+}
+
+// ── Phone Layouts ────────────────────────────────────────────────────
+
+/**
  * Phone: Bottom sheet with step list, main area shows active frame.
+ * Used when no AUXILIARY frames exist (2-panel equivalent).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -170,6 +312,9 @@ private fun WorkflowPhoneLayout(
     activeFrame: CockpitFrame?,
     activeIndex: Int,
     onStepSelected: (String) -> Unit,
+    onFrameClose: (String) -> Unit,
+    onFrameMinimize: (String) -> Unit,
+    onFrameMaximize: (String) -> Unit,
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -217,9 +362,9 @@ private fun WorkflowPhoneLayout(
                 isDraggable = false,
                 isResizable = false,
                 onSelect = {},
-                onClose = {},
-                onMinimize = {},
-                onMaximize = {},
+                onClose = { onFrameClose(activeFrame.id) },
+                onMinimize = { onFrameMinimize(activeFrame.id) },
+                onMaximize = { onFrameMaximize(activeFrame.id) },
                 stepNumber = activeIndex + 1,
                 modifier = Modifier
                     .fillMaxSize()
@@ -230,6 +375,142 @@ private fun WorkflowPhoneLayout(
             }
         }
     }
+}
+
+/**
+ * Phone: Tab navigation with HorizontalPager (3-panel equivalent).
+ *
+ * Three tabs at the top: Steps | Content | Auxiliary.
+ * User can swipe between pages or tap tabs.
+ * Used when AUXILIARY frames exist and the display is phone-sized.
+ */
+@Composable
+private fun WorkflowPhoneTabLayout(
+    frames: List<CockpitFrame>,
+    activeFrame: CockpitFrame?,
+    auxiliaryFrame: CockpitFrame,
+    activeIndex: Int,
+    onStepSelected: (String) -> Unit,
+    onFrameClose: (String) -> Unit,
+    onFrameMinimize: (String) -> Unit,
+    onFrameMaximize: (String) -> Unit,
+    frameContent: @Composable (CockpitFrame) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = AvanueTheme.colors
+    val scope = rememberCoroutineScope()
+    val pagerState = rememberPagerState(
+        initialPage = 1, // Start on Content tab
+        pageCount = { 3 }
+    )
+    val tabTitles = listOf("Steps", "Content", "Auxiliary")
+
+    Column(modifier = modifier.fillMaxSize()) {
+        // Tab row
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            containerColor = colors.surface.copy(alpha = 0.9f),
+            contentColor = colors.primary
+        ) {
+            tabTitles.forEachIndexed { index, title ->
+                Tab(
+                    selected = pagerState.currentPage == index,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                    text = {
+                        Text(
+                            text = title,
+                            fontSize = 13.sp,
+                            fontWeight = if (pagerState.currentPage == index)
+                                FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    },
+                    selectedContentColor = colors.primary,
+                    unselectedContentColor = colors.textPrimary.copy(alpha = 0.5f)
+                )
+            }
+        }
+
+        // Pager pages
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f).fillMaxWidth()
+        ) { page ->
+            when (page) {
+                // Page 0: Steps
+                0 -> StepListPanel(
+                    frames = frames.filter { it.panelRole != PanelRole.AUXILIARY },
+                    activeIndex = activeIndex,
+                    onStepSelected = { id ->
+                        onStepSelected(id)
+                        scope.launch { pagerState.animateScrollToPage(1) }
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                )
+                // Page 1: Content
+                1 -> {
+                    if (activeFrame != null) {
+                        FrameWindow(
+                            frame = activeFrame,
+                            isSelected = true,
+                            isDraggable = false,
+                            isResizable = false,
+                            onSelect = {},
+                            onClose = { onFrameClose(activeFrame.id) },
+                            onMinimize = { onFrameMinimize(activeFrame.id) },
+                            onMaximize = { onFrameMaximize(activeFrame.id) },
+                            stepNumber = activeIndex + 1,
+                            modifier = Modifier.fillMaxSize().padding(4.dp)
+                        ) {
+                            frameContent(activeFrame)
+                        }
+                    }
+                }
+                // Page 2: Auxiliary
+                2 -> {
+                    FrameWindow(
+                        frame = auxiliaryFrame,
+                        isSelected = false,
+                        isDraggable = false,
+                        isResizable = false,
+                        onSelect = {},
+                        onClose = { onFrameClose(auxiliaryFrame.id) },
+                        onMinimize = { onFrameMinimize(auxiliaryFrame.id) },
+                        onMaximize = { onFrameMaximize(auxiliaryFrame.id) },
+                        modifier = Modifier.fillMaxSize().padding(4.dp)
+                    ) {
+                        frameContent(auxiliaryFrame)
+                    }
+                }
+            }
+        }
+
+        // Step indicator dots at bottom
+        StepIndicatorDots(
+            totalSteps = frames.filter { it.panelRole != PanelRole.AUXILIARY }.size,
+            activeIndex = activeIndex,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
+}
+
+// ── Shared Components ────────────────────────────────────────────────
+
+/**
+ * Thin vertical divider line between panels.
+ */
+@Composable
+private fun VerticalDivider(modifier: Modifier = Modifier) {
+    val colors = AvanueTheme.colors
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(1.dp)
+            .background(colors.border.copy(alpha = 0.3f))
+    )
 }
 
 /**

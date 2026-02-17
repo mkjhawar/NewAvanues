@@ -4,7 +4,7 @@
 **Package:** `com.augmentalis.cockpit`
 **Platform:** KMP (Android + Desktop, iOS deferred)
 **Branch:** `IosVoiceOS-Development`
-**Date:** 2026-02-17
+**Date:** 2026-02-17 (updated 2026-02-17 — Traffic Lights, Multi-Pane Workflow, ExternalApp)
 
 ---
 
@@ -17,7 +17,7 @@ The UI follows the **SpatialVoice** design language with full **AvanueUI v5.1** 
 ### Key Capabilities
 
 - **13 layout modes** — from freeform drag-resize to 3D carousel to spatial dice
-- **16 content types** — across 3 priority tiers (P0 core, P1 extended, P2 advanced)
+- **17 content types** — across 3 priority tiers (P0 core, P1 extended, P2 advanced) + ExternalApp
 - **Hierarchical command bar** — replaces dropdown menus with animated chip state machine
 - **Pseudo-spatial head-tracking** — IMU-driven viewport panning for spatial layouts
 - **Device-adaptive layout resolution** — phone/tablet/glass constraints enforced automatically
@@ -52,9 +52,9 @@ The UI follows the **SpatialVoice** design language with full **AvanueUI v5.1** 
 
 | Source Set | Contents |
 |-----------|---------|
-| `commonMain` | Models, constants, all layout composables, LayoutEngine, CommandBar, CockpitScreenContent, SpatialViewportController, ISpatialOrientationSource, LayoutModeResolver, ICockpitRepository |
-| `androidMain` | CockpitScreen (thin wrapper), ContentRenderer (AndroidView), AndroidSpatialOrientationSource (IMU) |
-| `desktopMain` | DesktopSpatialOrientationSource (manual input fallback) |
+| `commonMain` | Models (CockpitFrame, PanelRole, FrameContent.ExternalApp), constants, all layout composables, LayoutEngine, CommandBar, CockpitScreenContent, SpatialViewportController, ISpatialOrientationSource, LayoutModeResolver, ICockpitRepository, IExternalAppResolver, ExternalAppContent |
+| `androidMain` | CockpitScreen (thin wrapper), ContentRenderer (AndroidView + ExternalApp wiring), AndroidSpatialOrientationSource (IMU), AndroidExternalAppResolver (PackageManager + Intent) |
+| `desktopMain` | DesktopSpatialOrientationSource (manual input fallback), DesktopExternalAppResolver (stub) |
 
 ### Build Configuration
 
@@ -100,19 +100,33 @@ data class CockpitFrame(
     val content: FrameContent,
     val state: FrameState,
     val spatialPosition: SpatialPosition,  // 3x3 grid position
+    val panelRole: PanelRole,              // STEPS, CONTENT, or AUXILIARY
     val contentType: String,
     val accent: ContentAccent,             // Semantic border color
     val isSpatiallyLocked: Boolean         // Pin in spatial viewport
 )
 ```
 
-### FrameContent (16 Types)
+#### PanelRole (Workflow Multi-Pane)
+
+```kotlin
+enum class PanelRole {
+    STEPS,      // Left panel — step navigation list
+    CONTENT,    // Center panel — main content (default)
+    AUXILIARY   // Right panel — supporting content (video call, chat, etc.)
+}
+```
+
+When any frame has `panelRole == AUXILIARY`, the workflow layout switches from 2-panel to 3-panel mode automatically.
+
+### FrameContent (17 Types)
 
 ```
 sealed class FrameContent
 ├── P0 Core (6): Web, Pdf, Image, Video, Note, Camera
 ├── P1 Extended (7): VoiceNote, Form, Signature, Voice, Map, Whiteboard, Terminal
-└── P2 Advanced (3): AiSummary, ScreenCast, Widget
+├── P2 Advanced (3): AiSummary, ScreenCast, Widget
+└── Integration (1): ExternalApp
 ```
 
 Each variant carries content-specific state (URL, page number, zoom level, etc.) and serializes to JSON for DB persistence.
@@ -153,6 +167,8 @@ Maps content types to semantic AvanueTheme color roles:
 | `SUCCESS` | `AvanueTheme.colors.success` | Camera |
 | `WARNING` | `AvanueTheme.colors.warning` | Video |
 | `ERROR` | `AvanueTheme.colors.error` | Terminal |
+
+**ExternalApp** uses `INFO` accent (informational blue).
 
 ### SpatialPosition
 
@@ -241,48 +257,99 @@ Bottom-docked bar with animated chip transitions:
 | `SpatialDiceLayout` | `SpatialDiceLayout.kt` (164 lines) | Dice-5 pattern: center 55% area, 4 corners ~11% each |
 | `GalleryLayout` | `GalleryLayout.kt` (102 lines) | `LazyVerticalGrid` filtered to media content types, responsive columns |
 | `FreeformCanvas` | `FreeformCanvas.kt` | Drag/resize with snap-to-edge (12dp threshold), z-order management |
-| `FrameWindow` | `FrameWindow.kt` | Title bar with content-type icon, close/minimize/maximize, themed accent border, frame number badge, spatial lock indicator |
-| `WorkflowSidebar` | `WorkflowSidebar.kt` (428 lines) | Device-adaptive step navigation with 30/70 tablet split and phone bottom sheet |
+| `FrameWindow` | `FrameWindow.kt` | Title bar with traffic lights (red/yellow/green), content-type icon, themed accent border, frame number badge, spatial lock indicator |
+| `WorkflowSidebar` | `WorkflowSidebar.kt` (~710 lines) | Multi-pane workflow with 2-panel (30/70) and 3-panel (20/60/20) modes |
+| `ExternalAppContent` | `ExternalAppContent.kt` | Cross-platform composable for external app status display and launch |
 
-### WorkflowSidebar (commonMain, 428 lines)
+### FrameWindow — Traffic Light Controls
 
-Provides a guided step-navigation UI for WORKFLOW layout mode. Adapts to device form factor:
+The window chrome uses macOS-style traffic light dots instead of traditional icon buttons:
 
-**Tablet/Desktop — 30/70 horizontal split:**
+```
+┌─ [●][●][●] ──── Step 1 ── Web ────── Frame Title ──── ← ──┐
+│  red yellow green                                          │
+│                                                            │
+│  [Content area]                                            │
+│                                                            │
+└────────────────────────────────────────────── [⊟ resize] ──┘
+```
+
+**Traffic Lights** (`TrafficLights` composable):
+- **Red** (leftmost, `colors.error`): Close
+- **Yellow** (`colors.warning`): Minimize
+- **Green** (`colors.success`): Maximize/Restore
+- Each dot: 12dp circle, 4dp spacing, 24dp touch target
+- On hover (desktop) or press (mobile): icon fades in via `animateFloatAsState`
+- Hover detection: `PointerEventType.Enter/Exit` (KMP-compatible, gracefully degrades on mobile)
+
+### WorkflowSidebar (commonMain, ~710 lines)
+
+Multi-pane workflow with adaptive layout based on `PanelRole` composition.
+
+**2-panel mode** (no `AUXILIARY` frames — backward compatible):
+
+**Tablet/Desktop — 30/70 split:**
 ```
 ┌──────────┬────────────────────────┐
 │  Steps   │                        │
 │  1. ●    │   Active Frame         │
 │  2. ○    │   (FrameWindow)        │
 │  3. ○    │                        │
-│  4. ○    │                        │
 └──────────┴────────────────────────┘
 ```
 
-**Phone — Bottom sheet overlay:**
+**Phone — Bottom sheet:**
 ```
 ┌────────────────────────────┐
-│   Active Frame             │
-│   (Full screen)            │
-│                            │
+│   Active Frame (full screen) │
 ├────────────────────────────┤
 │ Step 2 of 5  ● ● ○ ○ ○    │ ← collapsed peek (56dp)
 │ [Expandable step list]     │ ← expanded: full step rows
 └────────────────────────────┘
 ```
 
+**3-panel mode** (when any frame has `panelRole == AUXILIARY`):
+
+**Tablet/Desktop — 20/60/20 split:**
+```
+┌──────────┬────────────────────────┬──────────┐
+│  Steps   │    Main Content        │ Auxiliary │
+│  (20%)   │    (60%)               │  (20%)   │
+│  1. ●    │    [Pictures]          │  Video   │
+│  2. ○    │    [Instructions]      │  Call    │
+│  3. ○    │                        │  Notes   │
+└──────────┴────────────────────────┴──────────┘
+```
+
+**Phone — Tab navigation with HorizontalPager:**
+```
+┌─ [Steps] [Content] [Auxiliary] ──────────┐
+│                                          │
+│   ← Swipe between 3 tab pages →         │
+│   (steps auto-navigate to content tab)   │
+│                                          │
+├──────────────────────────────────────────┤
+│ Step 2 of 5  ● ● ○ ○ ○                  │
+└──────────────────────────────────────────┘
+```
+
 **Key composables:**
 
 | Composable | Purpose |
 |------------|---------|
-| `WorkflowSidebar` | Root — dispatches to tablet/phone layout based on `DisplayProfile` |
-| `WorkflowTabletLayout` | `Row` with 30% step panel + divider + 70% FrameWindow |
-| `WorkflowPhoneLayout` | `BottomSheetScaffold` with step dots peek + expandable list |
+| `WorkflowSidebar` | Root — dispatches to 2-panel or 3-panel based on AUXILIARY presence and `DisplayProfile` |
+| `WorkflowTabletLayout` | `Row` with 30% step panel + divider + 70% FrameWindow (2-panel) |
+| `WorkflowTriPanelLayout` | `Row` with 20/60/20 weighted columns + dividers (3-panel) |
+| `WorkflowPhoneLayout` | `BottomSheetScaffold` with step dots peek (2-panel phone) |
+| `WorkflowPhoneTabLayout` | `TabRow` + `HorizontalPager` with 3 swipeable pages (3-panel phone) |
 | `StepListPanel` | `LazyColumn` with header + `StepRow` items |
 | `StepRow` | Number badge (circle) + title + state icon, animated colors |
 | `StepIndicatorDots` | Compact dot row for collapsed bottom sheet (max 10 visible) |
+| `VerticalDivider` | Thin 1dp divider between panels |
 
 **Step states:** `PENDING` (gray, 0.4 alpha), `ACTIVE` (primary, highlighted border), `COMPLETED` (success/green, checkmark icon)
+
+**Bug fix:** All `onClose`/`onMinimize`/`onMaximize` callbacks are now properly wired from `LayoutEngine` through to `FrameWindow`. Previously these were empty `{}` lambdas.
 
 ### LayoutModeResolver (commonMain, 137 lines)
 
@@ -511,11 +578,13 @@ The `availableLayoutModes` parameter filters the CommandBar's layout picker to s
 
 ### Adding a New Content Type
 
-1. Add `FrameContent` subclass in `FrameContent.kt`
+1. Add `FrameContent` subclass in `FrameContent.kt` + type constant + add to `ALL_TYPES`
 2. Add `ContentAccent` mapping in `ContentAccent.forContentType()`
-3. Add `CommandBarState` actions if content-specific controls needed
-4. Add rendering in `ContentRenderer.kt` (androidMain)
-5. Add content module dependency in `build.gradle.kts` androidMain
+3. Add icon in `FrameWindow.contentTypeIcon()`
+4. Add to `CommandBar.addFrameOptions()`
+5. Add `CommandBarState` actions if content-specific controls needed
+6. Add rendering in `ContentRenderer.kt` (androidMain)
+7. Add content module dependency in `build.gradle.kts` androidMain
 
 ### Adding a New Platform
 
@@ -526,18 +595,59 @@ The `availableLayoutModes` parameter filters the CommandBar's layout picker to s
 
 ---
 
-## 11. 3rd-Party App Support (Research)
+## 11. 3rd-Party App Support (Implemented)
 
-Android's security model prevents non-system apps from visually embedding 3rd-party activities. The viable architecture for Cockpit is:
+Android's security model prevents non-system apps from visually embedding 3rd-party activities. The Cockpit implements a practical approach:
 
-| Scope | Approach | Viable |
+| Scope | Approach | Status |
 |-------|----------|--------|
-| **Own modules** (NoteAvanue, CameraAvanue, etc.) | ActivityEmbedding / Compose content slots | Yes — current approach |
-| **3rd-party apps** | `FLAG_ACTIVITY_LAUNCH_ADJACENT` + split-screen | Yes — OS manages split |
-| **Voice control across apps** | AccessibilityService overlay | Yes — already implemented |
-| **True 3rd-party embedding** | TaskOrganizer / VirtualDisplay | No — requires system UID |
+| **Own modules** (NoteAvanue, CameraAvanue, etc.) | Compose content slots | Implemented |
+| **3rd-party apps** | `FLAG_ACTIVITY_LAUNCH_ADJACENT` + split-screen | **Implemented** |
+| **Voice control across apps** | AccessibilityService overlay | Implemented |
+| **True 3rd-party embedding** | TaskOrganizer / VirtualDisplay | Not viable (requires system UID) |
 
-`FrameContent.ExternalApp(packageName, activityName, label)` is defined in the model but launches into OS split-screen rather than embedding within the Cockpit layout.
+### Architecture (KMP Split)
+
+```
+commonMain:
+  FrameContent.ExternalApp(packageName, activityName, label)
+  IExternalAppResolver (interface)
+  ExternalAppStatus (enum: NOT_INSTALLED, INSTALLED_NO_EMBED, EMBEDDABLE)
+  ExternalAppContent (shared composable — status badge + launch button)
+
+androidMain:
+  AndroidExternalAppResolver — PackageManager + Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT
+  ContentRenderer — wires ExternalApp to ExternalAppContent + resolver
+
+desktopMain:
+  DesktopExternalAppResolver — stub (NOT_INSTALLED for all apps)
+```
+
+### IExternalAppResolver
+
+```kotlin
+interface IExternalAppResolver {
+    fun resolveApp(packageName: String): ExternalAppStatus
+    fun launchAdjacent(packageName: String, activityName: String = "")
+}
+```
+
+### Android Resolution Logic
+
+1. `PackageManager.getApplicationInfo()` — check installed
+2. API 33+: `ActivityInfo` flags → check `FLAG_ALLOW_UNTRUSTED_ACTIVITY_EMBEDDING`
+3. If embeddable → `ExternalAppStatus.EMBEDDABLE` (future inline rendering)
+4. If installed but not embeddable → `ExternalAppStatus.INSTALLED_NO_EMBED` → "Open in Split Screen"
+5. If not found → `ExternalAppStatus.NOT_INSTALLED` → show install suggestion
+
+### ExternalAppContent (Cross-Platform Composable)
+
+Renders inside FrameWindow:
+- App icon placeholder (circle with first letter)
+- Package name + label
+- Status badge (color-coded: error/warning/success)
+- Action button: "Open in Split Screen" or "Open Adjacent"
+- All colors from `AvanueTheme.colors`
 
 See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdPartyApps-260217-V1.md`
 
@@ -547,7 +657,8 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 
 | Document | Location |
 |----------|---------|
-| Implementation Plan | `Docs/Plans/Cockpit/Cockpit-Plan-SpatialVoiceRedesign-260217-V1.md` |
+| SpatialVoice Redesign Plan | `Docs/Plans/Cockpit/Cockpit-Plan-SpatialVoiceRedesign-260217-V1.md` |
+| Multi-Pane + Traffic Lights Plan | `Docs/Plans/Cockpit/Cockpit-Plan-MultiPaneWorkflowTrafficLights-260217-V1.md` |
 | Pending Work Items Plan | `Docs/Plans/Cockpit/Cockpit-Plan-PendingWorkItems-260217-V1.md` |
 | ActivityEmbedding Research | `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdPartyApps-260217-V1.md` |
 | IMU Cursor Fix | `Docs/fixes/VoiceOSCore/VoiceOSCore-Fix-CursorIMUHeadTrackingRegression-260217-V1.md` |
@@ -560,4 +671,4 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 ---
 
 *Cockpit SpatialVoice Multi-Window System — Chapter 97*
-*NewAvanues Developer Manual — Updated 260217*
+*NewAvanues Developer Manual — Updated 260217 (Traffic Lights, Multi-Pane Workflow, ExternalApp)*

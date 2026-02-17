@@ -135,6 +135,9 @@ fun LayoutEngine(
             selectedFrameId = selectedFrameId,
             displayProfile = AvanueTheme.displayProfile,
             onStepSelected = onFrameSelected,
+            onFrameClose = onFrameClose,
+            onFrameMinimize = onFrameMinimize,
+            onFrameMaximize = onFrameMaximize,
             frameContent = frameContent,
             modifier = modifier
         )
