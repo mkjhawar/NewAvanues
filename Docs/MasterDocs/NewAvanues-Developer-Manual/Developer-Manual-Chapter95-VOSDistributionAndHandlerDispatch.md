@@ -194,9 +194,9 @@ class VosFileImporter(registry: IVosFileRegistryRepository, commandDao: VoiceCom
 
 ### Problem Solved
 
-VOS seed files defined 107+ commands across 11 categories, but originally only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 7 new handlers were added in v2.1, bringing the total to 11. Only **BrowserHandler** (47 web commands) remains unimplemented — it will delegate to the existing `WebCommandHandler`/`IWebCommandExecutor` pipeline.
+VOS seed files defined 107+ commands across 11 categories, but originally only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 7 new handlers were added in v2.1, then NoteCommandHandler (v2.2) and CockpitCommandHandler (v2.3) brought the total to 13. All handler categories are fully covered.
 
-### Handler Coverage (11 of 12 Handlers)
+### Handler Coverage (13 of 13 Handlers)
 
 | Handler | Category | Commands | Key API | Status |
 |---------|----------|----------|---------|--------|
@@ -212,8 +212,10 @@ VOS seed files defined 107+ commands across 11 categories, but originally only 4
 | **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal | v2.1 |
 | **VoiceControlHandler** | UI | mute/wake, dictation, help, numbers | VoiceControlCallbacks | v2.1 |
 | **WebCommandHandler** | BROWSER | 45 web commands | IWebCommandExecutor + DOMScraperBridge | v2.1 |
+| **NoteCommandHandler** | NOTE | 48 note commands (format, dictate, navigate) | INoteController + RichTextState | v2.2 |
+| **CockpitCommandHandler** | COCKPIT | 26 cockpit commands (frames, layouts, content) | Intent broadcast to CockpitViewModel | v2.3 |
 
-Bold = new in v2.1. All 12 handler categories are fully covered.
+Bold = new in v2.1+. All 13 handler categories are fully covered.
 
 ### Factory Registration
 
@@ -232,7 +234,9 @@ override fun createHandlers(): List<IHandler> {
         InputHandler(service),
         AppControlHandler(service),
         ReadingHandler(service),
-        VoiceControlHandler(service)
+        VoiceControlHandler(service),
+        NoteCommandHandler(service),
+        CockpitCommandHandler(service)
     )
 }
 ```
@@ -259,7 +263,7 @@ The accessibility service sets these callbacks during `onServiceReady()`. The ha
 
 `ActionCategory.PRIORITY_ORDER`:
 ```
-SYSTEM > NAVIGATION > APP > GAZE > GESTURE > UI > DEVICE > INPUT > MEDIA > ACCESSIBILITY > BROWSER > CUSTOM
+SYSTEM > NAVIGATION > APP > GAZE > GESTURE > UI > DEVICE > INPUT > MEDIA > ACCESSIBILITY > BROWSER > NOTE > COCKPIT > CUSTOM
 ```
 
 The `ActionCoordinator` iterates handlers by category priority. First handler that returns `HandlerResult.success()` wins.
