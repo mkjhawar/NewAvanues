@@ -130,6 +130,7 @@ Compact editor for Cockpit frames:
 - No TopAppBar (frame chrome provides navigation)
 - Compact toolbar: Bold/Italic + action icons (camera, attach, dictate, save)
 - `RichTextEditor` with same Markdown round-trip
+- `hasLoaded` keyed by `initialContent` — resets when Cockpit switches notes in the same frame
 - Attachment chips (FlowRow)
 - Word count footer
 

@@ -48,12 +48,12 @@ data class HubModule(
  * Static registry of all modules displayed on the Spatial Orbit hub.
  *
  * Core orbit (inner ring, 4 modules):
- *   VoiceTouch™, WebAvanue, CursorAvanue, AvanueHUB
+ *   VoiceTouch™, WebAvanue, CursorAvanue, Cockpit
  *
  * Content orbit (outer ring, 7 modules):
  *   PDFAvanue, ImageAvanue, VideoAvanue, NoteAvanue, PhotoAvanue, RemoteCast, AnnotateAvanue
  *
- * Content modules navigate to AvanueHUB where they render inside frames.
+ * Content modules navigate to Cockpit where they render inside frames.
  * Each "Avanue" is a destination — an avenue to explore.
  */
 object HubModuleRegistry {
@@ -85,8 +85,8 @@ object HubModuleRegistry {
         ),
         HubModule(
             id = "cockpit",
-            displayName = "AvanueHUB",
-            subtitle = "Where all avenues meet",
+            displayName = "Cockpit",
+            subtitle = "Multi-window display",
             icon = Icons.Default.Dashboard,
             orbit = OrbitTier.CORE,
             route = AvanueMode.COCKPIT.route
