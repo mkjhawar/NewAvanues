@@ -149,7 +149,7 @@ fun ContentRenderer(
             is FrameContent.Map -> MapContentRenderer(
                 latitude = content.latitude,
                 longitude = content.longitude,
-                zoomLevel = content.zoomLevel,
+                zoomLevel = content.zoomLevel.toInt(),
                 modifier = Modifier.fillMaxSize()
             )
 
