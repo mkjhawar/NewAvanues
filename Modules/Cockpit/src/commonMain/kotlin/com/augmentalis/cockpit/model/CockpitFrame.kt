@@ -48,9 +48,6 @@ data class CockpitFrame(
     /** Last modification timestamp (ISO 8601) */
     val updatedAt: String = "",
 ) {
-    /** Frame number within its session (1-based, assigned by session order) */
-    val frameNumber: Int get() = 0 // Computed by session, not stored
-
     /** Content type identifier for display and renderer lookup */
     val contentType: String get() = content.typeId
 

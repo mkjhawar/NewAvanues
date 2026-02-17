@@ -96,7 +96,7 @@ sealed class FrameContent {
     @Serializable
     @SerialName("note")
     data class Note(
-        val text: String = "",
+        val markdownContent: String = "",
         val cursorPosition: Int = 0,
         val fontSize: Float = 14f,
         /** JSON array of NoteAttachment objects: photos, docs, sketches embedded in the note */

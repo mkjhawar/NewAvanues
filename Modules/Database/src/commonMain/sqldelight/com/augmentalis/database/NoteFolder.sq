@@ -1,0 +1,38 @@
+-- NoteFolder.sq
+-- SQLDelight schema for NoteAvanue folder organization
+-- Supports both manual and smart (auto-filter) folders
+
+CREATE TABLE note_folder (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    parent_id TEXT,
+    icon TEXT NOT NULL DEFAULT 'folder',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_smart_folder INTEGER NOT NULL DEFAULT 0,
+    smart_filter TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX idx_nf_parent ON note_folder(parent_id);
+CREATE INDEX idx_nf_sort ON note_folder(sort_order);
+
+-- Get all folders
+selectAll:
+SELECT * FROM note_folder ORDER BY sort_order ASC, name ASC;
+
+-- Get root folders (no parent)
+selectRootFolders:
+SELECT * FROM note_folder WHERE parent_id IS NULL ORDER BY sort_order ASC, name ASC;
+
+-- Insert or replace
+insertOrReplace:
+INSERT OR REPLACE INTO note_folder (
+    id, name, parent_id, icon, sort_order, is_smart_folder, smart_filter,
+    created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Delete folder
+deleteById:
+DELETE FROM note_folder WHERE id = ?;
+
