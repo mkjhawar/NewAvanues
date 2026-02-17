@@ -154,7 +154,7 @@ dependencies {
     implementation(project(":Modules:ImageAvanue"))
     implementation(project(":Modules:VideoAvanue"))
     implementation(project(":Modules:NoteAvanue"))
-    implementation(project(":Modules:CameraAvanue"))
+    implementation(project(":Modules:PhotoAvanue"))
     implementation(project(":Modules:RemoteCast"))
     implementation(project(":Modules:AnnotationAvanue"))
 

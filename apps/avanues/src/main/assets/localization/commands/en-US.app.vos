@@ -64,3 +64,97 @@ acc_swipe_down|swipe down||Swipe down on screen
 acc_stroke_start|start drawing|draw,begin stroke|Begin a drawing stroke (annotation)
 acc_stroke_end|stop drawing|finish drawing,end stroke|End the current drawing stroke (annotation)
 acc_erase|eraser|erase mode,toggle eraser|Toggle eraser mode (annotation)
+# ── Camera (PhotoAvanue) ──
+cam_open|open photo avanue|open camera,camera view,camera avanue,photo avanue|Launch PhotoAvanue standalone
+cam_capture|take photo|capture,snap,shoot,take picture,cheese|Capture a photo
+cam_record_start|start recording|record video,begin recording,record|Start video recording
+cam_record_stop|stop recording|end recording,finish recording|Stop video recording
+cam_record_pause|pause recording|pause video|Pause video recording
+cam_record_resume|resume recording|continue recording|Resume paused recording
+cam_flip|flip camera|switch camera,front camera,back camera,selfie|Toggle front/back camera
+cam_flash_on|flash on|enable flash,turn on flash|Enable camera flash
+cam_flash_off|flash off|disable flash,turn off flash|Disable camera flash
+cam_flash_auto|flash auto|auto flash,automatic flash|Set flash to automatic
+cam_flash_torch|torch mode|flashlight,keep flash on|Keep flash on continuously
+cam_zoom_in|zoom in camera|camera closer,camera magnify|Zoom camera in
+cam_zoom_out|zoom out camera|camera wider|Zoom camera out
+cam_exposure_up|more exposure|brighter camera,lighten,increase exposure|Increase camera exposure
+cam_exposure_down|less exposure|darker camera,darken,decrease exposure|Decrease camera exposure
+cam_mode_photo|photo mode|picture mode,camera mode|Switch to photo capture mode
+cam_mode_video|video mode|movie mode,recording mode|Switch to video recording mode
+# ── Cockpit ──
+cockpit_open|open cockpit|cockpit view,launch cockpit,cockpit mode|Launch Cockpit standalone
+cockpit_add_frame|add frame|new frame,create frame,add panel|Add a new content frame
+cockpit_layout|change layout|switch layout,layout mode|Open layout picker
+cockpit_layout_grid|grid layout|grid,grid view|Switch to grid layout
+cockpit_layout_split|split layout|split view,side by side|Switch to split layout
+cockpit_layout_freeform|freeform layout|freeform,free layout|Switch to freeform layout
+cockpit_layout_fullscreen|fullscreen|maximize,full screen|Switch to fullscreen layout
+cockpit_layout_workflow|workflow|workflow mode,step mode|Switch to workflow layout
+cockpit_minimize|minimize frame|minimize,shrink frame|Minimize the active frame
+cockpit_maximize|maximize frame|maximize,expand frame|Maximize the active frame
+cockpit_close|close frame|close,remove frame,delete frame|Close the active frame
+cockpit_add_web|add web|new web,open web,add browser|Add a web browser frame
+cockpit_add_camera|add camera|open camera,new camera|Add a camera frame
+cockpit_add_note|add note|new note,open note|Add a note frame
+cockpit_add_pdf|add pdf|open pdf,new pdf|Add a PDF viewer frame
+cockpit_add_image|add image|open image,new image,add photo|Add an image viewer frame
+cockpit_add_video|add video|open video,new video|Add a video player frame
+cockpit_add_whiteboard|add whiteboard|open whiteboard,new whiteboard,draw|Add a whiteboard frame
+cockpit_add_terminal|add terminal|open terminal,new terminal,console|Add a terminal frame
+cockpit_web_back|go back in web|back,navigate back|Web frame: go back
+cockpit_web_forward|go forward in web|forward,navigate forward|Web frame: go forward
+cockpit_web_refresh|refresh web|reload,refresh page|Web frame: refresh page
+cockpit_scroll_up|cockpit scroll up|panel up|Scroll the active frame up
+cockpit_scroll_down|cockpit scroll down|panel down|Scroll the active frame down
+cockpit_zoom_in|cockpit zoom in|panel zoom in|Zoom into the active frame
+cockpit_zoom_out|cockpit zoom out|panel zoom out|Zoom out of the active frame
+# ── NoteAvanue ──
+note_open|open note avanue|open notes,notes app,note avanue|Launch NoteAvanue
+note_new|new note|create note,blank note|Create a new note
+note_save|save note|save,save changes|Save the current note
+note_close|close note|exit note,close notes|Close NoteAvanue
+note_bold|bold|make bold,bold text|Toggle bold formatting
+note_italic|italic|make italic,italic text|Toggle italic formatting
+note_underline|underline|make underline,underline text|Toggle underline formatting
+note_strikethrough|strikethrough|strike through,cross out|Toggle strikethrough formatting
+note_heading1|heading one|h1,heading 1,title|Apply heading level 1
+note_heading2|heading two|h2,heading 2,subtitle|Apply heading level 2
+note_heading3|heading three|h3,heading 3,section|Apply heading level 3
+note_bullet|bullet list|bullets,unordered list|Toggle bullet list
+note_numbered|numbered list|numbers,ordered list|Toggle numbered list
+note_checklist|checklist|task list,checkbox,todo list|Toggle checklist
+note_code|code block|code,monospace|Toggle code block
+note_quote|blockquote|quote,quotation|Toggle blockquote
+note_divider|insert divider|divider,horizontal line,separator|Insert horizontal divider
+note_undo|undo note|undo,undo that|Undo last edit
+note_redo|redo note|redo,redo that|Redo last undone edit
+note_select_all|select all text|select all,highlight all|Select all note content
+note_delete_line|delete line|remove line,clear line|Delete current line
+note_new_paragraph|new paragraph|next paragraph,paragraph break|Insert new paragraph
+note_go_top|go to top|top of note,beginning|Move to start of note
+note_go_bottom|go to bottom|end of note,bottom|Move to end of note
+note_next_heading|next heading|next section,jump forward|Jump to next heading
+note_prev_heading|previous heading|prior section,jump back|Jump to previous heading
+note_dictate|dictation mode|start dictating,voice typing,dictate|Switch to dictation mode
+note_command_mode|command mode|stop dictating,voice commands|Switch to command mode
+note_continuous|continuous dictation|keep dictating,auto dictate|Switch to continuous dictation
+note_copy|copy note text|copy,copy selection|Copy selected text
+note_paste|paste in note|paste,paste text|Paste from clipboard
+note_cut|cut note text|cut,cut selection|Cut selected text
+note_pin|pin note|pin,unpin,toggle pin|Toggle note pin status
+note_export|export note|export,share note|Export note as Markdown
+note_search|search notes|find note,search|Search within notes
+note_scroll_up|note scroll up|scroll up note|Scroll note content up
+note_scroll_down|note scroll down|scroll down note|Scroll note content down
+note_attach_photo|attach photo|add photo,insert photo|Attach a photo to note
+note_attach_file|attach file|add file,insert file|Attach a file to note
+note_attach_audio|attach audio|add recording,insert audio|Attach audio recording
+note_zoom_in|note zoom in|bigger text,enlarge|Increase note zoom
+note_zoom_out|note zoom out|smaller text,reduce|Decrease note zoom
+note_font_up|increase font|bigger font,font up|Increase font size
+note_font_down|decrease font|smaller font,font down|Decrease font size
+note_clear_format|clear formatting|remove formatting,plain text|Remove all formatting
+note_word_count|word count|count words,how many words|Show word count
+note_read_aloud|read note aloud|read note,read this|Read note content aloud
+note_stop_reading|stop reading note|stop reading,be quiet|Stop reading note aloud

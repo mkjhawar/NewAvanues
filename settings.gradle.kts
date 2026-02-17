@@ -142,7 +142,7 @@ include(":Modules:PDFAvanue")               // KMP PDF viewer (PdfRenderer + PDF
 include(":Modules:ImageAvanue")             // KMP image viewer with zoom/pan/gallery
 include(":Modules:VideoAvanue")             // KMP video player (Media3 + AVPlayer)
 include(":Modules:NoteAvanue")              // KMP rich notes with attachments + voice transcription
-include(":Modules:CameraAvanue")            // KMP camera capture/preview (CameraX + AVCaptureSession)
+include(":Modules:PhotoAvanue")              // KMP camera + video capture (CameraX + AVCaptureSession)
 include(":Modules:RemoteCast")              // KMP screen casting/sharing (MediaProjection + ReplayKit)
 include(":Modules:AnnotationAvanue")        // KMP whiteboard/signature/drawing canvas
 

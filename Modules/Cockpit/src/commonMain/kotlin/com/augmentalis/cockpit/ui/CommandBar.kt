@@ -167,6 +167,8 @@ fun CommandBar(
                         CommandChip(Icons.Default.Close, "Close", false, onFrameClose)
                     }
 
+                    // TODO: Content-specific chips are scaffolded for layout only.
+                    // Wire to CockpitCommandHandler dispatch when voice-to-UI bridge is ready.
                     CommandBarState.WEB_ACTIONS -> {
                         CommandChip(Icons.Default.ArrowBack, "Back", false) {}
                         CommandChip(Icons.Default.Language, "Forward", false) {}

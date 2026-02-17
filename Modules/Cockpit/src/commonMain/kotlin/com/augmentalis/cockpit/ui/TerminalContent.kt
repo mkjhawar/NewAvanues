@@ -102,6 +102,9 @@ fun TerminalContent(
                 )
             }
         } else {
+            // LazyColumn + horizontalScroll: intentional for terminal output.
+            // Terminal lines can be very wide — horizontal scroll lets users pan
+            // to see long lines, while LazyColumn virtualizes the vertical list.
             SelectionContainer {
                 LazyColumn(
                     state = listState,

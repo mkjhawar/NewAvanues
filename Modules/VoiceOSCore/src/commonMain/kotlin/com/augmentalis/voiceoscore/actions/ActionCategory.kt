@@ -82,8 +82,20 @@ enum class ActionCategory {
     BROWSER,
 
     /**
+     * Note editing actions (formatting, navigation, dictation, etc.)
+     * Priority: 12
+     */
+    NOTE,
+
+    /**
+     * Cockpit multi-window actions (frames, layouts, content management)
+     * Priority: 13
+     */
+    COCKPIT,
+
+    /**
      * Custom actions (user-defined, extensions, etc.)
-     * Priority: 12 (lowest)
+     * Priority: 14 (lowest)
      */
     CUSTOM;
 
@@ -104,6 +116,8 @@ enum class ActionCategory {
             MEDIA,
             ACCESSIBILITY,
             BROWSER,
+            NOTE,
+            COCKPIT,
             CUSTOM
         )
     }

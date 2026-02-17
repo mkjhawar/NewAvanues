@@ -169,7 +169,7 @@ private fun TimerWidget(modifier: Modifier = Modifier) {
 
     WidgetContainer(icon = Icons.Default.Timer, label = "Timer", modifier = modifier) {
         Text(
-            text = String.format("%02d:%02d", mins, secs),
+            text = "${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}",
             color = if (remainingMs == 0L) colors.error else colors.textPrimary,
             fontSize = 48.sp,
             fontWeight = FontWeight.Light,
@@ -221,7 +221,7 @@ private fun StopwatchWidget(modifier: Modifier = Modifier) {
 
     WidgetContainer(icon = Icons.Default.Timer, label = "Stopwatch", modifier = modifier) {
         Text(
-            text = String.format("%02d:%02d.%d", mins, secs, tenths),
+            text = "${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${tenths}",
             color = colors.textPrimary,
             fontSize = 42.sp,
             fontWeight = FontWeight.Light,

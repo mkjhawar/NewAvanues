@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlin.random.Random
 
 /**
  * ViewModel managing the active Cockpit session, frames, layout, and persistence.
@@ -32,9 +33,10 @@ import kotlinx.datetime.Clock
  * Android apps wrap this in an AndroidX ViewModel or Hilt-injected scope.
  */
 class CockpitViewModel(
-    private val repository: ICockpitRepository,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val repository: ICockpitRepository
 ) {
+    private val viewModelJob = SupervisorJob()
+    private val scope = CoroutineScope(viewModelJob + Dispatchers.Main)
     private val _activeSession = MutableStateFlow<CockpitSession?>(null)
     val activeSession: StateFlow<CockpitSession?> = _activeSession.asStateFlow()
 
@@ -87,8 +89,9 @@ class CockpitViewModel(
 
     /**
      * Create a new session with an optional initial frame.
+     * Suspends until the session is persisted to the database.
      */
-    fun createSession(name: String, isDefault: Boolean = false): CockpitSession {
+    suspend fun createSession(name: String, isDefault: Boolean = false): CockpitSession {
         val now = Clock.System.now().toString()
         val session = CockpitSession(
             id = generateId(),
@@ -98,10 +101,8 @@ class CockpitViewModel(
             createdAt = now,
             updatedAt = now
         )
-        scope.launch {
-            repository.saveSession(session)
-            _sessions.value = repository.getSessions()
-        }
+        repository.saveSession(session)
+        _sessions.value = repository.getSessions()
         return session
     }
 
@@ -240,12 +241,19 @@ class CockpitViewModel(
     }
 
     /**
-     * Update the serialized content state for a frame (e.g., current URL, page number).
+     * Update the content for a frame (e.g., current URL, page number).
+     * Updates in-memory state AND schedules auto-save to persist.
      */
-    fun updateContentState(frameId: String, jsonState: String) {
-        scope.launch {
-            repository.updateFrameContent(frameId, jsonState)
+    fun updateFrameContent(frameId: String, newContent: FrameContent) {
+        _frames.value = _frames.value.map { frame ->
+            if (frame.id == frameId) {
+                frame.copy(
+                    content = newContent,
+                    updatedAt = Clock.System.now().toString()
+                )
+            } else frame
         }
+        scheduleAutoSave()
     }
 
     /**
@@ -253,10 +261,14 @@ class CockpitViewModel(
      */
     fun setLayoutMode(mode: LayoutMode) {
         _layoutMode.value = mode
-        _activeSession.value = _activeSession.value?.copy(
+        val updatedSession = _activeSession.value?.copy(
             layoutMode = mode,
             updatedAt = Clock.System.now().toString()
-        )
+        ) ?: return
+        _activeSession.value = updatedSession
+        _sessions.value = _sessions.value.map { s ->
+            if (s.id == updatedSession.id) updatedSession else s
+        }
         scheduleAutoSave()
     }
 
@@ -264,10 +276,14 @@ class CockpitViewModel(
      * Rename the active session.
      */
     fun renameSession(newName: String) {
-        _activeSession.value = _activeSession.value?.copy(
+        val updatedSession = _activeSession.value?.copy(
             name = newName,
             updatedAt = Clock.System.now().toString()
-        )
+        ) ?: return
+        _activeSession.value = updatedSession
+        _sessions.value = _sessions.value.map { s ->
+            if (s.id == updatedSession.id) updatedSession else s
+        }
         scheduleAutoSave()
     }
 
@@ -304,9 +320,14 @@ class CockpitViewModel(
 
     /**
      * Persist the current session and all frames to the database.
+     * Syncs selectedFrameId from the authoritative StateFlow before saving.
      */
     private suspend fun save() {
-        val session = _activeSession.value ?: return
+        val currentSelectedId = _selectedFrameId.value
+        val session = _activeSession.value?.copy(
+            selectedFrameId = currentSelectedId
+        ) ?: return
+        _activeSession.value = session
         repository.saveSession(session)
         _frames.value.forEach { frame ->
             repository.saveFrame(frame)
@@ -321,12 +342,21 @@ class CockpitViewModel(
     }
 
     /**
+     * Release all resources and cancel pending coroutines.
+     * Must be called when the ViewModel is no longer needed.
+     */
+    fun dispose() {
+        autoSaveJob?.cancel()
+        viewModelJob.cancel()
+    }
+
+    /**
      * Generate a unique ID for sessions/frames.
-     * Uses timestamp + random suffix for uniqueness without UUID dependency.
+     * Uses timestamp + random Long (base-36) for high entropy without UUID dependency.
      */
     private fun generateId(): String {
         val timestamp = Clock.System.now().toEpochMilliseconds()
-        val random = (0..99999).random()
-        return "${timestamp}_${random}"
+        val random = Random.nextLong(0, Long.MAX_VALUE)
+        return "${timestamp}_${random.toString(36)}"
     }
 }
