@@ -6,6 +6,7 @@ import com.augmentalis.cockpit.model.CrossFrameLink
 import com.augmentalis.cockpit.model.PinnedFrame
 import com.augmentalis.cockpit.model.TimelineEvent
 import com.augmentalis.cockpit.model.WorkflowStep
+import kotlinx.serialization.Serializable
 
 /**
  * Repository interface for Cockpit session and frame persistence.
@@ -100,3 +101,14 @@ interface ICockpitRepository {
     /** Import session from JSON string */
     suspend fun importSession(json: String): CockpitSession?
 }
+
+/**
+ * Serialization wrapper for session export/import.
+ * Avoids double-encoding by holding typed objects directly.
+ */
+@Serializable
+data class SessionExport(
+    val session: CockpitSession,
+    val frames: List<CockpitFrame>,
+    val steps: List<WorkflowStep>
+)

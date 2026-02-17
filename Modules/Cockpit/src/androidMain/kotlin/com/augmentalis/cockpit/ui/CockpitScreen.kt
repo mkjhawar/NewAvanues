@@ -83,8 +83,8 @@ fun CockpitScreen(
         frameContent = { frame ->
             ContentRenderer(
                 frame = frame,
-                onContentStateChanged = { frameId, jsonState ->
-                    viewModel.updateContentState(frameId, jsonState)
+                onContentStateChanged = { frameId, newContent ->
+                    viewModel.updateFrameContent(frameId, newContent)
                 }
             )
         },

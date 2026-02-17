@@ -119,12 +119,6 @@ kotlin {
                 // Compose UI (Android-only: tooling preview)
                 implementation(libs.compose.ui.tooling.preview)
 
-                // CameraX — Camera preview frames
-                implementation(libs.androidx.camera.core)
-                implementation(libs.androidx.camera.camera2)
-                implementation(libs.androidx.camera.lifecycle)
-                implementation(libs.androidx.camera.view)
-
                 // SQLDelight Android Driver
                 implementation(libs.sqldelight.android.driver)
             }

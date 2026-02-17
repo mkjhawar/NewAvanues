@@ -80,7 +80,7 @@ fun NoteEditor(
     val colors = AvanueTheme.colors
     val richTextState = rememberRichTextState()
     var titleField by remember { mutableStateOf(initialTitle) }
-    var hasLoaded by remember { mutableStateOf(false) }
+    var hasLoaded by remember(initialContent) { mutableStateOf(false) }
 
     // Load initial Markdown content once
     if (!hasLoaded && initialContent.isNotBlank()) {

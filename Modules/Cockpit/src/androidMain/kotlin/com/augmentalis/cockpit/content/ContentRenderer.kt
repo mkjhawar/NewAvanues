@@ -51,7 +51,7 @@ import com.augmentalis.videoavanue.VideoPlayer
 @Composable
 fun ContentRenderer(
     frame: CockpitFrame,
-    onContentStateChanged: (String, String) -> Unit = { _, _ -> },
+    onContentStateChanged: (String, FrameContent) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -61,7 +61,7 @@ fun ContentRenderer(
             is FrameContent.Web -> WebContentRenderer(
                 url = content.url,
                 onUrlChanged = { newUrl ->
-                    onContentStateChanged(frame.id, """{"url":"$newUrl"}""")
+                    onContentStateChanged(frame.id, content.copy(url = newUrl))
                 }
             )
 
@@ -69,7 +69,7 @@ fun ContentRenderer(
                 uri = content.uri,
                 initialPage = content.currentPage,
                 onPageChanged = { page ->
-                    onContentStateChanged(frame.id, """{"uri":"${content.uri}","currentPage":$page,"zoom":${content.zoom}}""")
+                    onContentStateChanged(frame.id, content.copy(currentPage = page))
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -84,7 +84,7 @@ fun ContentRenderer(
                 autoPlay = content.isPlaying,
                 initialPositionMs = content.playbackPositionMs,
                 onPositionChanged = { posMs ->
-                    onContentStateChanged(frame.id, """{"uri":"${content.uri}","playbackPositionMs":$posMs}""")
+                    onContentStateChanged(frame.id, content.copy(playbackPositionMs = posMs))
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -92,15 +92,16 @@ fun ContentRenderer(
             is FrameContent.Note -> NoteEditor(
                 initialTitle = frame.title,
                 initialContent = content.markdownContent,
-                onSave = { title, markdownContent ->
-                    onContentStateChanged(frame.id, """{"markdownContent":"${markdownContent.replace("\"", "\\\"").replace("\n", "\\n")}"}""")
+                onSave = { _, markdownContent ->
+                    onContentStateChanged(frame.id, content.copy(markdownContent = markdownContent))
                 },
                 modifier = Modifier.fillMaxSize()
             )
 
             is FrameContent.Camera -> CameraPreview(
-                onPhotoCaptured = { uri ->
-                    onContentStateChanged(frame.id, """{"lastCapturedUri":"$uri"}""")
+                onPhotoCaptured = { _ ->
+                    // Photo capture is a side-effect (saved to gallery/attachment storage).
+                    // Camera content tracks lens/flash/zoom settings, not captured URIs.
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -121,27 +122,32 @@ fun ContentRenderer(
 
             is FrameContent.Signature -> SignatureCapture(
                 onComplete = { strokes ->
-                    onContentStateChanged(frame.id, """{"strokeCount":${strokes.size}}""")
+                    onContentStateChanged(frame.id, content.copy(isSigned = strokes.isNotEmpty()))
                 },
                 modifier = Modifier.fillMaxSize()
             )
 
             is FrameContent.Whiteboard -> AnnotationCanvas(
-                onStrokesChanged = { strokes ->
-                    onContentStateChanged(frame.id, """{"strokeCount":${strokes.size}}""")
+                onStrokesChanged = { _ ->
+                    // Stroke data is managed internally by AnnotationCanvas.
+                    // Whiteboard content tracks pen/color config, not stroke data.
                 },
                 modifier = Modifier.fillMaxSize()
             )
 
             is FrameContent.ScreenCast -> CastOverlay(
-                castState = CastState(),
+                castState = CastState(
+                    deviceId = content.sourceDeviceId,
+                    deviceName = content.sourceDeviceName,
+                    isConnected = content.isConnected
+                ),
                 modifier = Modifier.fillMaxSize()
             )
 
             is FrameContent.Form -> FormContent(
                 content = content,
-                onContentStateChanged = { json ->
-                    onContentStateChanged(frame.id, json)
+                onContentStateChanged = { updatedForm ->
+                    onContentStateChanged(frame.id, updatedForm)
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -161,10 +167,10 @@ fun ContentRenderer(
             is FrameContent.AiSummary -> AiSummaryContent(
                 content = content,
                 onGenerateSummary = {
-                    // AI module integration deferred — placeholder callback
+                    // TODO: AI module integration deferred — wire to Modules/AI:LLM when ready
                 },
-                onContentStateChanged = { json ->
-                    onContentStateChanged(frame.id, json)
+                onContentStateChanged = { updatedSummary ->
+                    onContentStateChanged(frame.id, updatedSummary)
                 },
                 modifier = Modifier.fillMaxSize()
             )
