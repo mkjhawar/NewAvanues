@@ -18,12 +18,13 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
- * Android implementation of [ICockpitRepository] backed by SQLDelight.
+ * Desktop (JVM) implementation of [ICockpitRepository] backed by SQLDelight.
  *
- * Handles serialization of [FrameContent] to/from JSON for the `contentData`
- * column, and maps between SQLDelight generated row types and domain models.
+ * Uses the same [VoiceOSDatabase] as Android (SQLDelight generates cross-platform
+ * query objects). Only the driver differs: JdbcSqliteDriver on Desktop vs
+ * AndroidSqliteDriver on Android.
  */
-class AndroidCockpitRepository(
+class DesktopCockpitRepository(
     private val database: VoiceOSDatabase
 ) : ICockpitRepository {
 
@@ -298,7 +299,6 @@ class AndroidCockpitRepository(
             val sourceFrames = json.decodeFromString<List<CockpitFrame>>(framesJson)
             val sourceSteps = json.decodeFromString<List<WorkflowStep>>(stepsJson)
 
-            // Generate fresh IDs so the imported session doesn't collide with existing ones
             val now = kotlinx.datetime.Clock.System.now()
             val newSessionId = "${now.toEpochMilliseconds()}_${(0..99999).random()}"
 
@@ -347,7 +347,6 @@ class AndroidCockpitRepository(
         return try {
             json.decodeFromString<FrameContent>(contentData)
         } catch (e: Exception) {
-            // Fallback: create default content based on type string
             when (contentType) {
                 FrameContent.TYPE_WEB -> FrameContent.Web()
                 FrameContent.TYPE_PDF -> FrameContent.Pdf()

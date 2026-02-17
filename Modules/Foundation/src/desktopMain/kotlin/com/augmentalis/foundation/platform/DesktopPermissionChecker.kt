@@ -5,8 +5,6 @@
 
 package com.augmentalis.foundation.platform
 
-import com.augmentalis.foundation.IPermissionChecker
-
 /**
  * Desktop (JVM) implementation of [IPermissionChecker].
  *

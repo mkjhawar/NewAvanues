@@ -54,14 +54,8 @@ object CockpitConstants {
     const val SPATIAL_GRID_COLUMNS = 3
     const val SPATIAL_GRID_ROWS = 3
 
-    /** Degrees of head rotation per screen-width of panning */
-    const val SPATIAL_DEGREES_PER_SCREEN = 30f
-
-    /** Deadzone in degrees — no movement within this range */
-    const val SPATIAL_DEADZONE_DEGREES = 5f
-
-    /** Spatial canvas lerp factor for smooth transitions (0..1) */
-    const val SPATIAL_LERP_FACTOR = 0.15f
+    // Spatial sensitivity constants moved to SpatialSensitivity enum
+    // in SpatialViewportController.kt (GLASS_LOW / NORMAL / HIGH presets)
 
     // ── Command Bar ────────────────────────────────────────
     /** Command bar height in dp (tablet/phone) */

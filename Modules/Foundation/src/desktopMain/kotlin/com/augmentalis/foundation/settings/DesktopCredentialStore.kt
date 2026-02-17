@@ -5,7 +5,6 @@
 
 package com.augmentalis.foundation.settings
 
-import com.augmentalis.foundation.ICredentialStore
 import java.util.Base64
 import java.util.prefs.Preferences
 

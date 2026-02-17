@@ -22,7 +22,11 @@ import com.augmentalis.cameraavanue.CameraPreview
 import com.augmentalis.cockpit.AndroidExternalAppResolver
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.FrameContent
+import com.augmentalis.cockpit.ui.AiSummaryContent
 import com.augmentalis.cockpit.ui.ExternalAppContent
+import com.augmentalis.cockpit.ui.FormContent
+import com.augmentalis.cockpit.ui.TerminalContent
+import com.augmentalis.cockpit.ui.WidgetContent
 import com.augmentalis.imageavanue.ImageViewer
 import com.augmentalis.noteavanue.NoteEditor
 import com.augmentalis.pdfavanue.PdfViewer
@@ -134,33 +138,39 @@ fun ContentRenderer(
                 modifier = Modifier.fillMaxSize()
             )
 
-            is FrameContent.Form -> PlaceholderContent(
-                label = "Form",
-                description = "Form builder — coming soon",
+            is FrameContent.Form -> FormContent(
+                content = content,
+                onContentStateChanged = { json ->
+                    onContentStateChanged(frame.id, json)
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
-            is FrameContent.Map -> PlaceholderContent(
-                label = "Map",
-                description = "Map integration — coming soon",
+            is FrameContent.Map -> MapContentRenderer(
+                latitude = content.latitude,
+                longitude = content.longitude,
+                zoomLevel = content.zoomLevel,
                 modifier = Modifier.fillMaxSize()
             )
 
-            is FrameContent.Terminal -> PlaceholderContent(
-                label = "Terminal",
-                description = "Terminal emulator — coming soon",
+            is FrameContent.Terminal -> TerminalContent(
+                content = content,
                 modifier = Modifier.fillMaxSize()
             )
 
-            is FrameContent.AiSummary -> PlaceholderContent(
-                label = "AI Summary",
-                description = "AI summarization — coming soon",
+            is FrameContent.AiSummary -> AiSummaryContent(
+                content = content,
+                onGenerateSummary = {
+                    // AI module integration deferred — placeholder callback
+                },
+                onContentStateChanged = { json ->
+                    onContentStateChanged(frame.id, json)
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
-            is FrameContent.Widget -> PlaceholderContent(
-                label = "Widget: ${content.widgetType.name}",
-                description = "Widget display — coming soon",
+            is FrameContent.Widget -> WidgetContent(
+                content = content,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -263,35 +273,69 @@ private fun VoiceNoteRenderer(
 }
 
 /**
- * Placeholder for content types that will be implemented in future phases.
+ * Map content renderer using OpenStreetMap via embedded WebView.
+ *
+ * Loads an OpenStreetMap embed URL with the given coordinates and zoom level.
+ * This approach avoids Google Maps SDK dependency and works across all Android devices.
  */
 @Composable
-private fun PlaceholderContent(
-    label: String,
-    description: String,
+private fun MapContentRenderer(
+    latitude: Double,
+    longitude: Double,
+    zoomLevel: Int,
     modifier: Modifier = Modifier
 ) {
-    val colors = AvanueTheme.colors
-
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = label,
-                color = colors.textPrimary.copy(alpha = 0.6f),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = description,
-                color = colors.textPrimary.copy(alpha = 0.4f),
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        }
+    val mapUrl = remember(latitude, longitude, zoomLevel) {
+        val bbox = calculateBoundingBox(latitude, longitude, zoomLevel)
+        "https://www.openstreetmap.org/export/embed.html" +
+            "?bbox=${bbox.west},${bbox.south},${bbox.east},${bbox.north}" +
+            "&layer=mapnik&marker=$latitude,$longitude"
     }
+
+    androidx.compose.ui.viewinterop.AndroidView(
+        factory = { ctx ->
+            android.webkit.WebView(ctx).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                settings.builtInZoomControls = true
+                settings.displayZoomControls = false
+                webViewClient = android.webkit.WebViewClient()
+                loadUrl(mapUrl)
+            }
+        },
+        update = { webView ->
+            val currentUrl = webView.url
+            if (currentUrl != mapUrl) {
+                webView.loadUrl(mapUrl)
+            }
+        },
+        modifier = modifier.fillMaxSize()
+    )
+}
+
+/**
+ * Bounding box for OpenStreetMap embed URL calculation.
+ */
+private data class MapBBox(
+    val west: Double,
+    val south: Double,
+    val east: Double,
+    val north: Double
+)
+
+/**
+ * Approximate bounding box from center coordinates and zoom level.
+ * Higher zoom = smaller bbox = more detail.
+ */
+private fun calculateBoundingBox(lat: Double, lon: Double, zoom: Int): MapBBox {
+    // Each zoom level halves the degrees shown; zoom 10 ≈ ±0.1°
+    val span = 360.0 / (1 shl zoom.coerceIn(1, 18))
+    return MapBBox(
+        west = lon - span,
+        south = lat - span / 2,
+        east = lon + span,
+        north = lat + span / 2
+    )
 }
