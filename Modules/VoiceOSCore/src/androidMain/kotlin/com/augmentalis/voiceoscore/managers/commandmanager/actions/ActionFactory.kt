@@ -643,8 +643,6 @@ class DynamicScrollAction(
             }
 
             val success = scrollableNode.performAction(action)
-            scrollableNode.recycle()
-            rootNode?.recycle()
 
             return if (success) {
                 createSuccessResult(command, successMessage)
@@ -702,7 +700,6 @@ class DynamicScrollAction(
             return createSuccessResult(command, successMessage)
         }
 
-        rootNode?.recycle()
         return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Could not perform scroll")
     }
 
@@ -715,7 +712,6 @@ class DynamicScrollAction(
             val child = node.getChild(i) ?: continue
             val scrollable = findScrollableNode(child)
             if (scrollable != null) return scrollable
-            child.recycle()
         }
 
         return null
@@ -742,7 +738,6 @@ class DynamicCursorAction(
         val focusedNode = rootNode?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
 
         if (focusedNode == null || !focusedNode.isEditable) {
-            rootNode?.recycle()
             return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "No editable field focused")
         }
 
@@ -797,8 +792,6 @@ class DynamicCursorAction(
         }
 
         val success = focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args)
-        focusedNode.recycle()
-        rootNode?.recycle()
 
         return if (success) {
             createSuccessResult(command, successMessage)
@@ -829,7 +822,6 @@ class DynamicEditingAction(
             ?: rootNode?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
 
         if (focusedNode == null) {
-            rootNode?.recycle()
             return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "No focused element")
         }
 
@@ -844,8 +836,6 @@ class DynamicEditingAction(
                     putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "")
                 }
                 val success = focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-                focusedNode.recycle()
-                rootNode?.recycle()
                 return if (success) {
                     createSuccessResult(command, successMessage)
                 } else {
@@ -858,27 +848,19 @@ class DynamicEditingAction(
                 val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_Z))
                 audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_Z))
-                focusedNode.recycle()
-                rootNode?.recycle()
                 return createSuccessResult(command, successMessage)
             }
 
             "redo" -> {
-                focusedNode.recycle()
-                rootNode?.recycle()
                 return createSuccessResult(command, successMessage)
             }
 
             else -> {
-                focusedNode.recycle()
-                rootNode?.recycle()
                 return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Unknown editing action: $action")
             }
         }
 
         val success = focusedNode.performAction(accessibilityAction)
-        focusedNode.recycle()
-        rootNode?.recycle()
 
         return if (success) {
             createSuccessResult(command, successMessage)
@@ -1071,9 +1053,7 @@ class DynamicKeyboardAction(
                     val focusedNode = rootNode?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
                     if (focusedNode != null) {
                         inputMethodManager.hideSoftInputFromWindow(null, 0)
-                        focusedNode.recycle()
                     }
-                    rootNode?.recycle()
                 }
                 // Alternative: use global action to dismiss keyboard
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && accessibilityService != null) {
@@ -1083,11 +1063,13 @@ class DynamicKeyboardAction(
             }
 
             "open", "show" -> {
-                inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
+                @Suppress("DEPRECATION")
+                inputMethodManager.showSoftInput(null, 0)
                 createSuccessResult(command, successMessage)
             }
 
             "toggle" -> {
+                @Suppress("DEPRECATION")
                 inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_IMPLICIT, 0)
                 createSuccessResult(command, successMessage)
             }

@@ -6,6 +6,8 @@
  */
 package com.avanues.logging
 
+import kotlin.concurrent.Volatile
+
 /**
  * Platform-specific logger factory
  *

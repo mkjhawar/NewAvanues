@@ -1,6 +1,6 @@
 // filename: features/nlu/src/iosMain/kotlin/com/augmentalis/ava/features/nlu/IntentClassifier.kt
 // created: 2025-11-02
-// author: Claude Code
+// Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
 // © Augmentalis Inc, Intelligent Devices LLC
 // TCR: Phase 2 - iOS NLU with Core ML implementation
 
@@ -8,6 +8,9 @@ package com.augmentalis.nlu
 
 import com.augmentalis.ava.core.common.Result
 import com.augmentalis.nlu.coreml.CoreMLModelManager
+import com.augmentalis.nlu.matching.currentTimeMillis
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -133,7 +136,7 @@ actual class IntentClassifier private constructor() {
                 )
             }
 
-            val startTime = System.currentTimeMillis()
+            val startTime = currentTimeMillis()
 
             // Tokenize input
             val tokens = tokenizer?.tokenize(utterance)
@@ -186,7 +189,7 @@ actual class IntentClassifier private constructor() {
                 }
             }
 
-            val inferenceTime = System.currentTimeMillis() - startTime
+            val inferenceTime = currentTimeMillis() - startTime
 
             // Find best matching intent
             val bestIntentIndex = scores.indices.maxByOrNull { scores[it] } ?: 0
@@ -441,6 +444,7 @@ actual class IntentClassifier private constructor() {
     @ThreadLocal
     actual companion object {
         private var INSTANCE: IntentClassifier? = null
+        private val lock = SynchronizedObject()
 
         /**
          * Get singleton instance of IntentClassifier
@@ -448,7 +452,7 @@ actual class IntentClassifier private constructor() {
          * @return IntentClassifier instance
          */
         actual fun getInstance(context: Any): IntentClassifier {
-            return INSTANCE ?: synchronized(this) {
+            return INSTANCE ?: synchronized(lock) {
                 INSTANCE ?: IntentClassifier().also {
                     INSTANCE = it
                     println("IntentClassifier: Singleton instance created")

@@ -11,13 +11,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -170,17 +170,6 @@ fun AddressBar(
         lastSyncedUrl = url
     }
 
-    // Detect WebGL-intensive sites that may cause ANR on AOSP devices
-    val isWebGLSite = remember(url) {
-        val lowerUrl = url.lowercase()
-        lowerUrl.contains("babylon") ||
-        lowerUrl.contains("shadertoy") ||
-        lowerUrl.contains("webgl") ||
-        lowerUrl.contains("three.js") ||
-        lowerUrl.contains("threejs") ||
-        lowerUrl.contains("webgpu")
-    }
-
     // Helper function to dismiss keyboard reliably
     fun dismissKeyboard() {
         hasFocus = false
@@ -241,25 +230,16 @@ fun AddressBar(
                             horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
                         ) {
                             // Bookmark button
-                            Surface(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(ShapeTokens.xs))
-                                    .clickable { onAddFavorite() },
-                                shape = RoundedCornerShape(ShapeTokens.xs),
-                                color = if (isFavorite) AvanueTheme.colors.starActive.copy(alpha = 0.15f) else Color.Transparent
+                            IconButton(
+                                onClick = onAddFavorite,
+                                modifier = Modifier.size(28.dp)
                             ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    Icon(
-                                        imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                        contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                        tint = if (isFavorite) IconVariant.Warning.toColor() else IconVariant.Secondary.toColor(),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                    contentDescription = if (isFavorite) "Remove bookmark (Voice: remove bookmark)" else "Add bookmark (Voice: add bookmark)",
+                                    tint = if (isFavorite) IconVariant.Warning.toColor() else IconVariant.Secondary.toColor(),
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
 
                             // URL input with select-all-on-focus behavior
@@ -305,38 +285,14 @@ fun AddressBar(
                                 }
                             )
 
-                            // History button - tap to open history
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(ShapeTokens.xs))
-                                    .clickable(onClick = onHistoryClick),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.History,
-                                    contentDescription = "History",
-                                    tint = IconVariant.Secondary.toColor(),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            // Go button — focuses URL field when empty
+                            // Settings button - one-tap access to settings
                             IconButton(
-                                onClick = {
-                                    if (textFieldValue.text.isNotBlank()) {
-                                        dismissKeyboard()
-                                        onGo()
-                                    } else {
-                                        focusRequester.requestFocus()
-                                    }
-                                },
-                                modifier = Modifier.size(28.dp),
-                                enabled = true
+                                onClick = onSettingsClick,
+                                modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Go (Voice: go)",
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings (Voice: open settings)",
                                     tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -357,7 +313,8 @@ fun AddressBar(
                             label = "Back",
                             onClick = onBack,
                             enabled = canGoBack,
-                            tint = if (canGoBack) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor()
+                            tint = if (canGoBack) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
+                            voiceHint = "go back"
                         )
 
                         LabeledNavButton(
@@ -365,41 +322,33 @@ fun AddressBar(
                             label = "Fwd",
                             onClick = onForward,
                             enabled = canGoForward,
-                            tint = if (canGoForward) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor()
+                            tint = if (canGoForward) IconVariant.Primary.toColor() else IconVariant.Disabled.toColor(),
+                            voiceHint = "go forward"
                         )
 
                         LabeledNavButton(
                             icon = Icons.Default.Refresh,
                             label = "Reload",
                             onClick = onRefresh,
-                            tint = IconVariant.Primary.toColor()
+                            tint = IconVariant.Primary.toColor(),
+                            voiceHint = "refresh"
+                        )
+
+                        LabeledNavButton(
+                            icon = Icons.Default.History,
+                            label = "History",
+                            onClick = onHistoryClick,
+                            tint = IconVariant.Primary.toColor(),
+                            voiceHint = "open history"
                         )
 
                         if (isArticleAvailable) {
                             LabeledNavButton(
-                                icon = Icons.Default.MenuBook,
+                                icon = Icons.AutoMirrored.Filled.MenuBook,
                                 label = "Read",
                                 onClick = onReadingModeToggle,
-                                tint = if (isReadingMode) IconVariant.Primary.toColor() else IconVariant.Secondary.toColor()
-                            )
-                        }
-
-                        // Desktop mode toggle
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.alpha(if (isWebGLSite) 0.5f else 1f)
-                        ) {
-                            CompactDesktopModeIndicator(
-                                isDesktopMode = isDesktopMode,
-                                onClick = onDesktopModeToggle,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Text(
-                                text = if (isDesktopMode) "Mobile" else "Advanced",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 8.sp,
-                                color = AvanueTheme.colors.textSecondary,
-                                textAlign = TextAlign.Center
+                                tint = if (isReadingMode) IconVariant.Primary.toColor() else IconVariant.Secondary.toColor(),
+                                voiceHint = "reading mode"
                             )
                         }
 
@@ -423,14 +372,16 @@ fun AddressBar(
                             icon = Icons.Default.GraphicEq,
                             label = "Voice",
                             onClick = onCommandBarToggle,
-                            tint = IconVariant.Primary.toColor()
+                            tint = IconVariant.Primary.toColor(),
+                            voiceHint = "show command bar"
                         )
 
                         LabeledNavButton(
                             icon = Icons.Default.Mic,
                             label = "Mic",
                             onClick = { if (!isListening) onStartListening() },
-                            tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor()
+                            tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor(),
+                            voiceHint = "start listening"
                         )
                     }
                 }
@@ -518,25 +469,16 @@ fun AddressBar(
                             horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
                         ) {
                             // Bookmark button - tap to add/remove from favorites
-                            Surface(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(ShapeTokens.sm))
-                                    .clickable { onAddFavorite() },
-                                shape = RoundedCornerShape(ShapeTokens.sm),
-                                color = if (isFavorite) AvanueTheme.colors.starActive.copy(alpha = 0.15f) else Color.Transparent
+                            IconButton(
+                                onClick = onAddFavorite,
+                                modifier = Modifier.size(32.dp)
                             ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    Icon(
-                                        imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                        contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                        tint = if (isFavorite) IconVariant.Warning.toColor() else IconVariant.Secondary.toColor(),
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                    contentDescription = if (isFavorite) "Remove bookmark (Voice: remove bookmark)" else "Add bookmark (Voice: add bookmark)",
+                                    tint = if (isFavorite) IconVariant.Warning.toColor() else IconVariant.Secondary.toColor(),
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
 
                             // URL input with select-all-on-focus behavior
@@ -583,36 +525,26 @@ fun AddressBar(
                             )
 
                             // History button - tap to open history
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(ShapeTokens.sm))
-                                    .clickable(onClick = onHistoryClick),
-                                contentAlignment = Alignment.Center
+                            IconButton(
+                                onClick = onHistoryClick,
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.History,
-                                    contentDescription = "History",
+                                    contentDescription = "History (Voice: open history)",
                                     tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
 
+                            // Settings button - one-tap access to settings
                             IconButton(
-                                onClick = {
-                                    if (textFieldValue.text.isNotBlank()) {
-                                        dismissKeyboard()
-                                        onGo()
-                                    } else {
-                                        focusRequester.requestFocus()
-                                    }
-                                },
-                                modifier = Modifier.size(32.dp),
-                                enabled = true
+                                onClick = onSettingsClick,
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Go (Voice: go)",
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings (Voice: open settings)",
                                     tint = IconVariant.Secondary.toColor(),
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -636,25 +568,6 @@ fun AddressBar(
                         )
                     }
 
-                    // Desktop/Advanced mode toggle
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.alpha(if (isWebGLSite) 0.5f else 1f)
-                    ) {
-                        CompactDesktopModeIndicator(
-                            isDesktopMode = isDesktopMode,
-                            onClick = onDesktopModeToggle,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Text(
-                            text = if (isDesktopMode) "Mobile" else "Advanced",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 8.sp,
-                            color = AvanueTheme.colors.textSecondary,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
                     // Command bar toggle button - shows/hides bottom command bar
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(
@@ -664,7 +577,7 @@ fun AddressBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.GraphicEq,
-                                contentDescription = if (isCommandBarVisible) "Hide command bar" else "Show command bar",
+                                contentDescription = if (isCommandBarVisible) "Hide command bar (Voice: hide command bar)" else "Show command bar (Voice: show command bar)",
                                 tint = IconVariant.Primary.toColor(),
                                 modifier = Modifier.size(24.dp)
                             )
@@ -687,7 +600,7 @@ fun AddressBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Mic,
-                                contentDescription = if (isListening) "Listening for command..." else "Tap to speak command",
+                                contentDescription = if (isListening) "Listening (Voice: stop listening)" else "Microphone (Voice: start listening)",
                                 tint = if (isListening) IconVariant.Success.toColor() else IconVariant.Primary.toColor(),
                                 modifier = Modifier
                             )
@@ -709,6 +622,15 @@ fun AddressBar(
 /**
  * Compact labeled icon button for the address bar navigation row.
  * Shows an icon with a tiny text label below.
+ *
+ * @param icon Icon to display
+ * @param label Visible text label below the icon
+ * @param onClick Click handler
+ * @param enabled Whether the button is enabled
+ * @param tint Icon tint color
+ * @param voiceHint Explicit voice command phrase. When provided, contentDescription
+ *   becomes "$label (Voice: $voiceHint)" for the universal voice hint convention.
+ *   Any Android accessibility framework (Compose, Flutter, RN, Unity) can use this.
  */
 @Composable
 private fun LabeledNavButton(
@@ -716,15 +638,17 @@ private fun LabeledNavButton(
     label: String,
     onClick: () -> Unit,
     enabled: Boolean = true,
-    tint: Color = IconVariant.Primary.toColor()
+    tint: Color = IconVariant.Primary.toColor(),
+    voiceHint: String? = null
 ) {
+    val description = if (voiceHint != null) "$label (Voice: $voiceHint)" else label
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable(enabled = enabled, onClick = onClick)
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = label,
+            contentDescription = description,
             tint = tint,
             modifier = Modifier.size(24.dp)
         )

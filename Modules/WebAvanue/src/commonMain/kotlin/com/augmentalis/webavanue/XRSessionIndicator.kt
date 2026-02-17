@@ -116,7 +116,7 @@ fun XRSessionIndicator(
 
                 // Performance metrics (only when active)
                 if (sessionState == "active" && fps > 0) {
-                    Divider(color = Color.White.copy(alpha = 0.2f))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -160,7 +160,7 @@ fun XRSessionIndicator(
 
                 // Warning message (if present)
                 if (warningLevel != "none" && sessionState == "active") {
-                    Divider(color = Color.White.copy(alpha = 0.2f))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

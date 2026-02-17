@@ -1,0 +1,111 @@
+# VOS v3.0 — hi-IN app commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:hi-IN:en-US:app
+
+nav_back|peeche jao|wapas jao,back,peeche,pichla screen|Pichle screen par jao
+nav_home|home jao|home,ghar jao,home screen|Home screen par jao
+nav_recent|recent apps dikhao|recent apps,haal ke apps,app switcher|Haal ke apps dikhao
+nav_drawer|app drawer kholo|app drawer,saare apps,all apps|App drawer kholo
+nav_scroll_down|neeche scroll karo|neeche jao,page down|Neeche scroll karo
+nav_scroll_up|upar scroll karo|upar jao,page up|Upar scroll karo
+nav_scroll_left|baayen scroll karo|left scroll|Baayen scroll karo
+nav_scroll_right|daayen scroll karo|right scroll|Daayen scroll karo
+media_play|music chalao|play karo,chalao,bajao,resume karo|Media play/resume karo
+media_pause|music roko|pause karo,roko,band karo|Media pause karo
+media_next|agla gaana|next track,skip karo,agla|Agla track bajao
+media_prev|pichla gaana|previous track,pichla|Pichla track bajao
+media_vol_up|volume badhao|volume up,aur loud,awaaz badhao|Volume badhao
+media_vol_down|volume kam karo|volume down,dheere karo,awaaz kam karo|Volume kam karo
+media_mute|mute karo|mute,chup karo,awaaz band karo|Audio mute karo
+sys_settings|settings kholo|settings,setting dikhao,phone settings|System settings kholo
+sys_notifications|notifications dikhao|notifications,notification panel|Notifications dikhao
+sys_clear_notif|notifications saaf karo|notifications hatao,clear notifications|Saari notifications saaf karo
+sys_screenshot|screenshot lo|screenshot,screen capture karo|Screenshot lo
+sys_flash_on|flashlight chalu karo|torch on,flashlight on,torch chalu karo|Flashlight chalu karo
+sys_flash_off|flashlight band karo|torch off,flashlight off,torch band karo|Flashlight band karo
+sys_bright_up|brightness badhao|aur chamak,brighter,roshni badhao|Screen brightness badhao
+sys_bright_down|brightness kam karo|kam chamak,dimmer,roshni kam karo|Screen brightness kam karo
+sys_lock|screen lock karo|phone lock karo,lock karo|Screen lock karo
+sys_rotate|screen ghoomao|rotate karo,orientation badlo|Screen rotation toggle karo
+sys_wifi|wifi toggle karo|wifi on,wifi off,wifi chalu karo,wifi band karo|WiFi toggle karo
+sys_bluetooth|bluetooth toggle karo|bluetooth on,bluetooth off,bluetooth chalu karo,bluetooth band karo|Bluetooth toggle karo
+voice_mute|awaaz band karo|sunna band karo,voice off,mic band karo|Voice recognition mute karo
+voice_wake|awaaz chalu karo|sunna shuru karo,voice on,mic chalu karo|Voice recognition jaago
+voice_dict_start|dictation shuru karo|dictation,likhna shuru karo,type mode|Dictation mode shuru karo
+voice_dict_stop|dictation band karo|dictation roko,command mode|Dictation mode band karo
+voice_help|voice commands dikhao|kya bol sakta hoon,help,madad|Available commands dikhao
+voice_num_on|numbers on|numbers dikhao,numbers hamesha|Screen elements par numbered badges hamesha dikhao
+voice_num_off|numbers off|numbers chupao,no numbers|Numbered badges mat dikhao
+voice_num_auto|numbers auto|numbers automatic,auto numbers|Sirf lists ke liye numbers dikhao
+voice_cursor_show|cursor dikhao|cursor on,cursor chalu karo|Voice cursor overlay dikhao
+voice_cursor_hide|cursor chupao|cursor off,cursor band karo|Voice cursor overlay chupao
+voice_cursor_click|cursor click karo|yahan click karo,click here|Cursor position par click karo
+acc_click|click karo|tap karo,dabao|Kisi named ya numbered element par click karo
+acc_long_click|der tak dabao|long press karo,long click karo,daba kar rakho|Element par long press karo
+acc_zoom_in|zoom in karo|bada karo,zoom badhao|Zoom in karo
+acc_zoom_out|zoom out karo|chhota karo,zoom ghatao|Zoom out karo
+acc_read|screen padho|padh kar sunao,yeh padho,page padho|Screen content zor se padho
+acc_stop_read|padhna band karo|ruko,chup raho,bas karo|Zor se padhna band karo
+text_select_all|sab select karo|saara select karo,poora highlight karo|Saara text select karo
+text_copy|copy karo|copy,text copy karo|Selection clipboard mein copy karo
+text_paste|paste karo|paste,chipkao|Clipboard se paste karo
+text_cut|cut karo|cut,kaat do|Selection clipboard mein cut karo
+text_undo|undo karo|wapas karo,undo|Pichla action undo karo
+text_redo|redo karo|phir se karo,redo|Pichla undo redo karo
+text_delete|delete karo|mitao,hatao,erase karo|Selected text delete karo
+input_show_kb|keyboard dikhao|keyboard kholo,keyboard|On-screen keyboard dikhao
+input_hide_kb|keyboard chupao|keyboard band karo,keyboard hatao|On-screen keyboard chupao
+appctl_close|app band karo|yeh band karo,exit karo,quit karo|Current app band karo
+acc_double_tap|डबल टैप|डबल क्लिक|एलिमेंट पर डबल टैप करें
+acc_swipe_left|बाएं स्वाइप करो||स्क्रीन पर बाएं स्वाइप करें
+acc_swipe_right|दाएं स्वाइप करो||स्क्रीन पर दाएं स्वाइप करें
+acc_swipe_up|ऊपर स्वाइप करो||स्क्रीन पर ऊपर स्वाइप करें
+acc_swipe_down|नीचे स्वाइप करो||स्क्रीन पर नीचे स्वाइप करें
+acc_stroke_start|ड्रॉइंग शुरू करो|ड्रॉ करो,स्ट्रोक शुरू करो|ड्रॉइंग स्ट्रोक शुरू करें (एनोटेशन)
+acc_stroke_end|ड्रॉइंग बंद करो|ड्रॉइंग खत्म करो,स्ट्रोक बंद करो|ड्रॉइंग स्ट्रोक समाप्त करें (एनोटेशन)
+acc_erase|इरेज़र|इरेज़ मोड,मिटाने वाला|इरेज़र मोड चालू करें (एनोटेशन)
+# ── Camera (PhotoAvanue) ──
+cam_open|photo avanue kholo|camera kholo,camera view,camera avanue,photo avanue|PhotoAvanue shuru karo
+cam_capture|photo lo|capture karo,snap karo,click karo,tasveer lo|Photo capture karo
+cam_record_start|recording shuru karo|video record karo,recording shuru,record karo|Video recording shuru karo
+cam_record_stop|recording band karo|recording khatam karo,recording roko|Video recording band karo
+cam_record_pause|recording pause karo|video pause karo|Video recording pause karo
+cam_record_resume|recording jaari rakho|recording continue karo|Paused recording jaari karo
+cam_flip|camera paltao|camera badlo,front camera,back camera,selfie camera|Front aur back camera badlo
+cam_flash_on|flash chalu karo|flash on karo,flash lagao|Camera flash chalu karo
+cam_flash_off|flash band karo|flash off karo,flash hatao|Camera flash band karo
+cam_flash_auto|flash auto karo|automatic flash,auto flash|Flash ko automatic par set karo
+cam_flash_torch|torch mode|flashlight mode,flash chalu rakho|Flash ko hamesha chalu rakho
+cam_zoom_in|camera zoom in karo|camera paas lao,camera bada karo|Camera mein zoom in karo
+cam_zoom_out|camera zoom out karo|camera door karo,camera chhota karo|Camera mein zoom out karo
+cam_exposure_up|exposure badhao|camera chamkao,halka karo,exposure increase|Camera exposure badhao
+cam_exposure_down|exposure kam karo|camera andhera karo,dark karo,exposure decrease|Camera exposure kam karo
+cam_mode_photo|photo mode|picture mode,camera mode|Photo capture mode mein jao
+cam_mode_video|video mode|movie mode,recording mode|Video recording mode mein jao
+# ── Cockpit ──
+cockpit_open|cockpit kholo|cockpit view,cockpit shuru karo,cockpit mode|Cockpit shuru karo
+cockpit_add_frame|frame jodo|naya frame,frame banao,panel jodo|Naya content frame jodo
+cockpit_layout|layout badlo|layout switch karo,layout mode|Layout picker kholo
+cockpit_layout_grid|grid layout|grid,grid view|Grid layout mein jao
+cockpit_layout_split|split layout|split view,side by side|Split layout mein jao
+cockpit_layout_freeform|freeform layout|freeform,free layout|Freeform layout mein jao
+cockpit_layout_fullscreen|fullscreen|maximize karo,poora screen|Fullscreen layout mein jao
+cockpit_layout_workflow|workflow|workflow mode,step mode|Workflow layout mein jao
+cockpit_minimize|frame minimize karo|minimize karo,frame chhota karo|Active frame minimize karo
+cockpit_maximize|frame maximize karo|maximize karo,frame bada karo|Active frame maximize karo
+cockpit_close|frame band karo|band karo,frame hatao,frame delete karo|Active frame band karo
+cockpit_add_web|web jodo|naya web,web kholo,browser jodo|Web browser frame jodo
+cockpit_add_camera|camera jodo|camera kholo,naya camera|Camera frame jodo
+cockpit_add_note|note jodo|nayi note,note kholo|Note frame jodo
+cockpit_add_pdf|pdf jodo|pdf kholo,naya pdf|PDF viewer frame jodo
+cockpit_add_image|image jodo|image kholo,nayi image,photo jodo|Image viewer frame jodo
+cockpit_add_video|video jodo|video kholo,naya video|Video player frame jodo
+cockpit_add_whiteboard|whiteboard jodo|whiteboard kholo,naya whiteboard,draw karo|Whiteboard frame jodo
+cockpit_add_terminal|terminal jodo|terminal kholo,naya terminal,console|Terminal frame jodo
+cockpit_web_back|web mein peeche jao|peeche,peeche navigate karo|Web frame: peeche jao
+cockpit_web_forward|web mein aage jao|aage,aage navigate karo|Web frame: aage jao
+cockpit_web_refresh|web refresh karo|reload karo,page refresh karo|Web frame: page refresh karo
+cockpit_scroll_up|cockpit upar scroll karo|panel upar|Active frame upar scroll karo
+cockpit_scroll_down|cockpit neeche scroll karo|panel neeche|Active frame neeche scroll karo
+cockpit_zoom_in|cockpit zoom in karo|panel zoom in|Active frame mein zoom in karo
+cockpit_zoom_out|cockpit zoom out karo|panel zoom out|Active frame mein zoom out karo

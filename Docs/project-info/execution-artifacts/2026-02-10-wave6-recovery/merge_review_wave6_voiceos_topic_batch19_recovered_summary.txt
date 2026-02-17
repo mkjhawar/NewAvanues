@@ -1,0 +1,6 @@
+batch=batch19
+manual_pool=172
+remaining_after_exclusion=10
+selected_topics=voiceuing-complete-guide (1), vos4-changelog-master (1), architecture-guide (1), voiceos-service-refactoring-todo (1), voiceos-service-refactoring-status (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch19_recovered.csv

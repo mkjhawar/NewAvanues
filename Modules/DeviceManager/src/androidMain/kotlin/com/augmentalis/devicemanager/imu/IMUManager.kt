@@ -4,15 +4,14 @@
 package com.augmentalis.devicemanager.imu
 
 import android.content.Context
-import android.content.Context.WINDOW_SERVICE
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.hardware.display.DisplayManager
 import android.util.Log
 import android.view.Display
 import android.view.Surface
-import android.view.WindowManager
 import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,7 +61,10 @@ class IMUManager private constructor(
     // This allows DeviceDetector to provide capabilities without circular dependencies
     private var deviceCapabilities: DeviceDetector.DeviceCapabilities? = null
 
-    private var mLastAccuracy = 0
+    // Initialize to ACCURACY_LOW so sensor events flow immediately after registerListener().
+    // The default value 0 (SENSOR_STATUS_UNRELIABLE) would block ALL events until
+    // onAccuracyChanged fires, which on some devices (RealWear smart glasses) may be delayed.
+    private var mLastAccuracy = SensorManager.SENSOR_STATUS_ACCURACY_LOW
 
     /**
      * Inject device capabilities for sensor availability checks
@@ -78,7 +80,11 @@ class IMUManager private constructor(
     // Sensor management
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
-    private var display: Display = (context.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay
+    // Use DisplayManager instead of WindowManager.defaultDisplay to avoid
+    // "Tried to obtain display from a Context not associated with one" on Android 11+
+    // when this singleton is created with applicationContext.
+    private var display: Display = (context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager)
+        .getDisplay(Display.DEFAULT_DISPLAY)
     private var rotation: Int = display.rotation
     private val rotationMatrixBuffer = FloatArray(9)
     private val adjustedRotationMatrixBuffer = FloatArray(9)
@@ -249,7 +255,8 @@ class IMUManager private constructor(
             // This prevents unnecessary sensor queries and registration attempts
 
             // Priority 1: Rotation vector sensors (best for orientation)
-            if (caps?.hasGyroscope == true && caps.hasMagnetometer) {
+            // Gate must match lazy rotationSensor property: gyro OR mag (not AND)
+            if (caps?.hasGyroscope == true || caps?.hasMagnetometer == true) {
                 rotationSensor?.let { sensor ->
                     val success = sensorManager.registerListener(
                         this, sensor, SENSOR_DELAY_MICROS

@@ -1,9 +1,9 @@
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
-    id("com.android.library")
-    id("com.google.devtools.ksp")
-    id("com.google.dagger.hilt.android")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 group = "com.augmentalis.alc"
@@ -66,31 +66,31 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // Kotlin standard
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
 
                 // Ktor for HTTP (cloud providers)
-                implementation("io.ktor:ktor-client-core:2.3.7")
-                implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
             }
         }
 
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
         val androidMain by getting {
             dependencies {
                 // Ktor Android engine
-                implementation("io.ktor:ktor-client-okhttp:2.3.7")
+                implementation(libs.ktor.client.okhttp)
 
                 // Hilt
-                implementation("com.google.dagger:hilt-android:2.48")
+                implementation(libs.hilt.android)
 
                 // TVM Runtime (local)
                 implementation(files("libs/tvm4j_core.jar"))
@@ -112,28 +112,28 @@ kotlin {
                 iosArm64Main.dependsOn(this)
                 iosSimulatorArm64Main.dependsOn(this)
                 dependencies {
-                    implementation("io.ktor:ktor-client-darwin:2.3.7")
+                    implementation(libs.ktor.client.darwin)
                 }
             }
         }
         // Desktop (JVM) source set
         val desktopMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-cio:2.3.7")
+                implementation(libs.ktor.client.cio)
                 // ONNX Runtime for desktop inference
                 implementation("com.microsoft.onnxruntime:onnxruntime:1.16.3")
                 // Logging
-                implementation("org.slf4j:slf4j-api:2.0.9")
-                implementation("ch.qos.logback:logback-classic:1.4.11")
+                implementation(libs.slf4j.api)
+                implementation(libs.logback.classic)
                 // Coroutines JVM
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.3")
+                implementation(libs.kotlinx.coroutines.core)
             }
         }
 
         val desktopTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
@@ -180,5 +180,5 @@ android {
 
 // Hilt KSP configuration for Android
 dependencies {
-    add("kspAndroid", "com.google.dagger:hilt-compiler:2.48")
+    add("kspAndroid", libs.hilt.compiler)
 }

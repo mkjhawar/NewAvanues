@@ -17,6 +17,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,17 +32,20 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.augmentalis.avanueui.theme.AppearanceMode
+import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.AvanueThemeProvider
-import com.augmentalis.avanueui.theme.AvanueThemeVariant
+import com.augmentalis.avanueui.theme.MaterialMode
 import com.augmentalis.avanueui.display.DisplayProfile
 import com.augmentalis.avanueui.display.DisplayProfileResolver
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
 import com.augmentalis.devicemanager.KmpDeviceType
-import com.augmentalis.voiceavanue.data.AvanuesSettings
+import com.augmentalis.foundation.settings.models.AvanuesSettings
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
+import com.augmentalis.voiceavanue.ui.cockpit.CockpitEntryViewModel
 import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
 import com.augmentalis.voiceavanue.ui.developer.DeveloperSettingsScreen
 import com.augmentalis.voiceavanue.ui.home.CommandsScreen
@@ -49,6 +53,8 @@ import com.augmentalis.voiceavanue.ui.home.HomeScreen
 import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
 import com.augmentalis.voiceavanue.ui.about.AboutScreen
 import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
+import com.augmentalis.voiceavanue.ui.sync.VosSyncScreen
+import com.augmentalis.cockpit.ui.CockpitScreen
 import com.augmentalis.webavanue.BrowserApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -77,12 +83,22 @@ class MainActivity : ComponentActivity() {
             val settings by settingsRepository.settings.collectAsState(
                 initial = AvanuesSettings()
             )
-            val variant = AvanueThemeVariant.fromString(settings.themeVariant)
+            val palette = AvanueColorPalette.fromString(settings.themePalette)
+            val style = MaterialMode.fromString(settings.themeStyle)
+            val appearance = AppearanceMode.fromString(settings.themeAppearance)
+            val isDark = when (appearance) {
+                AppearanceMode.Auto -> isSystemInDarkTheme()
+                AppearanceMode.Dark -> true
+                AppearanceMode.Light -> false
+            }
 
             AvanueThemeProvider(
-                colors = variant.colors,
-                glass = variant.glass,
-                displayProfile = displayProfile
+                colors = palette.colors(isDark),
+                glass = palette.glass(isDark),
+                water = palette.water(isDark),
+                displayProfile = displayProfile,
+                materialMode = style,
+                isDark = isDark
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -172,7 +188,9 @@ enum class AvanueMode(val route: String, val label: String) {
     SETTINGS("settings", "Settings"),
     ABOUT("about", "About Avanues"),
     DEVELOPER_CONSOLE("developer_console", "Developer Console"),
-    DEVELOPER_SETTINGS("developer_settings", "Developer Settings")
+    DEVELOPER_SETTINGS("developer_settings", "Developer Settings"),
+    VOS_SYNC("vos_sync", "VOS Sync"),
+    COCKPIT("cockpit", "Cockpit")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
 }
 
@@ -194,15 +212,8 @@ fun AvanuesApp(
     ) {
         composable(AvanueMode.HUB.route) {
             HubDashboardScreen(
-                onNavigateToVoice = {
-                    navController.navigate(AvanueMode.VOICE.route) {
-                        launchSingleTop = true
-                    }
-                },
-                onNavigateToBrowser = {
-                    navController.navigate(AvanueMode.BROWSER.route) {
-                        launchSingleTop = true
-                    }
+                onNavigateToRoute = { route ->
+                    navController.navigate(route) { launchSingleTop = true }
                 },
                 onNavigateToSettings = {
                     navController.navigate(AvanueMode.SETTINGS.route) {
@@ -256,6 +267,9 @@ fun AvanuesApp(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToDeveloperConsole = {
                     navController.navigate(AvanueMode.DEVELOPER_CONSOLE.route)
+                },
+                onNavigateToVosSync = {
+                    navController.navigate(AvanueMode.VOS_SYNC.route)
                 }
             )
         }
@@ -277,6 +291,20 @@ fun AvanuesApp(
 
         composable(AvanueMode.DEVELOPER_SETTINGS.route) {
             DeveloperSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.VOS_SYNC.route) {
+            VosSyncScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.COCKPIT.route) {
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

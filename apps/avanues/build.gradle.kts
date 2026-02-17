@@ -88,6 +88,7 @@ android {
     kotlinOptions {
         jvmTarget = "17"
         freeCompilerArgs += listOf(
+            "-Xexpect-actual-classes",
             "-opt-in=kotlin.RequiresOptIn",
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
             "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi"
@@ -102,6 +103,7 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
         jniLibs {
             pickFirsts.add("**/libc++_shared.so")
@@ -144,6 +146,18 @@ dependencies {
     // SpeechRecognition - KMP speech module
     implementation(project(":Modules:SpeechRecognition"))
 
+    // Cockpit - Multi-window display & session management
+    implementation(project(":Modules:Cockpit"))
+
+    // Content Modules (rendered inside Cockpit frames)
+    implementation(project(":Modules:PDFAvanue"))
+    implementation(project(":Modules:ImageAvanue"))
+    implementation(project(":Modules:VideoAvanue"))
+    implementation(project(":Modules:NoteAvanue"))
+    implementation(project(":Modules:PhotoAvanue"))
+    implementation(project(":Modules:RemoteCast"))
+    implementation(project(":Modules:AnnotationAvanue"))
+
     // Unified Database
     implementation(project(":Modules:Database"))
 
@@ -175,7 +189,7 @@ dependencies {
     // Jetpack Compose
     // =========================================================================
 
-    implementation(platform(libs.compose.bom.get()))
+    implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui.ui)
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
@@ -214,12 +228,32 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
 
     // =========================================================================
     // WebView (for WebAvanue browser)
     // =========================================================================
 
     implementation(libs.androidx.webkit)
+
+    // =========================================================================
+    // SFTP (for VOS sync)
+    // =========================================================================
+
+    implementation(libs.jsch)
+
+    // =========================================================================
+    // WorkManager (for background sync)
+    // =========================================================================
+
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // =========================================================================
+    // Security (Encrypted credential storage)
+    // =========================================================================
+
+    implementation(libs.androidx.security.crypto)
 
     // =========================================================================
     // Debug & Testing
@@ -234,6 +268,6 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)
-    androidTestImplementation(platform(libs.compose.bom.get()))
+    androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
 }

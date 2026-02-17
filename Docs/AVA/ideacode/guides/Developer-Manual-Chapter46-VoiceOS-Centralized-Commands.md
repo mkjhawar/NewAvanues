@@ -1,5 +1,7 @@
 # Chapter 46: VoiceOS Centralized Voice Command Architecture
 
+> **SUPERSEDED (260216):** This chapter documents the v1.0/v2.0 architecture using `ArrayJsonParser` and monolithic `.json` files. The current architecture uses `VosParser` (KMP) with split `.app.vos` / `.web.vos` files in compact v3.0 format. See **Chapter 93** (Voice Command Pipeline) and **Chapter 95** (VOS Distribution) for current documentation. `ArrayJsonParser` was deleted in the dead code audit (260216).
+
 **Version:** 2.0 (Corrected)
 **Date:** 2025-11-21
 **Audience:** Avanues Ecosystem Developers

@@ -1,0 +1,193 @@
+/**
+ * OverlayNumberingExecutor.kt - Per-container numbering executor for overlay badges
+ *
+ * Implements the KMP NumbersOverlayExecutor interface with per-container scoping.
+ * Now lives in KMP commonMain alongside OverlayStateManager, enabling direct
+ * calls without mode-mapping indirection.
+ *
+ * Replaces the flat global avidToNumber map with per-container stable numbering.
+ * Each scroll container gets its own number sequence, enabling multi-scroll-area
+ * screens to have independent numbering.
+ *
+ * Also centralizes screen transition logic (reset on app change, preserve on scroll)
+ * that was previously scattered across DynamicCommandGenerator and OverlayStateManager.
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ */
+
+package com.augmentalis.voiceoscore
+
+class OverlayNumberingExecutor : NumbersOverlayExecutor {
+
+    // Per-container numbering: containerAvid -> (avid -> assignedNumber)
+    private val assignments = mutableMapOf<String, LinkedHashMap<String, Int>>()
+    private val nextNumbers = mutableMapOf<String, Int>()
+
+    // Screen transition tracking
+    private var lastPackageName: String = ""
+    private var lastIsTargetApp: Boolean = false
+
+    // ===== Non-suspend methods for DynamicCommandGenerator =====
+
+    /**
+     * Handle screen context change. Resets numbering on app change and
+     * on major navigation (high structural change ratio). Preserves numbering
+     * on scroll (low structural change ratio).
+     *
+     * Uses structural-change-ratio universally for ALL apps (target and non-target)
+     * to distinguish scroll from navigation. Previously, non-target apps always
+     * reset on isNewScreen, causing scroll to clear overlay badges.
+     *
+     * @param packageName Current app package name
+     * @param isTargetApp Whether this app is in the TARGET_APPS list
+     * @param isNewScreen Whether the screen hash changed
+     * @param structuralChangeRatio 0.0-1.0 how much the top-level structure changed.
+     *        Low ratio (~0.1-0.3) = scroll. High ratio (~0.7-0.9) = navigation.
+     * @return true if numbering was reset
+     */
+    fun handleScreenContext(
+        packageName: String,
+        isTargetApp: Boolean,
+        isNewScreen: Boolean,
+        structuralChangeRatio: Float = 0f
+    ): Boolean {
+        val isAppChange = packageName != lastPackageName
+        var didReset = false
+
+        if (isAppChange) {
+            // Always reset on app switch
+            lastPackageName = packageName
+            clearAllAssignmentsInternal()
+            didReset = true
+        } else if (isNewScreen && structuralChangeRatio > MAJOR_NAVIGATION_THRESHOLD) {
+            // Major navigation (high structural change) — reset for ALL app types.
+            // Scroll events produce low ratios (same toolbar/RecyclerView structure)
+            // while navigation produces high ratios (fundamentally different layout).
+            clearAllAssignmentsInternal()
+            didReset = true
+        }
+        // isNewScreen with low structuralChangeRatio = scroll → preserve numbering
+
+        // Immediately clear stale overlay badges on screen/app transition.
+        // Without this, old badges persist during the async element extraction gap
+        // between transition detection and new overlay generation.
+        if (didReset) {
+            OverlayStateManager.clearOverlayItems()
+        }
+
+        lastIsTargetApp = isTargetApp
+        return didReset
+    }
+
+    companion object {
+        /** Threshold above which a screen change is considered major navigation
+         *  (not scroll). Fragment transitions like list -> detail typically exceed
+         *  0.7; lowered to 0.4 to catch subtler transitions. Applied uniformly to
+         *  both target apps (Gmail, etc.) and general apps with overlay ON. */
+        const val MAJOR_NAVIGATION_THRESHOLD = 0.4f
+    }
+
+    /**
+     * Assign numbers to overlay items based on visual position.
+     * Always assigns 1-N sorted by top->left, so numbers match on-screen order
+     * regardless of which items were previously visible (no sticky mapping).
+     */
+    fun assignNumbers(
+        items: List<NumberOverlayItem>,
+        containerAvid: String? = null
+    ): List<NumberOverlayItem> {
+        if (items.isEmpty()) return emptyList()
+
+        val containerId = containerAvid ?: "root"
+
+        // Position-based: sort by visual position, assign 1-N
+        val sorted = items.sortedWith(compareBy({ it.top }, { it.left }))
+        val containerMap = linkedMapOf<String, Int>()
+        val result = sorted.mapIndexed { index, item ->
+            val number = index + 1
+            containerMap[item.avid] = number
+            item.copy(number = number)
+        }
+
+        // Update stored mapping for voice command lookups
+        assignments[containerId] = containerMap
+        nextNumbers[containerId] = sorted.size + 1
+        return result
+    }
+
+    /**
+     * Reset numbering for in-app navigation (activity/fragment transition).
+     * Called from the app-level service when TYPE_WINDOW_STATE_CHANGED fires
+     * within the same package. Clears all assignments so the next screen
+     * starts numbering from 1.
+     */
+    fun resetForNavigation() {
+        clearAllAssignmentsInternal()
+    }
+
+    private fun clearAllAssignmentsInternal() {
+        assignments.clear()
+        nextNumbers.clear()
+    }
+
+    private fun trimIfNeeded() {
+        for ((_, containerMap) in assignments) {
+            if (containerMap.size > 500) {
+                val removeCount = containerMap.size - 500
+                val iterator = containerMap.entries.iterator()
+                repeat(removeCount) {
+                    if (iterator.hasNext()) { iterator.next(); iterator.remove() }
+                }
+            }
+        }
+    }
+
+    // ===== NumbersOverlayExecutor interface (suspend, for voice commands) =====
+
+    // No more mode-mapping! OverlayStateManager now uses the same
+    // KMP NumbersOverlayMode enum, so we pass through directly.
+
+    override suspend fun setNumbersMode(mode: NumbersOverlayMode): Boolean {
+        OverlayStateManager.setNumbersOverlayMode(mode)
+        return true
+    }
+
+    override suspend fun getCurrentMode(): NumbersOverlayMode {
+        return OverlayStateManager.numbersOverlayMode.value
+    }
+
+    override suspend fun getOrAssignNumber(avid: String, scrollContainerAvid: String?): Int {
+        val containerId = scrollContainerAvid ?: "root"
+        val containerMap = assignments.getOrPut(containerId) { linkedMapOf() }
+        return containerMap.getOrPut(avid) {
+            val next = nextNumbers.getOrPut(containerId) { 1 }
+            nextNumbers[containerId] = next + 1
+            next
+        }
+    }
+
+    override suspend fun getAssignedNumber(avid: String, scrollContainerAvid: String?): Int? {
+        return assignments[scrollContainerAvid ?: "root"]?.get(avid)
+    }
+
+    override suspend fun getAssignmentsForContainer(scrollContainerAvid: String?): Map<String, Int> {
+        return assignments[scrollContainerAvid ?: "root"]?.toMap() ?: emptyMap()
+    }
+
+    override suspend fun clearNumberAssignments() {
+        clearAllAssignmentsInternal()
+        OverlayStateManager.clearOverlayItems()
+    }
+
+    override suspend fun clearContainerAssignments(scrollContainerAvid: String) {
+        assignments.remove(scrollContainerAvid)
+        nextNumbers.remove(scrollContainerAvid)
+    }
+
+    override suspend fun onScreenTransition(newScreenId: String, isMajorTransition: Boolean) {
+        if (isMajorTransition) {
+            clearAllAssignmentsInternal()
+            OverlayStateManager.clearOverlayItems()
+        }
+    }
+}

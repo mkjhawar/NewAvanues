@@ -323,7 +323,7 @@ private fun SelectionSettingItem(
                     readOnly = true,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(),
+                        .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     enabled = enabled
                 )

@@ -18,6 +18,10 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     // Android Target
     androidTarget {
         compilations.all {

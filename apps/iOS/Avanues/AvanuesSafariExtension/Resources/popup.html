@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avanues Voice Control</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      width: 280px;
+      padding: 16px;
+      margin: 0;
+      background: #0a1628;
+      color: #e2e8f0;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 8px;
+      color: #60a5fa;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+      color: #94a3b8;
+    }
+    .commands {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .commands h2 {
+      font-size: 14px;
+      margin: 0 0 8px;
+      color: #93c5fd;
+    }
+    .cmd {
+      font-size: 12px;
+      padding: 3px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .cmd-name { color: #e2e8f0; font-weight: 600; }
+    .cmd-desc { color: #64748b; }
+    .footer {
+      font-size: 11px;
+      text-align: center;
+      color: #475569;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    a { color: #60a5fa; text-decoration: none; }
+    #status { font-size: 12px; margin-bottom: 12px; }
+    .status-ok { color: #4ade80; }
+    .status-err { color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1>Avanues Voice Control</h1>
+  <p id="status">Checking connection...</p>
+
+  <div class="commands">
+    <h2>Voice Commands</h2>
+    <div class="cmd"><span class="cmd-name">"click 3"</span><span class="cmd-desc">Click element #3</span></div>
+    <div class="cmd"><span class="cmd-name">"scroll down"</span><span class="cmd-desc">Scroll page down</span></div>
+    <div class="cmd"><span class="cmd-name">"scroll up"</span><span class="cmd-desc">Scroll page up</span></div>
+    <div class="cmd"><span class="cmd-name">"go back"</span><span class="cmd-desc">Previous page</span></div>
+    <div class="cmd"><span class="cmd-name">"go forward"</span><span class="cmd-desc">Next page</span></div>
+    <div class="cmd"><span class="cmd-name">"refresh"</span><span class="cmd-desc">Reload page</span></div>
+  </div>
+
+  <div class="footer">
+    <a href="https://avanues.com">Open Avanues App</a> for advanced features
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

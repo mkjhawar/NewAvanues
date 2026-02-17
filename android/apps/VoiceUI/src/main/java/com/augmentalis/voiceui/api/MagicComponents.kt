@@ -70,7 +70,7 @@ fun MagicScope.email(
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Email,
             imeAction = ImeAction.Next,
-            autoCorrect = false
+            autoCorrectEnabled = false
         ),
         singleLine = true,
         modifier = Modifier
@@ -149,7 +149,7 @@ fun MagicScope.password(
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done,
-                autoCorrect = false
+                autoCorrectEnabled = false
             ),
             singleLine = true,
             modifier = Modifier

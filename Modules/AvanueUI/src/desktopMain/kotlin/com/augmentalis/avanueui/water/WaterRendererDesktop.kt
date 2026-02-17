@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -114,7 +115,7 @@ actual fun Modifier.platformWaterEffect(
             color = waterScheme.refractionTint.copy(alpha = overlayOpacity),
             shape = shape
         )
-        // Specular highlight
+        // Specular highlight (desktop always active — no background state)
         .then(
             if (waterScheme.enableSpecular) {
                 Modifier.drawWithContent {

@@ -25,6 +25,10 @@ data class VoiceCommandEntity(
     val synonyms: String,
     val description: String,
     val category: String,
+    /** CommandActionType name (v2.0+). Empty string for v1.0 (falls back to id). */
+    val actionType: String = "",
+    /** JSON metadata string (v2.0+). Empty string if no metadata. */
+    val metadata: String = "",
     val priority: Int = 50,
     val isFallback: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
@@ -46,7 +50,26 @@ data class VoiceCommandEntity(
                 emptyList()
             }
         }
+
+        /**
+         * Parse metadata JSON string into Map.
+         * Returns empty map if metadata is empty or malformed.
+         */
+        fun parseMetadata(metadataJson: String): Map<String, String> {
+            if (metadataJson.isBlank()) return emptyMap()
+            return try {
+                val json = org.json.JSONObject(metadataJson)
+                val map = mutableMapOf<String, String>()
+                json.keys().forEach { key -> map[key] = json.optString(key, "") }
+                map
+            } catch (e: Exception) {
+                emptyMap()
+            }
+        }
     }
+
+    /** Resolved action: v2.0 actionType, falling back to command id for v1.0 */
+    val resolvedAction: String get() = actionType.ifEmpty { id }
 
     fun toDTO(): VoiceCommandDTO = VoiceCommandDTO(
         id = uid,
@@ -54,7 +77,7 @@ data class VoiceCommandEntity(
         locale = locale,
         triggerPhrase = primaryText,
         synonyms = synonyms,
-        action = id, // Use command ID as action
+        action = resolvedAction,
         description = description,
         category = category,
         priority = priority.toLong(),
@@ -75,8 +98,14 @@ data class LocaleStats(
 )
 
 /**
- * SQLDelight adapter implementing VoiceCommandDao-like interface
+ * SQLDelight adapter implementing VoiceCommandDao-like interface.
+ *
+ * @deprecated This Room-to-SQLDelight bridge is unnecessary indirection now that
+ * [com.augmentalis.voiceoscore.loader.StaticCommandPersistenceImpl] uses raw
+ * voiceCommandQueries directly. Still used by CommandLoader and CommandManager.
+ * Will be removed when those callers are migrated to use raw queries.
  */
+@Deprecated("Use VoiceOSDatabase.voiceCommandQueries directly")
 class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
 
     private val queries = database.voiceCommandQueries
@@ -90,7 +119,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
             locale = command.locale,
             trigger_phrase = command.primaryText,
             synonyms = command.synonyms,
-            action = command.id,
+            action = command.resolvedAction,
             description = command.description,
             category = command.category,
             priority = command.priority.toLong(),
@@ -114,7 +143,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
                     locale = command.locale,
                     trigger_phrase = command.primaryText,
                     synonyms = command.synonyms,
-                    action = command.id,
+                    action = command.resolvedAction,
                     description = command.description,
                     category = command.category,
                     priority = command.priority.toLong(),
@@ -183,7 +212,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
         val now = System.currentTimeMillis()
         queries.updateCommand(
             trigger_phrase = command.primaryText,
-            action = command.id,
+            action = command.resolvedAction,
             category = command.category,
             priority = command.priority.toLong(),
             is_enabled = 1L,
@@ -278,6 +307,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
         synonyms = this.synonyms,
         description = this.description,
         category = this.category,
+        actionType = this.action,
         priority = this.priority.toInt(),
         isFallback = this.is_fallback == 1L,
         createdAt = this.created_at

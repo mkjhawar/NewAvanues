@@ -55,27 +55,27 @@ fun PulseDot(
         is ServiceState.Degraded -> AvanueTheme.colors.warning    // #F59E0B
     }
 
-    val shouldPulse = state is ServiceState.Running ||
-            state is ServiceState.Error ||
-            state is ServiceState.Degraded
+    // Only pulse for actionable states (Error/Degraded) — Running uses a calm glow
+    val shouldPulse = state is ServiceState.Error || state is ServiceState.Degraded
 
     val effectiveDuration = when (state) {
         is ServiceState.Error -> pulseDurationMs / 2       // Fast pulse for errors
         is ServiceState.Degraded -> (pulseDurationMs * 1.5).toInt()  // Slow pulse
-        else -> pulseDurationMs                             // Normal 2s cycle
+        else -> pulseDurationMs
     }
 
     val canvasSize = dotSize * 3
 
     if (shouldPulse) {
-        PulseDotAnimated(
+        // Single subtle ring for Error/Degraded — not 3 concentric rings
+        SingleRingPulseDot(
             dotColor = dotColor,
             dotSize = dotSize,
             canvasSize = canvasSize,
             durationMs = effectiveDuration,
             modifier = modifier
         )
-    } else if (state is ServiceState.Ready) {
+    } else if (state is ServiceState.Running || state is ServiceState.Ready) {
         GlowDot(
             dotColor = dotColor,
             dotSize = dotSize,
@@ -184,6 +184,55 @@ private fun PulseDotAnimated(
         )
 
         // Solid center dot (always on top)
+        drawCircle(
+            color = dotColor,
+            radius = baseRadius,
+            center = center
+        )
+    }
+}
+
+@Composable
+private fun SingleRingPulseDot(
+    dotColor: Color,
+    dotSize: Dp,
+    canvasSize: Dp,
+    durationMs: Int,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "singlePulse")
+
+    val ringScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMs, easing = EaseOut),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ringScale"
+    )
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMs, easing = EaseOut),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ringAlpha"
+    )
+
+    Canvas(modifier = modifier.size(canvasSize)) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val baseRadius = (dotSize / 2).toPx()
+
+        // Single expanding ring
+        drawCircle(
+            color = dotColor.copy(alpha = ringAlpha),
+            radius = baseRadius * ringScale,
+            center = center
+        )
+
+        // Solid center dot
         drawCircle(
             color = dotColor,
             radius = baseRadius,

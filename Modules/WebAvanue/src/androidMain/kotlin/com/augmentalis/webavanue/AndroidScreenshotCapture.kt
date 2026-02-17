@@ -96,6 +96,7 @@ class AndroidScreenshotCapture(
         captureJob = null
     }
 
+    @Suppress("USELESS_IS_CHECK")
     override suspend fun saveScreenshot(
         data: ScreenshotData,
         filename: String?,
@@ -169,6 +170,7 @@ class AndroidScreenshotCapture(
      * - Limits maximum height to 15,000 pixels
      * - Recycles intermediate bitmaps
      */
+    @Suppress("DEPRECATION")
     private suspend fun captureFullPage(
         onProgress: suspend (Float, String) -> Unit
     ): Bitmap? = withContext(Dispatchers.Main) {
@@ -274,6 +276,7 @@ class AndroidScreenshotCapture(
      * Uses MediaStore API for Android Q+ (scoped storage)
      * Uses legacy file API for older versions
      */
+    @Suppress("DEPRECATION")
     private suspend fun saveToGallery(
         bitmap: Bitmap,
         filename: String,

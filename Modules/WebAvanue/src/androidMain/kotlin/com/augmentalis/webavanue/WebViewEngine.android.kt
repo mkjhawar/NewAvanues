@@ -10,6 +10,7 @@ import android.webkit.WebSettings
  * Platform-specific wrapper for android.webkit.WebView
  */
 actual class WebViewEngine(context: Context) {
+    @Suppress("DEPRECATION")
     private val webView: WebView = WebView(context).apply {
         settings.apply {
             javaScriptEnabled = true

@@ -1,27 +1,36 @@
 /**
- * CommandLoader.kt - Load voice commands from JSON into database
- * 
+ * CommandLoader.kt - Load voice commands from VOS files into database
+ *
  * Purpose: Load commands with automatic English fallback
  * Strategy:
  * 1. ALWAYS load English first (is_fallback = true)
  * 2. Then load user's system locale (if different)
  * 3. Resolution: user locale → English fallback → null
+ *
+ * Uses VosParser (commonMain KMP) which auto-detects format:
+ * - v2.1 JSON: legacy format with embedded maps
+ * - v3.0 Compact: pipe-delimited with compiled maps
  */
 
 package com.augmentalis.voiceoscore.managers.commandmanager.loader
 
 import android.content.Context
 import android.util.Log
+import com.augmentalis.voiceoscore.loader.VosParsedCommand
+import com.augmentalis.voiceoscore.loader.VosParseResult
+import com.augmentalis.voiceoscore.loader.VosParser
 import com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.DatabaseVersionDaoAdapter
 import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.DatabaseVersionEntity
 import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
+import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity
 import java.io.FileNotFoundException
 import java.util.Locale
 
 /**
- * Loader for voice command JSON files with English fallback support
- * Version 2: Added persistence check to avoid reloading on every app restart
+ * Loader for VOS command files with English fallback support.
+ * v3: Uses VosParser (KMP) with auto-detection of JSON v2.1 and compact v3.0.
+ * v2: Added persistence check to avoid reloading on every app restart.
  */
 class CommandLoader(
     private val context: Context,
@@ -33,7 +42,9 @@ class CommandLoader(
         private const val TAG = "CommandLoader"
         private const val COMMANDS_PATH = "localization/commands"
         private const val FALLBACK_LOCALE = "en-US"
-        private const val FILE_EXTENSION = ".VOS"  // VOS format (compact JSON)
+        private const val FILE_EXTENSION = ".VOS"  // Legacy monolithic format (unused)
+        private const val FILE_EXTENSION_APP = ".app.vos"  // App domain commands
+        private const val FILE_EXTENSION_WEB = ".web.vos"  // Web/browser domain commands
         
         /**
          * Convenience method to create loader with database instance
@@ -62,7 +73,7 @@ class CommandLoader(
 
             // 0. CHECK if database already loaded with correct version
             val existingVersion = versionDao.getVersion()
-            val requiredVersion = "1.0" // From JSON files
+            val requiredVersion = "3.0" // v3.0: compact pipe-delimited format with compiled maps
 
             if (existingVersion != null && existingVersion.jsonVersion == requiredVersion) {
                 val commandCount = commandDao.getCommandCount(FALLBACK_LOCALE)
@@ -76,7 +87,7 @@ class CommandLoader(
                 }
             }
 
-            Log.i(TAG, "Loading commands from JSON (version: $requiredVersion)...")
+            Log.i(TAG, "Loading commands from VOS files (version: $requiredVersion)...")
 
             // 1. ALWAYS load English first (fallback)
             val englishResult = loadLocale(FALLBACK_LOCALE, isFallback = true)
@@ -145,35 +156,67 @@ class CommandLoader(
                 Log.d(TAG, "Locale $locale already loaded ($count commands)")
                 return LoadResult.Success(commandCount = count, locales = listOf(locale))
             }
-            
-            // Load VOS file from assets
-            val vosFile = "$COMMANDS_PATH/$locale$FILE_EXTENSION"
-            val vosString = try {
-                context.assets.open(vosFile).bufferedReader().use { it.readText() }
+
+            // Load both domain files (.app.vos + .web.vos) and merge
+            val allCommands = mutableListOf<VoiceCommandEntity>()
+
+            // Load app domain commands
+            val appFile = "$COMMANDS_PATH/$locale$FILE_EXTENSION_APP"
+            val appString = try {
+                context.assets.open(appFile).bufferedReader().use { it.readText() }
             } catch (e: FileNotFoundException) {
-                Log.w(TAG, "VOS file not found: $vosFile")
+                Log.w(TAG, "App VOS file not found: $appFile")
+                null
+            }
+
+            if (appString != null) {
+                val appResult = VosParser.parse(appString, isFallback)
+                if (appResult is VosParseResult.Success) {
+                    allCommands.addAll(appResult.commands.map { it.toEntity() })
+                    Log.d(TAG, "Loaded ${appResult.commands.size} app commands for $locale")
+                } else if (appResult is VosParseResult.Error) {
+                    Log.e(TAG, "Failed to parse app VOS for $locale: ${appResult.message}")
+                }
+            }
+
+            // Load web domain commands
+            val webFile = "$COMMANDS_PATH/$locale$FILE_EXTENSION_WEB"
+            val webString = try {
+                context.assets.open(webFile).bufferedReader().use { it.readText() }
+            } catch (e: FileNotFoundException) {
+                Log.w(TAG, "Web VOS file not found: $webFile")
+                null
+            }
+
+            if (webString != null) {
+                val webResult = VosParser.parse(webString, isFallback)
+                if (webResult is VosParseResult.Success) {
+                    allCommands.addAll(webResult.commands.map { it.toEntity() })
+                    Log.d(TAG, "Loaded ${webResult.commands.size} web commands for $locale")
+                } else if (webResult is VosParseResult.Error) {
+                    Log.e(TAG, "Failed to parse web VOS for $locale: ${webResult.message}")
+                }
+            }
+
+            // If neither file found, locale is not available
+            if (appString == null && webString == null) {
                 return LoadResult.LocaleNotFound(locale)
             }
-            
-            // Parse VOS (compact JSON format)
-            val parseResult = ArrayJsonParser.parseCommandsJson(vosString, isFallback)
-            when (parseResult) {
-                is ArrayJsonParser.ParseResult.Success -> {
-                    // Insert into database
-                    commandDao.insertBatch(parseResult.commands)
-                    
-                    Log.i(TAG, "Loaded ${parseResult.commands.size} commands for $locale (fallback: $isFallback)")
-                    
-                    return LoadResult.Success(
-                        commandCount = parseResult.commands.size,
-                        locales = listOf(locale)
-                    )
-                }
-                is ArrayJsonParser.ParseResult.Error -> {
-                    return LoadResult.Error("Parse error: ${parseResult.message}")
-                }
+
+            if (allCommands.isEmpty()) {
+                return LoadResult.Error("No commands parsed for $locale")
             }
-            
+
+            // Insert merged commands into database
+            commandDao.insertBatch(allCommands)
+
+            Log.i(TAG, "Loaded ${allCommands.size} commands for $locale (app+web merged, fallback: $isFallback)")
+
+            return LoadResult.Success(
+                commandCount = allCommands.size,
+                locales = listOf(locale)
+            )
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load locale $locale", e)
             return LoadResult.Error("Load failed: ${e.message}")
@@ -254,10 +297,20 @@ class CommandLoader(
      */
     fun getAvailableLocales(): List<String> {
         return try {
-            context.assets.list(COMMANDS_PATH)
-                ?.filter { it.endsWith(".json") }
-                ?.map { it.removeSuffix(".json") }
-                ?: emptyList()
+            val files = context.assets.list(COMMANDS_PATH) ?: emptyArray()
+            // Scan for .app.vos files — a locale is available if it has at least the app domain file
+            val appLocales = files
+                .filter { it.endsWith(FILE_EXTENSION_APP) }
+                .map { it.removeSuffix(FILE_EXTENSION_APP) }
+                .toSet()
+            val webLocales = files
+                .filter { it.endsWith(FILE_EXTENSION_WEB) }
+                .map { it.removeSuffix(FILE_EXTENSION_WEB) }
+                .toSet()
+            // Return locales that have both app and web files (complete locales)
+            val complete = appLocales.intersect(webLocales)
+            Log.d(TAG, "Available locales: $complete (app=${appLocales.size}, web=${webLocales.size})")
+            complete.sorted()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list available locales", e)
             emptyList()
@@ -272,9 +325,26 @@ class CommandLoader(
             val commandCount: Int,
             val locales: List<String>
         ) : LoadResult()
-        
+
         data class LocaleNotFound(val locale: String) : LoadResult()
-        
+
         data class Error(val message: String) : LoadResult()
     }
+
+    /**
+     * Map KMP [VosParsedCommand] to Android [VoiceCommandEntity].
+     * Converts synonyms from List<String> to JSON array string for DB storage.
+     */
+    private fun VosParsedCommand.toEntity() = VoiceCommandEntity(
+        id = id,
+        locale = locale,
+        primaryText = primaryText,
+        synonyms = VosParser.synonymsToJson(synonyms),
+        description = description,
+        category = category,
+        actionType = actionType,
+        metadata = metadata,
+        priority = 50,
+        isFallback = isFallback
+    )
 }

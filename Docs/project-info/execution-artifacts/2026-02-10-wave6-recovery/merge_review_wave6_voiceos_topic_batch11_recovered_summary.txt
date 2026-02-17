@@ -1,0 +1,6 @@
+batch=batch11
+manual_pool=172
+remaining_after_exclusion=50
+selected_topics=voiceos-learnapp-user-manual (1), voiceos-phase3-implementation-complete (1), voiceos-changelog-2025-09 (1), voiceos-vosk-integration-report (1), voiceos-speechrecognition-changelog (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch11_recovered.csv

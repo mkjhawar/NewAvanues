@@ -17,6 +17,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
+
 import kotlin.math.roundToInt
 
 /**

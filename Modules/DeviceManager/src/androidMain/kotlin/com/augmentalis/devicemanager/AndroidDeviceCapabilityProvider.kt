@@ -1,6 +1,8 @@
 // Author: Manoj Jhawar
 // Purpose: Android implementation of DeviceCapabilityProvider
 
+@file:Suppress("DEPRECATION") // HardwareProfiler — deprecated class used as bridge to KMP API
+
 package com.augmentalis.devicemanager
 
 import android.app.ActivityManager
@@ -35,6 +37,7 @@ class AndroidDeviceCapabilityProvider(
     private val deviceDetector: DeviceDetector.DeviceCapabilities by lazy {
         DeviceDetector.getCapabilities(context)
     }
+    @Suppress("DEPRECATION")
     private val hardwareProfiler: HardwareProfiler by lazy { HardwareProfiler(context) }
 
     // Cached capabilities

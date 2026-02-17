@@ -98,18 +98,13 @@ class AndroidAppLauncher(
      */
     override fun getInstalledApps(): List<AppInfo> {
         return try {
-            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
 
-            val activities: List<ResolveInfo> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.queryIntentActivities(
-                    mainIntent,
-                    PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
-                )
+            val activities = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()))
             } else {
                 @Suppress("DEPRECATION")
-                packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_DEFAULT_ONLY)
+                packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
             }
 
             activities.mapNotNull { resolveInfo ->

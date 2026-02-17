@@ -443,3 +443,46 @@ Run guarded near-duplicate execution for Bucket B (`Docs/VoiceOS/**`) using refi
 
 - Wave6 queue slicing now spans four deterministic batches with full audit artifacts.
 - Throughput remains stable via script-first continuation with explicit exclusion governance.
+
+## Recovery continuation — 2026-02-10 (wave6 batch5→finish on durable path)
+
+### Incident-aware recovery basis
+
+- Previous `build/` execution artifacts were non-durable (`**/build/` ignored + clean task deletes root build dir).
+- Recovered source candidates from:
+  - `Docs/MasterDocs/merge_review_candidates_2026-02-10-wave4.xlsx`
+- Recovery converter:
+  - `contextsave/recover_wave4_xlsx_to_csv.py`
+- Recovered CSV:
+  - `contextsave/merge_review_candidates_2026-02-10-wave4_recovered.csv`
+
+### Durable recovery execution
+
+- Runner script:
+  - `Docs/project-info/execution-artifacts/recovery_wave6_batch5_to_finish_2026_02_10.py`
+- Durable artifact root:
+  - `Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/`
+
+### Reconstructed wave5d-equivalent summary
+
+- Execution CSV:
+  - `Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_execution_2026-02-10-wave5d-recovered.csv`
+- Execution summary:
+  - `Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_execution_2026-02-10-wave5d-recovered_summary.txt`
+- Metrics:
+  - candidate_rows=279
+  - needs_manual_review=172
+  - skipped_bucket_filter=107
+  - archived=0
+  - errors=0
+
+### Wave6 continuation (starting after completed batch1–batch4 exclusions)
+
+- Deterministic continuation generated **batch5 through batch20** (**16 batches**) under durable path.
+- Final rollup:
+  - `Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_recovery_batch5_to_finish_summary.txt`
+
+### Outcome
+
+- User-requested continuation (`batch5→finish`) is completed with reproducible, non-`build/` artifacts.
+- Recovery run is explicitly traceable and can be re-executed safely without dependence on transient build outputs.

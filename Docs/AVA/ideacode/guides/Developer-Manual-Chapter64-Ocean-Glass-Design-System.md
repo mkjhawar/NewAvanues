@@ -3,7 +3,18 @@
 **Version:** 2.1.0
 **Date:** 2025-12-03
 **Author:** AVA AI Team
-**Status:** Verified - Ocean Blue Theme + Adaptive Navigation
+**Status:** SUPERSEDED (2026-02-11)
+
+> ### SUPERSEDED
+>
+> This chapter documents the original Ocean Glass design system from December 2025.
+> As of Theme v5.1, the `OceanTheme` is deprecated. The design system is now:
+>
+> - **Chapter 91** — AvanueUI Design System Guide v2.0 (current architecture, 4 palettes, 3 axes)
+> - **Chapter 92** — Unified Component Architecture (MaterialMode, unified components)
+>
+> `OceanColors` has been renamed to `LunaColors`. Use `AvanueTheme.colors.*` instead of `OceanTheme.*`.
+> This chapter is preserved as a historical reference only.
 
 ---
 

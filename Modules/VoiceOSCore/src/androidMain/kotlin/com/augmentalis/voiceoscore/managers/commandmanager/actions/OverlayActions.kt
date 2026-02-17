@@ -498,6 +498,7 @@ object OverlayActions {
      * Announce text via AccessibilityService (TalkBack compatible)
      * Used in both visual and audio modes
      */
+    @Suppress("DEPRECATION")
     private fun announceViaAccessibility(service: AccessibilityService?, text: String) {
         service?.let {
             try {
@@ -531,6 +532,7 @@ object OverlayActions {
      * Vibrate device for haptic feedback
      * Used in audio mode for non-visual feedback
      */
+    @Suppress("DEPRECATION")
     @SuppressLint("MissingPermission")
     private fun vibrateDevice(context: Context, durationMs: Long) {
         try {

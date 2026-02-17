@@ -83,6 +83,15 @@ dokka = "1.9.10"
 # Ktor (HTTP client for KMP)
 ktor = "2.3.7"
 
+# Image Loading
+coil = "2.6.0"
+
+# Video/Media Playback
+media3 = "1.2.1"
+
+# SFTP
+jsch = "0.2.16"
+
 # gRPC/Wire
 wire = "5.4.0"
 grpc-kotlin = "1.4.1"
@@ -141,6 +150,8 @@ androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "androidx-camera" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "androidx-camera" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "androidx-camera" }
+androidx-camera-video = { module = "androidx.camera:camera-video", version.ref = "androidx-camera" }
+androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version = "1.3.7" }
 
 # Compose
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
@@ -201,6 +212,8 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 
 # Hilt Extensions
 hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
+hilt-work-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hilt-work" }
+hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -210,6 +223,7 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
@@ -225,6 +239,17 @@ grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpc-kotlin-stub = { module = "io.grpc:grpc-kotlin-stub", version.ref = "grpc-kotlin" }
 protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
 protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
+
+# Image Loading (Coil)
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+
+# Video/Media Playback (Media3)
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
+
+# SFTP
+jsch = { module = "com.github.mwiede:jsch", version.ref = "jsch" }
 
 [bundles]
 compose = [

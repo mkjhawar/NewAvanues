@@ -13,11 +13,11 @@
  */
 
 plugins {
-    kotlin("multiplatform")
-    id("com.android.library")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.dagger.hilt.android")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -64,11 +64,8 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                // Kotlin standard library
-                implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
-
                 // Coroutines
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation(libs.kotlinx.coroutines.core)
 
                 // NLU module for CommandMatchingService
                 implementation(project(":Modules:AI:NLU"))
@@ -78,18 +75,18 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
         val androidMain by getting {
             dependencies {
                 // Android Core
-                implementation("androidx.core:core-ktx:1.12.0")
-                implementation("androidx.appcompat:appcompat:1.6.1")
+                implementation(libs.androidx.core.ktx)
+                implementation(libs.androidx.appcompat)
 
                 // Android Coroutines
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+                implementation(libs.kotlinx.coroutines.android)
 
                 // RecyclerView for help menu UI
                 implementation("androidx.recyclerview:recyclerview:1.3.2")
@@ -131,25 +128,25 @@ kotlin {
                 compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
 
                 // OkHttp & Gson
-                implementation("com.squareup.okhttp3:okhttp:4.12.0")
-                implementation("com.google.code.gson:gson:2.10.1")
+                implementation(libs.okhttp)
+                implementation(libs.gson)
 
                 // Firebase
                 implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
                 implementation("com.google.firebase:firebase-config")
 
                 // Hilt
-                implementation("com.google.dagger:hilt-android:2.51.1")
+                implementation(libs.hilt.android)
             }
         }
 
         val androidUnitTest by getting {
             dependencies {
-                implementation("junit:junit:4.13.2")
-                implementation("org.jetbrains.kotlin:kotlin-test-junit:1.9.24")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-                implementation("org.robolectric:robolectric:4.11.1")
-                implementation("io.mockk:mockk:1.13.8")
+                implementation(libs.junit)
+                implementation(libs.kotlin.test.junit)
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.robolectric)
+                implementation(libs.mockk)
             }
         }
 
@@ -164,11 +161,16 @@ kotlin {
                 iosX64Main.dependsOn(this)
                 iosArm64Main.dependsOn(this)
                 iosSimulatorArm64Main.dependsOn(this)
+                dependencies {
+                    implementation(libs.kotlinx.atomicfu)
+                    // Compose runtime needed for kotlin.compose plugin on native targets
+                    implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+                }
             }
         }
         val desktopMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
+                implementation(libs.kotlinx.coroutines.swing)
             }
         }
 
@@ -240,5 +242,5 @@ android {
 
 dependencies {
     // KSP for Hilt
-    add("kspAndroid", "com.google.dagger:hilt-compiler:2.51.1")
+    add("kspAndroid", libs.hilt.compiler)
 }

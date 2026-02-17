@@ -28,6 +28,8 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
+
 import com.augmentalis.voiceoscore.DisambiguationResult
 import com.augmentalis.voiceoscore.ElementDisambiguator
 import com.augmentalis.voiceoscore.ElementInfo

@@ -1,0 +1,6 @@
+batch=batch8
+manual_pool=172
+remaining_after_exclusion=65
+selected_topics=voiceos-standards-vos4-architecture (1), voiceos-protocol-vos4-documentation (1), voiceos-bugs (1), voiceos-protocol-vos4-pre-implementation-qa (1), voiceos-reference-vos4-documentation-structure (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch8_recovered.csv

@@ -10,6 +10,7 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
 import com.augmentalis.voiceoscore.CommandActionType
 
 /**
@@ -27,504 +28,47 @@ import com.augmentalis.voiceoscore.CommandActionType
 object StaticCommandRegistry {
 
     // ═══════════════════════════════════════════════════════════════════
-    // Navigation Commands
+    // DB-Loaded Commands (populated from commands_static table at runtime)
+    // Falls back to hardcoded lists below when DB not yet loaded
     // ═══════════════════════════════════════════════════════════════════
 
-    val navigationCommands = listOf(
-        StaticCommand(
-            phrases = listOf("go back", "navigate back", "back", "previous screen"),
-            actionType = CommandActionType.BACK,
-            category = CommandCategory.NAVIGATION,
-            description = "Navigate to previous screen"
-        ),
-        StaticCommand(
-            phrases = listOf("go home", "home", "navigate home", "open home"),
-            actionType = CommandActionType.HOME,
-            category = CommandCategory.NAVIGATION,
-            description = "Go to home screen"
-        ),
-        StaticCommand(
-            phrases = listOf("show recent apps", "recent apps", "open recents", "app switcher"),
-            actionType = CommandActionType.RECENT_APPS,
-            category = CommandCategory.NAVIGATION,
-            description = "Show recent apps"
-        ),
-        StaticCommand(
-            phrases = listOf("open app drawer", "app drawer", "all apps"),
-            actionType = CommandActionType.APP_DRAWER,
-            category = CommandCategory.NAVIGATION,
-            description = "Open app drawer"
-        )
-    )
+    @Volatile
+    private var _dbCommands: List<StaticCommand>? = null
 
-    // ═══════════════════════════════════════════════════════════════════
-    // Media Commands
-    // ═══════════════════════════════════════════════════════════════════
+    /**
+     * Initialize registry with commands loaded from the database.
+     * Called from CommandManager after CommandLoader seeds the DB.
+     * Thread-safe via @Volatile.
+     *
+     * @param commands List of StaticCommand converted from DB entities
+     */
+    fun initialize(commands: List<StaticCommand>) {
+        _dbCommands = commands
+    }
 
-    val mediaCommands = listOf(
-        StaticCommand(
-            phrases = listOf("play music", "play", "resume"),
-            actionType = CommandActionType.MEDIA_PLAY,
-            category = CommandCategory.MEDIA,
-            description = "Play/resume media"
-        ),
-        StaticCommand(
-            phrases = listOf("pause music", "pause", "stop music"),
-            actionType = CommandActionType.MEDIA_PAUSE,
-            category = CommandCategory.MEDIA,
-            description = "Pause media"
-        ),
-        StaticCommand(
-            phrases = listOf("next song", "next track", "skip"),
-            actionType = CommandActionType.MEDIA_NEXT,
-            category = CommandCategory.MEDIA,
-            description = "Next track"
-        ),
-        StaticCommand(
-            phrases = listOf("previous song", "previous track", "go back"),
-            actionType = CommandActionType.MEDIA_PREVIOUS,
-            category = CommandCategory.MEDIA,
-            description = "Previous track"
-        ),
-        StaticCommand(
-            phrases = listOf("increase volume", "volume up", "louder"),
-            actionType = CommandActionType.VOLUME_UP,
-            category = CommandCategory.MEDIA,
-            description = "Increase volume"
-        ),
-        StaticCommand(
-            phrases = listOf("decrease volume", "volume down", "lower volume", "quieter"),
-            actionType = CommandActionType.VOLUME_DOWN,
-            category = CommandCategory.MEDIA,
-            description = "Decrease volume"
-        ),
-        StaticCommand(
-            phrases = listOf("mute volume", "mute", "silence"),
-            actionType = CommandActionType.VOLUME_MUTE,
-            category = CommandCategory.MEDIA,
-            description = "Mute audio"
-        )
-    )
+    /**
+     * Whether DB commands have been loaded.
+     */
+    fun isInitialized(): Boolean = _dbCommands != null
 
-    // ═══════════════════════════════════════════════════════════════════
-    // System Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val systemCommands = listOf(
-        StaticCommand(
-            phrases = listOf("open settings", "settings", "show settings", "device settings"),
-            actionType = CommandActionType.OPEN_SETTINGS,
-            category = CommandCategory.SYSTEM,
-            description = "Open system settings"
-        ),
-        StaticCommand(
-            phrases = listOf("show notifications", "notifications", "notification panel"),
-            actionType = CommandActionType.NOTIFICATIONS,
-            category = CommandCategory.SYSTEM,
-            description = "Show notifications"
-        ),
-        StaticCommand(
-            phrases = listOf("clear notifications", "dismiss notifications"),
-            actionType = CommandActionType.CLEAR_NOTIFICATIONS,
-            category = CommandCategory.SYSTEM,
-            description = "Clear all notifications"
-        ),
-        StaticCommand(
-            phrases = listOf("take screenshot", "screenshot", "capture screen"),
-            actionType = CommandActionType.SCREENSHOT,
-            category = CommandCategory.SYSTEM,
-            description = "Take a screenshot"
-        ),
-        StaticCommand(
-            phrases = listOf("turn on flashlight", "flashlight on", "torch on"),
-            actionType = CommandActionType.FLASHLIGHT_ON,
-            category = CommandCategory.SYSTEM,
-            description = "Turn on flashlight"
-        ),
-        StaticCommand(
-            phrases = listOf("turn off flashlight", "flashlight off", "torch off"),
-            actionType = CommandActionType.FLASHLIGHT_OFF,
-            category = CommandCategory.SYSTEM,
-            description = "Turn off flashlight"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // VoiceOS Control Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val voiceOSCommands = listOf(
-        StaticCommand(
-            phrases = listOf("mute voice", "stop listening", "voice off"),
-            actionType = CommandActionType.VOICE_MUTE,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Mute voice recognition"
-        ),
-        StaticCommand(
-            phrases = listOf("wake up voice", "start listening", "voice on"),
-            actionType = CommandActionType.VOICE_WAKE,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Wake voice recognition"
-        ),
-        StaticCommand(
-            phrases = listOf("start dictation", "dictation", "type mode"),
-            actionType = CommandActionType.DICTATION_START,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Start dictation mode"
-        ),
-        StaticCommand(
-            phrases = listOf("stop dictation", "end dictation", "command mode"),
-            actionType = CommandActionType.DICTATION_STOP,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Stop dictation mode"
-        ),
-        StaticCommand(
-            phrases = listOf("show voice commands", "what can I say", "help"),
-            actionType = CommandActionType.SHOW_COMMANDS,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Show available commands"
-        ),
-        // Numbers Overlay Control
-        StaticCommand(
-            phrases = listOf("numbers on", "show numbers", "numbers always"),
-            actionType = CommandActionType.NUMBERS_ON,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Always show numbered badges on screen elements"
-        ),
-        StaticCommand(
-            phrases = listOf("numbers off", "hide numbers", "no numbers"),
-            actionType = CommandActionType.NUMBERS_OFF,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Never show numbered badges"
-        ),
-        StaticCommand(
-            phrases = listOf("numbers auto", "numbers automatic", "auto numbers"),
-            actionType = CommandActionType.NUMBERS_AUTO,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Show numbers only for lists (emails, messages, etc.)"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // App Launcher Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val appCommands = listOf(
-        StaticCommand(
-            phrases = listOf("open browser", "browser", "open web browser"),
-            actionType = CommandActionType.OPEN_APP,
-            category = CommandCategory.APP_LAUNCH,
-            description = "Open web browser",
-            metadata = mapOf("app_type" to "browser")
-        ),
-        StaticCommand(
-            phrases = listOf("open camera", "camera", "take photo"),
-            actionType = CommandActionType.OPEN_APP,
-            category = CommandCategory.APP_LAUNCH,
-            description = "Open camera",
-            metadata = mapOf("app_type" to "camera")
-        ),
-        StaticCommand(
-            phrases = listOf("open gallery", "gallery", "photos"),
-            actionType = CommandActionType.OPEN_APP,
-            category = CommandCategory.APP_LAUNCH,
-            description = "Open photo gallery",
-            metadata = mapOf("app_type" to "gallery")
-        ),
-        StaticCommand(
-            phrases = listOf("open calculator", "calculator"),
-            actionType = CommandActionType.OPEN_APP,
-            category = CommandCategory.APP_LAUNCH,
-            description = "Open calculator",
-            metadata = mapOf("app_type" to "calculator")
-        ),
-        StaticCommand(
-            phrases = listOf("open calendar", "calendar"),
-            actionType = CommandActionType.OPEN_APP,
-            category = CommandCategory.APP_LAUNCH,
-            description = "Open calendar",
-            metadata = mapOf("app_type" to "calendar")
-        ),
-        StaticCommand(
-            phrases = listOf("open phone", "phone", "dialer"),
-            actionType = CommandActionType.OPEN_APP,
-            category = CommandCategory.APP_LAUNCH,
-            description = "Open phone dialer",
-            metadata = mapOf("app_type" to "phone")
-        ),
-        StaticCommand(
-            phrases = listOf("open messages", "messages", "sms"),
-            actionType = CommandActionType.OPEN_APP,
-            category = CommandCategory.APP_LAUNCH,
-            description = "Open messages app",
-            metadata = mapOf("app_type" to "messages")
-        ),
-        StaticCommand(
-            phrases = listOf("open contacts", "contacts"),
-            actionType = CommandActionType.OPEN_APP,
-            category = CommandCategory.APP_LAUNCH,
-            description = "Open contacts",
-            metadata = mapOf("app_type" to "contacts")
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Accessibility Commands (Scroll + Zoom + Element Interaction)
-    // ═══════════════════════════════════════════════════════════════════
-
-    val accessibilityCommands = listOf(
-        StaticCommand(
-            phrases = listOf("scroll down", "page down"),
-            actionType = CommandActionType.SCROLL_DOWN,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Scroll down"
-        ),
-        StaticCommand(
-            phrases = listOf("scroll up", "page up"),
-            actionType = CommandActionType.SCROLL_UP,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Scroll up"
-        ),
-        StaticCommand(
-            phrases = listOf("scroll left"),
-            actionType = CommandActionType.SCROLL_LEFT,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Scroll left"
-        ),
-        StaticCommand(
-            phrases = listOf("scroll right"),
-            actionType = CommandActionType.SCROLL_RIGHT,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Scroll right"
-        ),
-        StaticCommand(
-            phrases = listOf("click", "tap", "press"),
-            actionType = CommandActionType.CLICK,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Click/tap on a named or numbered element"
-        ),
-        StaticCommand(
-            phrases = listOf("long press", "long click", "press and hold", "hold"),
-            actionType = CommandActionType.LONG_CLICK,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Long press on element"
-        ),
-        StaticCommand(
-            phrases = listOf("zoom in", "magnify", "enlarge"),
-            actionType = CommandActionType.ZOOM_IN,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Zoom in"
-        ),
-        StaticCommand(
-            phrases = listOf("zoom out", "shrink"),
-            actionType = CommandActionType.ZOOM_OUT,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Zoom out"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Text & Clipboard Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val textCommands = listOf(
-        StaticCommand(
-            phrases = listOf("select all", "highlight all"),
-            actionType = CommandActionType.SELECT_ALL,
-            category = CommandCategory.TEXT,
-            description = "Select all text"
-        ),
-        StaticCommand(
-            phrases = listOf("copy", "copy that", "copy text"),
-            actionType = CommandActionType.COPY,
-            category = CommandCategory.TEXT,
-            description = "Copy selection to clipboard"
-        ),
-        StaticCommand(
-            phrases = listOf("paste", "paste text"),
-            actionType = CommandActionType.PASTE,
-            category = CommandCategory.TEXT,
-            description = "Paste from clipboard"
-        ),
-        StaticCommand(
-            phrases = listOf("cut", "cut text"),
-            actionType = CommandActionType.CUT,
-            category = CommandCategory.TEXT,
-            description = "Cut selection to clipboard"
-        ),
-        StaticCommand(
-            phrases = listOf("undo", "undo that", "take back"),
-            actionType = CommandActionType.UNDO,
-            category = CommandCategory.TEXT,
-            description = "Undo last action"
-        ),
-        StaticCommand(
-            phrases = listOf("redo", "redo that"),
-            actionType = CommandActionType.REDO,
-            category = CommandCategory.TEXT,
-            description = "Redo last undone action"
-        ),
-        StaticCommand(
-            phrases = listOf("delete", "delete that", "erase", "remove"),
-            actionType = CommandActionType.DELETE,
-            category = CommandCategory.TEXT,
-            description = "Delete selected text"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Screen & Display Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val screenCommands = listOf(
-        StaticCommand(
-            phrases = listOf("brightness up", "increase brightness", "brighter"),
-            actionType = CommandActionType.BRIGHTNESS_UP,
-            category = CommandCategory.SYSTEM,
-            description = "Increase screen brightness"
-        ),
-        StaticCommand(
-            phrases = listOf("brightness down", "decrease brightness", "dimmer"),
-            actionType = CommandActionType.BRIGHTNESS_DOWN,
-            category = CommandCategory.SYSTEM,
-            description = "Decrease screen brightness"
-        ),
-        StaticCommand(
-            phrases = listOf("lock screen", "lock phone", "lock"),
-            actionType = CommandActionType.LOCK_SCREEN,
-            category = CommandCategory.SYSTEM,
-            description = "Lock the screen"
-        ),
-        StaticCommand(
-            phrases = listOf("rotate screen", "rotate", "change orientation"),
-            actionType = CommandActionType.ROTATE_SCREEN,
-            category = CommandCategory.SYSTEM,
-            description = "Toggle screen rotation"
-        ),
-        StaticCommand(
-            phrases = listOf("toggle wifi", "wifi on", "wifi off", "turn on wifi", "turn off wifi"),
-            actionType = CommandActionType.TOGGLE_WIFI,
-            category = CommandCategory.SYSTEM,
-            description = "Toggle WiFi"
-        ),
-        StaticCommand(
-            phrases = listOf("toggle bluetooth", "bluetooth on", "bluetooth off", "turn on bluetooth", "turn off bluetooth"),
-            actionType = CommandActionType.TOGGLE_BLUETOOTH,
-            category = CommandCategory.SYSTEM,
-            description = "Toggle Bluetooth"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Cursor Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val cursorCommands = listOf(
-        StaticCommand(
-            phrases = listOf("show cursor", "cursor on", "enable cursor"),
-            actionType = CommandActionType.CURSOR_SHOW,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Show the voice cursor overlay"
-        ),
-        StaticCommand(
-            phrases = listOf("hide cursor", "cursor off", "disable cursor"),
-            actionType = CommandActionType.CURSOR_HIDE,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Hide the voice cursor overlay"
-        ),
-        StaticCommand(
-            phrases = listOf("cursor click", "click here"),
-            actionType = CommandActionType.CURSOR_CLICK,
-            category = CommandCategory.VOICE_CONTROL,
-            description = "Click at cursor position"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Reading / TTS Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val readingCommands = listOf(
-        StaticCommand(
-            phrases = listOf("read screen", "read aloud", "read this", "read page"),
-            actionType = CommandActionType.READ_SCREEN,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Read screen content aloud"
-        ),
-        StaticCommand(
-            phrases = listOf("stop reading", "stop", "quiet", "be quiet"),
-            actionType = CommandActionType.STOP_READING,
-            category = CommandCategory.ACCESSIBILITY,
-            description = "Stop reading aloud"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Input Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val inputCommands = listOf(
-        StaticCommand(
-            phrases = listOf("show keyboard", "open keyboard", "keyboard"),
-            actionType = CommandActionType.SHOW_KEYBOARD,
-            category = CommandCategory.INPUT,
-            description = "Show on-screen keyboard"
-        ),
-        StaticCommand(
-            phrases = listOf("hide keyboard", "close keyboard", "dismiss keyboard"),
-            actionType = CommandActionType.HIDE_KEYBOARD,
-            category = CommandCategory.INPUT,
-            description = "Hide on-screen keyboard"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // App Control Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val appControlCommands = listOf(
-        StaticCommand(
-            phrases = listOf("close app", "close this", "exit app", "quit"),
-            actionType = CommandActionType.CLOSE_APP,
-            category = CommandCategory.APP_CONTROL,
-            description = "Close the current app"
-        )
-    )
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Browser Commands
-    // ═══════════════════════════════════════════════════════════════════
-
-    val browserCommands = listOf(
-        StaticCommand(
-            phrases = listOf("retrain page", "rescan page", "rescan"),
-            actionType = CommandActionType.RETRAIN_PAGE,
-            category = CommandCategory.BROWSER,
-            description = "Force re-scrape current web page and regenerate voice commands"
-        )
-    )
+    /**
+     * Clear DB commands (for testing or forced reload).
+     */
+    fun reset() {
+        _dbCommands = null
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // Registry Access Methods
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * Get all static commands
+     * Get all static commands.
+     * Returns DB-loaded commands (sourced from .VOS files via CommandLoader).
+     * Returns empty list if DB not yet loaded — callers should ensure
+     * CommandLoader.seedFromAssets() runs before voice pipeline starts.
      */
-    fun all(): List<StaticCommand> =
-        navigationCommands +
-        mediaCommands +
-        systemCommands +
-        screenCommands +
-        voiceOSCommands +
-        cursorCommands +
-        appCommands +
-        appControlCommands +
-        accessibilityCommands +
-        textCommands +
-        readingCommands +
-        inputCommands +
-        browserCommands
+    fun all(): List<StaticCommand> = _dbCommands ?: emptyList()
 
     /**
      * Get all phrase strings (for speech engine vocabulary)
@@ -631,6 +175,12 @@ object StaticCommandRegistry {
  * Represents a static/predefined voice command
  */
 data class StaticCommand(
+    /**
+     * Unique command identifier from VOS file (e.g., "nav_back", "browser_refresh").
+     * Empty string for hardcoded fallback commands.
+     */
+    val id: String = "",
+
     /**
      * Alternative phrases that trigger this command
      */

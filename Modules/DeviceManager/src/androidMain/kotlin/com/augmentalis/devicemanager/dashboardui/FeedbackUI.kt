@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -312,7 +313,7 @@ fun AudioSettingsTab(
         item {
             FeedbackCard(
                 title = "Audio Feedback",
-                icon = Icons.Default.VolumeUp,
+                icon = Icons.AutoMirrored.Filled.VolumeUp,
                 enabled = audioState.enabled && audioState.isAvailable
             ) {
                 // Enable/Disable Toggle
@@ -611,7 +612,7 @@ fun FeedbackStatusGrid(feedbackState: FeedbackState) {
                 StatusChip(
                     "Audio", 
                     feedbackState.audio.enabled && feedbackState.audio.isAvailable,
-                    Icons.Default.VolumeUp
+                    Icons.AutoMirrored.Filled.VolumeUp
                 )
                 StatusChip(
                     "Visual", 

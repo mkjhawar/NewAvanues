@@ -1,0 +1,37 @@
+-- Cockpit timeline event — tracks session activity for history/review.
+-- Auto-captures key moments: frame creation, layout changes, screenshots.
+
+CREATE TABLE CockpitTimelineEvent (
+    id TEXT NOT NULL PRIMARY KEY,
+    sessionId TEXT NOT NULL,
+    eventType TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    screenshotUri TEXT,
+    metadata TEXT NOT NULL DEFAULT '{}',
+    timestamp TEXT NOT NULL,
+    FOREIGN KEY (sessionId) REFERENCES CockpitSession(id) ON DELETE CASCADE
+);
+
+-- Indexes
+CREATE INDEX idx_cockpit_timeline_session ON CockpitTimelineEvent(sessionId, timestamp);
+
+-- Queries
+
+getBySession:
+SELECT * FROM CockpitTimelineEvent WHERE sessionId = ? ORDER BY timestamp DESC;
+
+getRecent:
+SELECT * FROM CockpitTimelineEvent WHERE sessionId = ? ORDER BY timestamp DESC LIMIT ?;
+
+insert:
+INSERT INTO CockpitTimelineEvent(id, sessionId, eventType, description, screenshotUri, metadata, timestamp)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteBySession:
+DELETE FROM CockpitTimelineEvent WHERE sessionId = ?;
+
+deleteOlderThan:
+DELETE FROM CockpitTimelineEvent WHERE timestamp < ?;
+
+count:
+SELECT COUNT(*) FROM CockpitTimelineEvent WHERE sessionId = ?;

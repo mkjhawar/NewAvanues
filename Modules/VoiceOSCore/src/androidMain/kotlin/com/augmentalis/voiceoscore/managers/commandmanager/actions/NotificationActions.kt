@@ -226,6 +226,7 @@ object NotificationActions {
     /**
      * Announce text via AccessibilityService (TalkBack compatible)
      */
+    @Suppress("DEPRECATION")
     private fun announceViaAccessibility(service: AccessibilityService?, text: String) {
         service?.let {
             // Use accessibility announcement for TalkBack compatibility

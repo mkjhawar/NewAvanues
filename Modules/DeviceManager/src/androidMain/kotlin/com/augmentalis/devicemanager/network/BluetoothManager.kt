@@ -39,6 +39,7 @@ class BluetoothManager(
         const val PROFILE_A2DP = BluetoothProfile.A2DP
         const val PROFILE_HEADSET = BluetoothProfile.HEADSET
         const val PROFILE_HID = 4 // BluetoothProfile.HID_DEVICE
+        @Suppress("DEPRECATION")
         const val PROFILE_HEALTH = BluetoothProfile.HEALTH
         const val PROFILE_GATT = BluetoothProfile.GATT
         const val PROFILE_GATT_SERVER = BluetoothProfile.GATT_SERVER
@@ -727,6 +728,7 @@ class BluetoothManager(
         }
     }
     
+    @Suppress("DEPRECATION")
     private fun processCharacteristicData(characteristic: BluetoothGattCharacteristic) {
         // Process based on characteristic UUID
         when (characteristic.uuid) {
@@ -741,6 +743,7 @@ class BluetoothManager(
     // ========== BROADCAST RECEIVER ==========
     
     private val bluetoothReceiver = object : BroadcastReceiver() {
+        @Suppress("DEPRECATION")
         @SuppressLint("MissingPermission")
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {

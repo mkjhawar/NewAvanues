@@ -2,15 +2,16 @@
  * PlatformUtils.ios.kt - iOS-specific platform utilities
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Claude (AI Assistant)
  * Created: 2026-01-18
+ * Updated: 2026-02-12 - Fixed Kotlin 2.1.0 Native compatibility (atomicfu synchronized)
  */
 package com.augmentalis.speechrecognition
 
 import platform.Foundation.NSDate
 import platform.Foundation.NSLog
 import platform.Foundation.timeIntervalSince1970
-import kotlin.native.concurrent.AtomicReference
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 
 /**
  * Get current time in milliseconds (iOS)
@@ -52,7 +53,7 @@ actual fun logError(tag: String, message: String, throwable: Throwable?) {
 
 /**
  * Create a thread-safe mutable list (iOS/Native)
- * Note: Uses simple locking for thread safety
+ * Uses atomicfu SynchronizedObject for Kotlin/Native thread safety
  */
 actual fun <T> createSynchronizedList(): MutableList<T> {
     return SynchronizedMutableList()
@@ -67,10 +68,11 @@ actual fun <K, V> createConcurrentMap(): MutableMap<K, V> {
 
 /**
  * Simple synchronized list implementation for iOS
+ * Uses atomicfu SynchronizedObject instead of JVM synchronized(Any())
  */
 private class SynchronizedMutableList<T> : MutableList<T> {
     private val list = mutableListOf<T>()
-    private val lock = Any()
+    private val lock = SynchronizedObject()
 
     override val size: Int get() = synchronized(lock) { list.size }
 
@@ -117,10 +119,11 @@ private class SynchronizedMutableList<T> : MutableList<T> {
 
 /**
  * Simple synchronized map implementation for iOS
+ * Uses atomicfu SynchronizedObject instead of JVM synchronized(Any())
  */
 private class SynchronizedMutableMap<K, V> : MutableMap<K, V> {
     private val map = mutableMapOf<K, V>()
-    private val lock = Any()
+    private val lock = SynchronizedObject()
 
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
         get() = synchronized(lock) { map.entries.toMutableSet() }

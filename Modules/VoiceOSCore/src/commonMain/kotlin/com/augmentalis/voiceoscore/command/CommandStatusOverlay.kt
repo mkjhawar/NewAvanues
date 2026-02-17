@@ -15,6 +15,7 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
 import com.augmentalis.voiceoscore.currentTimeMillis
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

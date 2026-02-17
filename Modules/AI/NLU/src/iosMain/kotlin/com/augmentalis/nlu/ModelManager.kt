@@ -1,12 +1,13 @@
 // filename: features/nlu/src/iosMain/kotlin/com/augmentalis/ava/features/nlu/ModelManager.kt
 // created: 2025-11-02
-// author: Claude Code
+// Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
 // © Augmentalis Inc, Intelligent Devices LLC
 // TCR: Phase 2 - iOS NLU with model management
 
 package com.augmentalis.nlu
 
 import com.augmentalis.ava.core.common.Result
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.Foundation.*
@@ -29,6 +30,7 @@ import platform.Foundation.*
  * - MobileBERT (384-dim): Fast, English
  * - mALBERT (768-dim): Multilingual, higher quality
  */
+@OptIn(ExperimentalForeignApi::class)
 actual class ModelManager {
 
     // Model file names
@@ -60,11 +62,11 @@ actual class ModelManager {
     init {
         // Create models directory if needed
         try {
-            NSFileManager.defaultManager.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(
+            NSFileManager.defaultManager.createDirectoryAtPath(
                 modelsDir,
-                true,
-                null,
-                null
+                withIntermediateDirectories = true,
+                attributes = null,
+                error = null
             )
         } catch (e: Exception) {
             println("ModelManager: Failed to create models directory: ${e.message}")
@@ -108,9 +110,9 @@ actual class ModelManager {
         }
 
         // Check bundle
-        val bundleVocab = NSBundle.mainBundle.pathForResourceOfType(
+        val bundleVocab = NSBundle.mainBundle.pathForResource(
             "vocab",
-            "txt"
+            ofType = "txt"
         ) ?: return ""
 
         return bundleVocab
@@ -124,7 +126,7 @@ actual class ModelManager {
      */
     actual suspend fun downloadModelsIfNeeded(
         onProgress: (Float) -> Unit
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = withContext(Dispatchers.Default) {
         try {
             // iOS typically bundles models, so we return success if available
             if (isModelAvailable()) {
@@ -148,7 +150,7 @@ actual class ModelManager {
      * Copy model from app bundle to Documents for easier access
      * Useful for extracting bundled .mlpackage models
      */
-    actual suspend fun copyModelFromAssets(): Result<Unit> = withContext(Dispatchers.IO) {
+    actual suspend fun copyModelFromAssets(): Result<Unit> = withContext(Dispatchers.Default) {
         try {
             println("ModelManager: Copying model from bundle...")
 
@@ -161,7 +163,7 @@ actual class ModelManager {
                 val destUrl = NSURL.fileURLWithPath("$modelsDir/${mobileBertModel}")
 
                 try {
-                    fileManager.copyItemAtURLToURLError(sourceUrl, destUrl, null)
+                    fileManager.copyItemAtURL(sourceUrl, toURL = destUrl, error = null)
                     println("ModelManager: Model copied successfully")
                 } catch (e: Exception) {
                     println("ModelManager: Failed to copy model: ${e.message}")
@@ -187,7 +189,7 @@ actual class ModelManager {
 
             // Remove models directory
             try {
-                fileManager.removeItemAtPathError(modelsDir, null)
+                fileManager.removeItemAtPath(modelsDir, error = null)
                 println("ModelManager: Models cleared")
             } catch (e: Exception) {
                 println("ModelManager: Failed to clear models: ${e.message}")
@@ -208,7 +210,7 @@ actual class ModelManager {
     actual fun getModelsSize(): Long {
         return try {
             val fileManager = NSFileManager.defaultManager
-            val attr = fileManager.attributesOfItemAtPathError(modelsDir, null)
+            val attr = fileManager.attributesOfItemAtPath(modelsDir, error = null)
             val size = attr?.get(NSFileSize) as? Number
             size?.toLong() ?: 0L
         } catch (e: Exception) {
@@ -225,19 +227,19 @@ actual class ModelManager {
         val bundle = NSBundle.mainBundle
 
         // Try mALBERT first (better quality)
-        bundle.pathForResourceOfType("intent_classifier_malbert.mlpackage", null)?.let {
+        bundle.pathForResource("intent_classifier_malbert.mlpackage", ofType = null)?.let {
             println("ModelManager: Found mALBERT in bundle")
             return it
         }
 
         // Fallback to MobileBERT
-        bundle.pathForResourceOfType("intent_classifier_mobilebert.mlpackage", null)?.let {
+        bundle.pathForResource("intent_classifier_mobilebert.mlpackage", ofType = null)?.let {
             println("ModelManager: Found MobileBERT in bundle")
             return it
         }
 
         // Try without extension (for raw model files)
-        bundle.pathForResourceOfType("intent_classifier", "mlmodel")?.let {
+        bundle.pathForResource("intent_classifier", ofType = "mlmodel")?.let {
             println("ModelManager: Found .mlmodel in bundle")
             return it
         }
@@ -276,7 +278,7 @@ actual class ModelManager {
         }
 
         // Check bundle
-        val bundleVocab = NSBundle.mainBundle.pathForResourceOfType("vocab", "txt")
+        val bundleVocab = NSBundle.mainBundle.pathForResource("vocab", ofType = "txt")
         return bundleVocab != null
     }
 

@@ -225,13 +225,13 @@ fun AvidManagerScreen(viewModel: AvidViewModel = androidx.lifecycle.viewmodel.co
             
             items(
                 items = displayElements,
-                key = { it.vuid }
+                key = { it.avid }
             ) { element ->
                 ElementCard(
                     element = element,
-                    isSelected = element.vuid == uiState.selectedElement?.vuid,
+                    isSelected = element.avid == uiState.selectedElement?.avid,
                     onClick = { viewModel.selectElement(element) },
-                    onUnregister = { viewModel.unregisterElement(element.vuid) }
+                    onUnregister = { viewModel.unregisterElement(element.avid) }
                 )
             }
             
@@ -515,7 +515,7 @@ fun SelectedElementCard(
             Spacer(modifier = Modifier.height(12.dp))
             
             // Element Details
-            DetailRow("UUID", element.vuid.take(16) + "...")
+            DetailRow("UUID", element.avid.take(16) + "...")
             DetailRow("Name", element.name ?: "unnamed")
             DetailRow("Type", element.type)
             DetailRow("Status", if (element.isEnabled) "Enabled" else "Disabled")
@@ -801,7 +801,7 @@ fun ElementCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        element.vuid.take(8),
+                        element.avid.take(8),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

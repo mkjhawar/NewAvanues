@@ -1,14 +1,16 @@
 /**
  * AvanueCard.kt - Unified card component
  *
- * ONE component, theme decides glass/water/plain.
+ * ONE component, theme decides glass/water/cupertino/mountainview.
  * Reads AvanueTheme.materialMode to delegate to the correct implementation.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 package com.augmentalis.avanueui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
@@ -24,12 +26,7 @@ import com.augmentalis.avanueui.theme.MaterialMode
 /**
  * Unified card component for the Avanues ecosystem.
  *
- * Renders as glass, water, or plain Material3 based on [AvanueTheme.materialMode].
- *
- * @param onClick Optional click handler
- * @param modifier Modifier for customization
- * @param shape Card shape
- * @param content Card content (ColumnScope)
+ * Renders as glass, water, cupertino, or mountainview based on [AvanueTheme.materialMode].
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -40,19 +37,48 @@ fun AvanueCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     when (AvanueTheme.materialMode) {
-        MaterialMode.GLASS -> GlassCard(
+        MaterialMode.Glass -> GlassCard(
             onClick = onClick,
             modifier = modifier,
             shape = shape,
             content = content
         )
-        MaterialMode.WATER -> WaterCard(
+        MaterialMode.Water -> WaterCard(
             onClick = onClick,
             modifier = modifier,
             shape = shape,
             content = content
         )
-        MaterialMode.PLAIN -> {
+        MaterialMode.Cupertino -> {
+            val cupertinoShape = RoundedCornerShape(12.dp)
+            if (onClick != null) {
+                Card(
+                    onClick = onClick,
+                    modifier = modifier,
+                    shape = cupertinoShape,
+                    colors = CardDefaults.cardColors(
+                        containerColor = AvanueTheme.colors.surface,
+                        contentColor = AvanueTheme.colors.textPrimary
+                    ),
+                    elevation = CardDefaults.cardElevation(0.dp),
+                    border = BorderStroke(0.33.dp, AvanueTheme.colors.borderSubtle),
+                    content = content
+                )
+            } else {
+                Card(
+                    modifier = modifier,
+                    shape = cupertinoShape,
+                    colors = CardDefaults.cardColors(
+                        containerColor = AvanueTheme.colors.surface,
+                        contentColor = AvanueTheme.colors.textPrimary
+                    ),
+                    elevation = CardDefaults.cardElevation(0.dp),
+                    border = BorderStroke(0.33.dp, AvanueTheme.colors.borderSubtle),
+                    content = content
+                )
+            }
+        }
+        MaterialMode.MountainView -> {
             if (onClick != null) {
                 Card(
                     onClick = onClick,
@@ -62,6 +88,7 @@ fun AvanueCard(
                         containerColor = AvanueTheme.colors.surface,
                         contentColor = AvanueTheme.colors.textPrimary
                     ),
+                    elevation = CardDefaults.cardElevation(1.dp),
                     content = content
                 )
             } else {
@@ -72,6 +99,7 @@ fun AvanueCard(
                         containerColor = AvanueTheme.colors.surface,
                         contentColor = AvanueTheme.colors.textPrimary
                     ),
+                    elevation = CardDefaults.cardElevation(1.dp),
                     content = content
                 )
             }

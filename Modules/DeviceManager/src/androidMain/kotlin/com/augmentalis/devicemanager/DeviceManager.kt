@@ -135,14 +135,14 @@ class DeviceManager(private val context: Context) : DefaultLifecycleObserver {
     }
     
     val usbNetwork: UsbNetworkManager? by lazy { 
-        if (deviceCapabilities.hardware.hasUsb) UsbNetworkManager(context) else null.also {
+        if (deviceCapabilities.hardware.hasUsb) @Suppress("DEPRECATION") UsbNetworkManager(context) else null.also {
             Log.d(TAG, "USB host not available - manager not loaded")
         }
     }
     
     // Sensor managers - only load if hardware exists
     val lidar: LidarManager? by lazy { 
-        if (deviceCapabilities.sensors.totalSensorCount > 0) LidarManager(context) else null.also { // LiDAR check simplified
+        if (deviceCapabilities.sensors.totalSensorCount > 0) @Suppress("DEPRECATION") LidarManager(context) else null.also { // LiDAR check simplified
             Log.d(TAG, "LiDAR not available - manager not loaded")
         }
     }
@@ -158,6 +158,7 @@ class DeviceManager(private val context: Context) : DefaultLifecycleObserver {
     
     // Security managers
     val biometric: BiometricManager? by lazy { 
+        @Suppress("SENSELESS_COMPARISON")
         if (deviceCapabilities.biometric != null) BiometricManager(context, deviceCapabilities) else null.also {
             Log.d(TAG, "Biometric not available - manager not loaded")
         }

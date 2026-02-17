@@ -288,7 +288,7 @@ class EncryptionMigrationTest {
     // Helper methods
 
     private fun createTestDocument(): String {
-        val docId = VuidHelper.randomVUID()
+        val docId = AvidHelper.randomDocumentAVID()
         database.rAGDocumentQueries.insert(
             id = docId,
             title = "Test Document",
@@ -337,7 +337,7 @@ class EncryptionMigrationTest {
         }
 
         database.rAGChunkQueries.insert(
-            id = VuidHelper.randomVUID(),
+            id = AvidHelper.randomDocumentAVID(),
             document_id = documentId,
             chunk_index = index.toLong(),
             content = "Test chunk $index",

@@ -5,7 +5,7 @@ import com.augmentalis.ava.core.data.db.ConversationQueries
 import com.augmentalis.ava.core.data.db.MessageQueries
 import com.augmentalis.ava.core.data.mapper.toDomain
 import com.augmentalis.ava.core.data.mapper.toInsertParams
-import com.augmentalis.ava.core.data.util.VuidHelper
+import com.augmentalis.ava.core.data.util.AvidHelper
 import com.augmentalis.ava.core.domain.model.Message
 import com.augmentalis.ava.core.domain.model.MessageRole
 import com.augmentalis.ava.core.domain.repository.MessageRepository
@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
  * Handles message persistence and denormalized conversation count
  *
  * Updated: Room removed, now uses SQLDelight queries directly
- * KMP compatible: Uses VuidHelper for cross-platform VUID generation
+ * KMP compatible: Uses AvidHelper for cross-platform AVID generation
  */
 class MessageRepositoryImpl(
     private val messageQueries: MessageQueries,
@@ -56,7 +56,7 @@ class MessageRepositoryImpl(
         try {
             // Generate ID if not provided
             val messageWithId = if (message.id.isEmpty()) {
-                message.copy(id = VuidHelper.randomVUID())
+                message.copy(id = AvidHelper.randomMessageAVID())
             } else {
                 message
             }

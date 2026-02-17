@@ -28,6 +28,7 @@ data class VoiceTarget(
     val description: String? = null,
     val parent: String? = null,
     val children: MutableList<String> = mutableListOf(),
+    @Suppress("DEPRECATION")
     val position: Position? = null,
     val actions: Map<String, (Map<String, Any>) -> Unit> = emptyMap(),
     val isEnabled: Boolean = true,

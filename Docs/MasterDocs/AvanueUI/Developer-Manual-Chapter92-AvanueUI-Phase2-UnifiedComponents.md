@@ -1,6 +1,6 @@
 # Developer Manual — Chapter 92: AvanueUI Phase 2 — Unified Component Architecture
 
-**Date:** 2026-02-10 | **Branch:** `060226-1-consolidation-framework` | **Version:** 1.0
+**Date:** 2026-02-11 | **Branch:** `VoiceOSCore-KotlinUpdate` | **Version:** 2.0 (Theme v5.1)
 **Prerequisite:** Chapter 91 (AvanueUI DesignSystem Guide)
 
 ---
@@ -20,7 +20,8 @@ WaterCard(waterLevel = WaterLevel.REGULAR) { ... }   // Water effect
 ```kotlin
 // ONE component — theme decides rendering:
 AvanueCard { ... }
-// Glass if MaterialMode.GLASS, Water if MaterialMode.WATER, M3 if MaterialMode.PLAIN
+// Glass if MaterialMode.Glass, Water if MaterialMode.Water,
+// Cupertino if MaterialMode.Cupertino, M3 if MaterialMode.MountainView
 ```
 
 ---
@@ -30,12 +31,27 @@ AvanueCard { ... }
 ### v4.0 (2026-02-10) — Phase 2: Unified Component Architecture
 
 **New:**
-- `MaterialMode` enum: `GLASS`, `WATER`, `PLAIN`
+- `MaterialMode` enum: `Glass`, `Water`, `Cupertino`, `MountainView` (4 modes)
 - `AvanueTheme.materialMode` accessor
 - 7 unified components: `AvanueSurface`, `AvanueCard`, `AvanueButton`, `AvanueChip`, `AvanueBubble`, `AvanueFAB`, `AvanueIconButton`
-- `AvanueThemeVariant` now maps variants to material modes (OCEAN→GLASS, SUNSET→GLASS, LIQUID→WATER)
 
-**Deprecated:**
+### v5.1 (2026-02-11) — Three Independent Axes
+
+**New:**
+- `AppearanceMode` enum: `Light`, `Dark`, `Auto`
+- `AvanueColorPalette` enum: `SOL`, `LUNA`, `TERRA`, `HYDRA` (decoupled from MaterialMode)
+- `AvanueTheme.isDark` accessor + `LocalAppearanceIsDark` CompositionLocal
+- Light variants for all 4 palettes (Colors, Glass, Water)
+- XR variants for AR smart glasses (`palette.colorsXR`)
+- `Cupertino` material mode: 0dp elevation, 12dp corners, hairline borders
+- `MountainView` material mode: Standard M3 tonal elevation
+
+**Deprecated (v5.0):**
+- `AvanueThemeVariant` → use `AvanueColorPalette` + `MaterialMode` independently
+- `MaterialMode.PLAIN` → renamed to `MaterialMode.MountainView`
+- `OceanColors`/`SunsetColors`/`LiquidColors` → use `LunaColors`/`SolColors`/`HydraColors`
+
+**Deprecated (v4.0):**
 - `GlassSurface` → use `AvanueSurface`
 - `GlassCard` → use `AvanueCard`
 - `GlassBubble` → use `AvanueBubble`
@@ -70,38 +86,40 @@ AvanueCard { ... }
 
 ## 1. MaterialMode — Theme-Driven Rendering
 
-### 1.1 The Three Modes
+### 1.1 The Four Modes
 
 | Mode | Rendering | When To Use |
 |------|-----------|-------------|
-| `GLASS` | Frosted glass overlay (`Modifier.glass`) | Ocean/Sunset themes, standard UIs |
-| `WATER` | Liquid refraction + caustics (`Modifier.waterEffect`) | Apple-inspired Liquid Glass |
-| `PLAIN` | Standard Material3 with AvanueTheme colors | M3 Expressive (future), minimal UIs |
+| `Glass` | Frosted glass overlay (`Modifier.glass`) | visionOS-style, standard UIs |
+| `Water` | Liquid refraction + caustics (`Modifier.waterEffect`) | AvanueUI-original Liquid Glass (DEFAULT) |
+| `Cupertino` | 0dp elevation, 12dp corners, 0.33dp hairline borders | Apple iOS flat style |
+| `MountainView` | Standard M3 tonal elevation, M3 shape scale | Google Material3 style |
 
 ### 1.2 Setting MaterialMode
 
-**Via AvanueThemeProvider:**
+**Via AvanueThemeProvider (v5.1 — preferred):**
 ```kotlin
-import com.augmentalis.avanueui.theme.AvanueThemeProvider
-import com.augmentalis.avanueui.theme.MaterialMode
+import com.augmentalis.avanueui.theme.*
+import com.augmentalis.avanueui.display.DisplayProfile
+import androidx.compose.foundation.isSystemInDarkTheme
+
+val palette = AvanueColorPalette.HYDRA
+val style = MaterialMode.Water
+val isDark = isSystemInDarkTheme()  // or from AppearanceMode
 
 AvanueThemeProvider(
-    colors = OceanColors,
-    glass = OceanGlass,
-    materialMode = MaterialMode.GLASS,  // NEW parameter
+    colors = palette.colors(isDark),
+    glass = palette.glass(isDark),
+    water = palette.water(isDark),
+    materialMode = style,
+    isDark = isDark,
     displayProfile = DisplayProfile.PHONE
 ) {
     MyAppContent()
 }
 ```
 
-**Via AvanueThemeVariant (automatic):**
-```kotlin
-// Each variant has a default materialMode:
-// OCEAN  → MaterialMode.GLASS
-// SUNSET → MaterialMode.GLASS
-// LIQUID → MaterialMode.WATER
-```
+> **Note:** `AvanueThemeVariant` is DEPRECATED. Use `AvanueColorPalette` + `MaterialMode` + `AppearanceMode` independently.
 
 ### 1.3 Accessing MaterialMode
 
@@ -372,9 +390,10 @@ In `Renderers/Web/src/types/index.ts`:
  * Material rendering mode — controls visual effects per component
  */
 export enum MaterialMode {
-  GLASS = 'GLASS',     // Frosted glass overlay (CSS backdrop-filter)
-  WATER = 'WATER',     // Liquid refraction + caustics (CSS animations + backdrop-filter)
-  PLAIN = 'PLAIN'      // Standard Material3 with AvanueTheme colors
+  GLASS = 'Glass',          // Frosted glass overlay (CSS backdrop-filter)
+  WATER = 'Water',          // Liquid refraction + caustics (CSS animations + backdrop-filter)
+  CUPERTINO = 'Cupertino',  // Apple iOS flat (hairline borders, 0 elevation)
+  MOUNTAIN_VIEW = 'MountainView'  // Google M3 standard
 }
 ```
 
@@ -420,7 +439,8 @@ export const AvanueCard: React.FC<AvanueCardProps> = ({ onClick, className, chil
   const modeClass = {
     [MaterialMode.GLASS]: 'avanue-card--glass',
     [MaterialMode.WATER]: 'avanue-card--water',
-    [MaterialMode.PLAIN]: 'avanue-card--plain',
+    [MaterialMode.CUPERTINO]: 'avanue-card--cupertino',
+    [MaterialMode.MOUNTAIN_VIEW]: 'avanue-card--mountain-view',
   }[theme.materialMode];
 
   return (
@@ -458,8 +478,16 @@ Add water effect CSS to the design token CSS file:
   animation: water-shimmer var(--avanue-water-shimmer-duration) linear infinite;
 }
 
-/* Plain mode (standard M3) */
-.avanue-card--plain {
+/* Cupertino mode (Apple flat) */
+.avanue-card--cupertino {
+  background: var(--avanue-surface);
+  border: 0.33px solid var(--avanue-outline);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+/* MountainView mode (Google M3) */
+.avanue-card--mountain-view {
   background: var(--avanue-surface);
   border: 1px solid var(--avanue-outline);
 }
@@ -499,7 +527,7 @@ The iOS Renderer bridge (`Renderers/iOS/`) needs these updates:
 In `SwiftUIModels.kt`:
 ```kotlin
 enum class MaterialModeDTO {
-    GLASS, WATER, PLAIN
+    GLASS, WATER, CUPERTINO, MOUNTAIN_VIEW
 }
 ```
 
@@ -530,7 +558,12 @@ struct AvanueCard<Content: View>: View {
                 content()
                     .background(.ultraThinMaterial)
             }
-        case .plain:
+        case .cupertino:
+            content()
+                .background(Color(.systemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.separator, lineWidth: 0.33))
+        case .mountainView:
             content()
                 .background(Color(.systemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -557,7 +590,7 @@ These components remain as-is (not deprecated):
 
 ## 7. Architecture Decision: M3 Expressive
 
-The `PLAIN` mode currently renders standard Material3 with `AvanueTheme.colors.*`. When the project upgrades to Kotlin 2.1+ / Compose Multiplatform 1.9+, the `PLAIN` branch will switch to `MaterialExpressiveTheme` — the new M3 Expressive paradigm.
+The `MountainView` mode (formerly `PLAIN`) renders standard Material3 with `AvanueTheme.colors.*`. As of Kotlin 2.1.0 / Compose 1.7.3, when M3 Expressive APIs stabilize in Compose Multiplatform, the `MountainView` branch may switch to `MaterialExpressiveTheme`.
 
 **Impact:** ZERO consumer changes. The unified components abstract this entirely.
 
@@ -570,13 +603,16 @@ Modules/AvanueUI/src/commonMain/kotlin/com/augmentalis/avanueui/
 ├── tokens/                    ← 10 static token files (+WaterTokens)
 ├── theme/
 │   ├── AvanueTheme.kt        ← Updated: +materialMode param, +LocalMaterialMode
-│   ├── AvanueThemeVariant.kt ← Updated: +materialMode per variant
-│   ├── MaterialMode.kt       ← NEW: GLASS/WATER/PLAIN enum
+│   ├── AvanueColorPalette.kt  ← v5.0: SOL/LUNA/TERRA/HYDRA + isDark overloads
+│   ├── AppearanceMode.kt     ← v5.1: Light/Dark/Auto
+│   ├── MaterialMode.kt       ← v5.0: Glass/Water/Cupertino/MountainView
+│   ├── AvanueThemeVariant.kt ← DEPRECATED
 │   ├── AvanueColorScheme.kt
 │   ├── AvanueGlassScheme.kt
 │   ├── AvanueWaterScheme.kt
-│   ├── OceanColors.kt, SunsetColors.kt
-│   └── OceanGlass.kt, SunsetGlass.kt, OceanWater.kt, SunsetWater.kt
+│   ├── ModuleAccent.kt        ← Per-module color accents
+│   ├── Hydra*.kt, Sol*.kt, Luna*.kt, Terra*.kt  (Colors/Glass/Water + Light + XR)
+│   └── Ocean*.kt, Sunset*.kt, Liquid*.kt  (DEPRECATED aliases)
 ├── display/
 ├── glass/                     ← GlassLevel, GlassBorder (unchanged)
 ├── water/                     ← WaterLevel, WaterBorder, waterEffect (unchanged)

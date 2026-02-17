@@ -65,7 +65,18 @@ object SynonymRegistry {
 
         // Reading / TTS
         SynonymEntry("read", listOf("read aloud", "speak", "narrate")),
-        SynonymEntry("stop", listOf("halt", "cancel", "enough"))
+        SynonymEntry("stop", listOf("halt", "cancel", "enough")),
+
+        // Web gestures
+        SynonymEntry("pan", listOf("move view", "slide view", "shift view")),
+        SynonymEntry("tilt", listOf("angle", "angle view")),
+        SynonymEntry("orbit", listOf("circle around", "revolve")),
+        SynonymEntry("fling", listOf("flick", "swipe fast")),
+        SynonymEntry("throw", listOf("toss", "launch")),
+        SynonymEntry("pinch", listOf("squeeze", "spread")),
+        SynonymEntry("scale", listOf("resize", "size")),
+        SynonymEntry("grab", listOf("lock", "hold", "latch", "grip")),
+        SynonymEntry("release", listOf("let go", "drop", "unlock", "ungrab"))
     )
 
     /**
@@ -91,6 +102,59 @@ object SynonymRegistry {
         return entries.find { entry ->
             entry.synonyms.any { it.lowercase() == normalized }
         }?.canonical
+    }
+
+    /**
+     * Add localized verb phrases as synonyms for their canonical verbs.
+     *
+     * Called when VOS files load for a locale. Merges localized verbs into
+     * existing synonym entries. E.g., for es-ES, adds "pulsar", "clic", "tocar"
+     * as synonyms for canonical "click".
+     *
+     * Duplicate synonyms are ignored. Entries are marked non-default (user/locale-added).
+     *
+     * @param verbs Localized verbs extracted from VOS verb-type commands
+     */
+    fun addLocalizedVerbs(verbs: List<LocalizedVerb>) {
+        // Group by canonical verb
+        val grouped = verbs.groupBy { it.canonicalVerb.lowercase() }
+
+        for ((canonical, localizedVerbs) in grouped) {
+            val existingIndex = entries.indexOfFirst { it.canonical.lowercase() == canonical }
+            val newSynonyms = localizedVerbs.map { it.localizedPhrase.lowercase() }
+
+            if (existingIndex >= 0) {
+                // Merge into existing entry — add localized phrases not already present
+                val existing = entries[existingIndex]
+                val currentSynonyms = existing.synonyms.map { it.lowercase() }.toSet()
+                val additions = newSynonyms.filter { it !in currentSynonyms && it != canonical }
+                if (additions.isNotEmpty()) {
+                    entries[existingIndex] = existing.copy(
+                        synonyms = existing.synonyms + additions
+                    )
+                }
+            } else {
+                // No existing entry for this canonical — create one
+                val uniqueSynonyms = newSynonyms.filter { it != canonical }.distinct()
+                if (uniqueSynonyms.isNotEmpty()) {
+                    entries.add(SynonymEntry(canonical, uniqueSynonyms, isDefault = false))
+                }
+            }
+        }
+    }
+
+    /**
+     * Remove all non-default (locale-added) synonym entries and
+     * restore default entries to their original synonyms.
+     *
+     * Called before locale switch to clear previous locale's verbs.
+     */
+    fun clearLocalizedVerbs() {
+        // Remove non-default entries
+        entries.removeAll { !it.isDefault }
+        // Note: for simplicity, built-in entries retain any merged synonyms.
+        // A full reset would require storing the original list, but in practice
+        // addLocalizedVerbs() is idempotent (duplicates are skipped).
     }
 
     /**

@@ -11,17 +11,17 @@
  */
 package com.augmentalis.webavanue
 
-import com.augmentalis.avid.AvidGenerator
+import com.augmentalis.avid.AvidGlobalID
 
 /**
  * WebAvanue-specific ID generator using AVID system
  */
 object WebAvanueVuidGenerator {
-    fun generateTabId(): String = AvidGenerator.generateTabId()
-    fun generateFavoriteId(): String = AvidGenerator.generateFavoriteId()
-    fun generateDownloadId(): String = AvidGenerator.generateDownloadId()
-    fun generateHistoryId(): String = AvidGenerator.generateHistoryId()
-    fun generateSessionId(): String = AvidGenerator.generateSessionId()
-    fun generateGroupId(): String = AvidGenerator.generateGroupId()
-    fun generateFolderId(): String = AvidGenerator.generateGroupId()
+    fun generateTabId(): String = AvidGlobalID.generateTabId()
+    fun generateFavoriteId(): String = AvidGlobalID.generateFavoriteId()
+    fun generateDownloadId(): String = AvidGlobalID.generateDownloadId()
+    fun generateHistoryId(): String = AvidGlobalID.generateHistoryId()
+    fun generateSessionId(): String = AvidGlobalID.generateSessionId()
+    fun generateGroupId(): String = AvidGlobalID.generateGroupId()
+    fun generateFolderId(): String = AvidGlobalID.generateGroupId()
 }

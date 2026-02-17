@@ -1,0 +1,6 @@
+batch=batch20
+manual_pool=172
+remaining_after_exclusion=5
+selected_topics=voiceos-service-refactoring-summary (1), branch-vos4-legacyintegration-status (1), voiceos-master-code-index (1), voiceos-document-control-master (1), voiceos-proposal (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch20_recovered.csv

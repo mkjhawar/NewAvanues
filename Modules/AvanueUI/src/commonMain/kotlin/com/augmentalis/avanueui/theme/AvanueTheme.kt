@@ -6,8 +6,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -17,39 +19,33 @@ import com.augmentalis.avanueui.tokens.TypographyTokens
 
 // ===== CompositionLocals =====
 
-val LocalAvanueColors = staticCompositionLocalOf<AvanueColorScheme> { OceanColors }
-val LocalAvanueGlass = staticCompositionLocalOf<AvanueGlassScheme> { OceanGlass }
-val LocalAvanueWater = staticCompositionLocalOf<AvanueWaterScheme> { OceanWater }
+val LocalAvanueColors = staticCompositionLocalOf<AvanueColorScheme> { HydraColors }
+val LocalAvanueGlass = staticCompositionLocalOf<AvanueGlassScheme> { HydraGlass }
+val LocalAvanueWater = staticCompositionLocalOf<AvanueWaterScheme> { HydraWater }
 val LocalDisplayProfile = staticCompositionLocalOf { DisplayProfile.PHONE }
-val LocalMaterialMode = staticCompositionLocalOf { MaterialMode.GLASS }
+val LocalMaterialMode = staticCompositionLocalOf { MaterialMode.Water }
+val LocalAppearanceIsDark = staticCompositionLocalOf { true }
 
 /**
- * Unified theme provider for the Avanues ecosystem.
+ * Unified theme provider for the Avanues ecosystem (v5.1).
  *
  * Sets up both Material3 theming (for M3 components like TextField, Button) and
- * AvanueUI custom theming (colors, glass, display profile, density scaling).
- *
- * This is the ONLY theme wrapper your app needs:
- * ```
- * AvanueThemeProvider(
- *     colors = OceanColors,
- *     displayProfile = DisplayProfile.PHONE
- * ) {
- *     MyScreen()  // Has full M3 + AvanueUI theming
- * }
- * ```
+ * AvanueUI custom theming (colors, glass, water, display profile, density scaling).
+ * The [isDark] parameter controls the M3 ColorScheme bridge (dark vs light) and
+ * is exposed via [AvanueTheme.isDark] for components that need appearance-aware logic.
  *
  * When [displayProfile] specifies a non-1.0 density scale, [LocalDensity] is overridden
- * so that ALL dp/sp values automatically adapt. Existing code using `SpacingTokens.md`
- * (16dp) will render at 12dp physical on GLASS_COMPACT (0.75x) with zero code changes.
+ * so that ALL dp/sp values automatically adapt.
  */
 @Composable
+@Suppress("DEPRECATION")
 fun AvanueThemeProvider(
-    colors: AvanueColorScheme = OceanColors,
-    glass: AvanueGlassScheme = OceanGlass,
-    water: AvanueWaterScheme = OceanWater,
+    colors: AvanueColorScheme = HydraColors,
+    glass: AvanueGlassScheme = HydraGlass,
+    water: AvanueWaterScheme = HydraWater,
     displayProfile: DisplayProfile = DisplayProfile.PHONE,
-    materialMode: MaterialMode = MaterialMode.GLASS,
+    materialMode: MaterialMode = MaterialMode.Water,
+    isDark: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val currentDensity = LocalDensity.current
@@ -58,16 +54,27 @@ fun AvanueThemeProvider(
         fontScale = currentDensity.fontScale * displayProfile.fontScale
     )
 
+    // Keep static AvanueModuleAccents in sync so non-Compose consumers
+    // (Canvas overlay, services) always get the current theme colors.
+    SideEffect {
+        AvanueModuleAccents.setGlobalColors(
+            accent = colors.primary,
+            onAccent = colors.onPrimary,
+            accentMuted = colors.primaryLight
+        )
+    }
+
     CompositionLocalProvider(
         LocalAvanueColors provides colors,
         LocalAvanueGlass provides glass,
         LocalAvanueWater provides water,
         LocalDisplayProfile provides displayProfile,
         LocalMaterialMode provides materialMode,
+        LocalAppearanceIsDark provides isDark,
         LocalDensity provides scaledDensity,
     ) {
         MaterialTheme(
-            colorScheme = colors.toM3ColorScheme(),
+            colorScheme = colors.toM3ColorScheme(isDark),
             typography = AvanueTypography,
             shapes = AvanueShapes,
             content = content
@@ -97,44 +104,94 @@ object AvanueTheme {
 
     val materialMode: MaterialMode
         @Composable get() = LocalMaterialMode.current
+
+    val isDark: Boolean
+        @Composable get() = LocalAppearanceIsDark.current
+
+    /**
+     * Get resolved accent colors for a module.
+     * Returns custom override if set, otherwise derives from current theme.
+     */
+    @Composable
+    fun moduleAccent(moduleId: String): ModuleAccent {
+        val colors = LocalAvanueColors.current
+        val override = AvanueModuleAccents.get(moduleId)
+        return if (override.isCustom) override else ModuleAccent(
+            accent = colors.primary,
+            onAccent = colors.onPrimary,
+            accentMuted = colors.primaryLight,
+            isCustom = false
+        )
+    }
 }
 
 // ===== Material3 Integration =====
 
 /**
  * Maps AvanueColorScheme to Material3 ColorScheme.
+ * Uses darkColorScheme or lightColorScheme based on appearance mode.
  * This allows M3 components (TextField, Button, etc.) to use AvanueUI colors.
  */
-private fun AvanueColorScheme.toM3ColorScheme(): ColorScheme = darkColorScheme(
-    primary = primary,
-    onPrimary = onPrimary,
-    primaryContainer = primaryContainer,
-    onPrimaryContainer = onPrimaryContainer,
-    secondary = secondary,
-    onSecondary = onSecondary,
-    secondaryContainer = secondaryContainer,
-    onSecondaryContainer = onSecondaryContainer,
-    tertiary = tertiary,
-    tertiaryContainer = tertiaryContainer,
-    onTertiaryContainer = onTertiaryContainer,
-    error = error,
-    onError = onError,
-    errorContainer = errorContainer,
-    onErrorContainer = onErrorContainer,
-    background = background,
-    onBackground = textPrimary,
-    surface = surface,
-    onSurface = textPrimary,
-    surfaceVariant = surfaceVariant,
-    onSurfaceVariant = textSecondary,
-    outline = border,
-    outlineVariant = borderSubtle,
-    surfaceContainerLowest = background,
-    surfaceContainerLow = background,
-    surfaceContainer = surface,
-    surfaceContainerHigh = surfaceElevated,
-    surfaceContainerHighest = surfaceVariant,
-)
+private fun AvanueColorScheme.toM3ColorScheme(isDark: Boolean): ColorScheme =
+    if (isDark) darkColorScheme(
+        primary = primary,
+        onPrimary = onPrimary,
+        primaryContainer = primaryContainer,
+        onPrimaryContainer = onPrimaryContainer,
+        secondary = secondary,
+        onSecondary = onSecondary,
+        secondaryContainer = secondaryContainer,
+        onSecondaryContainer = onSecondaryContainer,
+        tertiary = tertiary,
+        tertiaryContainer = tertiaryContainer,
+        onTertiaryContainer = onTertiaryContainer,
+        error = error,
+        onError = onError,
+        errorContainer = errorContainer,
+        onErrorContainer = onErrorContainer,
+        background = background,
+        onBackground = textPrimary,
+        surface = surface,
+        onSurface = textPrimary,
+        surfaceVariant = surfaceVariant,
+        onSurfaceVariant = textSecondary,
+        outline = border,
+        outlineVariant = borderSubtle,
+        surfaceContainerLowest = background,
+        surfaceContainerLow = background,
+        surfaceContainer = surface,
+        surfaceContainerHigh = surfaceElevated,
+        surfaceContainerHighest = surfaceVariant,
+    ) else lightColorScheme(
+        primary = primary,
+        onPrimary = onPrimary,
+        primaryContainer = primaryContainer,
+        onPrimaryContainer = onPrimaryContainer,
+        secondary = secondary,
+        onSecondary = onSecondary,
+        secondaryContainer = secondaryContainer,
+        onSecondaryContainer = onSecondaryContainer,
+        tertiary = tertiary,
+        tertiaryContainer = tertiaryContainer,
+        onTertiaryContainer = onTertiaryContainer,
+        error = error,
+        onError = onError,
+        errorContainer = errorContainer,
+        onErrorContainer = onErrorContainer,
+        background = background,
+        onBackground = textPrimary,
+        surface = surface,
+        onSurface = textPrimary,
+        surfaceVariant = surfaceVariant,
+        onSurfaceVariant = textSecondary,
+        outline = border,
+        outlineVariant = borderSubtle,
+        surfaceContainerLowest = background,
+        surfaceContainerLow = background,
+        surfaceContainer = surface,
+        surfaceContainerHigh = surfaceElevated,
+        surfaceContainerHighest = surfaceVariant,
+    )
 
 /**
  * Typography scale using AvanueUI design tokens.

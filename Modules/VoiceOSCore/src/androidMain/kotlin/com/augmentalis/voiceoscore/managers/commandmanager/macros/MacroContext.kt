@@ -406,6 +406,7 @@ sealed class ExecutionState {
 /**
  * Extension function to safely use AccessibilityNodeInfo
  */
+@Suppress("DEPRECATION")
 private fun <T> AccessibilityNodeInfo.use(block: (AccessibilityNodeInfo) -> T): T {
     return try {
         block(this)

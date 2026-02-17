@@ -515,32 +515,28 @@ object TimePickerActions {
     ): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            // Strategy 1: Find TimePicker widget
-            val timePickers = findNodesByClassName(rootNode, "android.widget.TimePicker")
-            if (timePickers.isNotEmpty()) {
-                return updateTimePickerWidget(timePickers.first(), hour, minute, isAM)
-            }
-
-            // Strategy 2: Find individual NumberPickers
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.size >= 2) {
-                return updateNumberPickers(numberPickers, hour, minute, isAM)
-            }
-
-            // Strategy 3: Find Material TimePicker
-            val materialPickers = findNodesByClassName(
-                rootNode,
-                "com.google.android.material.timepicker.TimePickerView"
-            )
-            if (materialPickers.isNotEmpty()) {
-                return updateMaterialTimePicker(materialPickers.first(), hour, minute, isAM)
-            }
-
-            return false
-        } finally {
-            rootNode.recycle()
+        // Strategy 1: Find TimePicker widget
+        val timePickers = findNodesByClassName(rootNode, "android.widget.TimePicker")
+        if (timePickers.isNotEmpty()) {
+            return updateTimePickerWidget(timePickers.first(), hour, minute, isAM)
         }
+
+        // Strategy 2: Find individual NumberPickers
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.size >= 2) {
+            return updateNumberPickers(numberPickers, hour, minute, isAM)
+        }
+
+        // Strategy 3: Find Material TimePicker
+        val materialPickers = findNodesByClassName(
+            rootNode,
+            "com.google.android.material.timepicker.TimePickerView"
+        )
+        if (materialPickers.isNotEmpty()) {
+            return updateMaterialTimePicker(materialPickers.first(), hour, minute, isAM)
+        }
+
+        return false
     }
 
     /**
@@ -626,15 +622,11 @@ object TimePickerActions {
     private fun setHourValue(service: AccessibilityService?, hour: Int): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.isNotEmpty()) {
-                return setPickerValue(numberPickers[0], hour)
-            }
-            return false
-        } finally {
-            rootNode.recycle()
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.isNotEmpty()) {
+            return setPickerValue(numberPickers[0], hour)
         }
+        return false
     }
 
     /**
@@ -643,15 +635,11 @@ object TimePickerActions {
     private fun setMinuteValue(service: AccessibilityService?, minute: Int): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.size >= 2) {
-                return setPickerValue(numberPickers[1], minute)
-            }
-            return false
-        } finally {
-            rootNode.recycle()
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.size >= 2) {
+            return setPickerValue(numberPickers[1], minute)
         }
+        return false
     }
 
     /**
@@ -660,15 +648,11 @@ object TimePickerActions {
     private fun incrementHour(service: AccessibilityService?): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.isNotEmpty()) {
-                return numberPickers[0].performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
-            }
-            return false
-        } finally {
-            rootNode.recycle()
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.isNotEmpty()) {
+            return numberPickers[0].performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
         }
+        return false
     }
 
     /**
@@ -677,15 +661,11 @@ object TimePickerActions {
     private fun decrementHour(service: AccessibilityService?): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.isNotEmpty()) {
-                return numberPickers[0].performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
-            }
-            return false
-        } finally {
-            rootNode.recycle()
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.isNotEmpty()) {
+            return numberPickers[0].performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
         }
+        return false
     }
 
     /**
@@ -694,15 +674,11 @@ object TimePickerActions {
     private fun incrementMinute(service: AccessibilityService?): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.size >= 2) {
-                return numberPickers[1].performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
-            }
-            return false
-        } finally {
-            rootNode.recycle()
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.size >= 2) {
+            return numberPickers[1].performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
         }
+        return false
     }
 
     /**
@@ -711,15 +687,11 @@ object TimePickerActions {
     private fun decrementMinute(service: AccessibilityService?): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.size >= 2) {
-                return numberPickers[1].performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
-            }
-            return false
-        } finally {
-            rootNode.recycle()
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.size >= 2) {
+            return numberPickers[1].performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
         }
+        return false
     }
 
     /**
@@ -728,31 +700,27 @@ object TimePickerActions {
     private fun setAMPM(service: AccessibilityService?, isAM: Boolean): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            // Try NumberPicker for AM/PM
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.size >= 3) {
-                return setPickerValue(numberPickers[2], if (isAM) 0 else 1)
-            }
-
-            // Try buttons
-            val buttons = findNodesByClassName(rootNode, "android.widget.Button")
-            for (button in buttons) {
-                val text = button.text?.toString()?.lowercase() ?: continue
-                if ((text == "am" && isAM) || (text == "pm" && !isAM)) {
-                    // Already in desired state
-                    return true
-                }
-                if ((text == "am" && !isAM) || (text == "pm" && isAM)) {
-                    // Need to click to toggle
-                    return button.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                }
-            }
-
-            return false
-        } finally {
-            rootNode.recycle()
+        // Try NumberPicker for AM/PM
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.size >= 3) {
+            return setPickerValue(numberPickers[2], if (isAM) 0 else 1)
         }
+
+        // Try buttons
+        val buttons = findNodesByClassName(rootNode, "android.widget.Button")
+        for (button in buttons) {
+            val text = button.text?.toString()?.lowercase() ?: continue
+            if ((text == "am" && isAM) || (text == "pm" && !isAM)) {
+                // Already in desired state
+                return true
+            }
+            if ((text == "am" && !isAM) || (text == "pm" && isAM)) {
+                // Need to click to toggle
+                return button.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+        }
+
+        return false
     }
 
     /**
@@ -761,27 +729,23 @@ object TimePickerActions {
     private fun toggleAMPM(service: AccessibilityService?): Boolean {
         val rootNode = service?.rootInActiveWindow ?: return false
 
-        try {
-            // Try NumberPicker for AM/PM
-            val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
-            if (numberPickers.size >= 3) {
-                // Toggle by scrolling
-                return numberPickers[2].performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
-            }
-
-            // Try buttons
-            val buttons = findNodesByClassName(rootNode, "android.widget.Button")
-            for (button in buttons) {
-                val text = button.text?.toString()?.lowercase() ?: continue
-                if (text == "am" || text == "pm") {
-                    return button.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                }
-            }
-
-            return false
-        } finally {
-            rootNode.recycle()
+        // Try NumberPicker for AM/PM
+        val numberPickers = findNodesByClassName(rootNode, "android.widget.NumberPicker")
+        if (numberPickers.size >= 3) {
+            // Toggle by scrolling
+            return numberPickers[2].performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
         }
+
+        // Try buttons
+        val buttons = findNodesByClassName(rootNode, "android.widget.Button")
+        for (button in buttons) {
+            val text = button.text?.toString()?.lowercase() ?: continue
+            if (text == "am" || text == "pm") {
+                return button.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+        }
+
+        return false
     }
 
     /**
@@ -805,10 +769,8 @@ object TimePickerActions {
             val child = picker.getChild(i)
             if (child?.isEditable == true) {
                 val success = setNodeText(child, value.toString())
-                child.recycle()
                 if (success) return true
             }
-            child?.recycle()
         }
 
         return false

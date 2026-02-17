@@ -160,7 +160,7 @@ class CellularManager(
             TelephonyManager.NETWORK_TYPE_HSDPA -> "HSDPA"
             TelephonyManager.NETWORK_TYPE_HSUPA -> "HSUPA"
             TelephonyManager.NETWORK_TYPE_HSPA -> "HSPA"
-            TelephonyManager.NETWORK_TYPE_IDEN -> "IDEN"
+            @Suppress("DEPRECATION") TelephonyManager.NETWORK_TYPE_IDEN -> "IDEN"
             TelephonyManager.NETWORK_TYPE_EVDO_B -> "EVDO_B"
             TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
             TelephonyManager.NETWORK_TYPE_EHRPD -> "EHRPD"

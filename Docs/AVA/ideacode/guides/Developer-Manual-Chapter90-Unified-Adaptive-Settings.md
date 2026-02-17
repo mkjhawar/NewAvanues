@@ -1,12 +1,12 @@
 # Developer Manual - Chapter 90: Unified Adaptive Settings Architecture
 
-**Version:** 1.0.0
-**Date:** 2026-02-08
+**Version:** 1.1.0
+**Date:** 2026-02-11
 **Author:** AVA Development Team
 **Status:** Reference Documentation
 **Module:** apps/avanues/ (settings subsystem)
-**Branch:** 060226-1-consolidation-framework
-**Commit:** 321786ba
+**Branch:** VoiceOSCore-KotlinUpdate (updated from 060226-1-consolidation-framework)
+**Original Commit:** 321786ba
 
 ---
 
@@ -163,8 +163,8 @@ All components accept optional `icon: ImageVector?` — app settings use icons, 
 
 ### Important: JetBrains Compose Multiplatform Compatibility
 
-The project uses JetBrains Compose Multiplatform 1.6.11, which uses an older Material3 API:
-- `ExposedDropdownMenuBox.menuAnchor()` takes **no parameters** (no `MenuAnchorType`)
+The project uses JetBrains Compose Multiplatform 1.7.3 (as of 2026-02-10):
+- `ExposedDropdownMenuBox.menuAnchor()` now takes a `MenuAnchorType` parameter (changed from 1.6.11)
 - Always test AvanueUI changes against the Compose BOM version in `gradle/libs.versions.toml`
 
 ---
@@ -224,8 +224,10 @@ The `SectionContent()` renders identically regardless of display mode — only t
 ### SystemSettingsProvider (sortOrder: 500)
 
 - **Sections:** system
-- **Settings:** Start on Boot toggle
+- **Settings:** Start on Boot toggle, Color Palette dropdown, Material Style dropdown, Appearance dropdown (Light/Dark/Auto)
 - **Repository:** `AvanuesSettingsRepository` (DataStore)
+- **Theme v5.1:** Three independent dropdowns for the three theme axes (palette, style, appearance)
+- **DataStore keys:** `theme_palette`, `theme_style`, `theme_appearance`
 
 ---
 

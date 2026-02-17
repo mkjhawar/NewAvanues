@@ -559,7 +559,7 @@ object PersistenceDecisionEngine {
 
         val byRule = decisions.values.groupBy { it.ruleApplied }
             .mapValues { it.value.size }
-            .toSortedMap()
+            .toList().sortedBy { it.first }.toMap()
 
         val avgConfidence = decisions.values.map { it.confidence }.average()
 
@@ -568,7 +568,7 @@ object PersistenceDecisionEngine {
             appendLine("Total elements: $total")
             appendLine("Persist: $persistCount (${(persistCount * 100 / total)}%)")
             appendLine("Skip: $skipCount (${(skipCount * 100 / total)}%)")
-            appendLine("Average confidence: ${"%.2f".format(avgConfidence)}")
+            appendLine("Average confidence: ${(avgConfidence * 100).toLong() / 100.0}")
             appendLine()
             appendLine("Decisions by rule:")
             byRule.forEach { (rule, count) ->

@@ -15,6 +15,7 @@ import com.augmentalis.database.dto.toGeneratedCommandDTO
 import com.augmentalis.database.repositories.IGeneratedCommandRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 
 /**
  * SQLDelight implementation of IGeneratedCommandRepository.
@@ -225,7 +226,7 @@ class SQLDelightGeneratedCommandRepository(
         var rowsAffected = 0
         database.transaction {
             queries.markVersionDeprecated(
-                lastVerified = System.currentTimeMillis(),
+                lastVerified = Clock.System.now().toEpochMilliseconds(),
                 appId = packageName,
                 versionCode = versionCode
             )

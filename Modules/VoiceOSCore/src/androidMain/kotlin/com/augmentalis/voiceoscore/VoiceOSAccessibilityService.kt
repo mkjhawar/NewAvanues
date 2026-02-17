@@ -63,6 +63,10 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
     private var pendingScreenChangeJob: Job? = null
     private var currentPackageName: String? = null
 
+    // Scroll-triggered overlay refresh: debounced screen refresh after scroll settles
+    private var pendingScrollRefreshJob: Job? = null
+    private val scrollRefreshDebounceMs = 300L
+
     // =========================================================================
     // Abstract methods - to be implemented by app-level service
     // =========================================================================
@@ -97,6 +101,33 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      * App-level service can provide feedback (TTS, haptic, etc.)
      */
     protected open fun onCommandExecuted(command: QuantizedCommand, success: Boolean) {}
+
+    /**
+     * Called after scroll events settle (debounced).
+     *
+     * App-level service can override this to refresh overlay badges directly,
+     * bypassing the command generation pipeline. This is necessary because
+     * scroll events don't trigger handleScreenChange → onCommandsUpdated,
+     * so overlay badges would never update on scroll without this callback.
+     *
+     * @param packageName The current foreground app package name
+     */
+    protected open fun onScrollSettled(packageName: String) {}
+
+    /**
+     * Called on TYPE_WINDOW_STATE_CHANGED within the same app (same package).
+     *
+     * This is a strong signal of in-app navigation (activity/fragment transition),
+     * as opposed to scroll or content update. App-level service should override
+     * this to clear overlay items immediately, preventing stale badges from
+     * persisting during the async screen extraction gap.
+     *
+     * NOT called on package changes (those are handled by the package-change path
+     * which already resets state).
+     *
+     * @param packageName The current app package name
+     */
+    protected open fun onInAppNavigation(packageName: String) {}
 
     // =========================================================================
     // AccessibilityService lifecycle
@@ -203,6 +234,11 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         // For window state changes, process immediately
         if (forceImmediate) {
             pendingScreenChangeJob?.cancel()
+            pendingScrollRefreshJob?.cancel()  // Prevent stale scroll badges during navigation
+            // Signal in-app navigation so app-level service can clear overlays
+            // immediately. This fires only for same-package window state changes
+            // (package changes return early above).
+            onInAppNavigation(packageName ?: currentPackageName ?: "")
             handleScreenChange(event)
             lastEventProcessTime = now
             return
@@ -212,6 +248,7 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         if (now - lastEventProcessTime < debounceMs) {
             // Cancel any pending job and schedule a new one
             pendingScreenChangeJob?.cancel()
+            pendingScrollRefreshJob?.cancel()  // Prevent stale scroll badges during transition
             pendingScreenChangeJob = serviceScope.launch {
                 kotlinx.coroutines.delay(debounceMs)
                 handleScreenChange(event)
@@ -231,18 +268,33 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      *
      * When a scrollable container scrolls, we update BoundsResolver with
      * the new scroll position so click coordinates can be adjusted.
+     *
+     * Also schedules a debounced onScrollSettled() callback so the app-level
+     * service can refresh overlay badges directly. This bypasses the command
+     * generation pipeline (handleScreenChange → fingerprint → onCommandsUpdated)
+     * which gates on KMP fingerprint and would block overlay updates on scroll.
      */
     private fun handleScrollEvent(event: AccessibilityEvent) {
-        val boundsResolver = getBoundsResolver() ?: return
+        // Capture packageName FIRST, before event gets recycled after onAccessibilityEvent returns
+        val packageName = event.packageName?.toString() ?: currentPackageName ?: ""
 
-        // Extract scroll information from the event
+        // Schedule debounced overlay refresh BEFORE any early returns.
+        // Previous versions had getBoundsResolver() ?: return and event.source ?: return
+        // ABOVE this code, which prevented the scroll callback from ever firing.
+        pendingScrollRefreshJob?.cancel()
+        pendingScrollRefreshJob = serviceScope.launch {
+            kotlinx.coroutines.delay(scrollRefreshDebounceMs)
+            onScrollSettled(packageName)
+        }
+
+        // Update BoundsResolver with scroll position (optional, for click accuracy)
+        val boundsResolver = getBoundsResolver() ?: return
         val source = event.source ?: return
         try {
             val resourceId = source.viewIdResourceName ?: ""
             val scrollX = event.scrollX
             val scrollY = event.scrollY
 
-            // Only update if we have valid scroll position
             if (scrollX >= 0 || scrollY >= 0) {
                 boundsResolver.updateScrollOffset(resourceId, scrollX, scrollY)
                 Log.v(TAG, "Scroll event: $resourceId -> ($scrollX, $scrollY)")
@@ -285,9 +337,9 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
 
                 Log.d(TAG, "Generated ${commands.size} commands for $packageName")
 
-                // Update ActionCoordinator
+                // Update ActionCoordinator — source-tagged to preserve web commands
                 val coordinator = getActionCoordinator()
-                coordinator.updateDynamicCommands(commands)
+                coordinator.updateDynamicCommandsBySource("accessibility", commands)
 
                 // Notify app-level service
                 onCommandsUpdated(commands)

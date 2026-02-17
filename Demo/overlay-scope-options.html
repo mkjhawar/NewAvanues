@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overlay Badge Scope Options</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+  h1 { text-align: center; margin-bottom: 8px; color: #fff; font-size: 22px; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 24px; font-size: 14px; }
+  .options { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+  .option { width: 320px; border-radius: 16px; overflow: hidden; background: #16213e; border: 2px solid #333; }
+  .option.recommended { border-color: #4ade80; }
+  .option-header { padding: 12px 16px; text-align: center; font-weight: 700; font-size: 15px; }
+  .option-header.a { background: #7c3aed; }
+  .option-header.b { background: #059669; }
+  .option-header.c { background: #d97706; }
+  .option-header.d { background: #2563eb; }
+  .badge-count { font-size: 11px; opacity: 0.8; font-weight: 400; display: block; margin-top: 2px; }
+
+  /* Phone mockup */
+  .phone { background: #fff; margin: 8px; border-radius: 12px; overflow: hidden; position: relative; }
+  .phone-content { position: relative; }
+
+  /* Gmail zones */
+  .zone { padding: 8px 12px; display: flex; align-items: center; gap: 6px; position: relative; border-bottom: 1px solid #eee; min-height: 40px; }
+  .zone-label { font-size: 11px; color: #333; flex: 1; }
+  .zone-icons { display: flex; gap: 8px; }
+
+  /* Toolbar */
+  .toolbar { background: #f5ebe0; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+  .toolbar .icon { width: 28px; height: 28px; background: #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; position: relative; }
+
+  /* Email header */
+  .email-header { background: #fdf8f0; padding: 10px 12px; }
+  .sender-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .avatar { width: 32px; height: 32px; background: #7c4dff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
+  .sender-name { font-size: 13px; color: #333; font-weight: 600; }
+  .sender-date { font-size: 11px; color: #888; }
+  .header-icons { display: flex; gap: 8px; margin-left: auto; }
+  .header-icon { width: 24px; height: 24px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; position: relative; }
+  .to-me { font-size: 11px; color: #666; margin-top: 2px; }
+
+  /* Email body */
+  .email-body { background: #fff; padding: 12px; font-size: 11px; color: #444; line-height: 1.5; }
+  .email-body .link { color: #1a73e8; text-decoration: underline; position: relative; display: inline; }
+  .gcloud-logo { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 8px; }
+  .my-console { color: #1a73e8; font-weight: 600; float: right; position: relative; }
+
+  /* Thread items */
+  .thread-item { background: #f8f8f8; padding: 8px 12px; border-bottom: 1px solid #eee; position: relative; }
+  .thread-sender { font-size: 12px; color: #333; font-weight: 500; }
+  .thread-snippet { font-size: 11px; color: #888; }
+
+  /* Bottom bar */
+  .bottom-bar { background: #f5ebe0; padding: 8px 12px; display: flex; gap: 8px; justify-content: center; }
+  .bottom-btn { padding: 6px 24px; border-radius: 20px; font-size: 12px; font-weight: 600; position: relative; }
+  .reply-btn { background: #e0d5c5; color: #333; }
+  .fwd-btn { background: #e0d5c5; color: #333; }
+
+  /* Badge overlay */
+  .badge { position: absolute; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; z-index: 10; line-height: 1; }
+  .badge.green { background: #4d7a3e; }
+  .badge.dim { background: #4d7a3e; opacity: 0.25; }
+  .badge.hidden { display: none; }
+  .badge-label { position: absolute; top: 22px; left: 0; background: rgba(0,0,0,0.85); color: #fff; font-size: 7px; padding: 1px 4px; border-radius: 3px; white-space: nowrap; font-weight: 500; }
+
+  /* Legend */
+  .legend { margin-top: 16px; text-align: center; font-size: 12px; color: #aaa; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; margin: 0 10px; }
+  .legend .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .legend .dot.active { background: #4d7a3e; }
+  .legend .dot.skipped { background: #4d7a3e; opacity: 0.25; }
+
+  .rec-tag { display: inline-block; background: #4ade80; color: #000; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<h1>Overlay Badge Scope Options</h1>
+<p class="subtitle">Which elements get numbered badges in target apps like Gmail?</p>
+
+<div class="options">
+
+  <!-- OPTION A -->
+  <div class="option">
+    <div class="option-header a">Option A: All Clickable<span class="badge-count">~25+ badges per screen</span></div>
+    <div class="phone">
+      <div class="phone-content">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="icon" style="position:relative"><span style="font-size:16px">&larr;</span><div class="badge green" style="top:-6px;left:-6px">1</div><div class="badge-label" style="top:16px;left:-6px">Back</div></div>
+          <div style="flex:1"></div>
+          <div class="icon" style="position:relative"><span>&#128229;</span><div class="badge green" style="top:-6px;left:-6px">2</div><div class="badge-label" style="top:16px;left:-6px">Archive</div></div>
+          <div class="icon" style="position:relative"><span>&#128465;</span><div class="badge green" style="top:-6px;left:-6px">3</div><div class="badge-label" style="top:16px;left:-6px">Delete</div></div>
+          <div class="icon" style="position:relative"><span>&#9993;</span><div class="badge green" style="top:-6px;left:-6px">4</div><div class="badge-label" style="top:16px;left:-6px">Mark read</div></div>
+          <div class="icon" style="position:relative"><span>&#8942;</span><div class="badge green" style="top:-6px;left:-6px">5</div><div class="badge-label" style="top:16px;left:-6px">More</div></div>
+        </div>
+
+        <!-- Email header -->
+        <div class="email-header">
+          <div class="sender-row">
+            <div class="avatar" style="position:relative">G<div class="badge green" style="top:-6px;left:-6px;width:18px;height:18px;font-size:8px">6</div></div>
+            <div>
+              <div class="sender-name">Google Cl... <span class="sender-date">2 days ago</span></div>
+              <div class="to-me" style="position:relative">to me &#9662;<div class="badge green" style="top:-4px;left:50px;width:18px;height:18px;font-size:8px">11</div></div>
+            </div>
+            <div class="header-icons">
+              <div class="header-icon" style="position:relative">&#128578;<div class="badge green" style="top:-6px;left:-6px;width:18px;height:18px;font-size:8px">7</div></div>
+              <div class="header-icon" style="position:relative">&#8617;<div class="badge green" style="top:-6px;left:-6px;width:18px;height:18px;font-size:8px">8</div></div>
+              <div class="header-icon" style="position:relative">&#8942;<div class="badge green" style="top:-6px;left:-6px;width:18px;height:18px;font-size:8px">9</div></div>
+            </div>
+          </div>
+          <div style="position:relative;display:inline">&#9734; Star<div class="badge green" style="top:-4px;right:-24px;width:18px;height:18px;font-size:8px;left:auto">10</div></div>
+        </div>
+
+        <!-- Email body -->
+        <div class="email-body">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <div class="gcloud-logo">Google Cloud</div>
+            <div class="my-console" style="position:relative">MY CONSOLE<div class="badge green" style="top:-8px;right:-24px;width:18px;height:18px;font-size:8px;left:auto">12</div></div>
+          </div>
+          <p>Hello Naveen,</p>
+          <p>We're writing to provide you with security best practices regarding <span class="link" style="position:relative">service account keys<div class="badge green" style="top:-10px;left:-6px;width:18px;height:18px;font-size:8px">13</div></span> and API keys...</p>
+          <p style="margin-top:6px">We strongly advise implementing the <span class="link" style="position:relative">unified security framework<div class="badge green" style="top:-10px;left:-6px;width:18px;height:18px;font-size:8px">14</div></span>...</p>
+        </div>
+
+        <!-- Thread items -->
+        <div class="thread-item" style="position:relative">
+          <div class="badge green" style="top:4px;left:4px">15</div><div class="badge-label" style="top:26px;left:4px">Google Cloud</div>
+          <div style="margin-left:30px"><div class="thread-sender">Google Cloud</div><div class="thread-snippet">Security update...</div></div>
+        </div>
+        <div class="thread-item" style="position:relative">
+          <div class="badge green" style="top:4px;left:4px">16</div><div class="badge-label" style="top:26px;left:4px">adidas</div>
+          <div style="margin-left:30px"><div class="thread-sender">adidas Insider</div><div class="thread-snippet">New collection...</div></div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="bottom-bar">
+          <div class="reply-btn" style="position:relative">&#8617; Reply<div class="badge green" style="top:-8px;left:-8px;width:18px;height:18px;font-size:8px">17</div></div>
+          <div class="fwd-btn" style="position:relative">&#8618; Forward<div class="badge green" style="top:-8px;left:-8px;width:18px;height:18px;font-size:8px">18</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:8px;text-align:center;font-size:11px;color:#f87171">Cluttered: badges on EVERY link in email body too</div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="option recommended">
+    <div class="option-header b">Option B: Toolbar + Actions + Thread <span class="rec-tag">RECOMMENDED</span><span class="badge-count">~10-12 badges</span></div>
+    <div class="phone">
+      <div class="phone-content">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="icon" style="position:relative"><span style="font-size:16px">&larr;</span><div class="badge green" style="top:-6px;left:-6px">1</div><div class="badge-label" style="top:16px;left:-6px">Back</div></div>
+          <div style="flex:1"></div>
+          <div class="icon" style="position:relative"><span>&#128229;</span><div class="badge green" style="top:-6px;left:-6px">2</div><div class="badge-label" style="top:16px;left:-6px">Archive</div></div>
+          <div class="icon" style="position:relative"><span>&#128465;</span><div class="badge green" style="top:-6px;left:-6px">3</div><div class="badge-label" style="top:16px;left:-6px">Delete</div></div>
+          <div class="icon" style="position:relative"><span>&#9993;</span><div class="badge green" style="top:-6px;left:-6px">4</div><div class="badge-label" style="top:16px;left:-6px">Mark read</div></div>
+          <div class="icon" style="position:relative"><span>&#8942;</span><div class="badge green" style="top:-6px;left:-6px">5</div><div class="badge-label" style="top:16px;left:-6px">More</div></div>
+        </div>
+
+        <!-- Email header -->
+        <div class="email-header">
+          <div class="sender-row">
+            <div class="avatar">G</div>
+            <div>
+              <div class="sender-name">Google Cl... <span class="sender-date">2 days ago</span></div>
+              <div class="to-me">to me &#9662;</div>
+            </div>
+            <div class="header-icons">
+              <div class="header-icon" style="position:relative">&#128578;<div class="badge green" style="top:-6px;left:-6px;width:18px;height:18px;font-size:8px">6</div><div class="badge-label" style="top:12px;left:-6px">React</div></div>
+              <div class="header-icon" style="position:relative">&#8617;<div class="badge green" style="top:-6px;left:-6px;width:18px;height:18px;font-size:8px">7</div><div class="badge-label" style="top:12px;left:-6px">Reply</div></div>
+              <div class="header-icon" style="position:relative">&#8942;<div class="badge green" style="top:-6px;left:-6px;width:18px;height:18px;font-size:8px">8</div><div class="badge-label" style="top:12px;left:-6px">More</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email body - NO badges -->
+        <div class="email-body" style="min-height: 100px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <div class="gcloud-logo">Google Cloud</div>
+            <div class="my-console">MY CONSOLE</div>
+          </div>
+          <p>Hello Naveen,</p>
+          <p>We're writing to provide you with security best practices regarding <span class="link">service account keys</span> and API keys...</p>
+          <p style="margin-top:6px">We strongly advise implementing the <span class="link">unified security framework</span>...</p>
+          <p style="text-align:center;margin-top:8px;color:#aaa;font-size:10px;font-style:italic">No badges on email body links</p>
+        </div>
+
+        <!-- Thread items -->
+        <div class="thread-item" style="position:relative">
+          <div class="badge green" style="top:4px;left:4px">9</div><div class="badge-label" style="top:26px;left:4px">Google Cloud</div>
+          <div style="margin-left:30px"><div class="thread-sender">Google Cloud</div><div class="thread-snippet">Security update...</div></div>
+        </div>
+        <div class="thread-item" style="position:relative">
+          <div class="badge green" style="top:4px;left:4px">10</div><div class="badge-label" style="top:26px;left:4px">adidas</div>
+          <div style="margin-left:30px"><div class="thread-sender">adidas Insider</div><div class="thread-snippet">New collection...</div></div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="bottom-bar">
+          <div class="reply-btn" style="position:relative">&#8617; Reply<div class="badge green" style="top:-8px;left:-8px;width:18px;height:18px;font-size:8px">11</div></div>
+          <div class="fwd-btn" style="position:relative">&#8618; Forward<div class="badge green" style="top:-8px;left:-8px;width:18px;height:18px;font-size:8px">12</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:8px;text-align:center;font-size:11px;color:#4ade80">Clean: toolbar + actions + thread items. No body clutter.</div>
+  </div>
+
+  <!-- OPTION C -->
+  <div class="option">
+    <div class="option-header c">Option C: Minimalist<span class="badge-count">~8 badges</span></div>
+    <div class="phone">
+      <div class="phone-content">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="icon" style="position:relative"><span style="font-size:16px">&larr;</span><div class="badge green" style="top:-6px;left:-6px">1</div><div class="badge-label" style="top:16px;left:-6px">Back</div></div>
+          <div style="flex:1"></div>
+          <div class="icon" style="position:relative"><span>&#128229;</span><div class="badge green" style="top:-6px;left:-6px">2</div><div class="badge-label" style="top:16px;left:-6px">Archive</div></div>
+          <div class="icon" style="position:relative"><span>&#128465;</span><div class="badge green" style="top:-6px;left:-6px">3</div><div class="badge-label" style="top:16px;left:-6px">Delete</div></div>
+          <div class="icon" style="position:relative"><span>&#9993;</span><div class="badge green" style="top:-6px;left:-6px">4</div><div class="badge-label" style="top:16px;left:-6px">Mark read</div></div>
+          <div class="icon" style="position:relative"><span>&#8942;</span><div class="badge green" style="top:-6px;left:-6px">5</div><div class="badge-label" style="top:16px;left:-6px">More</div></div>
+        </div>
+
+        <!-- Email header - NO badges on individual icons -->
+        <div class="email-header">
+          <div class="sender-row">
+            <div class="avatar">G</div>
+            <div>
+              <div class="sender-name">Google Cl... <span class="sender-date">2 days ago</span></div>
+              <div class="to-me">to me &#9662;</div>
+            </div>
+            <div class="header-icons">
+              <div class="header-icon">&#128578;</div>
+              <div class="header-icon">&#8617;</div>
+              <div class="header-icon">&#8942;</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email body - NO badges -->
+        <div class="email-body" style="min-height: 120px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <div class="gcloud-logo">Google Cloud</div>
+            <div class="my-console">MY CONSOLE</div>
+          </div>
+          <p>Hello Naveen,</p>
+          <p>We're writing to provide you with security best practices regarding <span class="link">service account keys</span> and API keys...</p>
+          <p style="margin-top:6px">We strongly advise implementing the <span class="link">unified security framework</span>...</p>
+          <p style="text-align:center;margin-top:12px;color:#aaa;font-size:10px;font-style:italic">No badges on email body or header icons</p>
+        </div>
+
+        <!-- Thread items -->
+        <div class="thread-item" style="position:relative">
+          <div class="badge green" style="top:4px;left:4px">6</div><div class="badge-label" style="top:26px;left:4px">Google Cloud</div>
+          <div style="margin-left:30px"><div class="thread-sender">Google Cloud</div><div class="thread-snippet">Security update...</div></div>
+        </div>
+        <div class="thread-item" style="position:relative">
+          <div class="badge green" style="top:4px;left:4px">7</div><div class="badge-label" style="top:26px;left:4px">adidas</div>
+          <div style="margin-left:30px"><div class="thread-sender">adidas Insider</div><div class="thread-snippet">New collection...</div></div>
+        </div>
+        <div class="thread-item" style="position:relative">
+          <div class="badge green" style="top:4px;left:4px">8</div><div class="badge-label" style="top:26px;left:4px">Chargebee</div>
+          <div style="margin-left:30px"><div class="thread-sender">Chargebee</div><div class="thread-snippet">Invoice ready...</div></div>
+        </div>
+
+        <!-- Bottom bar - NO badges -->
+        <div class="bottom-bar">
+          <div class="reply-btn">&#8617; Reply</div>
+          <div class="fwd-btn">&#8618; Forward</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:8px;text-align:center;font-size:11px;color:#fbbf24">Minimal: top bar + thread items only. Reply/Forward not badged.</div>
+  </div>
+
+</div>
+
+<div class="legend" style="margin-top:20px">
+  <span><span class="dot active"></span> Badged element</span>
+  <span style="color:#4ade80;font-weight:600">Green border = Recommended (Option B)</span>
+</div>
+
+<div style="margin-top:24px;text-align:center;color:#666;font-size:12px">
+  <strong>Key improvement in ALL options:</strong> Labels show <strong>"Google Cloud"</strong> instead of <strong>", , , Google Cl"</strong><br>
+  Icons show metadata labels like <strong>"Archive"</strong>, <strong>"Delete"</strong> instead of nothing
+</div>
+
+</body>
+</html>

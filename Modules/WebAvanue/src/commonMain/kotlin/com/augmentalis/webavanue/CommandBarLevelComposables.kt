@@ -239,7 +239,7 @@ fun ZoomCommandBarFlat(
 /**
  * PageCommandBarFlat - PAGE level (variable buttons based on headless mode)
  *
- * Normal mode (6 buttons): Close, Prev, Next, Reload, Zoom+, Zoom-
+ * Normal mode (6 buttons): Close, Prev, Next, Reload, Desktop, Zoom+
  * Headless mode (6 buttons): Close, Prev, Next, Reload, Desktop, Favorite
  */
 @Composable
@@ -317,21 +317,22 @@ fun PageCommandBarFlat(
             backgroundColor = AvanueTheme.colors.surfaceElevated
         )
     } else {
-        // Normal mode: Show Zoom controls (Desktop/Favorite are in AddressBar)
+        // Normal mode: Desktop toggle (moved from AddressBar) + Zoom
+        CommandButton(
+            icon = if (isDesktopMode) Icons.Default.PhoneAndroid else Icons.Default.Laptop,
+            label = if (isDesktopMode) "Mobile" else "Desktop",
+            onClick = onDesktopModeToggle,
+            onFocus = { onLabelChange(if (isDesktopMode) "Switch to Mobile" else "Switch to Desktop") },
+            onBlur = { onLabelChange("") },
+            backgroundColor = if (isDesktopMode) AvanueTheme.colors.primary else AvanueTheme.colors.surfaceElevated,
+            isActive = isDesktopMode
+        )
+
         CommandButton(
             icon = Icons.Default.ZoomIn,
             label = "Zoom+",
             onClick = onZoomIn,
             onFocus = { onLabelChange("Zoom In") },
-            onBlur = { onLabelChange("") },
-            backgroundColor = AvanueTheme.colors.surfaceElevated
-        )
-
-        CommandButton(
-            icon = Icons.Default.ZoomOut,
-            label = "Zoom-",
-            onClick = onZoomOut,
-            onFocus = { onLabelChange("Zoom Out") },
             onBlur = { onLabelChange("") },
             backgroundColor = AvanueTheme.colors.surfaceElevated
         )

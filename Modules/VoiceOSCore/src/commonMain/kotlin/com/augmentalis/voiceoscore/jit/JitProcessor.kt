@@ -10,9 +10,13 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
+
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.ElementFingerprint
 import com.augmentalis.voiceoscore.ProcessingMode
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 
 /**
  * Result of processing a single element.
@@ -88,7 +92,7 @@ class JitProcessor {
     @Volatile
     private var processingMode: ProcessingMode = ProcessingMode.IMMEDIATE
     private val queue = mutableListOf<ElementInfo>()
-    private val queueLock = Any()
+    private val queueLock = SynchronizedObject()
     @Volatile
     private var processedCount = 0
 

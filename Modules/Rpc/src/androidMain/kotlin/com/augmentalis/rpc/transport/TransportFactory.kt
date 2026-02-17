@@ -36,7 +36,7 @@ object TransportFactory {
         const val VOICEOS = "universalrpc.voiceos"
         const val VOICE_CURSOR = "universalrpc.voicecursor"
         const val VOICE_RECOGNITION = "universalrpc.voicerecognition"
-        const val VUID_CREATOR = "universalrpc.vuidcreator"
+        const val AVID_CREATOR = "universalrpc.avidcreator"
         const val EXPLORATION = "universalrpc.exploration"
         const val AVA = "universalrpc.ava"
         const val COCKPIT = "universalrpc.cockpit"
@@ -47,7 +47,7 @@ object TransportFactory {
             ServiceRegistry.SERVICE_VOICEOS -> VOICEOS
             ServiceRegistry.SERVICE_VOICE_CURSOR -> VOICE_CURSOR
             ServiceRegistry.SERVICE_VOICE_RECOGNITION -> VOICE_RECOGNITION
-            ServiceRegistry.SERVICE_VUID_CREATOR -> VUID_CREATOR
+            ServiceRegistry.SERVICE_AVID_CREATOR -> AVID_CREATOR
             ServiceRegistry.SERVICE_EXPLORATION -> EXPLORATION
             ServiceRegistry.SERVICE_AVA -> AVA
             ServiceRegistry.SERVICE_COCKPIT -> COCKPIT

@@ -22,6 +22,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.tokens.WaterTokens
+import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSOperationQueue
+import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIDevice
 
 // ============================================================================
@@ -73,6 +78,22 @@ actual fun Modifier.platformWaterEffect(
     val density = LocalDensity.current
     val waterScheme = AvanueTheme.water
 
+    // Lifecycle-aware pause: skip expensive drawing when app is backgrounded
+    var isActive by remember { mutableStateOf(true) }
+    DisposableEffect(Unit) {
+        val center = NSNotificationCenter.defaultCenter
+        val bgObserver = center.addObserverForName(
+            UIApplicationDidEnterBackgroundNotification, null, NSOperationQueue.mainQueue
+        ) { _ -> isActive = false }
+        val fgObserver = center.addObserverForName(
+            UIApplicationWillEnterForegroundNotification, null, NSOperationQueue.mainQueue
+        ) { _ -> isActive = true }
+        onDispose {
+            center.removeObserver(bgObserver)
+            center.removeObserver(fgObserver)
+        }
+    }
+
     val overlayOpacity = when (waterLevel) {
         WaterLevel.REGULAR -> WaterTokens.overlayOpacityRegular
         WaterLevel.CLEAR -> WaterTokens.overlayOpacityClear
@@ -105,9 +126,9 @@ actual fun Modifier.platformWaterEffect(
             color = waterScheme.refractionTint.copy(alpha = overlayOpacity),
             shape = shape
         )
-        // Specular highlight
+        // Specular highlight (skipped when backgrounded)
         .then(
-            if (waterScheme.enableSpecular) {
+            if (waterScheme.enableSpecular && isActive) {
                 Modifier.drawWithContent {
                     drawContent()
                     val specRadiusPx = with(density) { WaterTokens.specularRadius.toPx() }
@@ -128,9 +149,9 @@ actual fun Modifier.platformWaterEffect(
                 }
             } else Modifier
         )
-        // Caustic shimmer (REGULAR level only)
+        // Caustic shimmer (REGULAR level only, skipped when backgrounded)
         .then(
-            if (waterScheme.enableCaustics && waterLevel == WaterLevel.REGULAR) {
+            if (waterScheme.enableCaustics && waterLevel == WaterLevel.REGULAR && isActive) {
                 val infiniteTransition = rememberInfiniteTransition(label = "iosWaterCaustic")
                 val time by infiniteTransition.animateFloat(
                     initialValue = 0f,

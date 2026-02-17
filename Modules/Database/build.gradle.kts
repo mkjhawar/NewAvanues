@@ -25,6 +25,10 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     // Android target
     androidTarget {
         compilations.all {
@@ -61,6 +65,7 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
+                implementation(libs.kotlinx.atomicfu)
 
                 // AVID module for identifier generation
                 implementation(project(":Modules:AVID"))

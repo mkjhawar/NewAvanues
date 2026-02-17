@@ -71,10 +71,10 @@ public class ParsedCommand(
     tag = 5,
     adapter = "com.squareup.wire.ProtoAdapter#STRING",
     label = WireField.Label.OMIT_IDENTITY,
-    jsonName = "targetVuid",
+    jsonName = "targetAvid",
     schemaIndex = 4,
   )
-  public val target_vuid: String = "",
+  public val target_avid: String = "",
   @field:WireField(
     tag = 6,
     adapter = "com.squareup.wire.ProtoAdapter#FLOAT",
@@ -119,7 +119,7 @@ public class ParsedCommand(
     if (original_text != other.original_text) return false
     if (action != other.action) return false
     if (parameters != other.parameters) return false
-    if (target_vuid != other.target_vuid) return false
+    if (target_avid != other.target_avid) return false
     if (confidence != other.confidence) return false
     if (alternatives != other.alternatives) return false
     return true
@@ -133,7 +133,7 @@ public class ParsedCommand(
       result = result * 37 + original_text.hashCode()
       result = result * 37 + action.hashCode()
       result = result * 37 + parameters.hashCode()
-      result = result * 37 + target_vuid.hashCode()
+      result = result * 37 + target_avid.hashCode()
       result = result * 37 + confidence.hashCode()
       result = result * 37 + alternatives.hashCode()
       super.hashCode = result
@@ -147,7 +147,7 @@ public class ParsedCommand(
     result += """original_text=${sanitize(original_text)}"""
     result += """action=${sanitize(action)}"""
     if (parameters.isNotEmpty()) result += """parameters=$parameters"""
-    result += """target_vuid=${sanitize(target_vuid)}"""
+    result += """target_avid=${sanitize(target_avid)}"""
     result += """confidence=$confidence"""
     if (alternatives.isNotEmpty()) result += """alternatives=${sanitize(alternatives)}"""
     return result.joinToString(prefix = "ParsedCommand{", separator = ", ", postfix = "}")
@@ -158,11 +158,11 @@ public class ParsedCommand(
     original_text: String = this.original_text,
     action: String = this.action,
     parameters: List<Slot> = this.parameters,
-    target_vuid: String = this.target_vuid,
+    target_avid: String = this.target_avid,
     confidence: Float = this.confidence,
     alternatives: List<String> = this.alternatives,
     unknownFields: ByteString = this.unknownFields,
-  ): ParsedCommand = ParsedCommand(request_id, original_text, action, parameters, target_vuid,
+  ): ParsedCommand = ParsedCommand(request_id, original_text, action, parameters, target_avid,
       confidence, alternatives, unknownFields)
 
   public companion object {
@@ -187,8 +187,8 @@ public class ParsedCommand(
           size += ProtoAdapter.STRING.encodedSizeWithTag(3, value.action)
         }
         size += Slot.ADAPTER.asRepeated().encodedSizeWithTag(4, value.parameters)
-        if (value.target_vuid != "") {
-          size += ProtoAdapter.STRING.encodedSizeWithTag(5, value.target_vuid)
+        if (value.target_avid != "") {
+          size += ProtoAdapter.STRING.encodedSizeWithTag(5, value.target_avid)
         }
         if (!value.confidence.equals(0f)) {
           size += ProtoAdapter.FLOAT.encodedSizeWithTag(6, value.confidence)
@@ -208,8 +208,8 @@ public class ParsedCommand(
           ProtoAdapter.STRING.encodeWithTag(writer, 3, value.action)
         }
         Slot.ADAPTER.asRepeated().encodeWithTag(writer, 4, value.parameters)
-        if (value.target_vuid != "") {
-          ProtoAdapter.STRING.encodeWithTag(writer, 5, value.target_vuid)
+        if (value.target_avid != "") {
+          ProtoAdapter.STRING.encodeWithTag(writer, 5, value.target_avid)
         }
         if (!value.confidence.equals(0f)) {
           ProtoAdapter.FLOAT.encodeWithTag(writer, 6, value.confidence)
@@ -224,8 +224,8 @@ public class ParsedCommand(
         if (!value.confidence.equals(0f)) {
           ProtoAdapter.FLOAT.encodeWithTag(writer, 6, value.confidence)
         }
-        if (value.target_vuid != "") {
-          ProtoAdapter.STRING.encodeWithTag(writer, 5, value.target_vuid)
+        if (value.target_avid != "") {
+          ProtoAdapter.STRING.encodeWithTag(writer, 5, value.target_avid)
         }
         Slot.ADAPTER.asRepeated().encodeWithTag(writer, 4, value.parameters)
         if (value.action != "") {
@@ -244,7 +244,7 @@ public class ParsedCommand(
         var original_text: String = ""
         var action: String = ""
         val parameters = mutableListOf<Slot>()
-        var target_vuid: String = ""
+        var target_avid: String = ""
         var confidence: Float = 0f
         val alternatives = mutableListOf<String>()
         val unknownFields = reader.forEachTag { tag ->
@@ -253,7 +253,7 @@ public class ParsedCommand(
             2 -> original_text = ProtoAdapter.STRING.decode(reader)
             3 -> action = ProtoAdapter.STRING.decode(reader)
             4 -> parameters.add(Slot.ADAPTER.decode(reader))
-            5 -> target_vuid = ProtoAdapter.STRING.decode(reader)
+            5 -> target_avid = ProtoAdapter.STRING.decode(reader)
             6 -> confidence = ProtoAdapter.FLOAT.decode(reader)
             7 -> alternatives.add(ProtoAdapter.STRING.decode(reader))
             else -> reader.readUnknownField(tag)
@@ -264,7 +264,7 @@ public class ParsedCommand(
           original_text = original_text,
           action = action,
           parameters = parameters,
-          target_vuid = target_vuid,
+          target_avid = target_avid,
           confidence = confidence,
           alternatives = alternatives,
           unknownFields = unknownFields

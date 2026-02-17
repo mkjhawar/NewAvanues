@@ -40,9 +40,9 @@ actual fun isAccessibilityAvailable(): Boolean = false
 
 /**
  * iOS implementation of isWebExtractionAvailable.
- * Returns false - actual check done at runtime.
+ * Returns true - iOS supports web extraction via WKWebView JavaScript injection.
  */
-actual fun isWebExtractionAvailable(): Boolean = false
+actual fun isWebExtractionAvailable(): Boolean = true
 
 /**
  * iOS implementation of getPlatformName.

@@ -415,24 +415,12 @@ data class UUIDStatistics(
  */
 
 @Composable
-fun rememberMagicVUID(type: String, name: String? = null): String {
+fun rememberMagicAVID(type: String, name: String? = null): String {
     return AvaMagicAVIDIntegration.rememberComponentUUID(type, name = name)
 }
 
 @Composable
-fun rememberScreenVUID(name: String): String {
+fun rememberScreenAVID(name: String): String {
     return AvaMagicAVIDIntegration.rememberScreenUUID(name)
 }
 
-// Deprecated aliases for backwards compatibility
-@Deprecated("Use rememberMagicVUID instead", ReplaceWith("rememberMagicVUID(type, name)"))
-@Composable
-fun rememberMagicUUID(type: String, name: String? = null): String = rememberMagicVUID(type, name)
-
-@Deprecated("Use rememberScreenVUID instead", ReplaceWith("rememberScreenVUID(name)"))
-@Composable
-fun rememberScreenUUID(name: String): String = rememberScreenVUID(name)
-
-// Backward compatibility typealias
-@Deprecated("Use AvaMagicAVIDIntegration instead", ReplaceWith("AvaMagicAVIDIntegration"))
-typealias MagicVUIDIntegration = AvaMagicAVIDIntegration

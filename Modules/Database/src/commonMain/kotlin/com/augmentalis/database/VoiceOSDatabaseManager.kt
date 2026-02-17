@@ -9,6 +9,9 @@
 
 package com.augmentalis.database
 
+import kotlin.concurrent.Volatile
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import com.augmentalis.database.repositories.ICommandUsageRepository
 import com.augmentalis.database.repositories.IContextPreferenceRepository
 import com.augmentalis.database.repositories.IVoiceCommandRepository
@@ -30,6 +33,8 @@ import com.augmentalis.database.repositories.IElementStateHistoryRepository
 import com.augmentalis.database.repositories.IElementCommandRepository
 import com.augmentalis.database.repositories.IQualityMetricRepository
 import com.augmentalis.database.repositories.IScrapedWebsiteRepository
+import com.augmentalis.database.repositories.IVosFileRegistryRepository
+import com.augmentalis.database.repositories.IPhraseSuggestionRepository
 import com.augmentalis.database.repositories.impl.SQLDelightCommandUsageRepository
 import com.augmentalis.database.repositories.impl.SQLDelightContextPreferenceRepository
 import com.augmentalis.database.repositories.impl.SQLDelightVoiceCommandRepository
@@ -51,6 +56,8 @@ import com.augmentalis.database.repositories.impl.SQLDelightElementStateHistoryR
 import com.augmentalis.database.repositories.impl.SQLDelightElementCommandRepository
 import com.augmentalis.database.repositories.impl.SQLDelightQualityMetricRepository
 import com.augmentalis.database.repositories.impl.SQLDelightScrapedWebsiteRepository
+import com.augmentalis.database.repositories.impl.SQLDelightVosFileRegistryRepository
+import com.augmentalis.database.repositories.impl.SQLDelightPhraseSuggestionRepository
 
 /**
  * Database statistics data class for VoiceDataManager compatibility.
@@ -83,6 +90,8 @@ class VoiceOSDatabaseManager private constructor(
 ) {
 
     companion object {
+        private val lock = SynchronizedObject()
+
         @Volatile
         private var instance: VoiceOSDatabaseManager? = null
 
@@ -93,7 +102,7 @@ class VoiceOSDatabaseManager private constructor(
          * @return Singleton database manager instance
          */
         fun getInstance(driverFactory: DatabaseDriverFactory): VoiceOSDatabaseManager {
-            return instance ?: synchronized(this) {
+            return instance ?: synchronized(lock) {
                 instance ?: VoiceOSDatabaseManager(driverFactory).also {
                     instance = it
                 }
@@ -104,7 +113,7 @@ class VoiceOSDatabaseManager private constructor(
          * Clear singleton instance (for testing only).
          */
         fun clearInstance() {
-            synchronized(this) {
+            synchronized(lock) {
                 instance = null
             }
         }
@@ -182,6 +191,22 @@ class VoiceOSDatabaseManager private constructor(
      */
     val scrapedWebsites: IScrapedWebsiteRepository by lazy {
         SQLDelightScrapedWebsiteRepository(_database)
+    }
+
+    /**
+     * Repository for VOS file registry (distribution system).
+     * Tracks all VOS files with provenance metadata for version control and FTP sync.
+     */
+    val vosFileRegistry: IVosFileRegistryRepository by lazy {
+        SQLDelightVosFileRegistryRepository(_database)
+    }
+
+    /**
+     * Repository for phrase suggestions (Phase C crowd-sourcing).
+     * Tracks user-submitted alternative phrases for voice commands.
+     */
+    val phraseSuggestions: IPhraseSuggestionRepository by lazy {
+        SQLDelightPhraseSuggestionRepository(_database)
     }
 
     // ==================== Context Repositories ====================

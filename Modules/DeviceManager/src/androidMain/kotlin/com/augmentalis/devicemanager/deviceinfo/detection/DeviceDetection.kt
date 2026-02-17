@@ -470,6 +470,7 @@ class DeviceDetection(private val context: Context) {
     fun getExtendedDisplayProfile(): ExtendedDisplayProfile {
         val metrics = DisplayMetrics()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            @Suppress("DEPRECATION")
             context.display?.getRealMetrics(metrics)
         } else {
             @Suppress("DEPRECATION")

@@ -1,0 +1,111 @@
+# VOS v3.0 — fr-FR app commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:fr-FR:en-US:app
+
+nav_back|retour|revenir,en arriere,page precedente|Revenir a l'ecran precedent
+nav_home|accueil|aller a l'accueil,ecran d'accueil,bureau|Aller a l'ecran d'accueil
+nav_recent|applis recentes|applications recentes,recents,basculer appli|Afficher les applications recentes
+nav_drawer|tiroir d'applis|toutes les applis,liste des applis|Ouvrir le tiroir d'applications
+nav_scroll_down|defiler vers le bas|descendre|Defiler vers le bas
+nav_scroll_up|defiler vers le haut|monter|Defiler vers le haut
+nav_scroll_left|defiler a gauche||Defiler vers la gauche
+nav_scroll_right|defiler a droite||Defiler vers la droite
+media_play|lire la musique|lecture,reprendre,jouer|Lire ou reprendre le media
+media_pause|mettre en pause|pause,arreter la musique|Mettre le media en pause
+media_next|chanson suivante|morceau suivant,piste suivante,suivant|Piste suivante
+media_prev|chanson precedente|morceau precedent,piste precedente,precedent|Piste precedente
+media_vol_up|monter le volume|plus fort,volume plus|Augmenter le volume
+media_vol_down|baisser le volume|moins fort,volume moins,plus bas|Baisser le volume
+media_mute|couper le son|muet,silence,mode silencieux|Couper le son
+sys_settings|ouvrir les parametres|parametres,reglages,configuration|Ouvrir les parametres du systeme
+sys_notifications|afficher les notifications|notifications,panneau de notifications|Afficher les notifications
+sys_clear_notif|effacer les notifications|supprimer les notifications|Effacer toutes les notifications
+sys_screenshot|capture d'ecran|screenshot,capturer l'ecran|Prendre une capture d'ecran
+sys_flash_on|allumer la lampe|lampe torche,torche,lampe on|Allumer la lampe torche
+sys_flash_off|eteindre la lampe|lampe off,torche off|Eteindre la lampe torche
+sys_bright_up|plus de luminosite|augmenter la luminosite,plus lumineux,ecran plus clair|Augmenter la luminosite de l'ecran
+sys_bright_down|moins de luminosite|baisser la luminosite,plus sombre,ecran plus sombre|Baisser la luminosite de l'ecran
+sys_lock|verrouiller l'ecran|verrouiller le telephone,verrouiller|Verrouiller l'ecran
+sys_rotate|pivoter l'ecran|rotation,changer l'orientation|Basculer la rotation de l'ecran
+sys_wifi|basculer le wifi|wifi on,wifi off,activer le wifi,desactiver le wifi|Activer ou desactiver le WiFi
+sys_bluetooth|basculer le bluetooth|bluetooth on,bluetooth off,activer le bluetooth,desactiver le bluetooth|Activer ou desactiver le Bluetooth
+voice_mute|couper la voix|arreter l'ecoute,voix off|Desactiver la reconnaissance vocale
+voice_wake|activer la voix|ecouter,voix on,commencer l'ecoute|Activer la reconnaissance vocale
+voice_dict_start|commencer la dictee|dictee,mode saisie|Demarrer le mode dictee
+voice_dict_stop|arreter la dictee|fin de dictee,mode commande|Arreter le mode dictee
+voice_help|afficher les commandes|qu'est-ce que je peux dire,aide,commandes disponibles|Afficher les commandes disponibles
+voice_num_on|numeros actifs|afficher les numeros,numeros toujours|Toujours afficher les numeros sur les elements
+voice_num_off|numeros inactifs|masquer les numeros,pas de numeros|Ne jamais afficher les numeros
+voice_num_auto|numeros auto|numeros automatiques,auto numeros|Afficher les numeros uniquement pour les listes
+voice_cursor_show|afficher le curseur|curseur on,activer le curseur|Afficher le curseur vocal
+voice_cursor_hide|masquer le curseur|curseur off,desactiver le curseur|Masquer le curseur vocal
+voice_cursor_click|clic curseur|cliquer ici|Cliquer a la position du curseur
+acc_click|cliquer|appuyer,toucher,taper|Cliquer sur un element nomme ou numerote
+acc_long_click|appui long|clic long,maintenir,rester appuye|Appui long sur un element
+acc_zoom_in|zoomer|agrandir,zoom avant,rapprocher|Zoomer
+acc_zoom_out|dezoomer|reduire,zoom arriere,eloigner|Dezoomer
+acc_read|lire l'ecran|lire a voix haute,lis-moi ca,lire la page|Lire le contenu de l'ecran a voix haute
+acc_stop_read|arreter la lecture|stop,tais-toi,silence|Arreter la lecture a voix haute
+text_select_all|tout selectionner|selectionner tout|Selectionner tout le texte
+text_copy|copier|copier ca,copier le texte|Copier la selection dans le presse-papiers
+text_paste|coller|coller le texte|Coller depuis le presse-papiers
+text_cut|couper|couper le texte|Couper la selection dans le presse-papiers
+text_undo|annuler|defaire,revenir en arriere|Annuler la derniere action
+text_redo|retablir|refaire|Retablir la derniere action annulee
+text_delete|supprimer|effacer,enlever|Supprimer le texte selectionne
+input_show_kb|afficher le clavier|ouvrir le clavier,clavier|Afficher le clavier virtuel
+input_hide_kb|masquer le clavier|fermer le clavier,cacher le clavier|Masquer le clavier virtuel
+appctl_close|fermer l'appli|fermer,quitter l'appli,quitter|Fermer l'application en cours
+acc_double_tap|double tap|double clic,double appui|Double-tap sur un element
+acc_swipe_left|balayer a gauche||Balayer vers la gauche sur l'ecran
+acc_swipe_right|balayer a droite||Balayer vers la droite sur l'ecran
+acc_swipe_up|balayer vers le haut||Balayer vers le haut sur l'ecran
+acc_swipe_down|balayer vers le bas||Balayer vers le bas sur l'ecran
+acc_stroke_start|commencer a dessiner|dessiner,debut de trait|Commencer un trait de dessin (annotation)
+acc_stroke_end|arreter de dessiner|fin de dessin,fin de trait|Terminer le trait de dessin (annotation)
+acc_erase|gomme|mode gomme,activer la gomme|Activer le mode gomme (annotation)
+# ── Camera (PhotoAvanue) ──
+cam_open|ouvrir photo avanue|ouvrir camera,vue camera,camera avanue,photo avanue|Lancer PhotoAvanue
+cam_capture|prendre une photo|capturer,photo,clicher,prendre un cliche|Prendre une photo
+cam_record_start|commencer l'enregistrement|enregistrer video,demarrer enregistrement,filmer|Demarrer l'enregistrement video
+cam_record_stop|arreter l'enregistrement|fin enregistrement,terminer enregistrement|Arreter l'enregistrement video
+cam_record_pause|mettre en pause l'enregistrement|pause video|Mettre l'enregistrement en pause
+cam_record_resume|reprendre l'enregistrement|continuer enregistrement|Reprendre l'enregistrement
+cam_flip|retourner la camera|changer camera,camera frontale,camera arriere,selfie|Basculer entre camera avant et arriere
+cam_flash_on|flash active|activer le flash,allumer le flash|Activer le flash
+cam_flash_off|flash desactive|desactiver le flash,eteindre le flash|Desactiver le flash
+cam_flash_auto|flash automatique|auto flash,flash auto|Mettre le flash en automatique
+cam_flash_torch|mode torche|lampe torche,garder le flash allume|Garder le flash allume en continu
+cam_zoom_in|zoom camera avant|camera plus pres,agrandir camera|Zoomer la camera
+cam_zoom_out|zoom camera arriere|camera plus loin,reduire camera|Dezoomer la camera
+cam_exposure_up|plus d'exposition|camera plus claire,eclaircir,augmenter exposition|Augmenter l'exposition de la camera
+cam_exposure_down|moins d'exposition|camera plus sombre,assombrir,reduire exposition|Reduire l'exposition de la camera
+cam_mode_photo|mode photo|mode image,mode camera|Passer en mode photo
+cam_mode_video|mode video|mode film,mode enregistrement|Passer en mode video
+# ── Cockpit ──
+cockpit_open|ouvrir cockpit|vue cockpit,lancer cockpit,mode cockpit|Lancer Cockpit
+cockpit_add_frame|ajouter un cadre|nouveau cadre,creer cadre,ajouter panneau|Ajouter un nouveau cadre de contenu
+cockpit_layout|changer la disposition|changer layout,mode disposition|Ouvrir le selecteur de disposition
+cockpit_layout_grid|disposition grille|grille,vue grille|Passer a la disposition en grille
+cockpit_layout_split|disposition divisee|vue divisee,cote a cote|Passer a la disposition divisee
+cockpit_layout_freeform|disposition libre|forme libre,disposition flexible|Passer a la disposition libre
+cockpit_layout_fullscreen|plein ecran|maximiser,ecran complet|Passer en plein ecran
+cockpit_layout_workflow|workflow|mode workflow,mode etapes|Passer a la disposition workflow
+cockpit_minimize|minimiser le cadre|minimiser,reduire cadre|Minimiser le cadre actif
+cockpit_maximize|maximiser le cadre|maximiser,agrandir cadre|Maximiser le cadre actif
+cockpit_close|fermer le cadre|fermer,supprimer cadre,enlever cadre|Fermer le cadre actif
+cockpit_add_web|ajouter web|nouveau web,ouvrir web,ajouter navigateur|Ajouter un cadre navigateur web
+cockpit_add_camera|ajouter camera|ouvrir camera,nouvelle camera|Ajouter un cadre camera
+cockpit_add_note|ajouter note|nouvelle note,ouvrir note|Ajouter un cadre note
+cockpit_add_pdf|ajouter pdf|ouvrir pdf,nouveau pdf|Ajouter un lecteur PDF
+cockpit_add_image|ajouter image|ouvrir image,nouvelle image,ajouter photo|Ajouter un afficheur d'images
+cockpit_add_video|ajouter video|ouvrir video,nouvelle video|Ajouter un lecteur video
+cockpit_add_whiteboard|ajouter tableau blanc|ouvrir tableau blanc,nouveau tableau blanc,dessiner|Ajouter un tableau blanc
+cockpit_add_terminal|ajouter terminal|ouvrir terminal,nouveau terminal,console|Ajouter un terminal
+cockpit_web_back|retour dans web|retour,naviguer en arriere|Cadre web: retour
+cockpit_web_forward|avancer dans web|avancer,naviguer en avant|Cadre web: avancer
+cockpit_web_refresh|actualiser web|recharger,rafraichir la page|Cadre web: actualiser
+cockpit_scroll_up|cockpit defiler haut|panneau haut|Defiler le cadre actif vers le haut
+cockpit_scroll_down|cockpit defiler bas|panneau bas|Defiler le cadre actif vers le bas
+cockpit_zoom_in|cockpit zoom avant|agrandir panneau|Zoomer dans le cadre actif
+cockpit_zoom_out|cockpit zoom arriere|reduire panneau|Dezoomer le cadre actif

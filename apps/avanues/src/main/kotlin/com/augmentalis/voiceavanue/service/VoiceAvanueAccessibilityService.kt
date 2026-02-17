@@ -29,21 +29,48 @@ import com.augmentalis.voiceoscore.CommandRegistry
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ServiceConfiguration
 import com.augmentalis.voiceoscore.SpeechEngine
+import com.augmentalis.voiceoscore.NumbersOverlayHandler
+import com.augmentalis.voiceoscore.StaticCommandRegistry
+import com.augmentalis.voiceoscore.CommandCategory
+import com.augmentalis.voiceoscore.WebCommandHandler
 import com.augmentalis.voiceoscore.createForAndroid
+import com.augmentalis.voiceoscore.NumbersOverlayMode
+import com.augmentalis.voiceoscore.OverlayNumberingExecutor
+import com.augmentalis.voiceoscore.OverlayStateManager
+import com.augmentalis.voiceoscore.TARGET_APPS
 import com.augmentalis.voiceavanue.MainActivity
+import com.augmentalis.avanueui.theme.AvanueModuleAccents
+import com.augmentalis.avanueui.theme.ModuleAccent
+import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
-import com.augmentalis.voiceavanue.data.DeveloperSettings
+import com.augmentalis.foundation.settings.models.DeveloperSettings
+import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
+import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetector
+import com.augmentalis.devicemanager.imu.IMUManager
+import com.augmentalis.voicecursor.core.CursorConfig
+import com.augmentalis.voicecursor.core.FilterStrength
+import com.augmentalis.voicecursor.overlay.CursorOverlayService
+import com.augmentalis.voiceoscore.handlers.VoiceControlCallbacks
+import com.augmentalis.voiceoscore.vos.VosFileImporter
+import com.augmentalis.voiceoscore.vos.sync.VosSyncManager
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import com.augmentalis.webavanue.BrowserVoiceOSCallback
+import com.augmentalis.webavanue.WebCommandExecutorImpl
 
 private const val TAG = "VoiceAvanueService"
 
@@ -53,14 +80,25 @@ private const val TAG = "VoiceAvanueService"
  */
 class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface SyncEntryPoint {
+        fun vosSyncManager(): VosSyncManager
+    }
+
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private var voiceOSCore: VoiceOSCore? = null
     private var actionCoordinator: ActionCoordinator? = null
     private var boundsResolver: BoundsResolver? = null
+    private var overlayNumberingExecutor: OverlayNumberingExecutor? = null
     private var dynamicCommandGenerator: DynamicCommandGenerator? = null
+    private var webCommandHandler: WebCommandHandler? = null
     private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var webCommandCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
+    private var cursorSettingsJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
+    private var imuManager: IMUManager? = null  // Lazy-init when cursor enabled
 
     override fun getActionCoordinator(): ActionCoordinator {
         // Prefer VoiceOSCore's coordinator — it has handlers registered
@@ -94,8 +132,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             Log.e(TAG, "Failed to start CommandOverlayService", e)
         }
 
-        // Initialize the dynamic command generator for overlay badges
-        dynamicCommandGenerator = DynamicCommandGenerator(resources)
+        // Initialize the numbering executor and dynamic command generator for overlay badges
+        val executor = OverlayNumberingExecutor()
+        overlayNumberingExecutor = executor
+        dynamicCommandGenerator = DynamicCommandGenerator(resources, executor)
 
         serviceScope.launch(Dispatchers.IO) {
             try {
@@ -125,6 +165,25 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 )
                 voiceOSCore?.initialize()
 
+                // Initialize CommandManager to build pattern matching cache + populate
+                // StaticCommandRegistry from DB. VoiceOSCore.initialize() already loaded
+                // commands to DB via StaticCommandPersistenceImpl; CommandManager's version
+                // check (v2.1) will skip re-loading since persistence already loaded.
+                CommandManager.getInstance(applicationContext).initialize()
+
+                // Register WebCommandHandler for web voice command routing
+                val handler = WebCommandHandler()
+                webCommandHandler = handler
+                voiceOSCore?.actionCoordinator?.registerHandler(handler)
+                Log.i(TAG, "WebCommandHandler registered with ActionCoordinator")
+
+                // Register NumbersOverlayHandler for "numbers on/off/auto" voice commands
+                overlayNumberingExecutor?.let { exec ->
+                    val numbersHandler = NumbersOverlayHandler(exec)
+                    voiceOSCore?.actionCoordinator?.registerHandler(numbersHandler)
+                    Log.i(TAG, "NumbersOverlayHandler registered with ActionCoordinator")
+                }
+
                 // Force screen refresh so dynamic commands register on VoiceOSCore's
                 // coordinator. Before init, commands were registered on a fallback
                 // coordinator with a different CommandRegistry. The screen hash cache
@@ -148,18 +207,49 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         }
                 }
 
-                // Bridge: Collect web DOM voice commands → route to VoiceOSCore speech grammar.
-                // BrowserVoiceOSCallback emits phrases from DOM scraping; we include them
-                // in the speech engine grammar so the user can speak web-specific commands.
-                // Engine-agnostic: flows through ISpeechEngine.updateCommands().
+                // Bridge: Collect web DOM voice commands → route to VoiceOSCore speech grammar
+                // AND register as QuantizedCommands in CommandRegistry (dual-path).
+                // Path 1: Phrases in speech grammar (recognition)
+                // Path 2: QuantizedCommands in CommandRegistry (routing to WebCommandHandler)
                 webCommandCollectorJob?.cancel()
                 webCommandCollectorJob = serviceScope.launch {
                     BrowserVoiceOSCallback.activeWebPhrases
                         .collect { phrases ->
                             try {
+                                // Path 1: Update speech grammar with web phrases
                                 voiceOSCore?.updateWebCommands(phrases)
-                                if (phrases.isNotEmpty()) {
-                                    Log.d(TAG, "Web commands updated: ${phrases.size} phrases")
+
+                                // Path 2: Register QuantizedCommands for ActionCoordinator routing
+                                val callbackInstance = BrowserVoiceOSCallback.activeInstance
+                                if (callbackInstance != null && phrases.isNotEmpty()) {
+                                    val quantizedWebCommands = callbackInstance.getWebCommandsAsQuantized()
+                                    voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("web", quantizedWebCommands)
+
+                                    // Wire the WebCommandExecutorImpl to WebCommandHandler
+                                    // The executor delegates to BrowserVoiceOSCallback's JS executor
+                                    // (which is set by WebViewContainer when the bridge attaches)
+                                    webCommandHandler?.let { wch ->
+                                        val executor = WebCommandExecutorImpl(callbackInstance)
+                                        wch.setExecutor(executor)
+                                    }
+
+                                    // Register static BROWSER + WEB_GESTURE commands with source="web"
+                                    // so ActionCoordinator routes them to WebCommandHandler when browser
+                                    // is active. Uses separate source tag "web_static" for independent
+                                    // lifecycle from DOM-scraped commands ("web").
+                                    val browserStaticCmds = StaticCommandRegistry.byCategoryAsQuantized(CommandCategory.BROWSER)
+                                    val gestureStaticCmds = StaticCommandRegistry.byCategoryAsQuantized(CommandCategory.WEB_GESTURE)
+                                    val webStaticCommands = (browserStaticCmds + gestureStaticCmds).map { cmd ->
+                                        cmd.copy(metadata = cmd.metadata + mapOf("source" to "web"))
+                                    }
+                                    voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("web_static", webStaticCommands)
+
+                                    Log.d(TAG, "Web commands dual-path: ${phrases.size} phrases, ${quantizedWebCommands.size} quantized, ${webStaticCommands.size} static")
+                                } else if (phrases.isEmpty()) {
+                                    // Clear web commands when leaving browser (preserves accessibility commands)
+                                    voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web")
+                                    voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web_static")
+                                    webCommandHandler?.setExecutor(null)
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to update web commands", e)
@@ -184,6 +274,233 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                     }
                 }
 
+                // Wire VoiceControlCallbacks for VoiceControlHandler
+                // Enables: mute/wake voice, dictation toggle, show commands, numbers overlay
+                try {
+                    val core = voiceOSCore
+                    VoiceControlCallbacks.onMuteVoice = {
+                        try {
+                            runBlocking { core?.stopListening() }
+                            Log.i(TAG, "Voice muted via callback")
+                            true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to mute voice", e)
+                            false
+                        }
+                    }
+                    VoiceControlCallbacks.onWakeVoice = {
+                        try {
+                            val result = runBlocking { core?.startListening() }
+                            val success = result?.isSuccess == true
+                            Log.i(TAG, "Voice wake via callback: success=$success")
+                            success
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to wake voice", e)
+                            false
+                        }
+                    }
+                    VoiceControlCallbacks.onStartDictation = {
+                        // Stop command recognition to avoid conflicts with keyboard dictation
+                        try {
+                            runBlocking { core?.stopListening() }
+                            Log.i(TAG, "Dictation mode: command recognition paused")
+                            true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to start dictation", e)
+                            false
+                        }
+                    }
+                    VoiceControlCallbacks.onStopDictation = {
+                        // Resume command recognition after dictation
+                        try {
+                            runBlocking { core?.startListening() }
+                            Log.i(TAG, "Command mode: recognition resumed")
+                            true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to stop dictation", e)
+                            false
+                        }
+                    }
+                    VoiceControlCallbacks.onShowCommands = {
+                        // Show numbered badges on all interactive elements
+                        OverlayStateManager.setNumbersOverlayMode(
+                            NumbersOverlayMode.ON
+                        )
+                        Log.i(TAG, "Showing commands: numbers overlay set to ON")
+                        true
+                    }
+                    VoiceControlCallbacks.onSetNumbersMode = { mode ->
+                        try {
+                            val overlayMode = when (mode.lowercase()) {
+                                "on" -> NumbersOverlayMode.ON
+                                "off" -> NumbersOverlayMode.OFF
+                                "auto" -> NumbersOverlayMode.AUTO
+                                else -> NumbersOverlayMode.AUTO
+                            }
+                            OverlayStateManager.setNumbersOverlayMode(overlayMode)
+                            Log.i(TAG, "Numbers mode set to: $overlayMode")
+                            true
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to set numbers mode", e)
+                            false
+                        }
+                    }
+                    Log.i(TAG, "VoiceControlCallbacks wired successfully")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to wire VoiceControlCallbacks", e)
+                }
+
+                // Wire VosFileImporter into VosSyncManager (late-binding).
+                // VoiceCommandDaoAdapter is created via CommandDatabase singleton,
+                // which requires VoiceOSDatabase — only available after DB init above.
+                try {
+                    val commandDatabase = com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
+                        .getInstance(applicationContext)
+                    val commandDao = commandDatabase.voiceCommandDao()
+                    val vosRegistry = db.vosFileRegistry
+                    val vosImporter = VosFileImporter(vosRegistry, commandDao)
+                    val entryPoint = EntryPointAccessors.fromApplication(
+                        applicationContext,
+                        SyncEntryPoint::class.java
+                    )
+                    entryPoint.vosSyncManager().setImporter(vosImporter)
+                    Log.i(TAG, "VosFileImporter wired to VosSyncManager")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to wire VosFileImporter: ${e.message}")
+                }
+
+                // Wire cursor settings + voice locale → CursorOverlayService lifecycle + config
+                // Collects DataStore settings, starts/stops service, builds CursorConfig,
+                // and switches voice command locale when changed.
+                cursorSettingsJob?.cancel()
+                var previousVoiceLocale: String? = null
+                cursorSettingsJob = serviceScope.launch {
+                    val cursorSettingsRepo = AvanuesSettingsRepository(applicationContext)
+                    cursorSettingsRepo.settings.collectLatest { settings ->
+                        // Voice command locale switching
+                        val newLocale = settings.voiceLocale
+                        if (previousVoiceLocale != null && previousVoiceLocale != newLocale) {
+                            Log.i(TAG, "Voice locale changed: $previousVoiceLocale → $newLocale")
+                            try {
+                                val cm = CommandManager.getInstance(applicationContext)
+                                val switched = cm.switchLocale(newLocale)
+                                if (switched) {
+                                    Log.i(TAG, "✅ Voice commands switched to $newLocale")
+                                } else {
+                                    Log.w(TAG, "⚠️ Failed to switch voice commands to $newLocale")
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Locale switch failed", e)
+                            }
+                        }
+                        previousVoiceLocale = newLocale
+
+                        // Start/stop CursorOverlayService based on toggle
+                        val canOverlay = Settings.canDrawOverlays(applicationContext)
+                        if (settings.cursorEnabled && canOverlay) {
+                            if (CursorOverlayService.getInstance() == null) {
+                                try {
+                                    val intent = Intent(applicationContext, CursorOverlayService::class.java)
+                                    applicationContext.startForegroundService(intent)
+                                    Log.i(TAG, "CursorOverlayService started via settings toggle")
+                                    // Wait for service onStartCommand() to set the singleton instance.
+                                    // startForegroundService() is async — without this wait, the IMU
+                                    // wiring block below would be skipped because getInstance() is still null.
+                                    var waitMs = 0
+                                    while (CursorOverlayService.getInstance() == null && waitMs < 2000) {
+                                        delay(100)
+                                        waitMs += 100
+                                    }
+                                    if (CursorOverlayService.getInstance() != null) {
+                                        Log.i(TAG, "CursorOverlayService ready after ${waitMs}ms")
+                                    } else {
+                                        Log.w(TAG, "CursorOverlayService not ready after ${waitMs}ms — IMU wiring will be skipped")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to start CursorOverlayService", e)
+                                }
+                            }
+                        } else if (!settings.cursorEnabled) {
+                            // Stop IMU tracking before stopping cursor service
+                            imuManager?.let { imu ->
+                                CursorOverlayService.getInstance()?.stopIMUTracking()
+                                imu.stopIMUTracking("VoiceCursor")
+                                Log.i(TAG, "IMU head tracking stopped (cursor disabled)")
+                            }
+                            CursorOverlayService.getInstance()?.let {
+                                applicationContext.stopService(Intent(applicationContext, CursorOverlayService::class.java))
+                                Log.i(TAG, "CursorOverlayService stopped via settings toggle")
+                            }
+                        }
+
+                        // Restore custom accent override from persisted value
+                        val accentOverride = settings.cursorAccentOverride
+                        if (accentOverride != null) {
+                            val color = androidx.compose.ui.graphics.Color(accentOverride.toInt())
+                            AvanueModuleAccents.setOverride(
+                                "voicecursor",
+                                ModuleAccent(
+                                    accent = color,
+                                    onAccent = androidx.compose.ui.graphics.Color.White,
+                                    accentMuted = color.copy(alpha = 0.6f),
+                                    isCustom = true
+                                )
+                            )
+                        } else {
+                            AvanueModuleAccents.clearOverride("voicecursor")
+                        }
+
+                        // Build CursorConfig from settings + accent colors
+                        val accentArgb = AvanueModuleAccents.getAccentArgb("voicecursor").toLong() and 0xFFFFFFFFL
+                        val onAccentArgb = AvanueModuleAccents.getOnAccentArgb("voicecursor").toLong() and 0xFFFFFFFFL
+
+                        val config = CursorConfig(
+                            dwellClickEnabled = settings.dwellClickEnabled,
+                            dwellClickDelayMs = settings.dwellClickDelayMs.toLong(),
+                            jitterFilterEnabled = settings.cursorSmoothing,
+                            filterStrength = FilterStrength.Medium,
+                            size = settings.cursorSize,
+                            speed = settings.cursorSpeed,
+                            showCoordinates = settings.showCoordinates,
+                            color = accentArgb,
+                            borderColor = onAccentArgb,
+                            dwellRingColor = accentArgb
+                        )
+
+                        val cursorService = CursorOverlayService.getInstance()
+                        if (cursorService != null) {
+                            cursorService.updateConfig(config)
+                            // Ensure ClickDispatcher is set so "cursor click" voice command works
+                            cursorService.setClickDispatcher(AccessibilityClickDispatcher())
+
+                            // Wire IMU head tracking to cursor (lazy-init IMUManager once)
+                            if (imuManager == null) {
+                                try {
+                                    val caps = DeviceDetector.getCapabilities(applicationContext)
+                                    Log.i(TAG, "DeviceDetector sensors: accel=${caps.sensors.hasAccelerometer}, gyro=${caps.sensors.hasGyroscope}, mag=${caps.sensors.hasMagnetometer}")
+                                    val imu = IMUManager.getInstance(applicationContext)
+                                    imu.injectCapabilities(caps)
+                                    imuManager = imu
+                                    Log.i(TAG, "IMUManager initialized with device capabilities")
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to initialize IMUManager", e)
+                                }
+                            }
+                            imuManager?.let { imu ->
+                                val started = imu.startIMUTracking("VoiceCursor")
+                                if (started) {
+                                    cursorService.startIMUTracking(imu)
+                                    Log.i(TAG, "IMU head tracking connected to cursor — pipeline active")
+                                } else {
+                                    Log.w(TAG, "IMU tracking start failed — check DeviceDetector capabilities and sensor availability")
+                                }
+                            }
+                        } else {
+                            Log.w(TAG, "CursorOverlayService.getInstance() is null — IMU wiring skipped")
+                        }
+                    }
+                }
+
                 Log.i(TAG, "VoiceOSCore initialized with dev settings: engine=${devSettings.sttEngine}, lang=${devSettings.voiceLanguage}, confidence=${devSettings.confidenceThreshold}")
             } catch (e: Exception) {
                 Log.e(TAG, "Initialization failed", e)
@@ -196,27 +513,70 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             voiceOSCore?.updateCommands(commands.map { it.phrase })
 
             // Update overlay badges from accessibility tree
-            try {
-                val root = rootInActiveWindow ?: return@launch
-                val packageName = root.packageName?.toString() ?: return@launch
-                val isTargetApp = OverlayStateManager.TARGET_APPS.contains(packageName)
+            refreshOverlayBadges()
+        }
+    }
 
-                // Browser-scope: clear web commands when foreground app is not the browser.
-                // Prevents web-scraped phrases from polluting grammar in other apps.
-                val isBrowser = packageName == applicationContext.packageName
-                if (!isBrowser) {
-                    BrowserVoiceOSCallback.clearActiveWebPhrases()
-                }
+    /**
+     * Called after scroll events settle (debounced 300ms).
+     *
+     * Bypasses the command generation pipeline to refresh overlay badges directly.
+     * Without this, scrolling in Gmail (or any app) would never update overlays because:
+     * - TYPE_VIEW_SCROLLED doesn't trigger handleScreenChange → onCommandsUpdated
+     * - Even TYPE_WINDOW_CONTENT_CHANGED gates on KMP fingerprint which may not change
+     */
+    override fun onInAppNavigation(packageName: String) {
+        Log.d(TAG, "In-app navigation detected: $packageName, clearing overlay")
+        // Reset numbering so new screen starts from 1
+        overlayNumberingExecutor?.resetForNavigation()
+        // Clear overlay items + hash + signatures for fresh scan
+        dynamicCommandGenerator?.clearCache()
+    }
 
-                dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating overlay", e)
+    override fun onScrollSettled(packageName: String) {
+        serviceScope.launch {
+            Log.d(TAG, "Scroll settled, refreshing overlay for $packageName")
+            // Invalidate screen hash so processScreen() always runs after scroll.
+            // We KNOW content changed (user scrolled), so skip hash-based deduplication.
+            // Without this, the content-aware hash might still match if the depth limit
+            // is too shallow to reach actual text nodes inside RecyclerView children.
+            dynamicCommandGenerator?.invalidateScreenHash()
+            refreshOverlayBadges()
+        }
+    }
+
+    /**
+     * Common overlay refresh logic used by both onCommandsUpdated (screen change)
+     * and onScrollSettled (scroll). Gets fresh rootInActiveWindow and runs
+     * DynamicCommandGenerator.processScreen().
+     *
+     * Navigation detection is handled by structural-change-ratio in handleScreenContext(),
+     * not by event source. This works for both Activity and Fragment transitions.
+     */
+    private fun refreshOverlayBadges() {
+        try {
+            val root = rootInActiveWindow ?: return
+            val packageName = root.packageName?.toString() ?: return
+            val isTargetApp = TARGET_APPS.contains(packageName)
+
+            // Browser-scope: clear web commands when foreground app is not the browser.
+            // Prevents web-scraped phrases from polluting grammar in other apps.
+            val isBrowser = packageName == applicationContext.packageName
+            if (!isBrowser) {
+                BrowserVoiceOSCallback.clearActiveWebPhrases()
             }
+
+            dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating overlay", e)
         }
     }
 
     override fun onDestroy() {
         instance = null
+
+        // Clear VoiceControlCallbacks to prevent stale references
+        VoiceControlCallbacks.clear()
 
         // Cancel speech result collection
         speechCollectorJob?.cancel()
@@ -226,6 +586,18 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         webCommandCollectorJob?.cancel()
         webCommandCollectorJob = null
         BrowserVoiceOSCallback.clearActiveWebPhrases()
+
+        // Cancel cursor settings collection
+        cursorSettingsJob?.cancel()
+        cursorSettingsJob = null
+
+        // Stop IMU head tracking
+        imuManager?.let { imu ->
+            CursorOverlayService.getInstance()?.stopIMUTracking()
+            imu.stopIMUTracking("VoiceCursor")
+            Log.i(TAG, "IMU head tracking stopped (service destroy)")
+        }
+        imuManager = null
 
         // Stop overlay service
         try {

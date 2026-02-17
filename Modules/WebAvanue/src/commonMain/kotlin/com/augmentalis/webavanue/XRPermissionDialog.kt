@@ -183,7 +183,7 @@ fun XRPermissionDeniedDialog(
                         "WebXR features require ${permissionType} permission. " +
                         "Please enable it in Settings to use AR/VR experiences."
                     } else {
-                        "${permissionType.capitalize()} permission is required for WebXR. " +
+                        "${permissionType.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }} permission is required for WebXR. " +
                         "Please grant permission to continue."
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -206,7 +206,7 @@ fun XRPermissionDeniedDialog(
                         listOf(
                             "1. Tap 'Open Settings' below",
                             "2. Select 'Permissions'",
-                            "3. Enable '${permissionType.capitalize()}'",
+                            "3. Enable '${permissionType.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}'",
                             "4. Return to WebAvanue"
                         ).forEach { step ->
                             Text(

@@ -18,7 +18,7 @@ interface ConversationRepository {
     
     /**
      * Get a single conversation by ID
-     * @param id Conversation VUID (Voice Universal Identifier)
+     * @param id Conversation AVID (Avanues Voice ID)
      * @return Result containing conversation or error
      */
     suspend fun getConversationById(id: String): Result<Conversation>
@@ -39,14 +39,14 @@ interface ConversationRepository {
     
     /**
      * Delete conversation (cascade deletes all messages)
-     * @param id Conversation VUID (Voice Universal Identifier)
+     * @param id Conversation AVID (Avanues Voice ID)
      * @return Result with success/error
      */
     suspend fun deleteConversation(id: String): Result<Unit>
     
     /**
      * Archive/unarchive conversation
-     * @param id Conversation VUID (Voice Universal Identifier)
+     * @param id Conversation AVID (Avanues Voice ID)
      * @param archived True to archive, false to unarchive
      * @return Result with success/error
      */

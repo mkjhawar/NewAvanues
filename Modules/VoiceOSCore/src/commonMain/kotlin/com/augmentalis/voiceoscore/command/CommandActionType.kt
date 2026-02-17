@@ -260,6 +260,131 @@ enum class CommandActionType {
     /** Force re-scrape of current web page (invalidate cache + rescrape DOM) */
     RETRAIN_PAGE,
 
+    // ═══════════════════════════════════════════════════════════════════
+    // Browser Navigation Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Browser back (history.back) */
+    PAGE_BACK,
+
+    /** Browser forward (history.forward) */
+    PAGE_FORWARD,
+
+    /** Reload the current page */
+    PAGE_REFRESH,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Page Scrolling Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Scroll to the top of the page */
+    SCROLL_TO_TOP,
+
+    /** Scroll to the bottom of the page */
+    SCROLL_TO_BOTTOM,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Form Navigation Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Focus next focusable element (tab) */
+    TAB_NEXT,
+
+    /** Focus previous focusable element (shift-tab) */
+    TAB_PREV,
+
+    /** Submit the current/nearest form */
+    SUBMIT_FORM,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Gesture Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Swipe left on element or page */
+    SWIPE_LEFT,
+
+    /** Swipe right on element or page */
+    SWIPE_RIGHT,
+
+    /** Swipe up on element or page */
+    SWIPE_UP,
+
+    /** Swipe down on element or page */
+    SWIPE_DOWN,
+
+    /** Grab (start drag) an element */
+    GRAB,
+
+    /** Release a grabbed element */
+    RELEASE,
+
+    /** Rotate an element */
+    ROTATE,
+
+    /** Drag an element to a position */
+    DRAG,
+
+    /** Double-click/double-tap an element */
+    DOUBLE_CLICK,
+
+    /** Hover over an element */
+    HOVER,
+
+    /** Move viewport (pan camera) */
+    PAN,
+
+    /** Tilt element or viewport */
+    TILT,
+
+    /** Orbit around an element */
+    ORBIT,
+
+    /** Rotate element around X axis */
+    ROTATE_X,
+
+    /** Rotate element around Y axis */
+    ROTATE_Y,
+
+    /** Rotate element around Z axis */
+    ROTATE_Z,
+
+    /** Pinch gesture (two-finger zoom) */
+    PINCH,
+
+    /** Fling gesture (fast directional swipe) */
+    FLING,
+
+    /** Throw gesture (velocity-based release) */
+    THROW,
+
+    /** Scale an element */
+    SCALE,
+
+    /** Reset zoom to default */
+    RESET_ZOOM,
+
+    /** Select a word at position */
+    SELECT_WORD,
+
+    /** Clear text selection */
+    CLEAR_SELECTION,
+
+    /** Hover out (mouse leave) */
+    HOVER_OUT,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Drawing/Annotation Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Begin a drawing stroke at cursor position */
+    STROKE_START,
+
+    /** End the current drawing stroke */
+    STROKE_END,
+
+    /** Toggle eraser mode at cursor position */
+    ERASE,
+
     /** Custom/specialized action */
     CUSTOM,
 
@@ -271,7 +396,8 @@ enum class CommandActionType {
      */
     fun isElementAction(): Boolean = this in listOf(
         CLICK, TAP, LONG_CLICK, TYPE, FOCUS, EXECUTE,
-        SCROLL_DOWN, SCROLL_UP, SCROLL_LEFT, SCROLL_RIGHT, SCROLL
+        SCROLL_DOWN, SCROLL_UP, SCROLL_LEFT, SCROLL_RIGHT, SCROLL,
+        DOUBLE_CLICK, HOVER, GRAB, DRAG
     )
 
     /**
@@ -321,6 +447,26 @@ enum class CommandActionType {
     fun isVoiceOSAction(): Boolean = this in listOf(
         VOICE_MUTE, VOICE_WAKE, DICTATION_START, DICTATION_STOP, SHOW_COMMANDS,
         NUMBERS_ON, NUMBERS_OFF, NUMBERS_AUTO
+    )
+
+    /**
+     * Check if this is a browser/web action
+     */
+    fun isBrowserAction(): Boolean = this in listOf(
+        RETRAIN_PAGE, PAGE_BACK, PAGE_FORWARD, PAGE_REFRESH,
+        SCROLL_TO_TOP, SCROLL_TO_BOTTOM,
+        TAB_NEXT, TAB_PREV, SUBMIT_FORM,
+        SWIPE_LEFT, SWIPE_RIGHT, SWIPE_UP, SWIPE_DOWN,
+        GRAB, RELEASE, ROTATE, DRAG,
+        DOUBLE_CLICK, HOVER,
+        PAN, TILT, ORBIT, ROTATE_X, ROTATE_Y, ROTATE_Z,
+        PINCH, FLING, THROW, SCALE,
+        RESET_ZOOM, SELECT_WORD, CLEAR_SELECTION, HOVER_OUT,
+        // Dual-purpose: also handled by web pipeline when browser active
+        ZOOM_IN, ZOOM_OUT, SCROLL_UP, SCROLL_DOWN, SCROLL_LEFT, SCROLL_RIGHT,
+        TAP, LONG_CLICK, FOCUS,
+        // Drawing/annotation
+        STROKE_START, STROKE_END, ERASE
     )
 
     companion object {

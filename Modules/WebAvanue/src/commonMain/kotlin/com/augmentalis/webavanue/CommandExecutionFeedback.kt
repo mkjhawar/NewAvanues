@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -281,7 +282,7 @@ private fun DisambiguationFeedback(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.HelpOutline,
+                        Icons.AutoMirrored.Filled.HelpOutline,
                         contentDescription = null,
                         tint = AvanueTheme.colors.warning,
                         modifier = Modifier.size(24.dp)
@@ -471,7 +472,7 @@ private fun NotFoundFeedback(
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(onClick = { /* Show all commands */ }) {
                     Icon(
-                        Icons.Default.HelpOutline,
+                        Icons.AutoMirrored.Filled.HelpOutline,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )

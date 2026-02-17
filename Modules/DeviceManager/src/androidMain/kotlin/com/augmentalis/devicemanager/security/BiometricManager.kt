@@ -1,6 +1,8 @@
 // Author: Manoj Jhawar
 // Purpose: Comprehensive biometric authentication management for fingerprint, face, iris, voice, and other biometric methods
 
+@file:Suppress("DEPRECATION") // FingerprintManager — all usages individually suppressed, this covers the import
+
 package com.augmentalis.devicemanager.security
 
 import android.Manifest
@@ -95,6 +97,7 @@ class BiometricManager(
     
     // Biometric services
     private var biometricManager: AndroidBiometricManager? = null
+    @Suppress("DEPRECATION")
     private var fingerprintManager: FingerprintManager? = null
     // FaceManager API is not publicly available
     // private var faceManager: FaceManager? = null
@@ -840,8 +843,9 @@ class BiometricManager(
                 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     setConfirmationRequired(request.requireConfirmation)
-                    
+
                     if (request.fallbackToDeviceCredential) {
+                        @Suppress("DEPRECATION")
                         setDeviceCredentialAllowed(true)
                     } else {
                         setNegativeButton(

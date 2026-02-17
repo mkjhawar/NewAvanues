@@ -174,6 +174,7 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
             }
         }
 

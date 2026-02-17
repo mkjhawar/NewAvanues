@@ -1,0 +1,6 @@
+batch=batch17
+manual_pool=172
+remaining_after_exclusion=20
+selected_topics=vos4-initialization-framework-implementation-guide (1), vos4-initialization-implementation-guide (1), speechmanagerimpl-implementation-report-251015-0359 (1), voiceos-4-user-manual-complete (1), vos4-master-inventory (1)
+batch_rows=5
+batch_csv=/Volumes/M-Drive/Coding/NewAvanues/Docs/project-info/execution-artifacts/2026-02-10-wave6-recovery/merge_review_wave6_voiceos_topic_batch17_recovered.csv

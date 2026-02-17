@@ -63,7 +63,8 @@ object SettingsModule {
     @Provides
     @IntoSet
     fun provideSystemSettings(
-        repository: AvanuesSettingsRepository
+        repository: AvanuesSettingsRepository,
+        credentialStore: com.augmentalis.voiceavanue.data.SftpCredentialStore
     ): ComposableSettingsProvider =
-        SystemSettingsProvider(repository)
+        SystemSettingsProvider(repository, credentialStore)
 }

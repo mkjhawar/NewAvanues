@@ -17,7 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.ripple
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -186,7 +186,7 @@ private fun HistoryPanel(
                 onNewConversation = onNewConversation
             )
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             // Conversation list or empty state
             if (conversations.isEmpty()) {
@@ -391,7 +391,7 @@ private fun ConversationItem(
             .fillMaxWidth()
             .clickable(
                 onClick = onClick,
-                indication = rememberRipple(),
+                indication = ripple(),
                 interactionSource = remember { MutableInteractionSource() }
             )
             .semantics { contentDescription = accessibilityText },
@@ -469,7 +469,7 @@ private fun ConversationItem(
     }
 
     // Divider between items
-    Divider(
+    HorizontalDivider(
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         modifier = Modifier.padding(horizontal = 16.dp)
     )

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -187,7 +188,7 @@ private fun QuickActionButtons(
             onClick = onBrowseTemplates,
             modifier = Modifier.weight(1f)
         ) {
-            Icon(Icons.Default.LibraryBooks, null, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Filled.LibraryBooks, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text("Templates")
         }

@@ -4,9 +4,12 @@
 
 package com.augmentalis.nlu.matching
 
+import kotlinx.cinterop.ExperimentalForeignApi
+import platform.Foundation.NSDate
 import platform.Foundation.NSString
 import platform.Foundation.precomposedStringWithCompatibilityMapping
 import platform.Foundation.decomposedStringWithCanonicalMapping
+import platform.Foundation.timeIntervalSince1970
 
 /**
  * Unicode NFKC normalization (iOS).
@@ -32,6 +35,7 @@ internal actual fun stripDiacritics(text: String): String {
 /**
  * Current time in milliseconds (iOS).
  */
+@OptIn(ExperimentalForeignApi::class)
 internal actual fun currentTimeMillis(): Long {
-    return (platform.Foundation.NSDate().timeIntervalSince1970 * 1000).toLong()
+    return (NSDate().timeIntervalSince1970 * 1000).toLong()
 }

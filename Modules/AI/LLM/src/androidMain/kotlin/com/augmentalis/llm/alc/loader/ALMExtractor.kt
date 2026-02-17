@@ -220,6 +220,7 @@ class ALMExtractor(
     /**
      * Extract tar archive to directory
      */
+    @Suppress("DEPRECATION")
     private fun extractTarArchive(tarFile: File, destDir: File) {
         FileInputStream(tarFile).use { fis ->
             TarArchiveInputStream(fis).use { tarIn ->

@@ -95,6 +95,7 @@ class LLMDownloadWorker(
                 resume = resume,
                 onProgress = { progress, bytesDownloaded, totalBytes, speed ->
                     // Update notification (launch coroutine since setForeground is suspend)
+                    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
                     GlobalScope.launch {
                         setForeground(createForegroundInfo(modelName, progress, speed))
                     }

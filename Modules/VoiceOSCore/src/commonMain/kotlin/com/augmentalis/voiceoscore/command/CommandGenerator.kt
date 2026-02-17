@@ -5,7 +5,7 @@ import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.ElementFingerprint
 import com.augmentalis.voiceoscore.currentTimeMillis
-import com.augmentalis.voiceoscore.util.NumberToWords
+import com.augmentalis.foundation.util.NumberToWords
 
 /**
  * Command Generator - Creates voice commands from UI elements.
@@ -37,6 +37,7 @@ object CommandGenerator {
         val listIndex: Int = -1  // Position in list for index-based commands
     )
 
+    @Suppress("DEPRECATION")
     fun fromElement(
         element: ElementInfo,
         packageName: String
@@ -145,6 +146,7 @@ object CommandGenerator {
         val currentTime = currentTimeMillis()
 
         // Determine if this is dynamic content (should NOT be persisted)
+        @Suppress("DEPRECATION")
         val isDynamic = element.isDynamicContent
 
         val command = QuantizedCommand(
@@ -479,46 +481,56 @@ object CommandGenerator {
     }
 
     /**
-     * Normalizes a RealWear ML script string by trimming the input around the first supported delimiter.
+     * Two-layer label normalizer for voice command derivation.
      *
-     * This function searches for the first delimiter (in the order defined by [PARSE_DESCRIPTION_DELIMITERS])
-     * that appears in [text]. If a delimiter is found, the input is split into exactly two parts using
-     * `split(delimiter, limit = 2)`.
+     * **Layer 1: Universal Voice Hint Convention**
+     * Checks for `(Voice: phrase)` pattern in the text. This is a framework-agnostic convention:
+     * any Android app (Compose, Flutter, React Native, Unity) can embed explicit voice phrases
+     * in contentDescription. Example: `"Back (Voice: go back)"` → returns `"go back"`.
      *
-     * Selection logic:
-     * - If the original [text] contains `"hf_"`, the function returns the substring *after* the first
-     *   encountered delimiter (i.e., `parts[1]`).
-     * - Otherwise, it returns the substring *before* the first encountered delimiter (i.e., `parts[0]`).
+     * **Layer 2: Delimiter-Based Parsing (RealWear ML Script)**
+     * Falls back to splitting on the first found delimiter from [PARSE_DESCRIPTION_DELIMITERS].
+     * - If `"hf_"` is present → returns the part after the delimiter
+     * - Otherwise → returns the part before the delimiter
      *
-     * If no delimiter from [PARSE_DESCRIPTION_DELIMITERS] is present, the input is returned unchanged.
+     * If neither layer matches, the input is returned unchanged.
      *
-     * Notes / edge cases:
-     * - If the delimiter exists but is at the beginning or end of the string, the returned value may be
-     *   an empty string.
-     * - The delimiter search is order-dependent: if multiple delimiters are present, only the first match
-     *   according to [PARSE_DESCRIPTION_DELIMITERS] is used.
-     * - The `"hf_"` check is performed on the original [text], not on the split parts.
-     *
-     * @param text Raw ML script or description text to normalize.
-     * @return A normalized string segment based on the delimiter and `"hf_"` presence rules.
+     * @param text Raw accessibility label or ML script text to normalize.
+     * @return Normalized label suitable for voice command generation.
      */
+    /**
+     * Regex to extract explicit voice phrase from the universal `(Voice: ...)` convention.
+     * Any Android app framework (Compose, Flutter, React Native, Unity) can embed
+     * `(Voice: phrase)` in contentDescription to provide explicit voice command mapping.
+     * Example: "Back (Voice: go back)" → extracts "go back"
+     */
+    private val VOICE_HINT_PATTERN = Regex("\\(Voice:\\s*(.+?)\\)\\s*$")
+
     private fun normalizeRealWearMlScript(text: String): String {
-        // Find the first delimiter from our list that exists in the current processedText
+        // Layer 1: Check for explicit (Voice: ...) hint — universal convention for any framework
+        val voiceMatch = VOICE_HINT_PATTERN.find(text)
+        if (voiceMatch != null) {
+            return voiceMatch.groupValues[1].trim()
+        }
+
+        // Layer 2: Delimiter-based parsing for RealWear ML scripts and general labels
         val foundDelimiter = PARSE_DESCRIPTION_DELIMITERS.firstOrNull { text.contains(it) }
 
         if (foundDelimiter != null) {
-            // If a delimiter is found, split the string.
-            // limit = 2 ensures we get exactly two parts if the delimiter is present.
             val parts = text.split(foundDelimiter, limit = 2)
 
-            val normalizedText = if ("hf_" in text) { // Condition checks the input `text` (normalized version)
-                // If "hf_" is present, take the part *after* the first delimiter
+            val candidate = if ("hf_" in text) {
                 parts[1]
             } else {
-                // If "hf_" is NOT present, take the part *before* the first delimiter
                 parts[0]
             }
-            return normalizedText
+
+            // Guard: don't return broken labels from aggressive splitting.
+            // If the candidate is too short (< 2 chars, e.g. time "3:45" → "3"),
+            // return the original text instead. This protects third-party app labels
+            // that naturally contain delimiters (time formats, compound labels).
+            val trimmed = candidate.trim()
+            return if (trimmed.length >= 2) trimmed else text
         }
         return text
     }

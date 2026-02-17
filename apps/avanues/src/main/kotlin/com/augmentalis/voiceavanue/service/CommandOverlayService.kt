@@ -75,6 +75,11 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.augmentalis.voiceoscore.BadgeTheme
+import com.augmentalis.voiceoscore.InstructionBarMode
+import com.augmentalis.voiceoscore.NumberOverlayItem
+import com.augmentalis.voiceoscore.NumbersOverlayMode
+import com.augmentalis.voiceoscore.OverlayStateManager
 import com.augmentalis.voiceavanue.MainActivity
 
 private const val TAG = "CommandOverlayService"
@@ -252,7 +257,7 @@ private fun NumbersOverlayContent() {
     val mode by OverlayStateManager.numbersOverlayMode.collectAsState()
 
     if (!showOverlay) return
-    if (mode == OverlayStateManager.NumbersOverlayMode.AUTO && items.isEmpty()) return
+    if (mode == NumbersOverlayMode.AUTO && items.isEmpty()) return
 
     Box(
         modifier = Modifier
@@ -275,7 +280,7 @@ private fun NumbersOverlayContent() {
 }
 
 @Composable
-private fun NumberBadge(item: OverlayStateManager.NumberOverlayItem) {
+private fun NumberBadge(item: NumberOverlayItem) {
     val theme by OverlayStateManager.badgeTheme.collectAsState()
     val density = LocalDensity.current
 
@@ -329,7 +334,7 @@ private fun NumbersInstructionPanel(
     modifier: Modifier = Modifier
 ) {
     val mode by OverlayStateManager.instructionBarMode.collectAsState()
-    if (mode == OverlayStateManager.InstructionBarMode.OFF) return
+    if (mode == InstructionBarMode.OFF) return
 
     var visible by remember { mutableStateOf(true) }
     val alpha by animateFloatAsState(
@@ -339,7 +344,7 @@ private fun NumbersInstructionPanel(
     )
 
     LaunchedEffect(mode, itemCount) {
-        if (mode == OverlayStateManager.InstructionBarMode.AUTO) {
+        if (mode == InstructionBarMode.AUTO) {
             visible = true
             kotlinx.coroutines.delay(3000)
             visible = false

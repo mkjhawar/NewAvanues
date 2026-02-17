@@ -108,7 +108,7 @@ enum class FilterStrength {
 @Serializable
 data class CursorConfig(
     val type: CursorType = CursorType.Normal,
-    val color: Long = 0xFF007AFF, // ARVision systemBlue
+    val color: Long = 0xFF007AFF, // ARVision systemBlue (cursor fill ARGB)
     val size: Int = 48, // ARVision standard touch target
     val handCursorSize: Int = 48,
     val speed: Int = 8,
@@ -116,6 +116,14 @@ data class CursorConfig(
     val cornerRadius: Float = 20.0f,
     val glassOpacity: Float = 0.8f,
     val showCoordinates: Boolean = false,
+
+    // Appearance — overlay rendering (defaults match original hardcoded values)
+    val borderColor: Long = 0xFFFFFFFF,      // Cursor border (was hardcoded White)
+    val dwellRingColor: Long = 0xFF007AFF,   // Dwell progress ring
+    val cursorAlpha: Int = 200,              // Fill opacity 0-255
+    val borderStrokeWidth: Float = 3f,       // Border width
+    val dwellRingStrokeWidth: Float = 4f,    // Dwell ring width
+    val cursorRadius: Float = 12f,           // Cursor dot radius
 
     // Dwell click settings
     val dwellClickEnabled: Boolean = true,
@@ -195,6 +203,55 @@ sealed class CursorInput {
         val dx: Float,
         val dy: Float
     ) : CursorInput()
+}
+
+/**
+ * Overlay window specification — KMP-shared sizing and positioning.
+ *
+ * Platforms use this to create a correctly-sized overlay that covers only the
+ * cursor dot + dwell ring. The overlay is repositioned as the cursor moves,
+ * preventing full-screen overlays that block touch events.
+ *
+ * @param sizePx Overlay width & height in pixels (square)
+ * @param centerOffsetPx Half-size; subtract from cursor position to get top-left origin
+ */
+data class CursorOverlaySpec(
+    val sizePx: Int,
+    val centerOffsetPx: Int
+) {
+    companion object {
+        /**
+         * Compute overlay dimensions from cursor config and display density.
+         *
+         * @param config Cursor configuration (radius, stroke widths)
+         * @param displayDensity Platform display density (1.0 = mdpi, 2.0 = xhdpi, 3.0 = xxhdpi)
+         * @return Spec with pixel-scaled overlay size
+         */
+        fun fromConfig(config: CursorConfig, displayDensity: Float = 1f): CursorOverlaySpec {
+            val scaledRadius = config.cursorRadius * displayDensity
+            val dwellRingExtra = (8f + config.dwellRingStrokeWidth) * displayDensity
+            val borderExtra = config.borderStrokeWidth * displayDensity
+            // Total radius = cursor dot + dwell ring gap + dwell ring stroke + border
+            val totalRadius = scaledRadius + dwellRingExtra + borderExtra
+            // Add margin for anti-aliasing
+            val margin = 4f * displayDensity
+            val sizePx = ((totalRadius + margin) * 2f).toInt().coerceAtLeast(1)
+            return CursorOverlaySpec(
+                sizePx = sizePx,
+                centerOffsetPx = sizePx / 2
+            )
+        }
+    }
+
+    /**
+     * Compute overlay top-left position for a given cursor position.
+     */
+    fun overlayOrigin(cursorX: Float, cursorY: Float): CursorPosition {
+        return CursorPosition(
+            x = cursorX - centerOffsetPx,
+            y = cursorY - centerOffsetPx
+        )
+    }
 }
 
 /**

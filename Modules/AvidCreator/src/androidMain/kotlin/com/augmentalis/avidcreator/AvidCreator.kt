@@ -91,6 +91,7 @@ class AvidElementManager private constructor() {
     /**
      * Generate a new AVID
      */
+    @Suppress("DEPRECATION")
     fun generateAvid(): String = AvidGenerator.generate()
 
     // ==================== Registration ====================
@@ -455,6 +456,3 @@ class AvidElementManager private constructor() {
 // Public API alias - AvidCreator is the standard name
 typealias AvidCreator = AvidElementManager
 
-// Backward compatibility alias
-@Deprecated("Use AvidCreator instead", ReplaceWith("AvidCreator"))
-typealias VuidCreator = AvidElementManager

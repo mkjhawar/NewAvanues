@@ -28,6 +28,10 @@ tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     // Android Target
     androidTarget {
         compilations.all {
@@ -78,6 +82,9 @@ kotlin {
 
                 // AVID for unified identifier generation
                 implementation(project(":Modules:AVID"))
+
+                // VoiceOSCore - IWebCommandExecutor interface, WebAction types, QuantizedCommand
+                implementation(project(":Modules:VoiceOSCore"))
 
                 // Kotlin
                 implementation(libs.kotlinx.coroutines.core)

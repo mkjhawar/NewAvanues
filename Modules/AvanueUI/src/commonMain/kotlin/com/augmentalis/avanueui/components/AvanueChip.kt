@@ -1,18 +1,21 @@
 /**
  * AvanueChip.kt - Unified chip component
  *
- * ONE component, theme decides glass/water/plain.
+ * ONE component, theme decides glass/water/cupertino/mountainview.
  * Reads AvanueTheme.materialMode to delegate to the correct implementation.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 package com.augmentalis.avanueui.components
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.components.glass.GlassChip
 import com.augmentalis.avanueui.components.glass.GlassShapes
 import com.augmentalis.avanueui.theme.AvanueTheme
@@ -23,15 +26,7 @@ import com.augmentalis.avanueui.water.waterEffect
 /**
  * Unified chip component for the Avanues ecosystem.
  *
- * Renders as glass, water, or plain Material3 based on [AvanueTheme.materialMode].
- *
- * @param onClick Click handler
- * @param label Chip label
- * @param modifier Modifier for customization
- * @param enabled Enable/disable chip
- * @param leadingIcon Optional leading icon
- * @param trailingIcon Optional trailing icon
- * @param shape Chip shape
+ * Renders as glass, water, cupertino, or mountainview based on [AvanueTheme.materialMode].
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -45,7 +40,7 @@ fun AvanueChip(
     shape: Shape = GlassShapes.chipShape
 ) {
     when (AvanueTheme.materialMode) {
-        MaterialMode.GLASS -> GlassChip(
+        MaterialMode.Glass -> GlassChip(
             onClick = onClick,
             label = label,
             modifier = modifier,
@@ -55,7 +50,7 @@ fun AvanueChip(
             glass = true,
             shape = shape
         )
-        MaterialMode.WATER -> {
+        MaterialMode.Water -> {
             val chipModifier = modifier.waterEffect(
                 backgroundColor = AvanueTheme.colors.surfaceElevated,
                 shape = shape,
@@ -70,14 +65,34 @@ fun AvanueChip(
                 leadingIcon = leadingIcon,
                 trailingIcon = trailingIcon,
                 colors = AssistChipDefaults.assistChipColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    containerColor = Color.Transparent,
                     labelColor = AvanueTheme.colors.textPrimary
                 ),
                 shape = shape,
                 border = null
             )
         }
-        MaterialMode.PLAIN -> {
+        MaterialMode.Cupertino -> {
+            AssistChip(
+                onClick = onClick,
+                label = label,
+                modifier = modifier,
+                enabled = enabled,
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = AvanueTheme.colors.surfaceElevated,
+                    labelColor = AvanueTheme.colors.textPrimary
+                ),
+                shape = RoundedCornerShape(8.dp),
+                border = AssistChipDefaults.assistChipBorder(
+                    enabled = enabled,
+                    borderColor = AvanueTheme.colors.borderSubtle,
+                    borderWidth = 0.33.dp
+                )
+            )
+        }
+        MaterialMode.MountainView -> {
             AssistChip(
                 onClick = onClick,
                 label = label,

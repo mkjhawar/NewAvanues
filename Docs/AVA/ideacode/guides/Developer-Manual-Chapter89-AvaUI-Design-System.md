@@ -1,58 +1,81 @@
 # Developer Manual - Chapter 89: AvaUI Design System
 
-**Version:** 1.0.0
-**Date:** 2026-02-07
+**Version:** 2.0.0
+**Date:** 2026-02-11
 **Author:** AVA Development Team
-**Status:** Reference Documentation
+**Status:** PARTIALLY SUPERSEDED — See notes below
 **Module:** AvanueUI (Modules/AvanueUI/)
+
+---
+
+> ### IMPORTANT: Superseded Sections
+>
+> This chapter was written for the pre-v5.0 architecture. The following sections are **SUPERSEDED**:
+>
+> | Section | Status | Replacement |
+> |---------|--------|-------------|
+> | 1. Overview (Architecture) | **SUPERSEDED** | Chapter 91 Section 1 |
+> | 2. Design Tokens | **CURRENT** | Tokens are unchanged |
+> | 3. Glassmorphic Components | **DEPRECATED** | Use unified components (Ch 92) |
+> | 4. Glass Modifiers | **CURRENT** | `Modifier.glass()` still works |
+> | 5. Themes (OceanTheme, MagicTheme, GlassAvanue) | **SUPERSEDED** | Chapter 91 Section 3 (Theme v5.1) |
+> | 6. ComponentProvider | **SUPERSEDED** | Use unified components directly |
+>
+> **For current documentation, see:**
+> - **Chapter 91** — AvanueUI Design System Guide v2.0 (Theme v5.1, module structure, palette system)
+> - **Chapter 92** — Unified Component Architecture (MaterialMode, unified components)
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#1-overview)
-2. [Design Tokens](#2-design-tokens)
-3. [Glassmorphic Components](#3-glassmorphic-components)
-4. [Glass Modifiers](#4-glass-modifiers)
-5. [Themes](#5-themes)
-6. [ComponentProvider](#6-componentprovider)
-7. [Spatial/AR Tokens](#7-spatial-ar-tokens)
-8. [ServiceState Integration](#8-servicestate-integration)
-9. [Usage Examples](#9-usage-examples)
-10. [File Locations](#10-file-locations)
+2. [Design Tokens](#2-design-tokens) (CURRENT)
+3. [Glassmorphic Components](#3-glassmorphic-components) (DEPRECATED — see Ch 92)
+4. [Glass Modifiers](#4-glass-modifiers) (CURRENT)
+5. [Themes](#5-themes) (SUPERSEDED — see Ch 91)
+6. [ComponentProvider](#6-componentprovider) (SUPERSEDED)
+7. [Spatial/AR Tokens](#7-spatial-ar-tokens) (CURRENT)
+8. [ServiceState Integration](#8-servicestate-integration) (CURRENT)
+9. [Usage Examples](#9-usage-examples) (SUPERSEDED)
+10. [File Locations](#10-file-locations) (SUPERSEDED)
 
 ---
 
 ## 1. Overview
 
-AvaUI (AvanueUI) is the comprehensive design system powering all Avanues applications. It provides a unified, glassmorphic visual language across Android, iOS, Desktop, and Web platforms via Kotlin Multiplatform.
+AvaUI (AvanueUI) is the comprehensive design system powering all Avanues applications. It provides a unified visual language across Android, iOS, Desktop, and Web platforms via Kotlin Multiplatform.
 
 ### Core Philosophy
 
-- **Glassmorphic First**: Transparent, frosted glass aesthetic optimized for modern UI/UX
+- **Theme-Driven Rendering**: Glass, Water, Cupertino, or MountainView — chosen by `MaterialMode`
 - **Cross-Platform**: Single design system across all platforms (KMP)
-- **Theme-Swappable**: Seamless migration path from Material3 to MagicUI
+- **Three Independent Axes**: Color Palette x Material Style x Appearance Mode (32 combinations)
 - **Token-Based**: Atomic design tokens ensure consistency
-- **AR/VR Ready**: Spatial tokens and transparent-first themes for smart glasses
+- **AR/VR Ready**: XR-optimized palettes with transparent backgrounds for smart glasses
 
-### Architecture
+### Architecture (v5.1)
 
 ```
-Modules/AvanueUI/
-├── Foundation/          # OceanTheme, GlassmorphicComponents, OceanDesignTokens
-├── Core/                # GlassAvanue theme, ComponentProvider
-├── DesignSystem/        # DesignTokens, TypographyTokens, SpacingTokens
-└── src/commonMain/      # AvanueTheme (Material3 wrapper)
+Modules/AvanueUI/src/commonMain/
+├── tokens/           # SpacingTokens, ShapeTokens, SizeTokens, etc.
+├── theme/            # AvanueColorPalette, MaterialMode, AppearanceMode
+│                     # Hydra/Sol/Luna/Terra (Colors/Glass/Water + Light + XR)
+├── display/          # DisplayProfile, DisplayUtils
+├── glass/            # GlassLevel, GlassBorder
+├── water/            # WaterLevel
+└── components/       # 7 unified components + legacy glass/water (deprecated)
 ```
 
-### Theme Systems
+### Theme System (v5.1 — Three Axes)
 
-| Theme | Purpose | Target Platform |
-|-------|---------|----------------|
-| **OceanTheme** | Primary dark glassmorphic theme | Android, iOS, Desktop |
-| **MagicTheme** | Extended Material3 with custom tokens | All platforms |
-| **GlassAvanue** | AR/MR optimized transparent theme | Vuzix, Vision Pro, smart glasses |
-| **AvanueTheme** | Material3 wrapper with extensions | Legacy support |
+| Axis | Enum | Values | Default |
+|------|------|--------|---------|
+| **Color Palette** | `AvanueColorPalette` | SOL, LUNA, TERRA, HYDRA | HYDRA |
+| **Material Style** | `MaterialMode` | Glass, Water, Cupertino, MountainView | Water |
+| **Appearance** | `AppearanceMode` | Light, Dark, Auto | Auto |
+
+> **DEPRECATED:** `OceanTheme`, `MagicTheme`, `GlassAvanue`, `AvanueThemeVariant`, `Foundation/`, `DesignSystem/`, `Core/` directories.
 
 ---
 
@@ -60,53 +83,47 @@ Modules/AvanueUI/
 
 Design tokens are the atomic values that define the visual language. All components reference tokens, never hardcoded values.
 
-### 2.1 Color Tokens (OceanTheme)
+### 2.1 Color Tokens (via AvanueTheme.colors)
+
+> **DEPRECATED:** `OceanTheme.*` — Use `AvanueTheme.colors.*` instead. Colors vary by palette (Hydra/Sol/Luna/Terra) and appearance (Light/Dark). Values below are for Hydra Dark (default).
 
 #### Background Colors
 ```kotlin
-OceanTheme.background       // #0F172A - Deep slate
-OceanTheme.surface          // #1E293B - Slate surface
-OceanTheme.surfaceElevated  // #334155 - Elevated surface
-OceanTheme.surfaceInput     // #334155 - Input fields
+AvanueTheme.colors.background       // #020617 - Sapphire black
+AvanueTheme.colors.surface          // #0F172A - Deep slate
+AvanueTheme.colors.surfaceElevated  // #1E293B - Elevated surface
+AvanueTheme.colors.surfaceInput     // #1E293B - Input fields
 ```
 
-#### Primary Colors (Coral Blue)
+#### Primary Colors (Royal Sapphire)
 ```kotlin
-OceanTheme.primary          // #3B82F6 - Coral blue
-OceanTheme.primaryDark      // #2563EB - Pressed state
-OceanTheme.primaryLight     // #60A5FA - Hover state
+AvanueTheme.colors.primary          // #1E40AF - Royal sapphire
+AvanueTheme.colors.primaryDark      // #1E3A8A - Pressed state
+AvanueTheme.colors.primaryLight     // #3B82F6 - Hover state
 ```
 
 #### Text Colors
 ```kotlin
-OceanTheme.textPrimary      // #E2E8F0 - Primary text (90% white)
-OceanTheme.textSecondary    // #CBD5E1 - Secondary text (80% white)
-OceanTheme.textTertiary     // #94A3B8 - Tertiary text (60% white)
-OceanTheme.textDisabled     // #64748B - Disabled text (40% white)
-OceanTheme.textOnPrimary    // #FFFFFF - Text on primary color
+AvanueTheme.colors.textPrimary      // #F1F5F9 - Primary text
+AvanueTheme.colors.textSecondary    // #94A3B8 - Secondary text
+AvanueTheme.colors.textTertiary     // #64748B - Tertiary text
+AvanueTheme.colors.textDisabled     // #475569 - Disabled text
+AvanueTheme.colors.textOnPrimary    // #FFFFFF - Text on primary color
 ```
 
 #### State Colors
 ```kotlin
-OceanTheme.success          // #10B981 - Seafoam green
-OceanTheme.warning          // #F59E0B - Amber
-OceanTheme.error            // #EF4444 - Coral red
-OceanTheme.info             // #0EA5E9 - Sky blue
+AvanueTheme.colors.success          // #22C55E - Green
+AvanueTheme.colors.warning          // #F59E0B - Amber
+AvanueTheme.colors.error            // #EF4444 - Red
+AvanueTheme.colors.info             // #3B82F6 - Blue
 ```
 
 #### Border Colors
 ```kotlin
-OceanTheme.border           // 20% white
-OceanTheme.borderSubtle     // 10% white
-OceanTheme.borderStrong     // 30% white
-OceanTheme.borderFocused    // Primary color
-```
-
-#### Glass Levels
-```kotlin
-OceanTheme.glassLight       // 5% opacity, 6dp blur
-OceanTheme.glassMedium      // 8% opacity, 8dp blur
-OceanTheme.glassHeavy       // 12% opacity, 10dp blur
+AvanueTheme.colors.border           // 12% white (dark) / 12% black (light)
+AvanueTheme.colors.borderSubtle     // 6% white/black
+AvanueTheme.colors.borderStrong     // 25% white/black
 ```
 
 ### 2.2 Spacing Tokens (OceanDesignTokens.Spacing)

@@ -1,5 +1,7 @@
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
+
 /**
  * Speed levels for cursor movement in VoiceOS cursor system.
  *

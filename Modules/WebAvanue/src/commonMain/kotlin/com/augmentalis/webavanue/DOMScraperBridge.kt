@@ -589,4 +589,738 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, error: 'Element not found' });
 })();
 """
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Selector-based action scripts (Phase 2)
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun clickBySelectorScript(selector: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => el.click(), 100);
+        return JSON.stringify({ success: true, message: 'Clicked element' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found: $selector' });
+})();
+"""
+
+    fun focusBySelectorScript(selector: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el && el.focus) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+        return JSON.stringify({ success: true, message: 'Focused element' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found or not focusable' });
+})();
+"""
+
+    fun inputTextBySelectorScript(selector: String, text: String): String {
+        val escaped = text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        return """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) {
+        el.focus();
+        if (el.isContentEditable) {
+            el.textContent = '$escaped';
+        } else {
+            el.value = '$escaped';
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        return JSON.stringify({ success: true, message: 'Input text set' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found or not an input' });
+})();
+"""
+    }
+
+    fun scrollToBySelectorScript(selector: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return JSON.stringify({ success: true, message: 'Scrolled to element' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found' });
+})();
+"""
+
+    fun toggleCheckboxScript(selector: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        if (el.type === 'checkbox' || el.type === 'radio') {
+            el.checked = !el.checked;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            return JSON.stringify({ success: true, message: 'Toggled to ' + el.checked });
+        }
+        el.click();
+        return JSON.stringify({ success: true, message: 'Clicked toggle element' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found' });
+})();
+"""
+
+    fun selectDropdownScript(selector: String, optionText: String): String {
+        val escaped = optionText.replace("\\", "\\\\").replace("'", "\\'")
+        return """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el && el.tagName === 'SELECT') {
+        const options = Array.from(el.options);
+        const match = options.find(o => o.text.toLowerCase().includes('$escaped'.toLowerCase()));
+        if (match) {
+            el.value = match.value;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            return JSON.stringify({ success: true, message: 'Selected: ' + match.text });
+        }
+        return JSON.stringify({ success: false, message: 'Option not found: $escaped' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found or not a select' });
+})();
+"""
+    }
+
+    fun longPressScript(selector: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const rect = el.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        el.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, bubbles: true }));
+        el.dispatchEvent(new MouseEvent('mousedown', { clientX: x, clientY: y, bubbles: true }));
+        setTimeout(() => {
+            el.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y, bubbles: true }));
+            el.dispatchEvent(new MouseEvent('mouseup', { clientX: x, clientY: y, bubbles: true }));
+            el.dispatchEvent(new MouseEvent('contextmenu', { clientX: x, clientY: y, bubbles: true }));
+        }, 600);
+        return JSON.stringify({ success: true, message: 'Long press initiated' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found' });
+})();
+"""
+
+    fun doubleClickScript(selector: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        return JSON.stringify({ success: true, message: 'Double-clicked element' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found' });
+})();
+"""
+
+    fun hoverScript(selector: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+        el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        return JSON.stringify({ success: true, message: 'Hovering over element' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found' });
+})();
+"""
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Page Navigation Scripts
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun scrollPageScript(direction: String): String = """
+(function() {
+    const vAmount = window.innerHeight * 0.85;
+    const hAmount = window.innerWidth * 0.85;
+    let dx = 0, dy = 0;
+    if ('$direction' === 'up') dy = -vAmount;
+    else if ('$direction' === 'down') dy = vAmount;
+    else if ('$direction' === 'left') dx = -hAmount;
+    else if ('$direction' === 'right') dx = hAmount;
+    window.scrollBy({ top: dy, left: dx, behavior: 'smooth' });
+    return JSON.stringify({ success: true, message: 'Scrolled $direction' });
+})();
+"""
+
+    fun scrollToTopScript(): String = """
+(function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return JSON.stringify({ success: true, message: 'Scrolled to top' });
+})();
+"""
+
+    fun scrollToBottomScript(): String = """
+(function() {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    return JSON.stringify({ success: true, message: 'Scrolled to bottom' });
+})();
+"""
+
+    fun pageBackScript(): String = """
+(function() {
+    window.history.back();
+    return JSON.stringify({ success: true, message: 'Navigated back' });
+})();
+"""
+
+    fun pageForwardScript(): String = """
+(function() {
+    window.history.forward();
+    return JSON.stringify({ success: true, message: 'Navigated forward' });
+})();
+"""
+
+    fun pageRefreshScript(): String = """
+(function() {
+    window.location.reload();
+    return JSON.stringify({ success: true, message: 'Page refreshed' });
+})();
+"""
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Form Navigation Scripts
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun tabNextScript(): String = """
+(function() {
+    const focusable = Array.from(document.querySelectorAll(
+        'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.disabled && el.offsetParent !== null);
+    const current = document.activeElement;
+    const idx = focusable.indexOf(current);
+    const next = focusable[idx + 1] || focusable[0];
+    if (next) {
+        next.focus();
+        next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return JSON.stringify({ success: true, message: 'Focused next field' });
+    }
+    return JSON.stringify({ success: false, message: 'No focusable elements found' });
+})();
+"""
+
+    fun tabPrevScript(): String = """
+(function() {
+    const focusable = Array.from(document.querySelectorAll(
+        'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.disabled && el.offsetParent !== null);
+    const current = document.activeElement;
+    const idx = focusable.indexOf(current);
+    const prev = focusable[idx - 1] || focusable[focusable.length - 1];
+    if (prev) {
+        prev.focus();
+        prev.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return JSON.stringify({ success: true, message: 'Focused previous field' });
+    }
+    return JSON.stringify({ success: false, message: 'No focusable elements found' });
+})();
+"""
+
+    fun submitFormScript(selector: String): String = """
+(function() {
+    let form = null;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        form = el ? el.closest('form') : null;
+    }
+    if (!form) form = document.activeElement ? document.activeElement.closest('form') : null;
+    if (!form) form = document.querySelector('form');
+    if (form) {
+        const submitBtn = form.querySelector('[type="submit"], button:not([type="button"]):not([type="reset"])');
+        if (submitBtn) {
+            submitBtn.click();
+        } else {
+            form.requestSubmit();
+        }
+        return JSON.stringify({ success: true, message: 'Form submitted' });
+    }
+    return JSON.stringify({ success: false, message: 'No form found' });
+})();
+"""
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Gesture Scripts (touch simulation)
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun swipeScript(selector: String, direction: String): String = """
+(function() {
+    let x, y;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        } else {
+            x = window.innerWidth / 2;
+            y = window.innerHeight / 2;
+        }
+    } else {
+        x = window.innerWidth / 2;
+        y = window.innerHeight / 2;
+    }
+    const dist = 200;
+    let endX = x, endY = y;
+    if ('$direction' === 'left') endX = x - dist;
+    else if ('$direction' === 'right') endX = x + dist;
+    else if ('$direction' === 'up') endY = y - dist;
+    else if ('$direction' === 'down') endY = y + dist;
+
+    const target = document.elementFromPoint(x, y) || document.body;
+    target.dispatchEvent(new TouchEvent('touchstart', {
+        bubbles: true, touches: [new Touch({ identifier: 1, target: target, clientX: x, clientY: y })]
+    }));
+    setTimeout(() => {
+        target.dispatchEvent(new TouchEvent('touchmove', {
+            bubbles: true, touches: [new Touch({ identifier: 1, target: target, clientX: endX, clientY: endY })]
+        }));
+        target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, changedTouches: [new Touch({ identifier: 1, target: target, clientX: endX, clientY: endY })] }));
+    }, 200);
+    return JSON.stringify({ success: true, message: 'Swiped $direction' });
+})();
+"""
+
+    fun grabScript(selector: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        const rect = el.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        el.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, bubbles: true, isPrimary: true }));
+        el.dispatchEvent(new MouseEvent('mousedown', { clientX: x, clientY: y, bubbles: true }));
+        el.dispatchEvent(new DragEvent('dragstart', { clientX: x, clientY: y, bubbles: true }));
+        window._avanuesGrabbed = { element: el, startX: x, startY: y };
+        return JSON.stringify({ success: true, message: 'Grabbed element' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found' });
+})();
+"""
+
+    fun releaseScript(): String = """
+(function() {
+    const grabbed = window._avanuesGrabbed;
+    if (grabbed && grabbed.element) {
+        const el = grabbed.element;
+        const x = grabbed.startX;
+        const y = grabbed.startY;
+        el.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y, bubbles: true, isPrimary: true }));
+        el.dispatchEvent(new MouseEvent('mouseup', { clientX: x, clientY: y, bubbles: true }));
+        el.dispatchEvent(new DragEvent('dragend', { clientX: x, clientY: y, bubbles: true }));
+        window._avanuesGrabbed = null;
+        return JSON.stringify({ success: true, message: 'Released element' });
+    }
+    return JSON.stringify({ success: false, message: 'Nothing grabbed' });
+})();
+"""
+
+    fun rotateScript(selector: String, direction: String, angle: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        const current = el.style.transform || '';
+        const sign = '$direction' === 'left' ? -1 : 1;
+        const deg = sign * parseInt('$angle', 10);
+        const match = current.match(/rotate\((-?\d+)deg\)/);
+        const currentDeg = match ? parseInt(match[1], 10) : 0;
+        el.style.transform = current.replace(/rotate\(-?\d+deg\)/, '') + ' rotate(' + (currentDeg + deg) + 'deg)';
+        el.style.transition = 'transform 0.3s ease';
+        return JSON.stringify({ success: true, message: 'Rotated ' + deg + ' degrees' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found' });
+})();
+"""
+
+    fun dragScript(selector: String, endX: String, endY: String): String = """
+(function() {
+    const el = document.querySelector('$selector');
+    if (el) {
+        const rect = el.getBoundingClientRect();
+        const startX = rect.left + rect.width / 2;
+        const startY = rect.top + rect.height / 2;
+        el.dispatchEvent(new DragEvent('dragstart', { clientX: startX, clientY: startY, bubbles: true }));
+        el.dispatchEvent(new DragEvent('drag', { clientX: $endX, clientY: $endY, bubbles: true }));
+        el.dispatchEvent(new DragEvent('dragend', { clientX: $endX, clientY: $endY, bubbles: true }));
+        return JSON.stringify({ success: true, message: 'Dragged element' });
+    }
+    return JSON.stringify({ success: false, message: 'Element not found' });
+})();
+"""
+
+    fun zoomScript(selector: String, direction: String): String = """
+(function() {
+    let el;
+    if ('$selector') {
+        el = document.querySelector('$selector');
+    }
+    if (!el) el = document.body;
+    const current = parseFloat(el.style.zoom || '1');
+    const factor = '$direction' === 'in' ? 1.25 : 0.8;
+    el.style.zoom = (current * factor).toFixed(2);
+    return JSON.stringify({ success: true, message: 'Zoomed $direction' });
+})();
+"""
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Text/Clipboard Scripts
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun selectAllScript(): String = """
+(function() {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+        active.select();
+    } else {
+        document.execCommand('selectAll');
+    }
+    return JSON.stringify({ success: true, message: 'Selected all' });
+})();
+"""
+
+    fun copyScript(): String = """
+(function() {
+    const ok = document.execCommand('copy');
+    return JSON.stringify({ success: ok, message: ok ? 'Copied' : 'Copy failed' });
+})();
+"""
+
+    fun cutScript(): String = """
+(function() {
+    const ok = document.execCommand('cut');
+    return JSON.stringify({ success: ok, message: ok ? 'Cut' : 'Cut failed' });
+})();
+"""
+
+    fun pasteScript(text: String): String {
+        val escaped = text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        return """
+(function() {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+        const start = active.selectionStart || 0;
+        const end = active.selectionEnd || 0;
+        const val = active.value;
+        active.value = val.substring(0, start) + '$escaped' + val.substring(end);
+        active.selectionStart = active.selectionEnd = start + '$escaped'.length;
+        active.dispatchEvent(new Event('input', { bubbles: true }));
+        return JSON.stringify({ success: true, message: 'Pasted text' });
+    }
+    const ok = document.execCommand('insertText', false, '$escaped');
+    return JSON.stringify({ success: ok, message: ok ? 'Pasted' : 'Paste failed — no active input' });
+})();
+"""
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Advanced Gesture Scripts (delegates to window.AvanuesGestures)
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun panScript(dx: String, dy: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.pan($dx, $dy);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun tiltScript(selector: String, angle: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.tilt(x, y, $angle);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun orbitScript(selector: String, deltaX: String, deltaY: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.orbit(x, y, $deltaX, $deltaY);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun rotateXScript(selector: String, angle: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.rotateX(x, y, $angle);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun rotateYScript(selector: String, angle: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.rotateY(x, y, $angle);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun rotateZScript(selector: String, angle: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.rotateZ(x, y, $angle);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun pinchScript(selector: String, scale: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            cx = rect.left + rect.width / 2;
+            cy = rect.top + rect.height / 2;
+        }
+    }
+    const offset = 50;
+    const result = window.AvanuesGestures.pinch(cx - offset, cy, cx + offset, cy, $scale);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun flingScript(direction: String, velocity: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.fling($velocity, '$direction');
+    return JSON.stringify(result);
+})();
+"""
+
+    fun throwScript(velocityX: String, velocityY: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.throwElement($velocityX, $velocityY);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun scaleScript(selector: String, factor: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.scale(x, y, $factor);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun resetZoomScript(): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.resetZoom();
+    return JSON.stringify(result);
+})();
+"""
+
+    fun selectWordScript(selector: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.selectWord(x, y);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun clearSelectionScript(): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.clearSelection();
+    return JSON.stringify(result);
+})();
+"""
+
+    fun hoverOutScript(selector: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.hoverOut(x, y);
+    return JSON.stringify(result);
+})();
+"""
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Directional Drag Script
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun dragDirectionScript(selector: String, direction: String, distance: String = "100"): String = """
+(function() {
+    const el = '$selector' ? document.querySelector('$selector')
+        : (window._avanuesGrabbed ? window._avanuesGrabbed.element : null);
+    if (el) {
+        const rect = el.getBoundingClientRect();
+        const startX = rect.left + rect.width / 2;
+        const startY = rect.top + rect.height / 2;
+        const dist = parseInt('$distance', 10);
+        let endX = startX, endY = startY;
+        if ('$direction' === 'left') endX -= dist;
+        else if ('$direction' === 'right') endX += dist;
+        else if ('$direction' === 'up') endY -= dist;
+        else if ('$direction' === 'down') endY += dist;
+        el.dispatchEvent(new DragEvent('dragstart', { clientX: startX, clientY: startY, bubbles: true }));
+        el.dispatchEvent(new DragEvent('drag', { clientX: endX, clientY: endY, bubbles: true }));
+        el.dispatchEvent(new DragEvent('dragend', { clientX: endX, clientY: endY, bubbles: true }));
+        return JSON.stringify({ success: true, message: 'Dragged $direction ' + dist + 'px' });
+    }
+    return JSON.stringify({ success: false, message: 'No element to drag — use grab first or target a selector' });
+})();
+"""
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Drawing/Annotation Scripts (delegates to AvanuesGestures)
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun strokeStartScript(selector: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.strokeStart(x, y);
+    return JSON.stringify(result);
+})();
+"""
+
+    fun strokeEndScript(): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    const result = window.AvanuesGestures.strokeEnd();
+    return JSON.stringify(result);
+})();
+"""
+
+    fun eraseScript(selector: String): String = """
+(function() {
+    if (typeof window.AvanuesGestures === 'undefined') {
+        return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
+    }
+    let x = window.innerWidth / 2, y = window.innerHeight / 2;
+    if ('$selector') {
+        const el = document.querySelector('$selector');
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+        }
+    }
+    const result = window.AvanuesGestures.erase(x, y);
+    return JSON.stringify(result);
+})();
+"""
 }

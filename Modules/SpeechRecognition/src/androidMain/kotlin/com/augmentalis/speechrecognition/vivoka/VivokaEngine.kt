@@ -913,6 +913,7 @@ class VivokaEngine(
         )
 
         // Use enhanced command if learning found a match
+        @Suppress("SENSELESS_COMPARISON")
         val finalResult = if (enhancedCommand != null && wasLearned) {
             result.copy(text = enhancedCommand)
         } else {

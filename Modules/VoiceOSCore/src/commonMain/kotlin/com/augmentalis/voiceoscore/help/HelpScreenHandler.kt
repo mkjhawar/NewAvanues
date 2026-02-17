@@ -369,7 +369,17 @@ class HelpScreenHandler(
             "numbers on", "numbers off", "numbers auto",
             "take screenshot", "flashlight on", "flashlight off",
             "show notifications", "quick settings",
-            "copy", "paste", "select all", "undo", "redo"
+            "copy", "paste", "select all", "undo", "redo",
+            // Web gestures
+            "pan left", "pan right", "pan up", "pan down",
+            "tilt up", "tilt down",
+            "orbit left", "orbit right",
+            "rotate x", "rotate y", "rotate z",
+            "pinch in", "pinch out",
+            "fling up", "fling down", "fling left", "fling right",
+            "throw", "scale up", "scale down",
+            "reset zoom", "select word", "clear selection",
+            "hover out", "grab", "release"
         )
     }
 }

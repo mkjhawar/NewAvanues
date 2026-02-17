@@ -16,6 +16,7 @@ import com.augmentalis.voiceoscore.CommandError
 import com.augmentalis.voiceoscore.CommandResult
 import com.augmentalis.voiceoscore.CommandSource
 import com.augmentalis.voiceoscore.ErrorCode
+import com.augmentalis.voiceoscore.command.LocalizedVerbProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,13 +35,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Provides:
  * - Handler registration and lifecycle management
  * - Priority-based command routing
- * - Dynamic command support (screen-specific commands with VUIDs)
+ * - Dynamic command support (screen-specific commands with AVIDs)
  * - Fuzzy matching for voice input variations
  * - Performance metrics collection
  * - Voice command interpretation
  *
  * ## Execution Priority:
- * 1. Dynamic command lookup by VUID (fastest, most accurate)
+ * 1. Dynamic command lookup by AVID (fastest, most accurate)
  * 2. Dynamic command fuzzy match (handles voice variations)
  * 3. Static handler lookup (system commands)
  * 4. Voice interpreter fallback (legacy keyword mapping)
@@ -122,6 +123,31 @@ class ActionCoordinator(
     }
 
     /**
+     * Update dynamic commands from a specific source, preserving other sources' commands.
+     *
+     * This is the source-aware variant of [updateDynamicCommands].
+     * Each source (e.g., "accessibility", "web") manages its own set of commands.
+     * Calling this with source="web" replaces only web commands; accessibility
+     * commands remain untouched, and vice versa.
+     *
+     * @param source Source identifier (e.g., "accessibility", "web")
+     * @param commands List of quantized commands from this source
+     */
+    suspend fun updateDynamicCommandsBySource(source: String, commands: List<QuantizedCommand>) {
+        commandRegistry.updateBySourceSuspend(source, commands)
+    }
+
+    /**
+     * Clear dynamic commands from a specific source only.
+     * Other sources' commands remain untouched.
+     *
+     * @param source Source identifier to clear
+     */
+    fun clearDynamicCommandsBySource(source: String) {
+        commandRegistry.clearBySource(source)
+    }
+
+    /**
      * Clear all dynamic commands.
      * Call when leaving an app or screen context is invalid.
      */
@@ -146,8 +172,17 @@ class ActionCoordinator(
         val startTime = currentTimeMillis()
         LoggingUtils.d("processCommand: phrase='${command.phrase}', actionType=${command.actionType}, bounds=${command.metadata["bounds"]}", TAG)
 
-        // Find handler
-        val handler = handlerRegistry.findHandler(command)
+        // Find handler — web-source commands bypass priority-based routing.
+        // Without this bypass, SystemHandler (priority 1) or AndroidGestureHandler
+        // (priority 2) steal overlapping phrases ("go back", "swipe up") before
+        // WebCommandHandler (BROWSER, priority 11) gets a chance.
+        val handler = if (command.metadata["source"] == "web") {
+            handlerRegistry.getHandlersForCategory(ActionCategory.BROWSER)
+                .firstOrNull { it.canHandle(command) }
+                ?: handlerRegistry.findHandler(command)  // Fallback to priority scan
+        } else {
+            handlerRegistry.findHandler(command)
+        }
         LoggingUtils.d("findHandler result: ${handler?.let { it::class.simpleName } ?: "null"}", TAG)
         if (handler == null) {
             val result = HandlerResult.failure("No handler found for: ${command.phrase}")
@@ -178,14 +213,14 @@ class ActionCoordinator(
     /**
      * Known action verbs that can prefix a command.
      * User says: "click 4" or "tap Submit" or just "4"
+     *
+     * Populated from [LocalizedVerbProvider] which includes:
+     * - Built-in English verbs (always available)
+     * - Locale-specific verbs from VOS files (after VOS load)
+     * Already sorted by length descending for longest-match-first extraction.
      */
-    private val actionVerbs = listOf(
-        "click", "tap", "press", "select", "choose", "pick",
-        "long click", "long press", "hold",
-        "double tap", "double click",
-        "scroll", "swipe",
-        "focus", "type"
-    )
+    private val actionVerbs: List<String>
+        get() = LocalizedVerbProvider.getActionVerbs()
 
     /**
      * Convert CommandActionType to a verb phrase for handler routing.
@@ -286,13 +321,55 @@ class ActionCoordinator(
 
             // Browser actions
             CommandActionType.RETRAIN_PAGE -> "retrain page"
+            CommandActionType.PAGE_BACK -> "go back"
+            CommandActionType.PAGE_FORWARD -> "go forward"
+            CommandActionType.PAGE_REFRESH -> "refresh page"
+
+            // Page scrolling
+            CommandActionType.SCROLL_TO_TOP -> "go to top"
+            CommandActionType.SCROLL_TO_BOTTOM -> "go to bottom"
+
+            // Form navigation
+            CommandActionType.TAB_NEXT -> "next field"
+            CommandActionType.TAB_PREV -> "previous field"
+            CommandActionType.SUBMIT_FORM -> "submit form"
+
+            // Gesture actions
+            CommandActionType.SWIPE_LEFT -> "swipe left"
+            CommandActionType.SWIPE_RIGHT -> "swipe right"
+            CommandActionType.SWIPE_UP -> "swipe up"
+            CommandActionType.SWIPE_DOWN -> "swipe down"
+            CommandActionType.GRAB -> "grab $target"
+            CommandActionType.RELEASE -> "release"
+            CommandActionType.ROTATE -> "rotate $target"
+            CommandActionType.DRAG -> "drag $target"
+            CommandActionType.DOUBLE_CLICK -> "double tap $target"
+            CommandActionType.HOVER -> "hover $target"
+
+            // Advanced gesture actions
+            CommandActionType.PAN -> "pan"
+            CommandActionType.TILT -> "tilt"
+            CommandActionType.ORBIT -> "orbit"
+            CommandActionType.ROTATE_X -> "rotate x"
+            CommandActionType.ROTATE_Y -> "rotate y"
+            CommandActionType.ROTATE_Z -> "rotate z"
+            CommandActionType.PINCH -> "pinch"
+            CommandActionType.FLING -> "fling"
+            CommandActionType.THROW -> "throw"
+            CommandActionType.SCALE -> "scale"
+            CommandActionType.RESET_ZOOM -> "reset zoom"
+            CommandActionType.SELECT_WORD -> "select word"
+            CommandActionType.CLEAR_SELECTION -> "clear selection"
+            CommandActionType.HOVER_OUT -> "hover out"
+
+            // Drawing/annotation actions
+            CommandActionType.STROKE_START -> "start drawing"
+            CommandActionType.STROKE_END -> "stop drawing"
+            CommandActionType.ERASE -> "eraser"
 
             // Default for custom/unknown
             CommandActionType.CUSTOM -> "tap $target"
-            // TODO: Need to implement later
-            CommandActionType.MACRO -> {
-                "not implemented"
-            }
+            CommandActionType.MACRO -> "not implemented"
         }
     }
 
@@ -311,8 +388,9 @@ class ActionCoordinator(
     private fun extractVerbAndTarget(voiceInput: String): Pair<String?, String?> {
         val normalized = voiceInput.lowercase().trim()
 
-        // Try to match action verbs (longest first to match "long press" before "press")
-        for (verb in actionVerbs.sortedByDescending { it.length }) {
+        // Try to match action verbs (longest first to match "long press" before "press").
+        // actionVerbs from LocalizedVerbProvider is pre-sorted by length descending.
+        for (verb in actionVerbs) {
             if (normalized.startsWith("$verb ")) {
                 val target = normalized.removePrefix("$verb ").trim()
                 return if (target.isNotBlank()) Pair(verb, target) else Pair(null, null)
@@ -356,6 +434,16 @@ class ActionCoordinator(
         // ═══════════════════════════════════════════════════════════════════
         LoggingUtils.d("Dynamic command registry size: ${commandRegistry.size}", TAG)
         if (commandRegistry.size > 0) {
+            // Pre-check: Full-phrase match for web-source commands.
+            // Web static commands ("go back", "swipe up") are registered as dynamic
+            // commands with source="web" when browser is active. This catches them
+            // before extractVerbAndTarget short-circuits on StaticCommandRegistry.
+            val webFullPhraseMatch = commandRegistry.findByPhrase(normalizedText)
+            if (webFullPhraseMatch != null && webFullPhraseMatch.metadata["source"] == "web") {
+                LoggingUtils.d("Web full-phrase match: '${webFullPhraseMatch.phrase}'", TAG)
+                return processCommand(webFullPhraseMatch)
+            }
+
             // Extract verb and target from voice input
             // e.g., "click 4" -> verb="click", target="4"
             val (verb, target) = extractVerbAndTarget(normalizedText)
@@ -366,12 +454,23 @@ class ActionCoordinator(
                 val exactMatch = commandRegistry.findByPhrase(target)
                 LoggingUtils.d("findByPhrase('$target') = ${exactMatch?.phrase ?: "null"}", TAG)
                 if (exactMatch != null) {
-                    // Found! Execute the command
-                    // If user provided verb (e.g., "click 4"), use their phrase
-                    // If no verb (e.g., just "4"), use command's actionType for routing
-                    // This makes dynamic commands work like static commands
-                    val actionPhrase = verb?.let { normalizedText }
-                        ?: actionTypeToPhrase(exactMatch.actionType, target)
+                    // Web-sourced commands: pass directly without phrase rewriting.
+                    // WebCommandHandler uses metadata (selector, xpath) for JS execution,
+                    // not accessibility gesture bounds. Rewriting would route to AndroidGestureHandler.
+                    if (exactMatch.metadata["source"] == "web") {
+                        LoggingUtils.d("Web command match! phrase='${exactMatch.phrase}', selector=${exactMatch.metadata["selector"]}", TAG)
+                        return processCommand(exactMatch)
+                    }
+
+                    // Native commands: rewrite phrase for gesture handler routing.
+                    // Localized verbs are normalized to canonical English so handlers
+                    // always receive English phrases (e.g., "pulsar 4" → "click 4").
+                    val actionPhrase = if (verb != null) {
+                        val canonical = LocalizedVerbProvider.canonicalVerbFor(verb)
+                        "$canonical $target"
+                    } else {
+                        actionTypeToPhrase(exactMatch.actionType, target)
+                    }
                     val actionCommand = exactMatch.copy(phrase = actionPhrase)
                     LoggingUtils.d("Dynamic command match! phrase='$actionPhrase', actionType=${exactMatch.actionType}, bounds=${exactMatch.metadata["bounds"]}", TAG)
                     return processCommand(actionCommand)
@@ -386,19 +485,32 @@ class ActionCoordinator(
 
                 when (matchResult) {
                     is CommandMatcher.MatchResult.Exact -> {
-                        // Use command's actionType for routing (same as static commands)
-                        val actionPhrase = verb?.let { normalizedText }
-                            ?: actionTypeToPhrase(matchResult.command.actionType, target)
-                        val cmd = matchResult.command.copy(phrase = actionPhrase)
+                        val matched = matchResult.command
+                        if (matched.metadata["source"] == "web") {
+                            return processCommand(matched)
+                        }
+                        val actionPhrase = if (verb != null) {
+                            val canonical = LocalizedVerbProvider.canonicalVerbFor(verb)
+                            "$canonical $target"
+                        } else {
+                            actionTypeToPhrase(matched.actionType, target)
+                        }
+                        val cmd = matched.copy(phrase = actionPhrase)
                         return processCommand(cmd)
                     }
                     is CommandMatcher.MatchResult.Fuzzy -> {
-                        // Only use fuzzy match if confidence is high enough
                         if (matchResult.confidence >= HIGH_CONFIDENCE_THRESHOLD) {
-                            // Use command's actionType for routing (same as static commands)
-                            val actionPhrase = verb?.let { normalizedText }
-                                ?: actionTypeToPhrase(matchResult.command.actionType, target)
-                            val cmd = matchResult.command.copy(phrase = actionPhrase)
+                            val matched = matchResult.command
+                            if (matched.metadata["source"] == "web") {
+                                return processCommand(matched)
+                            }
+                            val actionPhrase = if (verb != null) {
+                                val canonical = LocalizedVerbProvider.canonicalVerbFor(verb)
+                                "$canonical $target"
+                            } else {
+                                actionTypeToPhrase(matched.actionType, target)
+                            }
+                            val cmd = matched.copy(phrase = actionPhrase)
                             return processCommand(cmd)
                         }
                         // Low confidence fuzzy match - continue to NLU
@@ -489,8 +601,8 @@ class ActionCoordinator(
      * Get all commands (static + dynamic) as QuantizedCommand for NLU/LLM.
      *
      * This provides a unified view of all available voice commands:
-     * - Static commands: System-wide commands (targetVuid = null)
-     * - Dynamic commands: Screen-specific element commands (targetVuid = element VUID)
+     * - Static commands: System-wide commands (targetAvid = null)
+     * - Dynamic commands: Screen-specific element commands (targetAvid = element AVID)
      *
      * The NLU/LLM can use this to:
      * - Understand available actions
@@ -556,7 +668,7 @@ class ActionCoordinator(
                 appendLine("(No screen-specific commands available)")
             } else {
                 dynamicCommands.forEach { cmd ->
-                    appendLine("- ${cmd.phrase}: ${cmd.actionType.name} -> VUID:${cmd.targetVuid}")
+                    appendLine("- ${cmd.phrase}: ${cmd.actionType.name} -> AVID:${cmd.targetAvid}")
                 }
             }
         }
@@ -648,7 +760,7 @@ class ActionCoordinator(
             appendLine()
             appendLine("Dynamic Commands:")
             commandRegistry.all().take(10).forEach { cmd ->
-                appendLine("  - ${cmd.phrase} (VUID: ${cmd.targetVuid})")
+                appendLine("  - ${cmd.phrase} (AVID: ${cmd.targetAvid})")
             }
             if (commandRegistry.size > 10) {
                 appendLine("  ... and ${commandRegistry.size - 10} more")

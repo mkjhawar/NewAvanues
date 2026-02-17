@@ -21,7 +21,10 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlin.concurrent.Volatile
 import com.avanues.logging.LoggerFactory
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 
 /**
  * Core command generation orchestrator.
@@ -41,7 +44,7 @@ class CommandOrchestrator(
     // AVID assignment tracking for incremental updates
     // Note: These are accessed from single-threaded command generation, but use synchronized for safety
     private val avidAssignments = mutableMapOf<String, Int>()
-    private val avidLock = Any()
+    private val avidLock = SynchronizedObject()
     @Volatile
     private var nextAvidNumber = 1
     @Volatile

@@ -437,7 +437,7 @@ class MetadataFilteringTest {
         fileSize: Long? = null,
         createdAt: Instant = Clock.System.now()
     ): Document {
-        val docId = VuidHelper.randomVUID()
+        val docId = AvidHelper.randomDocumentAVID()
 
         // Create test file
         val extension = fileType.extension
@@ -458,7 +458,7 @@ class MetadataFilteringTest {
 
         // Create chunks manually
         val chunk = Chunk(
-            id = VuidHelper.randomVUID(),
+            id = AvidHelper.randomDocumentAVID(),
             documentId = docId,
             content = content,
             chunkIndex = 0,

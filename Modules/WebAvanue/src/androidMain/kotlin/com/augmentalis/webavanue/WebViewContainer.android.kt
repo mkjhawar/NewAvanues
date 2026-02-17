@@ -151,6 +151,9 @@ actual fun WebViewContainer(
             voiceOSScope.cancel()
             voiceOSBridge?.detach()
             voiceOSBridge = null
+            // Clear JS executor and active instance on dispose
+            (voiceOSCallback as? BrowserVoiceOSCallback)?.setJavaScriptExecutor(null)
+            BrowserVoiceOSCallback.setActiveInstance(null)
         }
     }
 
@@ -900,6 +903,14 @@ actual fun WebViewContainer(
                     bridge.attach()
                     voiceOSBridge = bridge
                     Log.d("VoiceOS", "Bridge attached to WebView for tab $tabId")
+
+                    // Wire JavaScript executor to BrowserVoiceOSCallback for command execution
+                    val jsExecutor = AndroidJavaScriptExecutor(view)
+                    (voiceOSCallback as? BrowserVoiceOSCallback)?.let { callback ->
+                        callback.setJavaScriptExecutor(jsExecutor)
+                        BrowserVoiceOSCallback.setActiveInstance(callback)
+                        Log.d("VoiceOS", "JS executor + active instance wired for tab $tabId")
+                    }
                 }
             },
             modifier = modifier

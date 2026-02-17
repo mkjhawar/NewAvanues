@@ -253,12 +253,8 @@ object TableActions {
         val row = findRowByIndex(tableNode, rowNumber - 1)
 
         return if (row != null) {
-            val result = performRowSelection(row)
-            row.recycle()
-            result
-        } else false.also {
-            tableNode.recycle()
-        }
+            performRowSelection(row)
+        } else false
     }
 
     /**
@@ -277,8 +273,6 @@ object TableActions {
             NavigationDirection.LAST -> navigateToExtremeRow(tableNode, first = false)
         }
 
-        focusedRow?.recycle()
-        tableNode.recycle()
         return result
     }
 
@@ -298,11 +292,8 @@ object TableActions {
                 Thread.sleep(200)
                 result = headerNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             }
-            headerNode.recycle()
             result
-        } else false.also {
-            tableNode.recycle()
-        }
+        } else false
     }
 
     /**
@@ -319,11 +310,8 @@ object TableActions {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
             }
             val result = filterInput.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-            filterInput.recycle()
             result
-        } else false.also {
-            tableNode.recycle()
-        }
+        } else false
     }
 
     /**
@@ -341,17 +329,14 @@ object TableActions {
 
         return if (clearButton != null) {
             val result = clearButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            clearButton.recycle()
             result
         } else {
             // Clear individual filter inputs
             val tableNode = findTableNode(rootNode)
             val result = if (tableNode != null) {
-                clearAllFilterInputs(tableNode).also { tableNode.recycle() }
+                clearAllFilterInputs(tableNode)
             } else false
             result
-        }.also {
-            rootNode.recycle()
         }
     }
 
@@ -371,11 +356,8 @@ object TableActions {
                 AccessibilityNodeInfo.ACTION_COLLAPSE
             }
             val result = focusedRow.performAction(action)
-            focusedRow.recycle()
             result
-        } else false.also {
-            tableNode.recycle()
-        }
+        } else false
     }
 
     /**
@@ -392,14 +374,10 @@ object TableActions {
             val result = if (cellNode != null) {
                 val selected = cellNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
                     || cellNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                cellNode.recycle()
                 selected
             } else false
-            rowNode.recycle()
             result
-        } else false.also {
-            tableNode.recycle()
-        }
+        } else false
     }
 
     // ============================================================================
@@ -416,13 +394,12 @@ object TableActions {
         )
 
         if (tablePatterns.any { className.contains(it) }) {
-            return AccessibilityNodeInfo.obtain(root)
+            return root
         }
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
             val found = findTableNode(child)
-            child.recycle()
             if (found != null) return found
         }
 
@@ -445,7 +422,6 @@ object TableActions {
             if (child.isFocused || child.isAccessibilityFocused || child.isSelected) {
                 return child
             }
-            child.recycle()
         }
         return tableNode.getChild(0) // Default to first row
     }
@@ -457,18 +433,14 @@ object TableActions {
     private fun findFilterInput(tableNode: AccessibilityNodeInfo, columnName: String): AccessibilityNodeInfo? {
         val header = findColumnHeader(tableNode, columnName) ?: return null
         val parent = header.parent
-        header.recycle()
 
         if (parent != null) {
             for (i in 0 until parent.childCount) {
                 val sibling = parent.getChild(i) ?: continue
                 if (sibling.isEditable) {
-                    parent.recycle()
                     return sibling
                 }
-                sibling.recycle()
             }
-            parent.recycle()
         }
         return null
     }
@@ -478,13 +450,12 @@ object TableActions {
         val contentDesc = root.contentDescription?.toString()?.lowercase() ?: ""
 
         if (nodeText.contains(text) || contentDesc.contains(text)) {
-            return AccessibilityNodeInfo.obtain(root)
+            return root
         }
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
             val found = findNodeByText(child, text)
-            child.recycle()
             if (found != null) return found
         }
 
@@ -506,7 +477,6 @@ object TableActions {
         if (currentRow == null) {
             val firstRow = tableNode.getChild(0) ?: return false
             val result = performRowSelection(firstRow)
-            firstRow.recycle()
             return result
         }
 
@@ -526,7 +496,6 @@ object TableActions {
 
         val targetRow = tableNode.getChild(targetIndex) ?: return false
         val result = performRowSelection(targetRow)
-        targetRow.recycle()
         return result
     }
 
@@ -546,7 +515,6 @@ object TableActions {
         val targetIndex = if (first) 0 else tableNode.childCount - 1
         val targetRow = tableNode.getChild(targetIndex) ?: return false
         val result = performRowSelection(targetRow)
-        targetRow.recycle()
         return result
     }
 
@@ -554,7 +522,6 @@ object TableActions {
         for (i in 0 until tableNode.childCount) {
             val child = tableNode.getChild(i) ?: continue
             val matches = child.hashCode() == row.hashCode()
-            child.recycle()
             if (matches) return i
         }
         return -1
@@ -576,7 +543,6 @@ object TableActions {
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i) ?: continue
                 clearEditableNodes(child)
-                child.recycle()
             }
         }
 

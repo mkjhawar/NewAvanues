@@ -5,7 +5,7 @@ import com.augmentalis.ava.core.data.db.ConversationQueries
 import com.augmentalis.ava.core.data.mapper.toDomain
 import com.augmentalis.ava.core.data.mapper.toInsertParams
 import com.augmentalis.ava.core.data.util.TimeHelper
-import com.augmentalis.ava.core.data.util.VuidHelper
+import com.augmentalis.ava.core.data.util.AvidHelper
 import com.augmentalis.ava.core.domain.model.Conversation
 import com.augmentalis.ava.core.domain.repository.ConversationRepository
 import app.cash.sqldelight.coroutines.asFlow
@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
  * Handles conversation persistence
  *
  * Updated: Room removed, now uses SQLDelight queries directly
- * KMP compatible: Uses VuidHelper and TimeHelper for cross-platform functionality
+ * KMP compatible: Uses AvidHelper and TimeHelper for cross-platform functionality
  */
 class ConversationRepositoryImpl(
     private val conversationQueries: ConversationQueries
@@ -52,7 +52,7 @@ class ConversationRepositoryImpl(
     override suspend fun createConversation(title: String): Result<Conversation> = withContext(Dispatchers.IO) {
         try {
             val conversation = Conversation(
-                id = VuidHelper.randomVUID(),
+                id = AvidHelper.randomConversationAVID(),
                 title = title,
                 createdAt = TimeHelper.currentTimeMillis(),
                 updatedAt = TimeHelper.currentTimeMillis(),

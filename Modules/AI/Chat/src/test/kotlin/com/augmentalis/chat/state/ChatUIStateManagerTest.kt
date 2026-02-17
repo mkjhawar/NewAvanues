@@ -17,7 +17,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import com.augmentalis.ava.core.data.util.VuidHelper
+import com.augmentalis.ava.core.data.util.AvidHelper
 
 /**
  * Unit tests for ChatUIStateManager.

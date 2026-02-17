@@ -527,6 +527,7 @@ class ContextManager(
         currentLocation = location
     }
     
+    @Deprecated("Deprecated in parent")
     override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {
         // Handle location provider status changes
     }

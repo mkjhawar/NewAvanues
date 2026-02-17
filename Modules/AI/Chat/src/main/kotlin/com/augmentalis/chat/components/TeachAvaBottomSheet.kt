@@ -271,7 +271,7 @@ fun TeachAvaBottomSheet(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor(),
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                             singleLine = true
                         )
 

@@ -120,11 +120,30 @@ class HandlerRegistry : IHandlerRegistry {
     /**
      * Find the first handler that can handle the command.
      *
+     * Uses canHandle(QuantizedCommand) which allows handlers to inspect metadata
+     * (e.g., WebCommandHandler checks metadata["source"] == "web").
+     * This is preferred over findHandler(String) for dynamic commands.
+     *
      * @param command The command to find a handler for
      * @return Handler that can handle the command, or null
      */
     override suspend fun findHandler(command: QuantizedCommand): IHandler? {
-        return findHandler(command.phrase)
+        mutex.withLock {
+            // Check handlers by priority order using QuantizedCommand overload
+            // This allows metadata-aware handlers (e.g., WebCommandHandler) to match
+            for (category in ActionCategory.PRIORITY_ORDER) {
+                handlers[category]?.let { handlerList ->
+                    for (handler in handlerList) {
+                        if (handler.canHandle(command)) {
+                            return handler
+                        }
+                    }
+                }
+            }
+
+            // If no prioritized handler found, check all remaining categories
+            return handlers.values.flatten().find { it.canHandle(command) }
+        }
     }
 
     /**

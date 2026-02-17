@@ -108,6 +108,7 @@ object TransactionHelper {
             }
 
             // Return result or throw exception
+            @Suppress("UNCHECKED_CAST")
             if (exception != null) {
                 Result.failure(exception)
             } else {
@@ -163,6 +164,7 @@ object TransactionHelper {
                 )
             }
 
+            @Suppress("UNCHECKED_CAST")
             if (exception != null) {
                 Result.failure(exception)
             } else {

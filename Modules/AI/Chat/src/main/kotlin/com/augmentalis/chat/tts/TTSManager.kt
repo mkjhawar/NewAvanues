@@ -224,7 +224,7 @@ class TTSManager @Inject constructor(
             )
         }
 
-        val utteranceId = AvidHelper.randomAVID()
+        val utteranceId = AvidHelper.randomUtteranceAVID()
 
         // Register completion callback
         onComplete?.let { callback ->
@@ -295,7 +295,7 @@ class TTSManager @Inject constructor(
             )
         }
 
-        val utteranceId = AvidHelper.randomAVID()
+        val utteranceId = AvidHelper.randomUtteranceAVID()
 
         // Register completion callback
         onComplete?.let { callback ->
