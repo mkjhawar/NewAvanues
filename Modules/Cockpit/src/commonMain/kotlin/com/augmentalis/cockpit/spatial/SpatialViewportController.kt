@@ -1,7 +1,6 @@
 package com.augmentalis.cockpit.spatial
 
 import androidx.compose.ui.geometry.Offset
-import com.augmentalis.cockpit.CockpitConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,22 +10,51 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /**
+ * Sensitivity presets for different display contexts.
+ *
+ * Each preset defines degrees-per-screen (how far to turn head to pan one screen width),
+ * deadzone (no-movement zone for stability), and lerp factor (smoothing).
+ *
+ * @property degreesPerScreen Head rotation needed to pan one full screen width
+ * @property deadzoneDegrees No-movement zone in degrees
+ * @property lerpFactor Smoothing factor (0=frozen, 1=instant, 0.1-0.2 recommended)
+ */
+enum class SpatialSensitivity(
+    val degreesPerScreen: Float,
+    val deadzoneDegrees: Float,
+    val lerpFactor: Float
+) {
+    /** Glass displays: wider range, larger deadzone for walking stability */
+    GLASS_LOW(degreesPerScreen = 45f, deadzoneDegrees = 8f, lerpFactor = 0.10f),
+    /** Default: balanced for tablet/desktop IMU or manual pan */
+    NORMAL(degreesPerScreen = 30f, deadzoneDegrees = 5f, lerpFactor = 0.15f),
+    /** High sensitivity: small head movements = large pans */
+    HIGH(degreesPerScreen = 15f, deadzoneDegrees = 3f, lerpFactor = 0.20f)
+}
+
+/**
  * Maps spatial orientation input to viewport translation offset.
  *
  * Pipeline:
  * 1. Receives yaw/pitch from [ISpatialOrientationSource]
- * 2. Applies deadzone (±[CockpitConstants.SPATIAL_DEADZONE_DEGREES] = no movement)
- * 3. Maps degrees to pixel offset (sensitivity = [CockpitConstants.SPATIAL_DEGREES_PER_SCREEN])
- * 4. Applies lerp smoothing for buttery-smooth transitions
- * 5. Outputs [viewportOffset] as a [StateFlow] for composable consumption
+ * 2. Applies deadzone (±[sensitivity.deadzoneDegrees] = no movement)
+ * 3. Maps degrees to pixel offset (sensitivity = [sensitivity.degreesPerScreen])
+ * 4. Clamps offset to ±[BOUNDS_MULTIPLIER] × screen dimensions
+ * 5. Applies lerp smoothing for buttery-smooth transitions
+ * 6. Outputs [viewportOffset] as a [StateFlow] for composable consumption
  *
  * @param screenWidthPx Screen width in pixels (used to scale degrees to offset)
  * @param screenHeightPx Screen height in pixels
+ * @param sensitivity Initial sensitivity preset
  */
 class SpatialViewportController(
-    private val screenWidthPx: Float,
-    private val screenHeightPx: Float
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    sensitivity: SpatialSensitivity = SpatialSensitivity.NORMAL
 ) {
+    private var screenWidthPx: Float = screenWidthPx
+    private var screenHeightPx: Float = screenHeightPx
+
     private val _viewportOffset = MutableStateFlow(Offset.Zero)
     /** Current viewport translation offset in pixels */
     val viewportOffset: StateFlow<Offset> = _viewportOffset.asStateFlow()
@@ -35,8 +63,17 @@ class SpatialViewportController(
     /** Whether spatial panning is locked (frozen viewport) */
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
 
+    /** Active sensitivity preset */
+    var sensitivity: SpatialSensitivity = sensitivity
+        private set
+
     private var collectJob: Job? = null
     private var targetOffset = Offset.Zero
+
+    companion object {
+        /** Viewport can pan up to this multiplier × screen dimensions in each direction */
+        const val BOUNDS_MULTIPLIER = 1.5f
+    }
 
     /**
      * Start consuming orientation data and updating the viewport offset.
@@ -53,28 +90,28 @@ class SpatialViewportController(
             source.orientationFlow.collect { orientation ->
                 if (_isLocked.value) return@collect
 
+                val s = sensitivity
+
                 // Apply deadzone
-                val yaw = applyDeadzone(
-                    orientation.yawDegrees,
-                    CockpitConstants.SPATIAL_DEADZONE_DEGREES
-                )
-                val pitch = applyDeadzone(
-                    orientation.pitchDegrees,
-                    CockpitConstants.SPATIAL_DEADZONE_DEGREES
-                )
+                val yaw = applyDeadzone(orientation.yawDegrees, s.deadzoneDegrees)
+                val pitch = applyDeadzone(orientation.pitchDegrees, s.deadzoneDegrees)
 
                 // Map degrees to pixel offset
-                val degreesPerScreen = CockpitConstants.SPATIAL_DEGREES_PER_SCREEN
                 targetOffset = Offset(
-                    x = -(yaw / degreesPerScreen) * screenWidthPx,
-                    y = -(pitch / degreesPerScreen) * screenHeightPx
+                    x = -(yaw / s.degreesPerScreen) * screenWidthPx,
+                    y = -(pitch / s.degreesPerScreen) * screenHeightPx
                 )
+
+                // Clamp to bounds
+                targetOffset = clampToBounds(targetOffset)
 
                 // Lerp toward target for smooth movement
                 val current = _viewportOffset.value
-                _viewportOffset.value = Offset(
-                    x = lerp(current.x, targetOffset.x, CockpitConstants.SPATIAL_LERP_FACTOR),
-                    y = lerp(current.y, targetOffset.y, CockpitConstants.SPATIAL_LERP_FACTOR)
+                _viewportOffset.value = clampToBounds(
+                    Offset(
+                        x = lerp(current.x, targetOffset.x, s.lerpFactor),
+                        y = lerp(current.y, targetOffset.y, s.lerpFactor)
+                    )
                 )
             }
         }
@@ -111,20 +148,43 @@ class SpatialViewportController(
     fun applyManualOffset(deltaX: Float, deltaY: Float) {
         if (_isLocked.value) return
         val current = _viewportOffset.value
-        _viewportOffset.value = Offset(
-            x = current.x + deltaX,
-            y = current.y + deltaY
+        val newOffset = clampToBounds(
+            Offset(x = current.x + deltaX, y = current.y + deltaY)
         )
-        targetOffset = _viewportOffset.value
+        _viewportOffset.value = newOffset
+        targetOffset = newOffset
     }
 
     /**
      * Update screen dimensions (called when container resizes).
+     * Re-clamps the current offset to the new bounds.
      */
     fun updateScreenSize(widthPx: Float, heightPx: Float) {
-        // Recalculating would require re-deriving the target from raw orientation,
-        // but since we lerp continuously, just updating the fields is sufficient
-        // for the next orientation update to use the new scale
+        screenWidthPx = widthPx
+        screenHeightPx = heightPx
+        // Re-clamp to new bounds so frames don't get stranded off-screen
+        _viewportOffset.value = clampToBounds(_viewportOffset.value)
+        targetOffset = clampToBounds(targetOffset)
+    }
+
+    /**
+     * Switch to a different sensitivity preset.
+     */
+    fun setSensitivity(preset: SpatialSensitivity) {
+        sensitivity = preset
+    }
+
+    /**
+     * Clamp an offset to ±[BOUNDS_MULTIPLIER] × screen dimensions.
+     * Prevents the viewport from panning so far that all content disappears.
+     */
+    private fun clampToBounds(offset: Offset): Offset {
+        val maxX = screenWidthPx * BOUNDS_MULTIPLIER
+        val maxY = screenHeightPx * BOUNDS_MULTIPLIER
+        return Offset(
+            x = offset.x.coerceIn(-maxX, maxX),
+            y = offset.y.coerceIn(-maxY, maxY)
+        )
     }
 
     private fun applyDeadzone(degrees: Float, deadzone: Float): Float {
