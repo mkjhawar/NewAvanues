@@ -151,7 +151,7 @@ Each variant carries content-specific state (URL, page number, zoom level, etc.)
 
 **Constants:**
 
-- `SPATIAL_CAPABLE` set: `FREEFORM, COCKPIT, MOSAIC, T_PANEL` — layouts that support spatial viewport panning
+- `SPATIAL_CAPABLE` set: `FREEFORM, COCKPIT, MOSAIC, T_PANEL, SPATIAL_DICE` — layouts that support spatial viewport panning
 - `GALLERY_CONTENT_TYPES`: Content types shown in Gallery mode
 
 ### ContentAccent
@@ -472,7 +472,7 @@ interface ICockpitRepository {
     suspend fun getFrames(sessionId: String): List<CockpitFrame>
     suspend fun saveFrame(frame: CockpitFrame)
     suspend fun deleteFrame(frameId: String)
-    suspend fun updateFrameContent(frameId: String, contentJson: String)
+    suspend fun updateFrameContent(frameId: String, newContent: FrameContent)
 
     // Workflow
     suspend fun getWorkflowSteps(): List<WorkflowStep>
@@ -482,9 +482,24 @@ interface ICockpitRepository {
     suspend fun exportSession(sessionId: String): String
     suspend fun importSession(json: String): CockpitSession
 }
+
+@Serializable
+data class SessionExport(
+    val session: CockpitSession,
+    val frames: List<CockpitFrame>,
+    val steps: List<WorkflowStep>
+)
 ```
 
-Backed by SQLDelight. Content serialized as JSON. Timestamps in ISO 8601.
+Export/import uses `SessionExport` for single-pass serialization (no double-encoding). Backed by SQLDelight. Content serialized as JSON. Timestamps in ISO 8601.
+
+### CockpitViewModel Lifecycle (v2.3)
+
+- `createSession()` is `suspend` — awaits DB save before returning the session
+- `updateFrameContent(frameId, FrameContent)` — typed updates via `copy()`, no raw JSON
+- `dispose()` — cancels `viewModelJob` (SupervisorJob) and auto-save. Call on screen exit
+- `setLayoutMode()` / `renameSession()` — propagate changes to `_sessions` list
+- `save()` — syncs `selectedFrameId` into `activeSession` before persisting
 
 ---
 

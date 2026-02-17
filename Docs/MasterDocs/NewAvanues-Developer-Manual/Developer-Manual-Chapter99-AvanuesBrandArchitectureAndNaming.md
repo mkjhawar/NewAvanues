@@ -28,7 +28,7 @@ The Avanues ecosystem uses a **city metaphor** to organize its brand hierarchy:
 |---|---|---|
 | The city itself | **VoiceOS** | The platform — the operating environment where everything runs |
 | City infrastructure | **Foundation, Database, Logging** | Invisible plumbing that makes the city work |
-| The central square | **AvanueHUB** | The intersection where all avenues meet — the multi-window hub |
+| The central square | **Cockpit** | The intersection where all avenues meet — the multi-window hub |
 | Named avenues | **WebAvanue, PhotoAvanue, etc.** | Destinations — each is an avenue worth exploring |
 | Street signs | **SpatialVoice design language** | The visual identity that makes the city feel cohesive |
 
@@ -47,7 +47,7 @@ VoiceOS (R)                          ← The platform / operating environment
   |
   +-- Avanues EcoSystem              ← The product family / ecosystem name
        |
-       +-- AvanueHUB                 ← The hub — where all avenues meet
+       +-- Cockpit                 ← The hub — where all avenues meet
        |     |
        |     +-- Frame windows       ← Content panels within the hub
        |
@@ -79,7 +79,7 @@ VoiceOS (R)                          ← The platform / operating environment
 |---|---|---|---|
 | **Platform** | The runtime environment | Standalone brand name + (R) | VoiceOS(R) |
 | **Ecosystem** | The product family | "Avanues" as collective noun | Avanues EcoSystem |
-| **Hub** | The central multi-window space | "Avanue" + function noun | AvanueHUB |
+| **Hub** | The central multi-window space | "Avanue" + function noun | Cockpit |
 | **Core Avanue** | Primary voice-first apps | Function name + "Avanue" OR unique brand | VoiceTouch(TM), WebAvanue |
 | **Content Avanue** | Media/productivity modules | Content type + "Avanue" | PhotoAvanue, PDFAvanue |
 | **Infrastructure** | Libraries, engines, SDKs | Descriptive name, NO "Avanue" suffix | Foundation, Database, Logging |
@@ -108,7 +108,7 @@ VoiceOS (R)                          ← The platform / operating environment
 | `voiceavanue` | VoiceTouch(TM) | Voice control platform | Mic | (TM) required on first use |
 | `webavanue` | WebAvanue | Voice browser | Language | None |
 | `voicecursor` | CursorAvanue | Handsfree cursor | Mouse | None |
-| `cockpit` | AvanueHUB | Where all avenues meet | Dashboard | None |
+| `cockpit` | Cockpit | Where all avenues meet | Dashboard | None |
 
 ### 3.2 Content Orbit (Hub Outer Ring)
 
@@ -147,7 +147,7 @@ Core Avanues have **descriptive** subtitles instead:
 - "Voice control platform" (VoiceTouch)
 - "Voice browser" (WebAvanue)
 - "Handsfree cursor" (CursorAvanue)
-- "Where all avenues meet" (AvanueHUB)
+- "Where all avenues meet" (Cockpit)
 
 ---
 
@@ -178,7 +178,7 @@ Is the module user-facing?
 | No space between name and "Avanue" | WebAvanue | Web Avanue |
 | CamelCase for compound names | PDFAvanue | PdfAvanue, PDF-Avanue |
 | Content type comes FIRST | ImageAvanue | AvanueImage |
-| Hub is "AvanueHUB" (HUB uppercase) | AvanueHUB | AvanueHub, Avanue Hub |
+| Hub is "Cockpit" | Cockpit | AvanueHub, Avanue Hub |
 | Ecosystem spelling is "Avanues" | Avanues EcoSystem | Avenues, Avanuees |
 | Infrastructure has NO suffix | Foundation | FoundationAvanue |
 
@@ -233,7 +233,7 @@ Each Avanue has a designated accent color for visual identity within the hub:
 | VoiceTouch | `AvanueTheme.colors.success` (green) |
 | WebAvanue | `AvanueTheme.colors.info` (blue) |
 | CursorAvanue | `AvanueTheme.colors.warning` (amber) |
-| AvanueHUB | `AvanueTheme.colors.tertiary` |
+| Cockpit | `AvanueTheme.colors.tertiary` |
 | PDFAvanue | `AvanueTheme.colors.error` (red) |
 | ImageAvanue | `AvanueTheme.colors.primary` |
 | VideoAvanue | `AvanueTheme.colors.secondary` |
@@ -257,7 +257,7 @@ Accent colors are resolved at runtime via `moduleAccentColor(moduleId)` in `HubM
 | Avanues | Brand name | None currently | Use as-is; consider (TM) filing |
 | CursorAvanue | Product name | None | Use as-is |
 | WebAvanue | Product name | None | Use as-is |
-| AvanueHUB | Product name | None | Use as-is |
+| Cockpit | Product name | None | Use as-is |
 | SpatialVoice | Design language name | None | Internal use; not user-facing |
 
 ### 6.2 Trademark Rules in Code
@@ -324,14 +324,14 @@ Voice commands to open modules use the **display name** (spoken naturally):
 | Open VoiceTouch | "open voice touch" | No trademark in speech |
 | Open WebAvanue | "open web avanue" | Spoken as "web ah-vah-new" |
 | Open PhotoAvanue | "open photo avanue" | Alt: "open camera" (synonym) |
-| Open AvanueHUB | "open avanue hub" | Alt: "open cockpit" (legacy synonym) |
+| Open Cockpit | "open cockpit" | Alt: "open hub" |
 
 ### 7.2 VOS Command Prefix Mapping
 
 | Prefix | Category | Brand Module |
 |---|---|---|
 | `cam_` | CAMERA | PhotoAvanue |
-| `cockpit_` | COCKPIT | AvanueHUB |
+| `cockpit_` | COCKPIT | Cockpit |
 | `web_` | BROWSER / WEB_GESTURE | WebAvanue |
 | `cursor_` | CURSOR | CursorAvanue |
 | `media_` | MEDIA | VoiceTouch (global media controls) |
@@ -371,7 +371,7 @@ Voice commands to open modules use the **display name** (spoken naturally):
 |---|---|---|
 | Avenues | **Avanues** | Brand name is intentionally different |
 | Avenue | **Avanue** | Singular follows the same rule |
-| AvanueHub | **AvanueHUB** | HUB is always uppercase |
+| AvanueHub | **Cockpit** | Use "Cockpit" — not an Avanue-suffixed module |
 | VoiceOS Avenues | **VoiceOS Avanues** | Ecosystem name uses brand spelling |
 | Avanue UI | **AvanueUI** | No space — it is one compound word |
 
@@ -381,7 +381,7 @@ Voice commands to open modules use the **display name** (spoken naturally):
 |---|---|---|
 | `FoundationAvanue` | `Foundation` | Infrastructure modules have no brand suffix |
 | `Avanue.Database` | `Database` | Databases are infrastructure |
-| `The Cockpit` | `AvanueHUB` | "Cockpit" is the internal ID, not the display name |
+| `The Cockpit` | `Cockpit` | Drop the article — just "Cockpit" |
 | `MaterialTheme.colorScheme.*` | `AvanueTheme.colors.*` | SpatialVoice requires AvanueTheme |
 | `"Made by AI"` | `"Manoj Jhawar with Aman Jhawar"` | No AI attribution, ever |
 
@@ -438,7 +438,7 @@ Add commands to all 5 locale `.app.vos` files with the appropriate prefix:
 
 Every content Avanue provides two composables:
 - `{Module}Screen()` in **commonMain** — standalone full-screen experience
-- `{Module}Content()` or `{Module}Preview()` in **androidMain** — embeddable view for AvanueHUB frames
+- `{Module}Content()` or `{Module}Preview()` in **androidMain** — embeddable view for Cockpit frames
 
 ---
 
@@ -450,7 +450,7 @@ For voice commands and user communication:
 |---|---|---|
 | Avanues | ah-VAN-yooz | /əˈvanjuːz/ |
 | Avanue | ah-VAN-yoo | /əˈvanjuː/ |
-| AvanueHUB | ah-VAN-yoo hub | /əˈvanjuː hʌb/ |
+| Cockpit | COCK-pit | /ˈkɒkpɪt/ |
 | VoiceOS | voyss-oh-ess | /vɔɪs oʊ ɛs/ |
 | VoiceTouch | voyss-tutch | /vɔɪs tʌtʃ/ |
 | SpatialVoice | SPAY-shul voyss | /ˈspeɪʃəl vɔɪs/ |
@@ -463,7 +463,7 @@ For voice commands and user communication:
 ```
 PLATFORM:     VoiceOS(R)
 ECOSYSTEM:    Avanues EcoSystem
-HUB:          AvanueHUB
+HUB:          Cockpit
 CORE:         VoiceTouch(TM) | WebAvanue | CursorAvanue
 CONTENT:      Photo | PDF | Image | Video | Note | Draw | Cast + "Avanue"
 DESIGN:       SpatialVoice (design language) / AvanueUI (code API)
