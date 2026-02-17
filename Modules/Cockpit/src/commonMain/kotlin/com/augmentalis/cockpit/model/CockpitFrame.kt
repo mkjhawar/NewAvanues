@@ -3,6 +3,23 @@ package com.augmentalis.cockpit.model
 import kotlinx.serialization.Serializable
 
 /**
+ * Role of a frame within a workflow layout's multi-pane arrangement.
+ *
+ * - [STEPS]: Left panel — workflow step navigation list
+ * - [CONTENT]: Center panel — main content (pictures, instructions, etc.)
+ * - [AUXILIARY]: Right panel — supporting content (video call, chat, notes)
+ *
+ * When any frame in a workflow has [AUXILIARY] role, the layout engine
+ * switches from 2-panel (30/70) to 3-panel (20/60/20) mode.
+ */
+@Serializable
+enum class PanelRole {
+    STEPS,
+    CONTENT,
+    AUXILIARY
+}
+
+/**
  * A single frame (window) within a Cockpit session.
  *
  * Each frame displays one content type (web, PDF, note, etc.) and has
@@ -24,6 +41,8 @@ data class CockpitFrame(
     val state: FrameState = FrameState(),
     /** Grid position in spatial canvas (CENTER = default visible area) */
     val spatialPosition: SpatialPosition = SpatialPosition.CENTER,
+    /** Role in workflow multi-pane layout (STEPS, CONTENT, or AUXILIARY) */
+    val panelRole: PanelRole = PanelRole.CONTENT,
     /** Creation timestamp (ISO 8601) */
     val createdAt: String = "",
     /** Last modification timestamp (ISO 8601) */
