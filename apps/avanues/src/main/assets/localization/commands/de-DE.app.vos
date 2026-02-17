@@ -109,3 +109,52 @@ cockpit_scroll_up|Cockpit hoch scrollen|Panel hoch|Im aktiven Rahmen nach oben s
 cockpit_scroll_down|Cockpit runter scrollen|Panel runter|Im aktiven Rahmen nach unten scrollen
 cockpit_zoom_in|Cockpit reinzoomen|Panel vergroessern|In den aktiven Rahmen hineinzoomen
 cockpit_zoom_out|Cockpit rauszoomen|Panel verkleinern|Aus dem aktiven Rahmen herauszoomen
+# ── NoteAvanue ──
+note_open|Note Avanue oeffnen|Notizen oeffnen,Notiz-App|NoteAvanue starten
+note_new|neue Notiz|Notiz erstellen,leere Notiz|Neue Notiz erstellen
+note_save|Notiz speichern|speichern,Aenderungen speichern|Aktuelle Notiz speichern
+note_close|Notiz schliessen|Notizen beenden,Notiz verlassen|NoteAvanue schliessen
+note_bold|fett|fett machen,fetter Text|Fettschrift umschalten
+note_italic|kursiv|kursiv machen,kursiver Text|Kursivschrift umschalten
+note_underline|unterstreichen|unterstrichen machen|Unterstreichung umschalten
+note_strikethrough|durchstreichen|durchgestrichen|Durchstreichung umschalten
+note_heading1|Ueberschrift eins|H1,Ueberschrift 1,Titel|Ueberschrift Ebene 1
+note_heading2|Ueberschrift zwei|H2,Ueberschrift 2,Untertitel|Ueberschrift Ebene 2
+note_heading3|Ueberschrift drei|H3,Ueberschrift 3,Abschnitt|Ueberschrift Ebene 3
+note_bullet|Aufzaehlungsliste|Aufzaehlung,ungeordnete Liste|Aufzaehlung umschalten
+note_numbered|nummerierte Liste|Nummern,geordnete Liste|Nummerierte Liste umschalten
+note_checklist|Checkliste|Aufgabenliste,Kontrollkaestchen|Checkliste umschalten
+note_code|Codeblock|Code,Festbreite|Codeblock umschalten
+note_quote|Zitat|Blockzitat,Zitierung|Blockzitat umschalten
+note_divider|Trennlinie einfuegen|Trennlinie,horizontale Linie|Horizontale Trennlinie einfuegen
+note_undo|Notiz rueckgaengig|rueckgaengig,zurueck|Letzte Bearbeitung rueckgaengig
+note_redo|Notiz wiederherstellen|wiederherstellen,nochmal|Letzte Aenderung wiederherstellen
+note_select_all|alles auswaehlen|alles markieren|Gesamten Notizinhalt auswaehlen
+note_delete_line|Zeile loeschen|Zeile entfernen|Aktuelle Zeile loeschen
+note_new_paragraph|neuer Absatz|naechster Absatz|Neuen Absatz einfuegen
+note_go_top|zum Anfang|Anfang der Notiz|Zum Anfang der Notiz springen
+note_go_bottom|zum Ende|Ende der Notiz|Zum Ende der Notiz springen
+note_next_heading|naechste Ueberschrift|naechster Abschnitt|Zur naechsten Ueberschrift springen
+note_prev_heading|vorherige Ueberschrift|vorheriger Abschnitt|Zur vorherigen Ueberschrift springen
+note_dictate|Diktiermodus|diktieren starten,Spracheingabe|Zum Diktiermodus wechseln
+note_command_mode|Befehlsmodus|diktieren stoppen,Sprachbefehle|Zum Befehlsmodus wechseln
+note_continuous|fortlaufendes Diktat|weiter diktieren|Zum fortlaufenden Diktat wechseln
+note_copy|Notiztext kopieren|kopieren|Ausgewaehlten Text kopieren
+note_paste|in Notiz einfuegen|einfuegen|Aus Zwischenablage einfuegen
+note_cut|Notiztext ausschneiden|ausschneiden|Ausgewaehlten Text ausschneiden
+note_pin|Notiz anheften|anheften,losloeoen|Anheftstatus umschalten
+note_export|Notiz exportieren|exportieren,Notiz teilen|Notiz als Markdown exportieren
+note_search|Notizen durchsuchen|Notiz finden,suchen|In Notizen suchen
+note_scroll_up|Notiz hoch scrollen|hoch scrollen|Notizinhalt nach oben scrollen
+note_scroll_down|Notiz runter scrollen|runter scrollen|Notizinhalt nach unten scrollen
+note_attach_photo|Foto anhaengen|Foto hinzufuegen,Bild einfuegen|Foto an Notiz anhaengen
+note_attach_file|Datei anhaengen|Datei hinzufuegen|Datei an Notiz anhaengen
+note_attach_audio|Audio anhaengen|Aufnahme hinzufuegen|Audioaufnahme anhaengen
+note_zoom_in|Notiz reinzoomen|Text vergroessern|Notiz-Zoom erhoehen
+note_zoom_out|Notiz rauszoomen|Text verkleinern|Notiz-Zoom verringern
+note_font_up|Schrift vergroessern|groessere Schrift|Schriftgroesse erhoehen
+note_font_down|Schrift verkleinern|kleinere Schrift|Schriftgroesse verringern
+note_clear_format|Formatierung entfernen|Klartext|Alle Formatierung entfernen
+note_word_count|Wortanzahl|Woerter zaehlen|Wortanzahl anzeigen
+note_read_aloud|Notiz vorlesen|Notiz lesen|Notizinhalt vorlesen
+note_stop_reading|Vorlesen stoppen|aufhoeren zu lesen|Vorlesen der Notiz stoppen

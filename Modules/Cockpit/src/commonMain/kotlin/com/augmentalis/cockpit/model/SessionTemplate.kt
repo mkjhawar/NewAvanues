@@ -161,8 +161,52 @@ object BuiltInTemplates {
         ),
     )
 
+    val LECTURE = SessionTemplate(
+        id = "tmpl_lecture",
+        name = "Lecture",
+        description = "Voice notes + rich notes for capturing lectures and classes",
+        iconName = "record_voice_over",
+        category = TemplateCategory.TRAINING,
+        layoutMode = LayoutMode.SPLIT_LEFT,
+        frameDefinitions = listOf(
+            FrameDefinition("Voice Recording", FrameContent.TYPE_VOICE_NOTE),
+            FrameDefinition("Lecture Notes", FrameContent.TYPE_NOTE),
+            FrameDefinition("Reference Material", FrameContent.TYPE_WEB),
+        ),
+    )
+
+    val MEETING_NOTES = SessionTemplate(
+        id = "tmpl_meeting_notes",
+        name = "Meeting Notes",
+        description = "Camera + note-taking + web reference + AI summary",
+        iconName = "edit_note",
+        category = TemplateCategory.MEETING,
+        layoutMode = LayoutMode.GRID,
+        frameDefinitions = listOf(
+            FrameDefinition("Camera", FrameContent.TYPE_CAMERA),
+            FrameDefinition("Meeting Notes", FrameContent.TYPE_NOTE),
+            FrameDefinition("Reference", FrameContent.TYPE_WEB),
+            FrameDefinition("AI Summary", FrameContent.TYPE_AI_SUMMARY),
+        ),
+    )
+
+    val RESEARCH_NOTES = SessionTemplate(
+        id = "tmpl_research_notes",
+        name = "Research + PDF",
+        description = "PDF source + notes + browser for academic research",
+        iconName = "menu_book",
+        category = TemplateCategory.RESEARCH,
+        layoutMode = LayoutMode.SPLIT_LEFT,
+        frameDefinitions = listOf(
+            FrameDefinition("Source PDF", FrameContent.TYPE_PDF),
+            FrameDefinition("Research Notes", FrameContent.TYPE_NOTE),
+            FrameDefinition("Web Search", FrameContent.TYPE_WEB),
+        ),
+    )
+
     val ALL = listOf(
         FIELD_INSPECTION, RESEARCH, TRAINING_WORKFLOW,
         MEETING, REMOTE_ASSIST, DEVELOPER,
+        LECTURE, MEETING_NOTES, RESEARCH_NOTES,
     )
 }

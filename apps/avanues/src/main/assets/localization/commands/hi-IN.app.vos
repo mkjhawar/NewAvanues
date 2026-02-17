@@ -109,3 +109,52 @@ cockpit_scroll_up|cockpit upar scroll karo|panel upar|Active frame upar scroll k
 cockpit_scroll_down|cockpit neeche scroll karo|panel neeche|Active frame neeche scroll karo
 cockpit_zoom_in|cockpit zoom in karo|panel zoom in|Active frame mein zoom in karo
 cockpit_zoom_out|cockpit zoom out karo|panel zoom out|Active frame mein zoom out karo
+# ── NoteAvanue ──
+note_open|note avanue kholo|notes kholo,notes app|NoteAvanue kholein
+note_new|nayi note|note banao,khaali note|Nayi note banaein
+note_save|note save karo|save karo,badlav save karo|Maujuda note save karein
+note_close|note band karo|notes se niklo|NoteAvanue band karein
+note_bold|bold|bold karo,bold text|Bold formatting toggle karein
+note_italic|italic|italic karo,italic text|Italic formatting toggle karein
+note_underline|underline|underline karo|Underline toggle karein
+note_strikethrough|strikethrough|line cross karo|Strikethrough toggle karein
+note_heading1|heading ek|h1,heading 1,sheersh|Heading level 1 lagaein
+note_heading2|heading do|h2,heading 2,upsheersh|Heading level 2 lagaein
+note_heading3|heading teen|h3,heading 3,vibhaag|Heading level 3 lagaein
+note_bullet|bullet list|bullets,bina kram list|Bullet list toggle karein
+note_numbered|numbered list|numbers,kram list|Numbered list toggle karein
+note_checklist|checklist|kaarya soochi,checkbox|Checklist toggle karein
+note_code|code block|code,monospace|Code block toggle karein
+note_quote|blockquote|quote,uddharan|Blockquote toggle karein
+note_divider|divider daalein|divider,horizontal line|Horizontal divider daalein
+note_undo|note undo|undo karo,vaapas karo|Pichhli editing vaapas karein
+note_redo|note redo|redo karo,phir se karo|Pichhla undo vaapas karein
+note_select_all|sab chuno|sab select karo|Saara content select karein
+note_delete_line|line mitao|line hatao|Current line mitaein
+note_new_paragraph|naya paragraph|agla paragraph|Naya paragraph daalein
+note_go_top|upar jao|note ki shuruat|Note ke shuru mein jaein
+note_go_bottom|neeche jao|note ka ant|Note ke ant mein jaein
+note_next_heading|agla heading|agla vibhaag|Agle heading par jaein
+note_prev_heading|pichhla heading|pichhla vibhaag|Pichhle heading par jaein
+note_dictate|dictation mode|bolna shuru karo,voice typing|Dictation mode mein jaein
+note_command_mode|command mode|bolna band karo,voice commands|Command mode mein jaein
+note_continuous|lagaataar dictation|bolte raho|Continuous dictation mein jaein
+note_copy|note text copy karo|copy karo|Selected text copy karein
+note_paste|note mein paste karo|paste karo|Clipboard se paste karein
+note_cut|note text cut karo|cut karo|Selected text cut karein
+note_pin|note pin karo|pin karo,unpin karo|Note pin toggle karein
+note_export|note export karo|export karo,note share karo|Note Markdown mein export karein
+note_search|notes khojo|note dhundho,search karo|Notes mein search karein
+note_scroll_up|note upar scroll karo|upar scroll|Note content upar scroll karein
+note_scroll_down|note neeche scroll karo|neeche scroll|Note content neeche scroll karein
+note_attach_photo|photo lagao|photo daalein,tasveer daalein|Note mein photo lagaein
+note_attach_file|file lagao|file daalein|Note mein file lagaein
+note_attach_audio|audio lagao|recording daalein|Audio recording lagaein
+note_zoom_in|note zoom in karo|text bada karo|Note zoom badhaein
+note_zoom_out|note zoom out karo|text chhota karo|Note zoom ghataaein
+note_font_up|font badhao|bada font|Font size badhaein
+note_font_down|font ghatao|chhota font|Font size ghataaein
+note_clear_format|formatting mitao|formatting hatao,seedha text|Saari formatting mitaein
+note_word_count|shabd ginti|kitne shabd|Shabd ginti dikhaein
+note_read_aloud|note padho|note sunao|Note content zor se padhein
+note_stop_reading|padhna band karo|band karo|Note padhna band karein

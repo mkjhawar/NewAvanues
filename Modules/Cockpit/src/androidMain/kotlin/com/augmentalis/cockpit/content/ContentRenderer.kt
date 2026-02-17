@@ -91,9 +91,9 @@ fun ContentRenderer(
 
             is FrameContent.Note -> NoteEditor(
                 initialTitle = frame.title,
-                initialContent = content.text,
-                onSave = { title, text ->
-                    onContentStateChanged(frame.id, """{"text":"${text.replace("\"", "\\\"")}"}""")
+                initialContent = content.markdownContent,
+                onSave = { title, markdownContent ->
+                    onContentStateChanged(frame.id, """{"markdownContent":"${markdownContent.replace("\"", "\\\"").replace("\n", "\\n")}"}""")
                 },
                 modifier = Modifier.fillMaxSize()
             )

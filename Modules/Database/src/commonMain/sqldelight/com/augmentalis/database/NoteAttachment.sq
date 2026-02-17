@@ -1,0 +1,40 @@
+-- NoteAttachment.sq
+-- SQLDelight schema for NoteAvanue inline attachments
+-- Photos, documents, audio recordings embedded in notes
+
+CREATE TABLE note_attachment (
+    id TEXT PRIMARY KEY NOT NULL,
+    note_id TEXT NOT NULL REFERENCES note_entity(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    uri TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    mime_type TEXT NOT NULL DEFAULT '',
+    file_size_bytes INTEGER NOT NULL DEFAULT 0,
+    block_offset INTEGER NOT NULL DEFAULT -1,
+    caption TEXT NOT NULL DEFAULT '',
+    thumbnail_uri TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX idx_na_note ON note_attachment(note_id);
+CREATE INDEX idx_na_type ON note_attachment(type);
+
+-- Get all attachments for a note
+selectByNote:
+SELECT * FROM note_attachment WHERE note_id = ? ORDER BY block_offset ASC;
+
+-- Insert attachment
+insert:
+INSERT INTO note_attachment (
+    id, note_id, type, uri, name, mime_type, file_size_bytes,
+    block_offset, caption, thumbnail_uri, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Delete attachment
+deleteById:
+DELETE FROM note_attachment WHERE id = ?;
+
+-- Delete all attachments for a note
+deleteByNote:
+DELETE FROM note_attachment WHERE note_id = ?;
+

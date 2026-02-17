@@ -109,3 +109,52 @@ cockpit_scroll_up|cockpit defiler haut|panneau haut|Defiler le cadre actif vers 
 cockpit_scroll_down|cockpit defiler bas|panneau bas|Defiler le cadre actif vers le bas
 cockpit_zoom_in|cockpit zoom avant|agrandir panneau|Zoomer dans le cadre actif
 cockpit_zoom_out|cockpit zoom arriere|reduire panneau|Dezoomer le cadre actif
+# ── NoteAvanue ──
+note_open|ouvrir note avanue|ouvrir notes,app de notes|Ouvrir NoteAvanue
+note_new|nouvelle note|creer note,note vide|Creer une nouvelle note
+note_save|sauvegarder note|sauvegarder,enregistrer|Sauvegarder la note actuelle
+note_close|fermer note|quitter notes,fermer notes|Fermer NoteAvanue
+note_bold|gras|mettre en gras,texte gras|Activer le gras
+note_italic|italique|mettre en italique,texte italique|Activer l'italique
+note_underline|souligner|mettre en souligne|Activer le soulignement
+note_strikethrough|barre|texte barre|Activer le texte barre
+note_heading1|titre un|h1,titre 1,titre|Appliquer titre niveau 1
+note_heading2|titre deux|h2,titre 2,sous-titre|Appliquer titre niveau 2
+note_heading3|titre trois|h3,titre 3,section|Appliquer titre niveau 3
+note_bullet|liste a puces|puces,liste non ordonnee|Activer liste a puces
+note_numbered|liste numerotee|numeros,liste ordonnee|Activer liste numerotee
+note_checklist|liste de taches|checklist,cases a cocher|Activer liste de taches
+note_code|bloc de code|code,police fixe|Activer bloc de code
+note_quote|citation|bloc de citation|Activer citation
+note_divider|inserer separateur|separateur,ligne horizontale|Inserer ligne de separation
+note_undo|annuler note|annuler|Annuler derniere modification
+note_redo|retablir note|retablir|Retablir derniere modification
+note_select_all|tout selectionner|selectionner tout|Selectionner tout le contenu
+note_delete_line|supprimer ligne|effacer ligne|Supprimer la ligne actuelle
+note_new_paragraph|nouveau paragraphe|paragraphe suivant|Inserer nouveau paragraphe
+note_go_top|aller en haut|debut de note|Aller au debut de la note
+note_go_bottom|aller en bas|fin de note|Aller a la fin de la note
+note_next_heading|titre suivant|section suivante|Sauter au titre suivant
+note_prev_heading|titre precedent|section precedente|Sauter au titre precedent
+note_dictate|mode dictee|commencer a dicter,saisie vocale|Passer en mode dictee
+note_command_mode|mode commande|arreter de dicter,commandes vocales|Passer en mode commande
+note_continuous|dictee continue|continuer a dicter|Passer en dictee continue
+note_copy|copier texte note|copier|Copier le texte selectionne
+note_paste|coller dans note|coller|Coller depuis le presse-papier
+note_cut|couper texte note|couper|Couper le texte selectionne
+note_pin|epingler note|epingler,desepingler|Basculer epinglage de note
+note_export|exporter note|exporter,partager note|Exporter note en Markdown
+note_search|rechercher notes|trouver note,chercher|Rechercher dans les notes
+note_scroll_up|note defiler haut|defiler haut|Defiler contenu vers le haut
+note_scroll_down|note defiler bas|defiler bas|Defiler contenu vers le bas
+note_attach_photo|joindre photo|ajouter photo,inserer photo|Joindre photo a la note
+note_attach_file|joindre fichier|ajouter fichier|Joindre fichier a la note
+note_attach_audio|joindre audio|ajouter enregistrement|Joindre enregistrement audio
+note_zoom_in|note zoom avant|texte plus grand|Augmenter zoom de note
+note_zoom_out|note zoom arriere|texte plus petit|Reduire zoom de note
+note_font_up|augmenter police|police plus grande|Augmenter taille de police
+note_font_down|reduire police|police plus petite|Reduire taille de police
+note_clear_format|effacer formatage|supprimer formatage,texte brut|Supprimer tout formatage
+note_word_count|compter mots|combien de mots|Afficher le nombre de mots
+note_read_aloud|lire note a voix haute|lire note|Lire contenu de note a voix haute
+note_stop_reading|arreter lecture note|arreter lecture|Arreter lecture de note

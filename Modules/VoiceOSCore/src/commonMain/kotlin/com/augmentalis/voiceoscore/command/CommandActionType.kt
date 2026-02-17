@@ -385,6 +385,225 @@ enum class CommandActionType {
     /** Toggle eraser mode at cursor position */
     ERASE,
 
+    // ═══════════════════════════════════════════════════════════════════
+    // Note Editing Actions (NoteAvanue)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Open NoteAvanue module */
+    OPEN_MODULE,
+
+    /** Toggle bold formatting */
+    FORMAT_BOLD,
+
+    /** Toggle italic formatting */
+    FORMAT_ITALIC,
+
+    /** Toggle underline formatting */
+    FORMAT_UNDERLINE,
+
+    /** Toggle strikethrough formatting */
+    FORMAT_STRIKETHROUGH,
+
+    /** Apply heading level 1 */
+    HEADING_1,
+
+    /** Apply heading level 2 */
+    HEADING_2,
+
+    /** Apply heading level 3 */
+    HEADING_3,
+
+    /** Toggle bullet (unordered) list */
+    BULLET_LIST,
+
+    /** Toggle numbered (ordered) list */
+    NUMBERED_LIST,
+
+    /** Toggle checklist/task item */
+    CHECKLIST,
+
+    /** Toggle code block */
+    CODE_BLOCK,
+
+    /** Toggle blockquote */
+    BLOCKQUOTE,
+
+    /** Insert horizontal divider */
+    INSERT_DIVIDER,
+
+    /** Navigate to start of document */
+    GO_TO_TOP,
+
+    /** Navigate to end of document */
+    GO_TO_BOTTOM,
+
+    /** Navigate to next heading */
+    NEXT_HEADING,
+
+    /** Navigate to previous heading */
+    PREVIOUS_HEADING,
+
+    /** Delete current line/paragraph */
+    DELETE_LINE,
+
+    /** Insert new paragraph */
+    NEW_PARAGRAPH,
+
+    /** Switch to dictation mode */
+    DICTATION_MODE,
+
+    /** Switch to command mode */
+    COMMAND_MODE,
+
+    /** Switch to continuous dictation */
+    CONTINUOUS_MODE,
+
+    /** Create a new note */
+    NEW_NOTE,
+
+    /** Toggle note pin status */
+    TOGGLE_PIN,
+
+    /** Export note */
+    EXPORT_NOTE,
+
+    /** Search within notes */
+    SEARCH_NOTES,
+
+    /** Insert text at cursor (used by dictation pipeline) */
+    INSERT_TEXT,
+
+    /** Note-scoped undo (avoids collision with global UNDO in TextHandler) */
+    NOTE_UNDO,
+
+    /** Note-scoped redo (avoids collision with global REDO in TextHandler) */
+    NOTE_REDO,
+
+    /** Save current note */
+    SAVE_NOTE,
+
+    /** Attach a file to note */
+    ATTACH_FILE,
+
+    /** Attach an audio recording to note */
+    ATTACH_AUDIO,
+
+    /** Increase editor font size */
+    INCREASE_FONT,
+
+    /** Decrease editor font size */
+    DECREASE_FONT,
+
+    /** Clear all formatting from selection */
+    CLEAR_FORMATTING,
+
+    /** Show word/character count */
+    WORD_COUNT,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Camera Module Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Capture a photo */
+    CAPTURE_PHOTO,
+
+    /** Start video recording */
+    RECORD_START,
+
+    /** Stop video recording */
+    RECORD_STOP,
+
+    /** Pause video recording */
+    RECORD_PAUSE,
+
+    /** Resume video recording */
+    RECORD_RESUME,
+
+    /** Switch camera lens (front/back) */
+    SWITCH_LENS,
+
+    /** Flash on */
+    FLASH_ON,
+
+    /** Flash off */
+    FLASH_OFF,
+
+    /** Flash auto */
+    FLASH_AUTO,
+
+    /** Flash torch (continuous) */
+    FLASH_TORCH,
+
+    /** Increase camera exposure */
+    EXPOSURE_UP,
+
+    /** Decrease camera exposure */
+    EXPOSURE_DOWN,
+
+    /** Switch to photo capture mode */
+    MODE_PHOTO,
+
+    /** Switch to video recording mode */
+    MODE_VIDEO,
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Cockpit Actions
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** Add a new frame to cockpit */
+    ADD_FRAME,
+
+    /** Open layout picker */
+    LAYOUT_PICKER,
+
+    /** Switch to grid layout */
+    LAYOUT_GRID,
+
+    /** Switch to split layout */
+    LAYOUT_SPLIT,
+
+    /** Switch to freeform layout */
+    LAYOUT_FREEFORM,
+
+    /** Switch to fullscreen layout */
+    LAYOUT_FULLSCREEN,
+
+    /** Switch to workflow layout */
+    LAYOUT_WORKFLOW,
+
+    /** Minimize a frame */
+    MINIMIZE_FRAME,
+
+    /** Maximize a frame */
+    MAXIMIZE_FRAME,
+
+    /** Close a frame */
+    CLOSE_FRAME,
+
+    /** Add web content frame */
+    ADD_WEB,
+
+    /** Add camera frame */
+    ADD_CAMERA,
+
+    /** Add note frame */
+    ADD_NOTE,
+
+    /** Add PDF frame */
+    ADD_PDF,
+
+    /** Add image frame */
+    ADD_IMAGE,
+
+    /** Add video frame */
+    ADD_VIDEO,
+
+    /** Add whiteboard frame */
+    ADD_WHITEBOARD,
+
+    /** Add terminal frame */
+    ADD_TERMINAL,
+
     /** Custom/specialized action */
     CUSTOM,
 

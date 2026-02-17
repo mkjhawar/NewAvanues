@@ -109,3 +109,52 @@ cockpit_scroll_up|cockpit scroll up|panel up|Scroll the active frame up
 cockpit_scroll_down|cockpit scroll down|panel down|Scroll the active frame down
 cockpit_zoom_in|cockpit zoom in|panel zoom in|Zoom into the active frame
 cockpit_zoom_out|cockpit zoom out|panel zoom out|Zoom out of the active frame
+# ── NoteAvanue ──
+note_open|open note avanue|open notes,notes app,note avanue|Launch NoteAvanue
+note_new|new note|create note,blank note|Create a new note
+note_save|save note|save,save changes|Save the current note
+note_close|close note|exit note,close notes|Close NoteAvanue
+note_bold|bold|make bold,bold text|Toggle bold formatting
+note_italic|italic|make italic,italic text|Toggle italic formatting
+note_underline|underline|make underline,underline text|Toggle underline formatting
+note_strikethrough|strikethrough|strike through,cross out|Toggle strikethrough formatting
+note_heading1|heading one|h1,heading 1,title|Apply heading level 1
+note_heading2|heading two|h2,heading 2,subtitle|Apply heading level 2
+note_heading3|heading three|h3,heading 3,section|Apply heading level 3
+note_bullet|bullet list|bullets,unordered list|Toggle bullet list
+note_numbered|numbered list|numbers,ordered list|Toggle numbered list
+note_checklist|checklist|task list,checkbox,todo list|Toggle checklist
+note_code|code block|code,monospace|Toggle code block
+note_quote|blockquote|quote,quotation|Toggle blockquote
+note_divider|insert divider|divider,horizontal line,separator|Insert horizontal divider
+note_undo|undo note|undo,undo that|Undo last edit
+note_redo|redo note|redo,redo that|Redo last undone edit
+note_select_all|select all text|select all,highlight all|Select all note content
+note_delete_line|delete line|remove line,clear line|Delete current line
+note_new_paragraph|new paragraph|next paragraph,paragraph break|Insert new paragraph
+note_go_top|go to top|top of note,beginning|Move to start of note
+note_go_bottom|go to bottom|end of note,bottom|Move to end of note
+note_next_heading|next heading|next section,jump forward|Jump to next heading
+note_prev_heading|previous heading|prior section,jump back|Jump to previous heading
+note_dictate|dictation mode|start dictating,voice typing,dictate|Switch to dictation mode
+note_command_mode|command mode|stop dictating,voice commands|Switch to command mode
+note_continuous|continuous dictation|keep dictating,auto dictate|Switch to continuous dictation
+note_copy|copy note text|copy,copy selection|Copy selected text
+note_paste|paste in note|paste,paste text|Paste from clipboard
+note_cut|cut note text|cut,cut selection|Cut selected text
+note_pin|pin note|pin,unpin,toggle pin|Toggle note pin status
+note_export|export note|export,share note|Export note as Markdown
+note_search|search notes|find note,search|Search within notes
+note_scroll_up|note scroll up|scroll up note|Scroll note content up
+note_scroll_down|note scroll down|scroll down note|Scroll note content down
+note_attach_photo|attach photo|add photo,insert photo|Attach a photo to note
+note_attach_file|attach file|add file,insert file|Attach a file to note
+note_attach_audio|attach audio|add recording,insert audio|Attach audio recording
+note_zoom_in|note zoom in|bigger text,enlarge|Increase note zoom
+note_zoom_out|note zoom out|smaller text,reduce|Decrease note zoom
+note_font_up|increase font|bigger font,font up|Increase font size
+note_font_down|decrease font|smaller font,font down|Decrease font size
+note_clear_format|clear formatting|remove formatting,plain text|Remove all formatting
+note_word_count|word count|count words,how many words|Show word count
+note_read_aloud|read note aloud|read note,read this|Read note content aloud
+note_stop_reading|stop reading note|stop reading,be quiet|Stop reading note aloud
