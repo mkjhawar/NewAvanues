@@ -1,0 +1,70 @@
+-- NoteEntity.sq
+-- SQLDelight schema for NoteAvanue rich notes
+-- Stores Markdown content with voice origin tracking
+
+CREATE TABLE note_entity (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    markdown_content TEXT NOT NULL DEFAULT '',
+    folder_id TEXT,
+    is_pinned INTEGER NOT NULL DEFAULT 0,
+    is_locked INTEGER NOT NULL DEFAULT 0,
+    source TEXT NOT NULL DEFAULT 'MANUAL',
+    voice_origin_pct REAL NOT NULL DEFAULT 0.0,
+    word_count INTEGER NOT NULL DEFAULT 0,
+    tags_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX idx_note_folder ON note_entity(folder_id);
+CREATE INDEX idx_note_pinned ON note_entity(is_pinned);
+CREATE INDEX idx_note_locked ON note_entity(is_locked);
+CREATE INDEX idx_note_updated ON note_entity(updated_at);
+CREATE INDEX idx_note_source ON note_entity(source);
+
+-- Get all notes ordered by update time
+selectAll:
+SELECT * FROM note_entity ORDER BY is_pinned DESC, updated_at DESC;
+
+-- Get note by ID
+selectById:
+SELECT * FROM note_entity WHERE id = ?;
+
+-- Get notes in a folder
+selectByFolder:
+SELECT * FROM note_entity WHERE folder_id = ? ORDER BY is_pinned DESC, updated_at DESC;
+
+-- Full-text search across title and content
+searchByText:
+SELECT * FROM note_entity
+WHERE title LIKE '%' || ? || '%' OR markdown_content LIKE '%' || ? || '%'
+ORDER BY updated_at DESC;
+
+-- Insert or replace a note
+insertOrReplace:
+INSERT OR REPLACE INTO note_entity (
+    id, title, markdown_content, folder_id, is_pinned, is_locked,
+    source, voice_origin_pct, word_count, tags_json,
+    created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Update content only (auto-save path)
+updateContent:
+UPDATE note_entity SET markdown_content = ?, word_count = ?, updated_at = ? WHERE id = ?;
+
+-- Toggle pin
+togglePin:
+UPDATE note_entity SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?;
+
+-- Move to folder
+moveToFolder:
+UPDATE note_entity SET folder_id = ?, updated_at = ? WHERE id = ?;
+
+-- Delete note
+deleteById:
+DELETE FROM note_entity WHERE id = ?;
+
+-- Get recent notes (limit)
+selectRecent:
+SELECT * FROM note_entity ORDER BY updated_at DESC LIMIT ?;

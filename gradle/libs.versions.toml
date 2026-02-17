@@ -86,6 +86,9 @@ ktor = "2.3.7"
 # SFTP
 jsch = "0.2.16"
 
+# Rich Text Editor
+richeditor = "1.0.0-rc13"
+
 # gRPC/Wire
 wire = "5.4.0"
 grpc-kotlin = "1.4.1"
@@ -234,6 +237,9 @@ protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", ve
 
 # SFTP
 jsch = { module = "com.github.mwiede:jsch", version.ref = "jsch" }
+
+# Rich Text Editor (KMP — Compose Multiplatform)
+richeditor-compose = { module = "com.mohamedrejeb.richeditor:richeditor-compose", version.ref = "richeditor" }
 
 [bundles]
 compose = [

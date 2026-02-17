@@ -1,706 +1,160 @@
-{
-  "version": "2.1",
-  "locale": "es-ES",
-  "fallback": "en-US",
-  "domain": "app",
-  "category_map": {
-    "nav": "NAVIGATION",
-    "media": "MEDIA",
-    "sys": "SYSTEM",
-    "voice": "VOICE_CONTROL",
-    "app": "APP_LAUNCH",
-    "acc": "ACCESSIBILITY",
-    "text": "TEXT",
-    "input": "INPUT",
-    "appctl": "APP_CONTROL"
-  },
-  "action_map": {
-    "nav_back": "BACK",
-    "nav_home": "HOME",
-    "nav_recent": "RECENT_APPS",
-    "nav_drawer": "APP_DRAWER",
-    "nav_scroll_down": "SCROLL_DOWN",
-    "nav_scroll_up": "SCROLL_UP",
-    "nav_scroll_left": "SCROLL_LEFT",
-    "nav_scroll_right": "SCROLL_RIGHT",
-    "media_play": "MEDIA_PLAY",
-    "media_pause": "MEDIA_PAUSE",
-    "media_next": "MEDIA_NEXT",
-    "media_prev": "MEDIA_PREVIOUS",
-    "media_vol_up": "VOLUME_UP",
-    "media_vol_down": "VOLUME_DOWN",
-    "media_mute": "VOLUME_MUTE",
-    "sys_settings": "OPEN_SETTINGS",
-    "sys_notifications": "NOTIFICATIONS",
-    "sys_clear_notif": "CLEAR_NOTIFICATIONS",
-    "sys_screenshot": "SCREENSHOT",
-    "sys_flash_on": "FLASHLIGHT_ON",
-    "sys_flash_off": "FLASHLIGHT_OFF",
-    "sys_bright_up": "BRIGHTNESS_UP",
-    "sys_bright_down": "BRIGHTNESS_DOWN",
-    "sys_lock": "LOCK_SCREEN",
-    "sys_rotate": "ROTATE_SCREEN",
-    "sys_wifi": "TOGGLE_WIFI",
-    "sys_bluetooth": "TOGGLE_BLUETOOTH",
-    "voice_mute": "VOICE_MUTE",
-    "voice_wake": "VOICE_WAKE",
-    "voice_dict_start": "DICTATION_START",
-    "voice_dict_stop": "DICTATION_STOP",
-    "voice_help": "SHOW_COMMANDS",
-    "voice_num_on": "NUMBERS_ON",
-    "voice_num_off": "NUMBERS_OFF",
-    "voice_num_auto": "NUMBERS_AUTO",
-    "voice_cursor_show": "CURSOR_SHOW",
-    "voice_cursor_hide": "CURSOR_HIDE",
-    "voice_cursor_click": "CURSOR_CLICK",
-    "app_browser": "OPEN_APP",
-    "app_camera": "OPEN_APP",
-    "app_gallery": "OPEN_APP",
-    "app_calc": "OPEN_APP",
-    "app_calendar": "OPEN_APP",
-    "app_phone": "OPEN_APP",
-    "app_messages": "OPEN_APP",
-    "app_contacts": "OPEN_APP",
-    "acc_click": "CLICK",
-    "acc_long_click": "LONG_CLICK",
-    "acc_zoom_in": "ZOOM_IN",
-    "acc_zoom_out": "ZOOM_OUT",
-    "acc_read": "READ_SCREEN",
-    "acc_stop_read": "STOP_READING",
-    "text_select_all": "SELECT_ALL",
-    "text_copy": "COPY",
-    "text_paste": "PASTE",
-    "text_cut": "CUT",
-    "text_undo": "UNDO",
-    "text_redo": "REDO",
-    "text_delete": "DELETE",
-    "input_show_kb": "SHOW_KEYBOARD",
-    "input_hide_kb": "HIDE_KEYBOARD",
-    "appctl_close": "CLOSE_APP"
-  },
-  "meta_map": {
-    "app_browser": {
-      "app_type": "browser"
-    },
-    "app_camera": {
-      "app_type": "camera"
-    },
-    "app_gallery": {
-      "app_type": "gallery"
-    },
-    "app_calc": {
-      "app_type": "calculator"
-    },
-    "app_calendar": {
-      "app_type": "calendar"
-    },
-    "app_phone": {
-      "app_type": "phone"
-    },
-    "app_messages": {
-      "app_type": "messages"
-    },
-    "app_contacts": {
-      "app_type": "contacts"
-    }
-  },
-  "commands": [
-    [
-      "nav_back",
-      "ir atrás",
-      [
-        "atrás",
-        "volver",
-        "pantalla anterior"
-      ],
-      "Ir a la pantalla anterior"
-    ],
-    [
-      "nav_home",
-      "ir al inicio",
-      [
-        "inicio",
-        "pantalla principal",
-        "ir a casa"
-      ],
-      "Ir a la pantalla de inicio"
-    ],
-    [
-      "nav_recent",
-      "apps recientes",
-      [
-        "aplicaciones recientes",
-        "abrir recientes",
-        "cambiar app"
-      ],
-      "Mostrar aplicaciones recientes"
-    ],
-    [
-      "nav_drawer",
-      "abrir cajón de apps",
-      [
-        "cajón de aplicaciones",
-        "todas las apps"
-      ],
-      "Abrir el cajón de aplicaciones"
-    ],
-    [
-      "nav_scroll_down",
-      "bajar",
-      [
-        "desplazar abajo",
-        "página abajo"
-      ],
-      "Desplazar hacia abajo"
-    ],
-    [
-      "nav_scroll_up",
-      "subir",
-      [
-        "desplazar arriba",
-        "página arriba"
-      ],
-      "Desplazar hacia arriba"
-    ],
-    [
-      "nav_scroll_left",
-      "desplazar izquierda",
-      [
-        "mover a la izquierda"
-      ],
-      "Desplazar hacia la izquierda"
-    ],
-    [
-      "nav_scroll_right",
-      "desplazar derecha",
-      [
-        "mover a la derecha"
-      ],
-      "Desplazar hacia la derecha"
-    ],
-    [
-      "media_play",
-      "reproducir",
-      [
-        "play",
-        "reanudar",
-        "dale play"
-      ],
-      "Reproducir o reanudar medios"
-    ],
-    [
-      "media_pause",
-      "pausar",
-      [
-        "pausa",
-        "detener música",
-        "para la música"
-      ],
-      "Pausar reproducción"
-    ],
-    [
-      "media_next",
-      "siguiente canción",
-      [
-        "siguiente",
-        "saltar",
-        "próxima"
-      ],
-      "Siguiente pista"
-    ],
-    [
-      "media_prev",
-      "canción anterior",
-      [
-        "anterior",
-        "pista anterior"
-      ],
-      "Pista anterior"
-    ],
-    [
-      "media_vol_up",
-      "subir volumen",
-      [
-        "volumen arriba",
-        "más fuerte",
-        "más alto"
-      ],
-      "Subir el volumen"
-    ],
-    [
-      "media_vol_down",
-      "bajar volumen",
-      [
-        "volumen abajo",
-        "más bajo",
-        "más despacio"
-      ],
-      "Bajar el volumen"
-    ],
-    [
-      "media_mute",
-      "silenciar",
-      [
-        "mudo",
-        "silencio",
-        "quitar sonido"
-      ],
-      "Silenciar el audio"
-    ],
-    [
-      "sys_settings",
-      "abrir ajustes",
-      [
-        "ajustes",
-        "configuración",
-        "opciones del sistema"
-      ],
-      "Abrir los ajustes del sistema"
-    ],
-    [
-      "sys_notifications",
-      "mostrar notificaciones",
-      [
-        "notificaciones",
-        "panel de notificaciones",
-        "avisos"
-      ],
-      "Mostrar el panel de notificaciones"
-    ],
-    [
-      "sys_clear_notif",
-      "borrar notificaciones",
-      [
-        "limpiar notificaciones",
-        "quitar avisos"
-      ],
-      "Borrar todas las notificaciones"
-    ],
-    [
-      "sys_screenshot",
-      "captura de pantalla",
-      [
-        "hacer captura",
-        "pantallazo",
-        "screenshot"
-      ],
-      "Tomar una captura de pantalla"
-    ],
-    [
-      "sys_flash_on",
-      "encender linterna",
-      [
-        "linterna encendida",
-        "luz encendida",
-        "pon la linterna"
-      ],
-      "Encender la linterna"
-    ],
-    [
-      "sys_flash_off",
-      "apagar linterna",
-      [
-        "linterna apagada",
-        "luz apagada",
-        "quita la linterna"
-      ],
-      "Apagar la linterna"
-    ],
-    [
-      "sys_bright_up",
-      "subir brillo",
-      [
-        "más brillo",
-        "aumentar brillo",
-        "pantalla más clara"
-      ],
-      "Aumentar el brillo de pantalla"
-    ],
-    [
-      "sys_bright_down",
-      "bajar brillo",
-      [
-        "menos brillo",
-        "reducir brillo",
-        "pantalla más oscura"
-      ],
-      "Reducir el brillo de pantalla"
-    ],
-    [
-      "sys_lock",
-      "bloquear pantalla",
-      [
-        "bloquear",
-        "bloquear teléfono",
-        "bloqueo"
-      ],
-      "Bloquear la pantalla"
-    ],
-    [
-      "sys_rotate",
-      "rotar pantalla",
-      [
-        "girar pantalla",
-        "cambiar orientación",
-        "rotar"
-      ],
-      "Cambiar la orientación de pantalla"
-    ],
-    [
-      "sys_wifi",
-      "cambiar wifi",
-      [
-        "wifi encendido",
-        "wifi apagado",
-        "activar wifi",
-        "desactivar wifi"
-      ],
-      "Activar o desactivar WiFi"
-    ],
-    [
-      "sys_bluetooth",
-      "cambiar bluetooth",
-      [
-        "bluetooth encendido",
-        "bluetooth apagado",
-        "activar bluetooth",
-        "desactivar bluetooth"
-      ],
-      "Activar o desactivar Bluetooth"
-    ],
-    [
-      "voice_mute",
-      "silenciar voz",
-      [
-        "dejar de escuchar",
-        "voz apagada",
-        "no escuches"
-      ],
-      "Silenciar el reconocimiento de voz"
-    ],
-    [
-      "voice_wake",
-      "activar voz",
-      [
-        "empieza a escuchar",
-        "voz encendida",
-        "escucha"
-      ],
-      "Activar el reconocimiento de voz"
-    ],
-    [
-      "voice_dict_start",
-      "iniciar dictado",
-      [
-        "dictado",
-        "modo dictado",
-        "empezar a dictar"
-      ],
-      "Iniciar el modo de dictado"
-    ],
-    [
-      "voice_dict_stop",
-      "parar dictado",
-      [
-        "terminar dictado",
-        "modo comandos",
-        "dejar de dictar"
-      ],
-      "Detener el modo de dictado"
-    ],
-    [
-      "voice_help",
-      "mostrar comandos",
-      [
-        "qué puedo decir",
-        "ayuda",
-        "ver comandos"
-      ],
-      "Mostrar los comandos disponibles"
-    ],
-    [
-      "voice_num_on",
-      "números activados",
-      [
-        "mostrar números",
-        "números siempre"
-      ],
-      "Mostrar siempre los números en los elementos"
-    ],
-    [
-      "voice_num_off",
-      "números desactivados",
-      [
-        "ocultar números",
-        "sin números",
-        "quitar números"
-      ],
-      "No mostrar nunca los números"
-    ],
-    [
-      "voice_num_auto",
-      "números automáticos",
-      [
-        "números auto",
-        "auto números"
-      ],
-      "Mostrar números solo en listas"
-    ],
-    [
-      "voice_cursor_show",
-      "mostrar cursor",
-      [
-        "cursor encendido",
-        "activar cursor"
-      ],
-      "Mostrar el cursor de voz"
-    ],
-    [
-      "voice_cursor_hide",
-      "ocultar cursor",
-      [
-        "cursor apagado",
-        "desactivar cursor"
-      ],
-      "Ocultar el cursor de voz"
-    ],
-    [
-      "voice_cursor_click",
-      "clic del cursor",
-      [
-        "pulsar aquí",
-        "clic aquí"
-      ],
-      "Hacer clic en la posición del cursor"
-    ],
-    [
-      "app_browser",
-      "abrir navegador",
-      [
-        "navegador",
-        "abrir web",
-        "internet"
-      ],
-      "Abrir el navegador web"
-    ],
-    [
-      "app_camera",
-      "abrir cámara",
-      [
-        "cámara",
-        "hacer foto",
-        "sacar foto"
-      ],
-      "Abrir la cámara"
-    ],
-    [
-      "app_gallery",
-      "abrir galería",
-      [
-        "galería",
-        "fotos",
-        "ver fotos"
-      ],
-      "Abrir la galería de fotos"
-    ],
-    [
-      "app_calc",
-      "abrir calculadora",
-      [
-        "calculadora",
-        "calcular"
-      ],
-      "Abrir la calculadora"
-    ],
-    [
-      "app_calendar",
-      "abrir calendario",
-      [
-        "calendario",
-        "ver calendario"
-      ],
-      "Abrir el calendario"
-    ],
-    [
-      "app_phone",
-      "abrir teléfono",
-      [
-        "teléfono",
-        "llamar",
-        "marcador"
-      ],
-      "Abrir el teléfono"
-    ],
-    [
-      "app_messages",
-      "abrir mensajes",
-      [
-        "mensajes",
-        "sms",
-        "ver mensajes"
-      ],
-      "Abrir la app de mensajes"
-    ],
-    [
-      "app_contacts",
-      "abrir contactos",
-      [
-        "contactos",
-        "agenda"
-      ],
-      "Abrir los contactos"
-    ],
-    [
-      "acc_click",
-      "pulsar",
-      [
-        "clic",
-        "tocar",
-        "toca"
-      ],
-      "Pulsar en un elemento por nombre o número"
-    ],
-    [
-      "acc_long_click",
-      "mantener pulsado",
-      [
-        "pulsación larga",
-        "pulsar y mantener",
-        "toque largo"
-      ],
-      "Mantener pulsado un elemento"
-    ],
-    [
-      "acc_zoom_in",
-      "ampliar",
-      [
-        "zoom in",
-        "acercar",
-        "hacer zoom"
-      ],
-      "Ampliar la vista"
-    ],
-    [
-      "acc_zoom_out",
-      "alejar",
-      [
-        "zoom out",
-        "reducir",
-        "alejar zoom"
-      ],
-      "Reducir la vista"
-    ],
-    [
-      "acc_read",
-      "leer pantalla",
-      [
-        "leer en voz alta",
-        "lee esto",
-        "leer página"
-      ],
-      "Leer el contenido de la pantalla en voz alta"
-    ],
-    [
-      "acc_stop_read",
-      "dejar de leer",
-      [
-        "para",
-        "calla",
-        "silencio"
-      ],
-      "Dejar de leer en voz alta"
-    ],
-    [
-      "text_select_all",
-      "seleccionar todo",
-      [
-        "marcar todo",
-        "elegir todo"
-      ],
-      "Seleccionar todo el texto"
-    ],
-    [
-      "text_copy",
-      "copiar",
-      [
-        "copiar eso",
-        "copiar texto"
-      ],
-      "Copiar la selección al portapapeles"
-    ],
-    [
-      "text_paste",
-      "pegar",
-      [
-        "pegar texto",
-        "pega eso"
-      ],
-      "Pegar desde el portapapeles"
-    ],
-    [
-      "text_cut",
-      "cortar",
-      [
-        "cortar texto",
-        "recortar"
-      ],
-      "Cortar la selección al portapapeles"
-    ],
-    [
-      "text_undo",
-      "deshacer",
-      [
-        "deshacer eso",
-        "anular"
-      ],
-      "Deshacer la última acción"
-    ],
-    [
-      "text_redo",
-      "rehacer",
-      [
-        "rehacer eso",
-        "repetir"
-      ],
-      "Rehacer la última acción deshecha"
-    ],
-    [
-      "text_delete",
-      "borrar",
-      [
-        "borrar eso",
-        "eliminar",
-        "quitar"
-      ],
-      "Borrar el texto seleccionado"
-    ],
-    [
-      "input_show_kb",
-      "mostrar teclado",
-      [
-        "abrir teclado",
-        "teclado"
-      ],
-      "Mostrar el teclado en pantalla"
-    ],
-    [
-      "input_hide_kb",
-      "ocultar teclado",
-      [
-        "cerrar teclado",
-        "quitar teclado"
-      ],
-      "Ocultar el teclado en pantalla"
-    ],
-    [
-      "appctl_close",
-      "cerrar app",
-      [
-        "cerrar esto",
-        "salir de la app",
-        "salir"
-      ],
-      "Cerrar la aplicación actual"
-    ]
-  ]
-}
+# VOS v3.0 — es-ES app commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:es-ES:en-US:app
+
+nav_back|ir atrás|atrás,volver,pantalla anterior|Ir a la pantalla anterior
+nav_home|ir al inicio|inicio,pantalla principal,ir a casa|Ir a la pantalla de inicio
+nav_recent|apps recientes|aplicaciones recientes,abrir recientes,cambiar app|Mostrar aplicaciones recientes
+nav_drawer|abrir cajón de apps|cajón de aplicaciones,todas las apps|Abrir el cajón de aplicaciones
+nav_scroll_down|bajar|desplazar abajo,página abajo|Desplazar hacia abajo
+nav_scroll_up|subir|desplazar arriba,página arriba|Desplazar hacia arriba
+nav_scroll_left|desplazar izquierda|mover a la izquierda|Desplazar hacia la izquierda
+nav_scroll_right|desplazar derecha|mover a la derecha|Desplazar hacia la derecha
+media_play|reproducir|play,reanudar,dale play|Reproducir o reanudar medios
+media_pause|pausar|pausa,detener música,para la música|Pausar reproducción
+media_next|siguiente canción|siguiente,saltar,próxima|Siguiente pista
+media_prev|canción anterior|anterior,pista anterior|Pista anterior
+media_vol_up|subir volumen|volumen arriba,más fuerte,más alto|Subir el volumen
+media_vol_down|bajar volumen|volumen abajo,más bajo,más despacio|Bajar el volumen
+media_mute|silenciar|mudo,silencio,quitar sonido|Silenciar el audio
+sys_settings|abrir ajustes|ajustes,configuración,opciones del sistema|Abrir los ajustes del sistema
+sys_notifications|mostrar notificaciones|notificaciones,panel de notificaciones,avisos|Mostrar el panel de notificaciones
+sys_clear_notif|borrar notificaciones|limpiar notificaciones,quitar avisos|Borrar todas las notificaciones
+sys_screenshot|captura de pantalla|hacer captura,pantallazo,screenshot|Tomar una captura de pantalla
+sys_flash_on|encender linterna|linterna encendida,luz encendida,pon la linterna|Encender la linterna
+sys_flash_off|apagar linterna|linterna apagada,luz apagada,quita la linterna|Apagar la linterna
+sys_bright_up|subir brillo|más brillo,aumentar brillo,pantalla más clara|Aumentar el brillo de pantalla
+sys_bright_down|bajar brillo|menos brillo,reducir brillo,pantalla más oscura|Reducir el brillo de pantalla
+sys_lock|bloquear pantalla|bloquear,bloquear teléfono,bloqueo|Bloquear la pantalla
+sys_rotate|rotar pantalla|girar pantalla,cambiar orientación,rotar|Cambiar la orientación de pantalla
+sys_wifi|cambiar wifi|wifi encendido,wifi apagado,activar wifi,desactivar wifi|Activar o desactivar WiFi
+sys_bluetooth|cambiar bluetooth|bluetooth encendido,bluetooth apagado,activar bluetooth,desactivar bluetooth|Activar o desactivar Bluetooth
+voice_mute|silenciar voz|dejar de escuchar,voz apagada,no escuches|Silenciar el reconocimiento de voz
+voice_wake|activar voz|empieza a escuchar,voz encendida,escucha|Activar el reconocimiento de voz
+voice_dict_start|iniciar dictado|dictado,modo dictado,empezar a dictar|Iniciar el modo de dictado
+voice_dict_stop|parar dictado|terminar dictado,modo comandos,dejar de dictar|Detener el modo de dictado
+voice_help|mostrar comandos|qué puedo decir,ayuda,ver comandos|Mostrar los comandos disponibles
+voice_num_on|números activados|mostrar números,números siempre|Mostrar siempre los números en los elementos
+voice_num_off|números desactivados|ocultar números,sin números,quitar números|No mostrar nunca los números
+voice_num_auto|números automáticos|números auto,auto números|Mostrar números solo en listas
+voice_cursor_show|mostrar cursor|cursor encendido,activar cursor|Mostrar el cursor de voz
+voice_cursor_hide|ocultar cursor|cursor apagado,desactivar cursor|Ocultar el cursor de voz
+voice_cursor_click|clic del cursor|pulsar aquí,clic aquí|Hacer clic en la posición del cursor
+acc_click|pulsar|clic,tocar,toca|Pulsar en un elemento por nombre o número
+acc_long_click|mantener pulsado|pulsación larga,pulsar y mantener,toque largo|Mantener pulsado un elemento
+acc_zoom_in|ampliar|zoom in,acercar,hacer zoom|Ampliar la vista
+acc_zoom_out|alejar|zoom out,reducir,alejar zoom|Reducir la vista
+acc_read|leer pantalla|leer en voz alta,lee esto,leer página|Leer el contenido de la pantalla en voz alta
+acc_stop_read|dejar de leer|para,calla,silencio|Dejar de leer en voz alta
+text_select_all|seleccionar todo|marcar todo,elegir todo|Seleccionar todo el texto
+text_copy|copiar|copiar eso,copiar texto|Copiar la selección al portapapeles
+text_paste|pegar|pegar texto,pega eso|Pegar desde el portapapeles
+text_cut|cortar|cortar texto,recortar|Cortar la selección al portapapeles
+text_undo|deshacer|deshacer eso,anular|Deshacer la última acción
+text_redo|rehacer|rehacer eso,repetir|Rehacer la última acción deshecha
+text_delete|borrar|borrar eso,eliminar,quitar|Borrar el texto seleccionado
+input_show_kb|mostrar teclado|abrir teclado,teclado|Mostrar el teclado en pantalla
+input_hide_kb|ocultar teclado|cerrar teclado,quitar teclado|Ocultar el teclado en pantalla
+appctl_close|cerrar app|cerrar esto,salir de la app,salir|Cerrar la aplicación actual
+acc_double_tap|doble toque|doble clic|Hacer doble toque en un elemento
+acc_swipe_left|deslizar izquierda||Deslizar a la izquierda en pantalla
+acc_swipe_right|deslizar derecha||Deslizar a la derecha en pantalla
+acc_swipe_up|deslizar arriba||Deslizar hacia arriba en pantalla
+acc_swipe_down|deslizar abajo||Deslizar hacia abajo en pantalla
+acc_stroke_start|empezar a dibujar|dibujar,iniciar trazo|Iniciar un trazo de dibujo (anotación)
+acc_stroke_end|dejar de dibujar|terminar dibujo,fin de trazo|Terminar el trazo de dibujo (anotación)
+acc_erase|borrador|modo borrador,activar borrador|Activar el modo borrador (anotación)
+# ── Cámara (PhotoAvanue) ──
+cam_open|abrir foto avanue|abrir cámara,vista de cámara,cámara avanue,foto avanue|Abrir PhotoAvanue
+cam_capture|tomar foto|capturar,disparar,hacer foto,sacar foto|Capturar una foto
+cam_record_start|empezar a grabar|grabar video,iniciar grabación,grabar|Iniciar grabación de video
+cam_record_stop|parar grabación|terminar grabación,finalizar grabación|Detener grabación de video
+cam_record_pause|pausar grabación|pausar video|Pausar grabación de video
+cam_record_resume|reanudar grabación|continuar grabando|Reanudar grabación pausada
+cam_flip|voltear cámara|cambiar cámara,cámara frontal,cámara trasera,selfie|Cambiar entre cámara frontal y trasera
+cam_flash_on|flash encendido|activar flash,encender flash|Activar el flash de la cámara
+cam_flash_off|flash apagado|desactivar flash,apagar flash|Desactivar el flash de la cámara
+cam_flash_auto|flash automático|auto flash,flash auto|Poner flash en automático
+cam_flash_torch|modo linterna|linterna,mantener flash encendido|Mantener el flash encendido
+cam_zoom_in|acercar cámara|cámara más cerca,ampliar cámara|Acercar la cámara
+cam_zoom_out|alejar cámara|cámara más lejos,reducir cámara|Alejar la cámara
+cam_exposure_up|más exposición|cámara más clara,aclarar,aumentar exposición|Aumentar la exposición de la cámara
+cam_exposure_down|menos exposición|cámara más oscura,oscurecer,reducir exposición|Reducir la exposición de la cámara
+cam_mode_photo|modo foto|modo imagen,modo cámara|Cambiar al modo de foto
+cam_mode_video|modo video|modo película,modo grabación|Cambiar al modo de video
+# ── Cockpit ──
+cockpit_open|abrir cockpit|vista cockpit,lanzar cockpit,modo cockpit|Abrir Cockpit
+cockpit_add_frame|añadir panel|nuevo panel,crear panel,añadir marco|Añadir un nuevo panel de contenido
+cockpit_layout|cambiar diseño|cambiar layout,modo diseño|Abrir selector de diseño
+cockpit_layout_grid|diseño de rejilla|rejilla,vista de rejilla|Cambiar a diseño de rejilla
+cockpit_layout_split|diseño dividido|vista dividida,lado a lado|Cambiar a diseño dividido
+cockpit_layout_freeform|diseño libre|forma libre,diseño flexible|Cambiar a diseño libre
+cockpit_layout_fullscreen|pantalla completa|maximizar,pantalla llena|Cambiar a pantalla completa
+cockpit_layout_workflow|flujo de trabajo|modo flujo,modo pasos|Cambiar a diseño de flujo de trabajo
+cockpit_minimize|minimizar panel|minimizar,reducir panel|Minimizar el panel activo
+cockpit_maximize|maximizar panel|maximizar,expandir panel|Maximizar el panel activo
+cockpit_close|cerrar panel|cerrar,quitar panel,eliminar panel|Cerrar el panel activo
+cockpit_add_web|añadir web|nueva web,abrir web,añadir navegador|Añadir un panel de navegador web
+cockpit_add_camera|añadir cámara|abrir cámara,nueva cámara|Añadir un panel de cámara
+cockpit_add_note|añadir nota|nueva nota,abrir nota|Añadir un panel de notas
+cockpit_add_pdf|añadir pdf|abrir pdf,nuevo pdf|Añadir un visor de PDF
+cockpit_add_image|añadir imagen|abrir imagen,nueva imagen,añadir foto|Añadir un visor de imágenes
+cockpit_add_video|añadir video|abrir video,nuevo video|Añadir un reproductor de video
+cockpit_add_whiteboard|añadir pizarra|abrir pizarra,nueva pizarra,dibujar|Añadir una pizarra
+cockpit_add_terminal|añadir terminal|abrir terminal,nueva terminal,consola|Añadir una terminal
+cockpit_web_back|retroceder en web|atrás,navegar atrás|Panel web: ir atrás
+cockpit_web_forward|avanzar en web|adelante,navegar adelante|Panel web: ir adelante
+cockpit_web_refresh|actualizar web|recargar,refrescar página|Panel web: actualizar página
+cockpit_scroll_up|cockpit subir|panel arriba|Desplazar el panel activo hacia arriba
+cockpit_scroll_down|cockpit bajar|panel abajo|Desplazar el panel activo hacia abajo
+cockpit_zoom_in|cockpit acercar|ampliar panel|Acercar en el panel activo
+cockpit_zoom_out|cockpit alejar|reducir panel|Alejar del panel activo
+# ── NoteAvanue ──
+note_open|abrir note avanue|abrir notas,app de notas|Abrir NoteAvanue
+note_new|nueva nota|crear nota,nota en blanco|Crear una nueva nota
+note_save|guardar nota|guardar,guardar cambios|Guardar la nota actual
+note_close|cerrar nota|salir de notas,cerrar notas|Cerrar NoteAvanue
+note_bold|negrita|poner negrita,texto negrita|Activar negrita
+note_italic|cursiva|poner cursiva,texto cursiva|Activar cursiva
+note_underline|subrayar|poner subrayado|Activar subrayado
+note_strikethrough|tachado|tachar texto|Activar tachado
+note_heading1|titulo uno|h1,titulo 1,titulo|Aplicar titulo nivel 1
+note_heading2|titulo dos|h2,titulo 2,subtitulo|Aplicar titulo nivel 2
+note_heading3|titulo tres|h3,titulo 3,seccion|Aplicar titulo nivel 3
+note_bullet|lista con vinetas|vinetas,lista sin orden|Activar lista con vinetas
+note_numbered|lista numerada|numeros,lista ordenada|Activar lista numerada
+note_checklist|lista de tareas|checklist,casillas|Activar lista de tareas
+note_code|bloque de codigo|codigo,monoespaciado|Activar bloque de codigo
+note_quote|cita|bloque de cita,citacion|Activar cita
+note_divider|insertar divisor|divisor,linea horizontal|Insertar linea divisora
+note_undo|deshacer nota|deshacer|Deshacer ultima edicion
+note_redo|rehacer nota|rehacer|Rehacer ultima edicion
+note_select_all|seleccionar todo|seleccionar todo texto|Seleccionar todo el contenido
+note_delete_line|borrar linea|eliminar linea|Borrar linea actual
+note_new_paragraph|nuevo parrafo|siguiente parrafo|Insertar nuevo parrafo
+note_go_top|ir al inicio|inicio de nota|Ir al inicio de la nota
+note_go_bottom|ir al final|final de nota|Ir al final de la nota
+note_next_heading|siguiente titulo|siguiente seccion|Saltar al siguiente titulo
+note_prev_heading|titulo anterior|seccion anterior|Saltar al titulo anterior
+note_dictate|modo dictado|empezar a dictar,escritura por voz|Cambiar a modo dictado
+note_command_mode|modo comandos|dejar de dictar,comandos de voz|Cambiar a modo comandos
+note_continuous|dictado continuo|seguir dictando|Cambiar a dictado continuo
+note_copy|copiar texto nota|copiar|Copiar texto seleccionado
+note_paste|pegar en nota|pegar|Pegar del portapapeles
+note_cut|cortar texto nota|cortar|Cortar texto seleccionado
+note_pin|fijar nota|fijar,desfijar|Alternar fijado de nota
+note_export|exportar nota|exportar,compartir nota|Exportar nota como Markdown
+note_search|buscar notas|encontrar nota,buscar|Buscar en notas
+note_scroll_up|nota subir|desplazar arriba|Desplazar contenido arriba
+note_scroll_down|nota bajar|desplazar abajo|Desplazar contenido abajo
+note_attach_photo|adjuntar foto|agregar foto,insertar foto|Adjuntar foto a la nota
+note_attach_file|adjuntar archivo|agregar archivo|Adjuntar archivo a la nota
+note_attach_audio|adjuntar audio|agregar grabacion|Adjuntar grabacion de audio
+note_zoom_in|nota acercar|texto mas grande|Aumentar zoom de nota
+note_zoom_out|nota alejar|texto mas pequeno|Reducir zoom de nota
+note_font_up|aumentar fuente|fuente mas grande|Aumentar tamano de fuente
+note_font_down|reducir fuente|fuente mas pequena|Reducir tamano de fuente
+note_clear_format|limpiar formato|quitar formato,texto plano|Eliminar toda la formatacion
+note_word_count|contar palabras|cuantas palabras|Mostrar conteo de palabras
+note_read_aloud|leer nota en voz alta|leer nota|Leer contenido de nota en voz alta
+note_stop_reading|dejar de leer nota|dejar de leer|Dejar de leer nota en voz alta
