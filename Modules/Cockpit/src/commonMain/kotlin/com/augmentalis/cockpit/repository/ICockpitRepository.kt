@@ -2,6 +2,9 @@ package com.augmentalis.cockpit.repository
 
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.CockpitSession
+import com.augmentalis.cockpit.model.CrossFrameLink
+import com.augmentalis.cockpit.model.PinnedFrame
+import com.augmentalis.cockpit.model.TimelineEvent
 import com.augmentalis.cockpit.model.WorkflowStep
 
 /**
@@ -52,6 +55,42 @@ interface ICockpitRepository {
 
     /** Save a single workflow step */
     suspend fun saveWorkflowStep(step: WorkflowStep)
+
+    // ── Pinned Frames ─────────────────────────────────────────────────
+
+    /** Get all pinned frames (PiP overlays visible across sessions) */
+    suspend fun getPinnedFrames(): List<PinnedFrame>
+
+    /** Pin a frame for PiP overlay */
+    suspend fun pinFrame(pinnedFrame: PinnedFrame)
+
+    /** Unpin a frame by its frame ID */
+    suspend fun unpinFrame(frameId: String)
+
+    // ── Cross-Frame Links ─────────────────────────────────────────────
+
+    /** Get all links for a session */
+    suspend fun getCrossFrameLinks(sessionId: String): List<CrossFrameLink>
+
+    /** Get enabled links originating from a specific frame */
+    suspend fun getLinksFromFrame(sourceFrameId: String): List<CrossFrameLink>
+
+    /** Save a cross-frame link */
+    suspend fun saveCrossFrameLink(sessionId: String, link: CrossFrameLink)
+
+    /** Delete a cross-frame link by ID */
+    suspend fun deleteCrossFrameLink(linkId: String)
+
+    // ── Timeline Events ───────────────────────────────────────────────
+
+    /** Get timeline events for a session (newest first) */
+    suspend fun getTimelineEvents(sessionId: String, limit: Int = 50): List<TimelineEvent>
+
+    /** Log a timeline event */
+    suspend fun logEvent(event: TimelineEvent)
+
+    /** Delete events older than the given ISO 8601 timestamp */
+    suspend fun clearOldEvents(beforeTimestamp: String)
 
     // ── Bulk Operations ──────────────────────────────────────────────
 
