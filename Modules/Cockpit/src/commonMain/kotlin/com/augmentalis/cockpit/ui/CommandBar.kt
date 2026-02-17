@@ -24,7 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Casino
@@ -116,7 +116,7 @@ fun CommandBar(
                 // Back button (non-root states)
                 if (currentState.parent != null) {
                     CommandChip(
-                        icon = Icons.Default.ArrowBack,
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
                         label = "Back",
                         isActive = false,
                         onClick = { onStateChange(currentState.parent!!) }
@@ -170,7 +170,7 @@ fun CommandBar(
                     // TODO: Content-specific chips are scaffolded for layout only.
                     // Wire to CockpitCommandHandler dispatch when voice-to-UI bridge is ready.
                     CommandBarState.WEB_ACTIONS -> {
-                        CommandChip(Icons.Default.ArrowBack, "Back", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Back", false) {}
                         CommandChip(Icons.Default.Language, "Forward", false) {}
                         CommandChip(Icons.Default.Language, "Refresh", false) {}
                         CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {}
@@ -191,14 +191,14 @@ fun CommandBar(
                     }
 
                     CommandBarState.VIDEO_ACTIONS -> {
-                        CommandChip(Icons.Default.ArrowBack, "Rewind", false) {}
-                        CommandChip(Icons.Default.ArrowBack, "Play/Pause", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Rewind", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Play/Pause", false) {}
                         CommandChip(Icons.Default.Fullscreen, "Fullscreen", false) {}
                     }
 
                     CommandBarState.NOTE_ACTIONS -> {
-                        CommandChip(Icons.Default.ArrowBack, "Undo", false) {}
-                        CommandChip(Icons.Default.ArrowBack, "Redo", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Undo", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Redo", false) {}
                     }
 
                     CommandBarState.CAMERA_ACTIONS -> {
