@@ -34,6 +34,7 @@ import com.augmentalis.cockpit.model.CommandBarState
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.LayoutMode
+import com.augmentalis.cockpit.spatial.SpatialViewportController
 
 /**
  * Cross-platform Cockpit screen shell.
@@ -63,6 +64,8 @@ fun CockpitScreenContent(
     onLayoutModeChanged: (LayoutMode) -> Unit,
     onAddFrame: (FrameContent, String) -> Unit,
     frameContent: @Composable (CockpitFrame) -> Unit,
+    spatialController: SpatialViewportController? = null,
+    availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -115,19 +118,43 @@ fun CockpitScreenContent(
                 modifier = Modifier.weight(1f).fillMaxWidth()
             )
         } else {
-            LayoutEngine(
-                layoutMode = layoutMode,
-                frames = frames,
-                selectedFrameId = selectedFrameId,
-                onFrameSelected = onFrameSelected,
-                onFrameMoved = onFrameMoved,
-                onFrameResized = onFrameResized,
-                onFrameClose = onFrameClose,
-                onFrameMinimize = onFrameMinimize,
-                onFrameMaximize = onFrameMaximize,
-                frameContent = frameContent,
-                modifier = Modifier.weight(1f).fillMaxWidth()
-            )
+            val layoutModifier = Modifier.weight(1f).fillMaxWidth()
+            val isSpatial = layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null
+
+            if (isSpatial) {
+                SpatialCanvas(
+                    controller = spatialController!!,
+                    modifier = layoutModifier
+                ) {
+                    LayoutEngine(
+                        layoutMode = layoutMode,
+                        frames = frames,
+                        selectedFrameId = selectedFrameId,
+                        onFrameSelected = onFrameSelected,
+                        onFrameMoved = onFrameMoved,
+                        onFrameResized = onFrameResized,
+                        onFrameClose = onFrameClose,
+                        onFrameMinimize = onFrameMinimize,
+                        onFrameMaximize = onFrameMaximize,
+                        frameContent = frameContent,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            } else {
+                LayoutEngine(
+                    layoutMode = layoutMode,
+                    frames = frames,
+                    selectedFrameId = selectedFrameId,
+                    onFrameSelected = onFrameSelected,
+                    onFrameMoved = onFrameMoved,
+                    onFrameResized = onFrameResized,
+                    onFrameClose = onFrameClose,
+                    onFrameMinimize = onFrameMinimize,
+                    onFrameMaximize = onFrameMaximize,
+                    frameContent = frameContent,
+                    modifier = layoutModifier
+                )
+            }
         }
 
         // Status bar
@@ -163,7 +190,8 @@ fun CockpitScreenContent(
             },
             onFrameClose = {
                 selectedFrameId?.let { onFrameClose(it) }
-            }
+            },
+            availableLayoutModes = availableLayoutModes
         )
     }
 }

@@ -83,6 +83,7 @@ fun CommandBar(
     onFrameMinimize: () -> Unit,
     onFrameMaximize: () -> Unit,
     onFrameClose: () -> Unit,
+    availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -147,7 +148,7 @@ fun CommandBar(
                     }
 
                     CommandBarState.LAYOUT_PICKER -> {
-                        LayoutMode.entries.forEach { mode ->
+                        availableLayoutModes.forEach { mode ->
                             CommandChip(
                                 icon = layoutModeIcon(mode),
                                 label = layoutModeLabel(mode),
