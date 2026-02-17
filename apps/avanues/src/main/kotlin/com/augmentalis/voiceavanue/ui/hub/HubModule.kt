@@ -48,12 +48,13 @@ data class HubModule(
  * Static registry of all modules displayed on the Spatial Orbit hub.
  *
  * Core orbit (inner ring, 4 modules):
- *   VoiceTouch, WebAvanue, CursorAvanue, Cockpit
+ *   VoiceTouch™, WebAvanue, CursorAvanue, Cockpit
  *
  * Content orbit (outer ring, 7 modules):
- *   PDF, Image, Video, Notes, Camera, Cast, Annotate
+ *   PDFAvanue, ImageAvanue, VideoAvanue, NoteAvanue, PhotoAvanue, RemoteCast, AnnotateAvanue
  *
  * Content modules navigate to Cockpit where they render inside frames.
+ * Each "Avanue" is a destination — an avenue to explore.
  */
 object HubModuleRegistry {
 
@@ -95,56 +96,56 @@ object HubModuleRegistry {
     val contentModules: List<HubModule> = listOf(
         HubModule(
             id = "pdfavanue",
-            displayName = "PDF",
-            subtitle = "Document viewer",
+            displayName = "PDFAvanue",
+            subtitle = "Document avenue",
             icon = Icons.Default.PictureAsPdf,
             orbit = OrbitTier.CONTENT,
             route = AvanueMode.COCKPIT.route
         ),
         HubModule(
             id = "imageavanue",
-            displayName = "Image",
-            subtitle = "Image viewer",
+            displayName = "ImageAvanue",
+            subtitle = "Gallery avenue",
             icon = Icons.Default.Image,
             orbit = OrbitTier.CONTENT,
             route = AvanueMode.COCKPIT.route
         ),
         HubModule(
             id = "videoavanue",
-            displayName = "Video",
-            subtitle = "Media player",
+            displayName = "VideoAvanue",
+            subtitle = "Media avenue",
             icon = Icons.Default.VideoLibrary,
             orbit = OrbitTier.CONTENT,
             route = AvanueMode.COCKPIT.route
         ),
         HubModule(
             id = "noteavanue",
-            displayName = "Notes",
-            subtitle = "Rich text editor",
+            displayName = "NoteAvanue",
+            subtitle = "Writing avenue",
             icon = Icons.Default.EditNote,
             orbit = OrbitTier.CONTENT,
             route = AvanueMode.COCKPIT.route
         ),
         HubModule(
-            id = "cameraavanue",
-            displayName = "Camera",
-            subtitle = "Capture & scan",
+            id = "photoavanue",
+            displayName = "PhotoAvanue",
+            subtitle = "Capture avenue",
             icon = Icons.Default.CameraAlt,
             orbit = OrbitTier.CONTENT,
             route = AvanueMode.COCKPIT.route
         ),
         HubModule(
             id = "remotecast",
-            displayName = "Cast",
-            subtitle = "Screen sharing",
+            displayName = "CastAvanue",
+            subtitle = "Sharing avenue",
             icon = Icons.Default.Cast,
             orbit = OrbitTier.CONTENT,
             route = AvanueMode.COCKPIT.route
         ),
         HubModule(
             id = "annotationavanue",
-            displayName = "Annotate",
-            subtitle = "Draw & sign",
+            displayName = "DrawAvanue",
+            subtitle = "Creative avenue",
             icon = Icons.Default.Draw,
             orbit = OrbitTier.CONTENT,
             route = AvanueMode.COCKPIT.route
@@ -171,7 +172,7 @@ fun moduleAccentColor(moduleId: String): Color {
         "imageavanue" -> AvanueTheme.colors.primary
         "videoavanue" -> AvanueTheme.colors.secondary
         "noteavanue" -> AvanueTheme.colors.success
-        "cameraavanue" -> AvanueTheme.colors.info
+        "photoavanue" -> AvanueTheme.colors.info
         "remotecast" -> AvanueTheme.colors.warning
         "annotationavanue" -> AvanueTheme.colors.tertiary
         else -> AvanueTheme.colors.primary
