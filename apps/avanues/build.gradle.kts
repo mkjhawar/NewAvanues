@@ -146,6 +146,18 @@ dependencies {
     // SpeechRecognition - KMP speech module
     implementation(project(":Modules:SpeechRecognition"))
 
+    // Cockpit - Multi-window display & session management
+    implementation(project(":Modules:Cockpit"))
+
+    // Content Modules (rendered inside Cockpit frames)
+    implementation(project(":Modules:PDFAvanue"))
+    implementation(project(":Modules:ImageAvanue"))
+    implementation(project(":Modules:VideoAvanue"))
+    implementation(project(":Modules:NoteAvanue"))
+    implementation(project(":Modules:CameraAvanue"))
+    implementation(project(":Modules:RemoteCast"))
+    implementation(project(":Modules:AnnotationAvanue"))
+
     // Unified Database
     implementation(project(":Modules:Database"))
 

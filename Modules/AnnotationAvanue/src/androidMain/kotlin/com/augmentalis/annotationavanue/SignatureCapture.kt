@@ -52,7 +52,7 @@ fun SignatureCapture(
     val colors = AvanueTheme.colors
     var strokes by remember { mutableStateOf<List<com.augmentalis.annotationavanue.model.Stroke>>(emptyList()) }
     var currentPoints by remember { mutableStateOf<List<StrokePoint>>(emptyList()) }
-    val penColor = colors.onBackground
+    val penColor = colors.textPrimary
 
     Column(
         modifier = modifier
@@ -63,7 +63,7 @@ fun SignatureCapture(
     ) {
         Text(
             text = "Sign below",
-            color = colors.onBackground.copy(alpha = 0.6f),
+            color = colors.textPrimary.copy(alpha = 0.6f),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
@@ -75,7 +75,7 @@ fun SignatureCapture(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .border(1.dp, colors.outline, RoundedCornerShape(8.dp))
+                .border(1.dp, colors.borderSubtle, RoundedCornerShape(8.dp))
                 .background(colors.surface, RoundedCornerShape(8.dp))
         ) {
             Canvas(
@@ -140,7 +140,7 @@ fun SignatureCapture(
                 // Signature line
                 val lineY = size.height * 0.75f
                 drawLine(
-                    color = Color(colors.onSurface.value).copy(alpha = 0.2f),
+                    color = Color(colors.textPrimary.value).copy(alpha = 0.2f),
                     start = androidx.compose.ui.geometry.Offset(20f, lineY),
                     end = androidx.compose.ui.geometry.Offset(size.width - 20f, lineY),
                     strokeWidth = 1f
@@ -167,7 +167,7 @@ fun SignatureCapture(
             ) {
                 Text(
                     "Done",
-                    color = if (strokes.isNotEmpty()) colors.primary else colors.onSurface.copy(alpha = 0.3f)
+                    color = if (strokes.isNotEmpty()) colors.primary else colors.textPrimary.copy(alpha = 0.3f)
                 )
             }
         }

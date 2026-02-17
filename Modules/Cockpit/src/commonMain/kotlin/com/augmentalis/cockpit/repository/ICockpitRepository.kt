@@ -2,12 +2,13 @@ package com.augmentalis.cockpit.repository
 
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.CockpitSession
-import com.augmentalis.cockpit.model.LayoutMode
 import com.augmentalis.cockpit.model.WorkflowStep
-import kotlinx.coroutines.flow.Flow
 
 /**
  * Repository interface for Cockpit session and frame persistence.
+ *
+ * Provides imperative suspend-based CRUD operations.
+ * Reactive Flow-based observers will be added per-platform when needed.
  *
  * Implemented per-platform:
  * - Android: SQLDelight via VoiceOSDatabase
@@ -18,51 +19,39 @@ interface ICockpitRepository {
 
     // ── Sessions ─────────────────────────────────────────────────────
 
-    /** Observe all sessions (ordered by updatedAt descending) */
-    fun observeSessions(): Flow<List<CockpitSession>>
+    /** Get all sessions (ordered by updatedAt descending) */
+    suspend fun getSessions(): List<CockpitSession>
 
-    /** Get a session by ID with all its frames and workflow steps */
+    /** Get a session by ID */
     suspend fun getSession(sessionId: String): CockpitSession?
 
-    /** Get or create the default session */
-    suspend fun getOrCreateDefaultSession(): CockpitSession
-
-    /** Create a new session */
-    suspend fun createSession(name: String, layoutMode: LayoutMode = LayoutMode.DEFAULT): CockpitSession
-
-    /** Update session metadata (name, layout mode, selected frame) */
-    suspend fun updateSession(session: CockpitSession)
+    /** Insert or replace a session */
+    suspend fun saveSession(session: CockpitSession)
 
     /** Delete a session and all its frames */
     suspend fun deleteSession(sessionId: String)
 
-    /** Duplicate a session (deep copy with new IDs) */
-    suspend fun duplicateSession(sessionId: String, newName: String): CockpitSession?
-
     // ── Frames ───────────────────────────────────────────────────────
 
-    /** Observe frames for a session (ordered by zOrder) */
-    fun observeFrames(sessionId: String): Flow<List<CockpitFrame>>
+    /** Get all frames for a session (ordered by zOrder) */
+    suspend fun getFrames(sessionId: String): List<CockpitFrame>
 
-    /** Add a new frame to a session */
-    suspend fun addFrame(frame: CockpitFrame)
+    /** Insert or replace a frame */
+    suspend fun saveFrame(frame: CockpitFrame)
 
-    /** Update frame state (position, size, content, visibility) */
-    suspend fun updateFrame(frame: CockpitFrame)
+    /** Delete a frame by ID */
+    suspend fun deleteFrame(frameId: String)
 
-    /** Remove a frame */
-    suspend fun removeFrame(frameId: String)
-
-    /** Reorder frames (update zOrder values) */
-    suspend fun reorderFrames(sessionId: String, orderedFrameIds: List<String>)
+    /** Update only the content JSON for a frame */
+    suspend fun updateFrameContent(frameId: String, contentJson: String)
 
     // ── Workflow Steps ────────────────────────────────────────────────
 
     /** Get workflow steps for a session */
     suspend fun getWorkflowSteps(sessionId: String): List<WorkflowStep>
 
-    /** Set workflow steps (replaces all existing steps) */
-    suspend fun setWorkflowSteps(sessionId: String, steps: List<WorkflowStep>)
+    /** Save a single workflow step */
+    suspend fun saveWorkflowStep(step: WorkflowStep)
 
     // ── Bulk Operations ──────────────────────────────────────────────
 

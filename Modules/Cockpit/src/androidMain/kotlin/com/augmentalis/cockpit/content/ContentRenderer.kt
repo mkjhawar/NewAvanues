@@ -98,7 +98,14 @@ fun ContentRenderer(
             )
 
             is FrameContent.VoiceNote -> VoiceNoteRenderer(
-                transcription = content.transcription,
+                transcription = content.transcript,
+                isRecording = content.isRecording,
+                durationMs = content.durationMs,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            is FrameContent.Voice -> VoiceNoteRenderer(
+                transcription = "",
                 isRecording = content.isRecording,
                 durationMs = content.durationMs,
                 modifier = Modifier.fillMaxSize()
@@ -208,7 +215,7 @@ private fun VoiceNoteRenderer(
     ) {
         Text(
             text = if (isRecording) "Recording..." else "Voice Note",
-            color = if (isRecording) colors.error else colors.onBackground,
+            color = if (isRecording) colors.error else colors.textPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )
@@ -218,7 +225,7 @@ private fun VoiceNoteRenderer(
         val secs = seconds % 60
         Text(
             text = String.format("%02d:%02d", minutes, secs),
-            color = colors.onBackground.copy(alpha = 0.7f),
+            color = colors.textPrimary.copy(alpha = 0.7f),
             fontSize = 32.sp,
             fontWeight = FontWeight.Light
         )
@@ -226,7 +233,7 @@ private fun VoiceNoteRenderer(
         if (transcription.isNotBlank()) {
             Text(
                 text = transcription,
-                color = colors.onBackground.copy(alpha = 0.8f),
+                color = colors.textPrimary.copy(alpha = 0.8f),
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 modifier = Modifier.padding(top = 16.dp)
@@ -253,14 +260,14 @@ private fun PlaceholderContent(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = label,
-                color = colors.onBackground.copy(alpha = 0.6f),
+                color = colors.textPrimary.copy(alpha = 0.6f),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = description,
-                color = colors.onBackground.copy(alpha = 0.4f),
+                color = colors.textPrimary.copy(alpha = 0.4f),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 8.dp)

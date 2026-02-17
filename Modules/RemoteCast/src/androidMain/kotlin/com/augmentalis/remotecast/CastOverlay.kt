@@ -70,13 +70,13 @@ fun CastOverlay(
                 )
                 Text(
                     text = castState.deviceName.ifBlank { "Streaming" },
-                    color = colors.onSurface,
+                    color = colors.textPrimary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "${castState.latencyMs}ms",
-                    color = colors.onSurface.copy(alpha = 0.5f),
+                    color = colors.textPrimary.copy(alpha = 0.5f),
                     fontSize = 10.sp
                 )
                 IconButton(
@@ -100,13 +100,13 @@ fun CastOverlay(
                 Icon(
                     imageVector = if (castState.isConnected) Icons.Default.CastConnected else Icons.Default.Cast,
                     contentDescription = "Cast",
-                    tint = colors.onBackground.copy(alpha = 0.4f),
+                    tint = colors.textPrimary.copy(alpha = 0.4f),
                     modifier = Modifier.size(64.dp)
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
                     text = if (castState.isConnected) "Connected to ${castState.deviceName}" else "No device connected",
-                    color = colors.onBackground.copy(alpha = 0.6f),
+                    color = colors.textPrimary.copy(alpha = 0.6f),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -149,12 +149,12 @@ fun CastOverlay(
             Text(
                 text = if (castState.isStreaming) "Casting: ${castState.resolution.width}x${castState.resolution.height}"
                 else "Ready to cast",
-                color = colors.onSurface.copy(alpha = 0.5f),
+                color = colors.textPrimary.copy(alpha = 0.5f),
                 fontSize = 11.sp
             )
             Text(
                 text = "${castState.frameRate} fps",
-                color = colors.onSurface.copy(alpha = 0.5f),
+                color = colors.textPrimary.copy(alpha = 0.5f),
                 fontSize = 11.sp
             )
         }

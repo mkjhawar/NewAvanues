@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -56,6 +57,16 @@ kotlin {
                 // Database — SQLDelight persistence (CockpitSession, CockpitFrame tables)
                 implementation(project(":Modules:Database"))
 
+                // Compose Multiplatform (shared across Android + Desktop)
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
+                implementation(compose.ui)
+
+                // AvanueUI v5.1 — Theme + Unified Components (KMP)
+                implementation(project(":Modules:AvanueUI"))
+
                 // Coroutines
                 implementation(libs.kotlinx.coroutines.core)
 
@@ -79,9 +90,6 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
-                // AvanueUI — Theme v5.1 + unified components
-                implementation(project(":Modules:AvanueUI"))
-
                 // Avanue Content Modules — standalone viewers/editors for each frame type
                 implementation(project(":Modules:WebAvanue"))
                 implementation(project(":Modules:PDFAvanue"))
@@ -95,10 +103,10 @@ kotlin {
                 // VoiceOSCore — Voice command integration
                 implementation(project(":Modules:VoiceOSCore"))
 
-                // DeviceManager — IMU for head cursor (future: spatial mode)
+                // DeviceManager — IMU for head cursor (spatial mode)
                 implementation(project(":Modules:DeviceManager"))
 
-                // VoiceCursor — Cursor overlay (future: spatial mode)
+                // VoiceCursor — Cursor overlay (spatial mode)
                 implementation(project(":Modules:VoiceCursor"))
 
                 // Android Core
@@ -108,11 +116,7 @@ kotlin {
                 implementation(libs.androidx.lifecycle.runtime.compose)
                 implementation(libs.androidx.activity.compose)
 
-                // Compose UI
-                implementation(platform(libs.compose.bom.get()))
-                implementation(libs.compose.ui.ui)
-                implementation(libs.compose.material3)
-                implementation(libs.compose.material.icons.extended)
+                // Compose UI (Android-only: tooling preview)
                 implementation(libs.compose.ui.tooling.preview)
 
                 // CameraX — Camera preview frames

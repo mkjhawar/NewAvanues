@@ -58,7 +58,7 @@ fun AnnotationCanvas(
     var undoneStrokes by remember { mutableStateOf<List<com.augmentalis.annotationavanue.model.Stroke>>(emptyList()) }
     var currentTool by remember { mutableStateOf(AnnotationTool.PEN) }
     var strokeWidth by remember { mutableStateOf(4f) }
-    val strokeColor = colors.onBackground
+    val strokeColor = colors.textPrimary
 
     Column(modifier = modifier.fillMaxSize()) {
         // Toolbar
@@ -73,21 +73,21 @@ fun AnnotationCanvas(
             IconButton(onClick = { currentTool = AnnotationTool.PEN }) {
                 Icon(
                     Icons.Default.Create, "Pen",
-                    tint = if (currentTool == AnnotationTool.PEN) colors.primary else colors.onSurface.copy(alpha = 0.5f),
+                    tint = if (currentTool == AnnotationTool.PEN) colors.primary else colors.textPrimary.copy(alpha = 0.5f),
                     modifier = Modifier.size(20.dp)
                 )
             }
             IconButton(onClick = { currentTool = AnnotationTool.HIGHLIGHTER }) {
                 Icon(
                     Icons.Default.Create, "Highlighter",
-                    tint = if (currentTool == AnnotationTool.HIGHLIGHTER) colors.tertiary else colors.onSurface.copy(alpha = 0.5f),
+                    tint = if (currentTool == AnnotationTool.HIGHLIGHTER) colors.tertiary else colors.textPrimary.copy(alpha = 0.5f),
                     modifier = Modifier.size(20.dp)
                 )
             }
             IconButton(onClick = { currentTool = AnnotationTool.ERASER }) {
                 Icon(
                     Icons.Default.Circle, "Eraser",
-                    tint = if (currentTool == AnnotationTool.ERASER) colors.error else colors.onSurface.copy(alpha = 0.5f),
+                    tint = if (currentTool == AnnotationTool.ERASER) colors.error else colors.textPrimary.copy(alpha = 0.5f),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -103,7 +103,7 @@ fun AnnotationCanvas(
             ) {
                 Icon(
                     Icons.Default.Undo, "Undo",
-                    tint = if (strokes.isNotEmpty()) colors.onSurface else colors.onSurface.copy(alpha = 0.2f),
+                    tint = if (strokes.isNotEmpty()) colors.textPrimary else colors.textPrimary.copy(alpha = 0.2f),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -119,7 +119,7 @@ fun AnnotationCanvas(
             ) {
                 Icon(
                     Icons.Default.Redo, "Redo",
-                    tint = if (undoneStrokes.isNotEmpty()) colors.onSurface else colors.onSurface.copy(alpha = 0.2f),
+                    tint = if (undoneStrokes.isNotEmpty()) colors.textPrimary else colors.textPrimary.copy(alpha = 0.2f),
                     modifier = Modifier.size(20.dp)
                 )
             }

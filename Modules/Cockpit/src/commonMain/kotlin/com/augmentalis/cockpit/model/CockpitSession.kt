@@ -25,6 +25,8 @@ data class CockpitSession(
     val selectedFrameId: String? = null,
     /** Whether this is the auto-created default session */
     val isDefault: Boolean = false,
+    /** Optional background URI for the session (wallpaper, gradient, etc.) */
+    val backgroundUri: String? = null,
     /** Creation timestamp (ISO 8601) */
     val createdAt: String = "",
     /** Last modification timestamp (ISO 8601) */

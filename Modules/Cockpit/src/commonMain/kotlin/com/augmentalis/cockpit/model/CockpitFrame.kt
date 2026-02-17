@@ -22,6 +22,8 @@ data class CockpitFrame(
     val content: FrameContent,
     /** Position, size, and visual state */
     val state: FrameState = FrameState(),
+    /** Grid position in spatial canvas (CENTER = default visible area) */
+    val spatialPosition: SpatialPosition = SpatialPosition.CENTER,
     /** Creation timestamp (ISO 8601) */
     val createdAt: String = "",
     /** Last modification timestamp (ISO 8601) */
@@ -32,4 +34,10 @@ data class CockpitFrame(
 
     /** Content type identifier for display and renderer lookup */
     val contentType: String get() = content.typeId
+
+    /** Semantic accent for themed border coloring */
+    val accent: ContentAccent get() = ContentAccent.forContentType(contentType)
+
+    /** Whether this frame is locked to a non-center spatial position */
+    val isSpatiallyLocked: Boolean get() = !spatialPosition.isCenter
 }
