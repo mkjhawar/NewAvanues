@@ -44,7 +44,7 @@ class CockpitViewModel(
     private val _selectedFrameId = MutableStateFlow<String?>(null)
     val selectedFrameId: StateFlow<String?> = _selectedFrameId.asStateFlow()
 
-    private val _layoutMode = MutableStateFlow(LayoutMode.FREEFORM)
+    private val _layoutMode = MutableStateFlow(LayoutMode.DEFAULT)
     val layoutMode: StateFlow<LayoutMode> = _layoutMode.asStateFlow()
 
     private val _sessions = MutableStateFlow<List<CockpitSession>>(emptyList())
@@ -93,7 +93,7 @@ class CockpitViewModel(
         val session = CockpitSession(
             id = generateId(),
             name = name,
-            layoutMode = LayoutMode.FREEFORM,
+            layoutMode = LayoutMode.DEFAULT,
             isDefault = isDefault,
             createdAt = now,
             updatedAt = now
@@ -112,7 +112,7 @@ class CockpitViewModel(
         val session = _activeSession.value ?: return
         val currentFrames = _frames.value
 
-        if (currentFrames.size >= CockpitConstants.MAX_FRAMES) return
+        if (currentFrames.size >= CockpitConstants.MAX_FRAMES_PER_SESSION) return
 
         // Calculate initial position for new frame (cascade from top-left)
         val cascadeStep = 30f
@@ -129,8 +129,8 @@ class CockpitViewModel(
             state = FrameState(
                 posX = initialX,
                 posY = initialY,
-                width = CockpitConstants.DEFAULT_FRAME_WIDTH_DP.toFloat(),
-                height = CockpitConstants.DEFAULT_FRAME_HEIGHT_DP.toFloat(),
+                width = CockpitConstants.DEFAULT_FRAME_WIDTH.toFloat(),
+                height = CockpitConstants.DEFAULT_FRAME_HEIGHT.toFloat(),
                 zOrder = nextZOrder++
             ),
             createdAt = now,

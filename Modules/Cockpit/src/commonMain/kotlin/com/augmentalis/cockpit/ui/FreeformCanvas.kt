@@ -129,16 +129,16 @@ fun FreeformCanvas(
                         // Apply snap guides
                         val (snappedX, snappedY) = applySnap(
                             newX, newY, frameWidth, frameHeight,
-                            snapEdges, CockpitConstants.SNAP_THRESHOLD_DP.toFloat(),
+                            snapEdges, CockpitConstants.SNAP_THRESHOLD.toFloat(),
                             frame.id
                         )
                         onFrameMoved(frame.id, snappedX, snappedY)
                     },
                     onResize = { dw, dh ->
                         val newW = (frame.state.width + dw)
-                            .coerceIn(CockpitConstants.MIN_FRAME_WIDTH_DP.toFloat(), CockpitConstants.MAX_FRAME_WIDTH_DP.toFloat())
+                            .coerceIn(CockpitConstants.MIN_FRAME_WIDTH.toFloat(), CockpitConstants.MAX_FRAME_WIDTH)
                         val newH = (frame.state.height + dh)
-                            .coerceIn(CockpitConstants.MIN_FRAME_HEIGHT_DP.toFloat(), CockpitConstants.MAX_FRAME_HEIGHT_DP.toFloat())
+                            .coerceIn(CockpitConstants.MIN_FRAME_HEIGHT.toFloat(), CockpitConstants.MAX_FRAME_HEIGHT)
                         onFrameResized(frame.id, newW, newH)
                     },
                     modifier = Modifier.fillMaxSize()

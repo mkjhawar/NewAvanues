@@ -5,11 +5,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,6 +29,7 @@ import com.augmentalis.cockpit.model.CockpitFrame
 /**
  * Horizontal taskbar showing minimized frame tabs.
  * Tapping a tab restores the frame to its previous position.
+ * Each tab shows the content type icon and frame title.
  */
 @Composable
 fun MinimizedTaskbar(
@@ -56,9 +61,19 @@ fun MinimizedTaskbar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Content type icon
+                Icon(
+                    imageVector = contentTypeIcon(frame.content),
+                    contentDescription = null,
+                    tint = resolveAccentColor(frame.accent).copy(alpha = 0.6f),
+                    modifier = Modifier.size(12.dp)
+                )
+
+                Spacer(Modifier.width(2.dp))
+
                 Text(
-                    text = frame.title.ifBlank { frame.content.type() },
-                    color = colors.onSurface.copy(alpha = 0.8f),
+                    text = frame.title.ifBlank { contentTypeLabel(frame.content) },
+                    color = colors.textPrimary.copy(alpha = 0.8f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -69,14 +84,18 @@ fun MinimizedTaskbar(
     }
 }
 
-private fun com.augmentalis.cockpit.model.FrameContent.type(): String = when (this) {
+/**
+ * Returns a short human-readable label for the content type.
+ */
+fun contentTypeLabel(content: com.augmentalis.cockpit.model.FrameContent): String = when (content) {
     is com.augmentalis.cockpit.model.FrameContent.Web -> "Web"
     is com.augmentalis.cockpit.model.FrameContent.Pdf -> "PDF"
     is com.augmentalis.cockpit.model.FrameContent.Image -> "Image"
     is com.augmentalis.cockpit.model.FrameContent.Video -> "Video"
     is com.augmentalis.cockpit.model.FrameContent.Note -> "Note"
     is com.augmentalis.cockpit.model.FrameContent.Camera -> "Camera"
-    is com.augmentalis.cockpit.model.FrameContent.VoiceNote -> "Voice"
+    is com.augmentalis.cockpit.model.FrameContent.VoiceNote -> "Voice Note"
+    is com.augmentalis.cockpit.model.FrameContent.Voice -> "Voice"
     is com.augmentalis.cockpit.model.FrameContent.Form -> "Form"
     is com.augmentalis.cockpit.model.FrameContent.Signature -> "Signature"
     is com.augmentalis.cockpit.model.FrameContent.Map -> "Map"

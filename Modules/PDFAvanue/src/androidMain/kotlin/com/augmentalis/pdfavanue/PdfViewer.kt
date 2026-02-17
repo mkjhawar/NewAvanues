@@ -120,14 +120,14 @@ fun PdfViewer(
             Row(Modifier.fillMaxWidth().height(48.dp).background(colors.surface.copy(alpha = 0.8f)).padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { if (currentPage > 0) { currentPage--; zoom = 1f; offsetX = 0f; offsetY = 0f } }, enabled = currentPage > 0) {
-                    Icon(Icons.Default.ChevronLeft, "Previous", tint = colors.onSurface) }
-                Text("${currentPage + 1} / $pageCount", color = colors.onSurface, fontSize = 14.sp)
+                    Icon(Icons.Default.ChevronLeft, "Previous", tint = colors.textPrimary) }
+                Text("${currentPage + 1} / $pageCount", color = colors.textPrimary, fontSize = 14.sp)
                 Row {
-                    IconButton(onClick = { zoom = (zoom * 0.8f).coerceAtLeast(0.5f) }) { Icon(Icons.Default.ZoomOut, "Zoom out", tint = colors.onSurface) }
-                    IconButton(onClick = { zoom = (zoom * 1.25f).coerceAtMost(5f) }) { Icon(Icons.Default.ZoomIn, "Zoom in", tint = colors.onSurface) }
+                    IconButton(onClick = { zoom = (zoom * 0.8f).coerceAtLeast(0.5f) }) { Icon(Icons.Default.ZoomOut, "Zoom out", tint = colors.textPrimary) }
+                    IconButton(onClick = { zoom = (zoom * 1.25f).coerceAtMost(5f) }) { Icon(Icons.Default.ZoomIn, "Zoom in", tint = colors.textPrimary) }
                 }
                 IconButton(onClick = { if (currentPage < pageCount - 1) { currentPage++; zoom = 1f; offsetX = 0f; offsetY = 0f } }, enabled = currentPage < pageCount - 1) {
-                    Icon(Icons.Default.ChevronRight, "Next", tint = colors.onSurface) }
+                    Icon(Icons.Default.ChevronRight, "Next", tint = colors.textPrimary) }
             }
         }
     }

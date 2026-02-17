@@ -75,11 +75,11 @@ fun ImageViewer(
             Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter).background(colors.surface.copy(alpha = 0.7f)).padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { if (currentIndex > 0) { currentIndex--; zoom = 1f; offsetX = 0f; offsetY = 0f; rotation = 0f; onImageChanged(currentIndex) } }, enabled = currentIndex > 0) {
-                    Icon(Icons.Default.ChevronLeft, "Previous", tint = colors.onSurface) }
-                Text("${currentIndex + 1} / ${imageList.size}", color = colors.onSurface)
-                IconButton(onClick = { rotation += 90f }) { Icon(Icons.Default.RotateRight, "Rotate", tint = colors.onSurface) }
+                    Icon(Icons.Default.ChevronLeft, "Previous", tint = colors.textPrimary) }
+                Text("${currentIndex + 1} / ${imageList.size}", color = colors.textPrimary)
+                IconButton(onClick = { rotation += 90f }) { Icon(Icons.Default.RotateRight, "Rotate", tint = colors.textPrimary) }
                 IconButton(onClick = { if (currentIndex < imageList.lastIndex) { currentIndex++; zoom = 1f; offsetX = 0f; offsetY = 0f; rotation = 0f; onImageChanged(currentIndex) } }, enabled = currentIndex < imageList.lastIndex) {
-                    Icon(Icons.Default.ChevronRight, "Next", tint = colors.onSurface) }
+                    Icon(Icons.Default.ChevronRight, "Next", tint = colors.textPrimary) }
             }
         }
     }

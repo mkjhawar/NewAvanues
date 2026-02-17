@@ -100,23 +100,23 @@ fun VideoPlayer(
             Slider(
                 value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
                 onValueChange = { val seekTo = (it * duration).toLong(); exoPlayer.seekTo(seekTo); currentPosition = seekTo },
-                colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.onSurface.copy(alpha = 0.3f)),
+                colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.textPrimary.copy(alpha = 0.3f)),
                 modifier = Modifier.fillMaxWidth()
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(formatTime(currentPosition), color = colors.onSurface.copy(alpha = 0.7f), fontSize = 12.sp)
+                Text(formatTime(currentPosition), color = colors.textPrimary.copy(alpha = 0.7f), fontSize = 12.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { exoPlayer.seekBack() }) { Icon(Icons.Default.FastRewind, "Rewind", tint = colors.onSurface) }
+                    IconButton(onClick = { exoPlayer.seekBack() }) { Icon(Icons.Default.FastRewind, "Rewind", tint = colors.textPrimary) }
                     IconButton(onClick = { if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }) {
-                        Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play/Pause", tint = colors.onSurface, modifier = Modifier.size(36.dp))
+                        Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play/Pause", tint = colors.textPrimary, modifier = Modifier.size(36.dp))
                     }
-                    IconButton(onClick = { exoPlayer.seekForward() }) { Icon(Icons.Default.FastForward, "Forward", tint = colors.onSurface) }
+                    IconButton(onClick = { exoPlayer.seekForward() }) { Icon(Icons.Default.FastForward, "Forward", tint = colors.textPrimary) }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { isMuted = !isMuted; exoPlayer.volume = if (isMuted) 0f else 1f }) {
-                        Icon(if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, "Mute", tint = colors.onSurface)
+                        Icon(if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, "Mute", tint = colors.textPrimary)
                     }
-                    Text(formatTime(duration), color = colors.onSurface.copy(alpha = 0.7f), fontSize = 12.sp)
+                    Text(formatTime(duration), color = colors.textPrimary.copy(alpha = 0.7f), fontSize = 12.sp)
                 }
             }
         }

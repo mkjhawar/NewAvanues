@@ -98,15 +98,23 @@
              Call SentryManager.init() manually when DSN is configured. -->
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
 
-        <!-- Main Activity (no direct LAUNCHER — routed via aliases) -->
+        <!-- Main Activity — single launcher icon, Hub is always the entry point -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:icon="@mipmap/ic_launcher_avanues"
             android:label="Avanues"
+            android:roundIcon="@mipmap/ic_launcher_avanues_round"
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden"
             android:theme="@style/Theme.VoiceAvanue.SplashScreen"
             android:windowSoftInputMode="adjustResize">
+
+            <!-- Launcher icon -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
 
             <!-- Deep links for browser URLs -->
             <intent-filter>
@@ -117,51 +125,6 @@
                 <data android:scheme="https" />
             </intent-filter>
         </activity>
-
-        <!-- Launcher 1: Avanues (master hub dashboard) -->
-        <activity-alias
-            android:name=".AvanuesAlias"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_avanues"
-            android:label="Avanues"
-            android:roundIcon="@mipmap/ic_launcher_avanues_round">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <meta-data android:name="launch_mode" android:value="hub" />
-        </activity-alias>
-
-        <!-- Launcher 2: VoiceAvanue (voice/accessibility dashboard) -->
-        <activity-alias
-            android:name=".VoiceAvanueAlias"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_voice"
-            android:label="VoiceAvanue"
-            android:roundIcon="@mipmap/ic_launcher_voice_round">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <meta-data android:name="launch_mode" android:value="voice" />
-        </activity-alias>
-
-        <!-- Launcher 3: WebAvanue (full browser) -->
-        <activity-alias
-            android:name=".WebAvanueAlias"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_web"
-            android:label="WebAvanue"
-            android:roundIcon="@mipmap/ic_launcher_web_round">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <meta-data android:name="launch_mode" android:value="browser" />
-        </activity-alias>
 
         <!-- Accessibility Service for VoiceOS -->
         <service
