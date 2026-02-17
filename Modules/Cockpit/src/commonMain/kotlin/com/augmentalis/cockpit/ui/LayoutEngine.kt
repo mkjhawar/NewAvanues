@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.LayoutMode
 
@@ -129,10 +130,11 @@ fun LayoutEngine(
             modifier = modifier
         )
 
-        LayoutMode.WORKFLOW -> WorkflowLayout(
+        LayoutMode.WORKFLOW -> WorkflowSidebar(
             frames = visibleFrames,
             selectedFrameId = selectedFrameId,
-            onFrameSelected = onFrameSelected,
+            displayProfile = AvanueTheme.displayProfile,
+            onStepSelected = onFrameSelected,
             frameContent = frameContent,
             modifier = modifier
         )
