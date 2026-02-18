@@ -7,14 +7,11 @@
  *
  * Modules included:
  * - VoiceOSCore: Voice command processing, element discovery, handlers
- * - WebAvanue: Web browser logic, DOM scraping, tab management
  * - Database: SQLDelight persistence (52 .sq schemas)
  * - Foundation: StateFlow utilities, ViewModels, coroutine dispatchers
  * - AVID: Avanues Voice ID system
  * - Logging: KMP logging infrastructure
- *
- * Phase 2 (not yet included):
- * - SpeechRecognition: Speech engine abstractions (depends on AI:NLU)
+ * - SpeechRecognition: Speech engine abstractions, ISpeechEngine interface
  *
  * Phase 4 (not yet included):
  * - AI/NLU: Intent classification, entity extraction (9 missing iOS actuals)
@@ -62,8 +59,7 @@ kotlin {
             export(project(":Modules:Database"))
             export(project(":Modules:Foundation"))
             export(project(":Modules:AVID"))
-            // SpeechRecognition deferred to Phase 2 — depends on AI:NLU which lacks iOS actuals
-            // export(project(":Modules:SpeechRecognition"))
+            export(project(":Modules:SpeechRecognition"))
             export(project(":Modules:Logging"))
             // AI/NLU deferred to Phase 4 — requires 9 missing iosMain actual declarations
             // export(project(":Modules:AI:NLU"))
@@ -79,8 +75,7 @@ kotlin {
                 api(project(":Modules:Database"))
                 api(project(":Modules:Foundation"))
                 api(project(":Modules:AVID"))
-                // SpeechRecognition deferred to Phase 2 — depends on AI:NLU which lacks iOS actuals
-                // api(project(":Modules:SpeechRecognition"))
+                api(project(":Modules:SpeechRecognition"))
                 api(project(":Modules:Logging"))
                 // AI/NLU deferred to Phase 4
                 // api(project(":Modules:AI:NLU"))

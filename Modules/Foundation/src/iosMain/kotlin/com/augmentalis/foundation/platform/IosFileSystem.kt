@@ -4,7 +4,6 @@
  */
 package com.augmentalis.foundation.platform
 
-import com.augmentalis.foundation.IFileSystem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -17,6 +16,9 @@ import platform.Foundation.NSString
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.create
+import platform.Foundation.dataUsingEncoding
+import platform.Foundation.stringWithContentsOfFile
+import platform.Foundation.writeToFile
 
 @OptIn(ExperimentalForeignApi::class)
 class IosFileSystem : IFileSystem {
@@ -47,20 +49,15 @@ class IosFileSystem : IFileSystem {
     override fun exists(path: String): Boolean = fileManager.fileExistsAtPath(path)
 
     override suspend fun readText(path: String): String = withContext(Dispatchers.Default) {
-        val data = NSData.dataWithContentsOfFile(path)
-            ?: throw IllegalStateException("Cannot read file: $path")
-        NSString.create(data = data, encoding = NSUTF8StringEncoding) as? String
-            ?: throw IllegalStateException("Cannot decode file as UTF-8: $path")
+        @Suppress("CAST_NEVER_SUCCEEDS")
+        val text = NSString.stringWithContentsOfFile(path, encoding = NSUTF8StringEncoding, error = null) as? String
+        text ?: throw IllegalStateException("Cannot read file: $path")
     }
 
     override suspend fun writeText(path: String, content: String): Unit = withContext(Dispatchers.Default) {
-        val nsString = content as NSString
-        val success = nsString.writeToFile(
-            path,
-            atomically = true,
-            encoding = NSUTF8StringEncoding,
-            error = null
-        )
+        val data = (content as NSString).dataUsingEncoding(NSUTF8StringEncoding)
+            ?: throw IllegalStateException("Cannot encode content as UTF-8")
+        val success = data.writeToFile(path, atomically = true)
         if (!success) throw IllegalStateException("Cannot write file: $path")
     }
 

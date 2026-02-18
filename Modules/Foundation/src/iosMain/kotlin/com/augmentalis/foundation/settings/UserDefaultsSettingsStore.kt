@@ -4,12 +4,10 @@
  */
 package com.augmentalis.foundation.settings
 
-import com.augmentalis.foundation.ISettingsStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import platform.Foundation.NSNotificationCenter
-import platform.Foundation.NSObjectProtocol
 import platform.Foundation.NSUserDefaults
 import platform.Foundation.NSUserDefaultsDidChangeNotification
 
@@ -36,10 +34,9 @@ class UserDefaultsSettingsStore<T>(
     private val writer = UserDefaultsWriter()
     private val _settings = MutableStateFlow(codec.decode(reader))
     override val settings: Flow<T> = _settings.asStateFlow()
-    private var observer: NSObjectProtocol? = null
+    private var observer: Any? = null
 
     init {
-        @Suppress("UNCHECKED_CAST")
         observer = NSNotificationCenter.defaultCenter.addObserverForName(
             name = NSUserDefaultsDidChangeNotification,
             `object` = defaults,
