@@ -161,7 +161,8 @@ data class DashboardUiState(
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: AvanuesSettingsRepository
+    private val settingsRepository: AvanuesSettingsRepository,
+    private val phraseSuggestionRepo: com.augmentalis.database.repositories.IPhraseSuggestionRepository
 ) : ViewModel() {
 
     private val _modules = MutableStateFlow<List<ModuleStatus>>(emptyList())
@@ -502,6 +503,23 @@ class DashboardViewModel @Inject constructor(
             notificationManager.areNotificationsEnabled()
         } else {
             true
+        }
+    }
+
+    fun submitPhraseSuggestion(commandId: String, originalPhrase: String, suggestedPhrase: String, locale: String) {
+        viewModelScope.launch {
+            phraseSuggestionRepo.insert(
+                com.augmentalis.database.dto.PhraseSuggestionDTO(
+                    id = 0,
+                    commandId = commandId,
+                    originalPhrase = originalPhrase,
+                    suggestedPhrase = suggestedPhrase,
+                    locale = locale,
+                    createdAt = System.currentTimeMillis(),
+                    status = "pending",
+                    source = "user"
+                )
+            )
         }
     }
 }
