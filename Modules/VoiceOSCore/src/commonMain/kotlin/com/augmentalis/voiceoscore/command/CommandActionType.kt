@@ -546,6 +546,56 @@ enum class CommandActionType {
     /** Switch to video recording mode */
     MODE_VIDEO,
 
+    // ── Pro Camera ──
+
+    /** Enable bokeh/portrait extension */
+    BOKEH_MODE,
+
+    /** Enable HDR extension */
+    HDR_MODE,
+
+    /** Enable night mode extension */
+    NIGHT_MODE,
+
+    /** Enable face retouch extension */
+    RETOUCH_MODE,
+
+    /** Disable all camera extensions (auto mode) */
+    EXTENSION_OFF,
+
+    /** Enable pro (manual) camera controls */
+    PRO_MODE_ON,
+
+    /** Disable pro mode (return to auto) */
+    PRO_MODE_OFF,
+
+    /** Increase ISO sensitivity */
+    ISO_UP,
+
+    /** Decrease ISO sensitivity */
+    ISO_DOWN,
+
+    /** Focus on nearby objects */
+    FOCUS_NEAR,
+
+    /** Focus on distant objects */
+    FOCUS_FAR,
+
+    /** Set white balance to auto */
+    WB_AUTO,
+
+    /** Set white balance to daylight */
+    WB_DAYLIGHT,
+
+    /** Set white balance to cloudy */
+    WB_CLOUDY,
+
+    /** Enable RAW/DNG capture */
+    RAW_ON,
+
+    /** Disable RAW capture */
+    RAW_OFF,
+
     // ═══════════════════════════════════════════════════════════════════
     // Cockpit Actions
     // ═══════════════════════════════════════════════════════════════════

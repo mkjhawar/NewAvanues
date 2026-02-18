@@ -486,7 +486,8 @@ class CommandManager(private val context: Context) {
                         actionType = actionType,
                         category = category,
                         description = entity.description,
-                        metadata = metadata
+                        metadata = metadata,
+                        domain = entity.domain
                     )
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to convert entity ${entity.id} to StaticCommand", e)

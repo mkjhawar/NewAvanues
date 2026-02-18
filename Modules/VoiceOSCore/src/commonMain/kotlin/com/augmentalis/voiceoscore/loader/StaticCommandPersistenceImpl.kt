@@ -179,6 +179,7 @@ class StaticCommandPersistenceImpl(
                     action = cmd.actionType.ifEmpty { cmd.id },
                     description = cmd.description,
                     category = cmd.category,
+                    domain = cmd.domain,
                     priority = 50L,
                     is_fallback = if (cmd.isFallback) 1L else 0L,
                     is_enabled = 1L,

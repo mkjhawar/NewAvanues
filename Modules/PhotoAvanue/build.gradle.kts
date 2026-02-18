@@ -66,12 +66,13 @@ kotlin {
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.androidx.activity.compose)
 
-                // CameraX — photo capture, video recording, preview
+                // CameraX — photo capture, video recording, preview, extensions
                 implementation(libs.androidx.camera.core)
                 implementation(libs.androidx.camera.camera2)
                 implementation(libs.androidx.camera.lifecycle)
                 implementation(libs.androidx.camera.view)
                 implementation(libs.androidx.camera.video)
+                implementation(libs.androidx.camera.extensions)
 
                 // EXIF — GPS metadata tagging
                 implementation(libs.androidx.exifinterface)

@@ -14,7 +14,9 @@ data class CameraState(
     val isCapturing: Boolean = false,
     val hasGpsLocation: Boolean = false,
     val lastCapturedUri: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val extensions: CameraExtensions = CameraExtensions(),
+    val pro: ProCameraState = ProCameraState()
 )
 
 @Serializable

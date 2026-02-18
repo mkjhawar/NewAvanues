@@ -28,6 +28,7 @@ class SQLDelightVoiceCommandRepository(
                 trigger_phrase = command.triggerPhrase,
                 action = command.action,
                 category = command.category,
+                domain = command.domain,
                 priority = command.priority,
                 is_enabled = command.isEnabled,
                 created_at = command.createdAt,

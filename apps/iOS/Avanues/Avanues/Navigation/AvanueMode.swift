@@ -55,9 +55,10 @@ enum AvanueMode: String, Hashable, CaseIterable, Identifiable {
     /// Whether this mode is available for navigation (vs. placeholder).
     var isAvailable: Bool {
         switch self {
-        case .hub, .browser, .settings, .about:
+        case .hub, .browser, .settings, .about,
+             .voice, .commands:
             return true
-        case .voice, .commands, .vosSyncManagement,
+        case .vosSyncManagement,
              .developerConsole, .developerSettings:
             return false // Placeholder until future phases
         }

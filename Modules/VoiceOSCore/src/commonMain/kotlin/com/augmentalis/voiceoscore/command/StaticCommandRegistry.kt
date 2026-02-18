@@ -92,6 +92,43 @@ object StaticCommandRegistry {
     }
 
     /**
+     * Find command matching phrase, filtered by active domains.
+     * When multiple domains match, non-"app" domains take priority
+     * (more specific context wins over global).
+     *
+     * @param phrase The voice phrase to match
+     * @param activeDomains Set of currently active domains (always includes "app")
+     * @return Best matching StaticCommand for active domains, or null
+     */
+    fun findByPhraseInDomains(phrase: String, activeDomains: Set<String>): StaticCommand? {
+        val normalized = phrase.lowercase().trim()
+        val matches = all().filter { cmd ->
+            cmd.domain in activeDomains && cmd.phrases.any { it.lowercase() == normalized }
+        }
+        if (matches.isEmpty()) return null
+        // Non-app domain wins when active (more specific context)
+        return matches.find { it.domain != "app" } ?: matches.first()
+    }
+
+    /**
+     * Get commands by domain.
+     */
+    fun byDomain(domain: String): List<StaticCommand> =
+        all().filter { it.domain == domain }
+
+    /**
+     * Get commands for a set of active domains.
+     */
+    fun byDomains(domains: Set<String>): List<StaticCommand> =
+        all().filter { it.domain in domains }
+
+    /**
+     * Get all commands for active domains as QuantizedCommand.
+     */
+    fun byDomainsAsQuantized(domains: Set<String>): List<QuantizedCommand> =
+        byDomains(domains).flatMap { it.toQuantizedCommands() }
+
+    /**
      * Get command count
      */
     val commandCount: Int get() = all().size
@@ -204,7 +241,15 @@ data class StaticCommand(
     /**
      * Additional metadata for command execution
      */
-    val metadata: Map<String, String> = emptyMap()
+    val metadata: Map<String, String> = emptyMap(),
+
+    /**
+     * Domain this command belongs to.
+     * "app" = always active (global commands).
+     * "web" = active when browser is in foreground.
+     * "notes", "cockpit", etc. = active when that module is active.
+     */
+    val domain: String = "app"
 ) {
     /**
      * Primary phrase (first in list)
@@ -237,7 +282,8 @@ data class StaticCommand(
                     "source" to "static",
                     "category" to category.name,
                     "description" to description,
-                    "primary_phrase" to primaryPhrase
+                    "primary_phrase" to primaryPhrase,
+                    "domain" to domain
                 )
             )
         }
@@ -262,7 +308,8 @@ data class StaticCommand(
                 "source" to "static",
                 "category" to category.name,
                 "description" to description,
-                "aliases" to phrases.drop(1).joinToString("|")
+                "aliases" to phrases.drop(1).joinToString("|"),
+                "domain" to domain
             )
         )
     }
