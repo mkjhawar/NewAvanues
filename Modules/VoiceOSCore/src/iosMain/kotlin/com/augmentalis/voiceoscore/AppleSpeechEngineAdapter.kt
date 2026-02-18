@@ -208,7 +208,7 @@ internal class AppleSpeechEngineAdapter : ISpeechEngine {
         }
         return com.augmentalis.speechrecognition.SpeechConfig(
             language = config.language,
-            engine = "apple_speech",
+            engine = com.augmentalis.speechrecognition.SpeechEngine.APPLE_SPEECH,
             mode = srMode,
             confidenceThreshold = config.confidenceThreshold,
             enableFuzzyMatching = true
