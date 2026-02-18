@@ -64,7 +64,7 @@ class CommandLoader(
 
             // 0. CHECK if database already loaded with correct version
             val existingVersion = versionDao.getVersion()
-            val requiredVersion = "2.1" // v2.1: domain-split .app.vos + .web.vos files
+            val requiredVersion = "3.1" // v3.1: domain activation system — domain column in commands_static
 
             if (existingVersion != null && existingVersion.jsonVersion == requiredVersion) {
                 val commandCount = commandDao.getCommandCount(FALLBACK_LOCALE)
@@ -321,4 +321,22 @@ class CommandLoader(
         
         data class Error(val message: String) : LoadResult()
     }
+
+    /**
+     * Map KMP [VosParsedCommand] to Android [VoiceCommandEntity].
+     * Converts synonyms from List<String> to JSON array string for DB storage.
+     */
+    private fun VosParsedCommand.toEntity() = VoiceCommandEntity(
+        id = id,
+        locale = locale,
+        primaryText = primaryText,
+        synonyms = VosParser.synonymsToJson(synonyms),
+        description = description,
+        category = category,
+        actionType = actionType,
+        metadata = metadata,
+        domain = domain,
+        priority = 50,
+        isFallback = isFallback
+    )
 }

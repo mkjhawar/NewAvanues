@@ -218,33 +218,25 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                 // Path 2: Register QuantizedCommands for ActionCoordinator routing
                                 val callbackInstance = BrowserVoiceOSCallback.activeInstance
                                 if (callbackInstance != null && phrases.isNotEmpty()) {
+                                    // DOM-scraped element commands (truly dynamic)
                                     val quantizedWebCommands = callbackInstance.getWebCommandsAsQuantized()
                                     voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("web", quantizedWebCommands)
 
                                     // Wire the WebCommandExecutorImpl to WebCommandHandler
-                                    // The executor delegates to BrowserVoiceOSCallback's JS executor
-                                    // (which is set by WebViewContainer when the bridge attaches)
                                     webCommandHandler?.let { wch ->
                                         val executor = WebCommandExecutorImpl(callbackInstance)
                                         wch.setExecutor(executor)
                                     }
 
-                                    // Register static BROWSER + WEB_GESTURE commands with source="web"
-                                    // so ActionCoordinator routes them to WebCommandHandler when browser
-                                    // is active. Uses separate source tag "web_static" for independent
-                                    // lifecycle from DOM-scraped commands ("web").
-                                    val browserStaticCmds = StaticCommandRegistry.byCategoryAsQuantized(CommandCategory.BROWSER)
-                                    val gestureStaticCmds = StaticCommandRegistry.byCategoryAsQuantized(CommandCategory.WEB_GESTURE)
-                                    val webStaticCommands = (browserStaticCmds + gestureStaticCmds).map { cmd ->
-                                        cmd.copy(metadata = cmd.metadata + mapOf("source" to "web"))
-                                    }
-                                    voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("web_static", webStaticCommands)
+                                    // Activate web domain — static BROWSER + WEB_GESTURE commands
+                                    // now route via the domain activation system. No re-registration needed.
+                                    voiceOSCore?.actionCoordinator?.activateModule("web")
 
-                                    Log.d(TAG, "Web commands dual-path: ${phrases.size} phrases, ${quantizedWebCommands.size} quantized, ${webStaticCommands.size} static")
+                                    Log.d(TAG, "Web active: ${phrases.size} phrases, ${quantizedWebCommands.size} dynamic")
                                 } else if (phrases.isEmpty()) {
-                                    // Clear web commands when leaving browser (preserves accessibility commands)
+                                    // Deactivate web domain + clear dynamic commands
+                                    voiceOSCore?.actionCoordinator?.deactivateModule("web")
                                     voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web")
-                                    voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("web_static")
                                     webCommandHandler?.setExecutor(null)
                                 }
                             } catch (e: Exception) {
