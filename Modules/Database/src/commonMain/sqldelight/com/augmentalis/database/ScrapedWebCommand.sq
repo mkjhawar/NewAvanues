@@ -62,6 +62,10 @@ CREATE INDEX idx_swc_element_hash ON scraped_web_command(element_hash);
 -- Queries
 -- ═══════════════════════════════════════════════════════════════════════════════
 
+selectById:
+SELECT * FROM scraped_web_command
+WHERE id = ?;
+
 selectByDomain:
 SELECT * FROM scraped_web_command
 WHERE domain_id = ? AND is_deprecated = 0
@@ -173,3 +177,6 @@ DELETE FROM scraped_web_command WHERE id IN (
       AND is_user_approved = 0
       AND last_verified < ?
 );
+
+lastInsertRowId:
+SELECT last_insert_rowid();

@@ -123,3 +123,6 @@ WHERE domain_id = ?;
 deleteDisabled:
 DELETE FROM web_app_whitelist
 WHERE is_enabled = 0 AND last_visited < ?;
+
+lastInsertRowId:
+SELECT last_insert_rowid();
