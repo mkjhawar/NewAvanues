@@ -17,6 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.annotationavanue.AnnotationCanvas
 import com.augmentalis.annotationavanue.SignatureCapture
+import com.augmentalis.annotationavanue.controller.AnnotationSerializer
+import com.augmentalis.annotationavanue.model.AnnotationTool
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.photoavanue.CameraPreview
 import com.augmentalis.cockpit.AndroidExternalAppResolver
@@ -78,6 +80,8 @@ fun ContentRenderer(
                 uri = content.uri,
                 modifier = Modifier.fillMaxSize()
             )
+            // Note: Image state (zoom/pan) is transient per-session.
+            // Persistence for showMetadata is handled via FrameContent.Image.showMetadata.
 
             is FrameContent.Video -> VideoPlayer(
                 uri = content.uri,
@@ -127,13 +131,29 @@ fun ContentRenderer(
                 modifier = Modifier.fillMaxSize()
             )
 
-            is FrameContent.Whiteboard -> AnnotationCanvas(
-                onStrokesChanged = { _ ->
-                    // Stroke data is managed internally by AnnotationCanvas.
-                    // Whiteboard content tracks pen/color config, not stroke data.
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+            is FrameContent.Whiteboard -> {
+                val restoredStrokes = remember(content.strokesJson) {
+                    AnnotationSerializer.strokesFromJson(content.strokesJson)
+                }
+                AnnotationCanvas(
+                    initialStrokes = restoredStrokes,
+                    currentTool = AnnotationTool.PEN,
+                    strokeColor = content.penColor,
+                    strokeWidth = content.penWidth,
+                    onStrokeCompleted = { stroke ->
+                        val updated = restoredStrokes + stroke
+                        val json = AnnotationSerializer.strokesToJson(updated)
+                        onContentStateChanged(frame.id, content.copy(strokesJson = json))
+                    },
+                    onStrokesErased = { erasedIds ->
+                        val remaining = restoredStrokes.filter { it.id !in erasedIds }
+                        val json = AnnotationSerializer.strokesToJson(remaining)
+                        onContentStateChanged(frame.id, content.copy(strokesJson = json))
+                    },
+                    canUndo = restoredStrokes.isNotEmpty(),
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             is FrameContent.ScreenCast -> CastOverlay(
                 castState = CastState(
