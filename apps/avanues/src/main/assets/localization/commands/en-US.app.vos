@@ -174,3 +174,63 @@ note_clear_format|clear formatting|remove formatting,plain text|Remove all forma
 note_word_count|word count|count words,how many words|Show word count
 note_read_aloud|read note aloud|read note,read this|Read note content aloud
 note_stop_reading|stop reading note|stop reading,be quiet|Stop reading note aloud
+# ── Annotation (AnnotationAvanue) ──
+ann_pen|pen tool|pen,draw,freehand|Select pen drawing tool
+ann_highlight|highlighter|highlight,highlight tool|Select highlighter tool
+ann_shape_rect|draw rectangle|rectangle,rect,box|Draw rectangle shape
+ann_shape_circle|draw circle|circle,oval,ellipse|Draw circle shape
+ann_shape_arrow|draw arrow|arrow,pointer|Draw arrow shape
+ann_shape_line|draw line|line,straight line|Draw straight line
+ann_color|color picker|pick color,change color|Open color picker
+ann_undo|undo annotation|undo drawing|Undo last annotation stroke
+ann_redo|redo annotation|redo drawing|Redo last undone stroke
+ann_clear|clear annotations|clear all,erase all|Clear all annotations
+ann_save|save annotation|save drawing,export drawing|Save annotation as image
+ann_share|share annotation|send drawing|Share annotation
+ann_eraser|eraser tool|eraser,erase|Switch to eraser tool
+ann_pen_up|thicker pen|bigger pen,pen size up|Increase pen thickness
+ann_pen_down|thinner pen|smaller pen,pen size down|Decrease pen thickness
+# ── Image (ImageAvanue) ──
+img_open|open image|view image,show image|Open image viewer
+img_gallery|open gallery|gallery,photo gallery,my photos|Open photo gallery
+img_grayscale|grayscale|black and white,monochrome|Apply grayscale filter
+img_sepia|sepia|vintage,old photo|Apply sepia filter
+img_blur|blur image|soften,blur|Apply blur filter
+img_sharpen|sharpen image|sharpen,enhance|Apply sharpen filter
+img_brightness|adjust brightness|brighten image,darken image|Adjust image brightness
+img_contrast|adjust contrast|more contrast,less contrast|Adjust image contrast
+img_rotate_left|rotate left|turn left,rotate counter clockwise|Rotate image 90 degrees left
+img_rotate_right|rotate right|turn right,rotate clockwise|Rotate image 90 degrees right
+img_flip_h|flip horizontal|mirror,flip|Flip image horizontally
+img_flip_v|flip vertical|flip upside down|Flip image vertically
+img_crop|crop image|crop,trim|Enter crop mode
+img_share|share image|send image|Share image
+img_delete|delete image|remove image,trash image|Delete image
+img_info|image info|image details,exif,metadata|Show image metadata
+img_next|next image|next photo|View next image in gallery
+img_prev|previous image|previous photo,prior image|View previous image
+# ── Video (VideoAvanue) ──
+vid_play|play video|play,resume video|Play or resume video
+vid_pause|pause video|pause|Pause video playback
+vid_stop|stop video|stop|Stop video playback
+vid_fwd|skip forward|fast forward,skip ahead,forward ten|Skip forward 10 seconds
+vid_back|skip backward|rewind,skip back,back ten|Skip backward 10 seconds
+vid_faster|speed up video|faster,increase speed|Increase playback speed
+vid_slower|slow down video|slower,decrease speed|Decrease playback speed
+vid_normal|normal speed|reset speed,one x|Reset playback to normal speed
+vid_fullscreen|fullscreen video|full screen,maximize video|Toggle fullscreen mode
+vid_mute|mute video|silent,video mute|Mute video audio
+vid_unmute|unmute video|video sound on|Unmute video audio
+vid_loop|loop video|repeat,loop|Toggle loop playback
+# ── Screen Casting (RemoteCast) ──
+cast_start|start casting|cast screen,share screen,begin cast|Start screen casting
+cast_stop|stop casting|end cast,stop sharing|Stop screen casting
+cast_connect|connect cast|connect device,pair device|Connect to cast device
+cast_disconnect|disconnect cast|disconnect device|Disconnect from cast device
+cast_quality|cast quality|streaming quality,change quality|Change cast quality
+# ── AI ──
+ai_summarize|summarize|ai summary,generate summary|Generate AI summary
+ai_chat|ai chat|talk to ai,ask ai,open ai|Open AI chat
+ai_search|ai search|search knowledge,rag search|Search knowledge base
+ai_teach|teach ai|train ai,add knowledge|Teach AI new knowledge
+ai_clear|clear ai context|reset ai,new conversation|Clear AI conversation context

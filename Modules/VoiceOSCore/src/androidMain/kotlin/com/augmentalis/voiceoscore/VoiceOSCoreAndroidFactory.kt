@@ -105,7 +105,13 @@ internal class AndroidHandlerFactory(
             VoiceControlHandler(service),
             // Wave 3: Module-specific handlers
             NoteCommandHandler(service),
-            CockpitCommandHandler(service)
+            CockpitCommandHandler(service),
+            // Wave 4: Media/utility module handlers
+            AnnotationCommandHandler(service),
+            ImageCommandHandler(service),
+            VideoCommandHandler(service),
+            CastCommandHandler(service),
+            AICommandHandler(service)
         )
     }
 }

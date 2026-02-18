@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -106,14 +108,14 @@ fun VideoPlayer(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(formatTime(currentPosition), color = colors.textPrimary.copy(alpha = 0.7f), fontSize = 12.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { exoPlayer.seekBack() }) { Icon(Icons.Default.FastRewind, "Rewind", tint = colors.textPrimary) }
-                    IconButton(onClick = { if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }) {
+                    IconButton(onClick = { exoPlayer.seekBack() }, modifier = Modifier.semantics { contentDescription = "Voice: click skip backward" }) { Icon(Icons.Default.FastRewind, "Rewind", tint = colors.textPrimary) }
+                    IconButton(onClick = { if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }, modifier = Modifier.semantics { contentDescription = if (isPlaying) "Voice: click pause video" else "Voice: click play video" }) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play/Pause", tint = colors.textPrimary, modifier = Modifier.size(36.dp))
                     }
-                    IconButton(onClick = { exoPlayer.seekForward() }) { Icon(Icons.Default.FastForward, "Forward", tint = colors.textPrimary) }
+                    IconButton(onClick = { exoPlayer.seekForward() }, modifier = Modifier.semantics { contentDescription = "Voice: click skip forward" }) { Icon(Icons.Default.FastForward, "Forward", tint = colors.textPrimary) }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { isMuted = !isMuted; exoPlayer.volume = if (isMuted) 0f else 1f }) {
+                    IconButton(onClick = { isMuted = !isMuted; exoPlayer.volume = if (isMuted) 0f else 1f }, modifier = Modifier.semantics { contentDescription = if (isMuted) "Voice: click unmute video" else "Voice: click mute video" }) {
                         Icon(if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, "Mute", tint = colors.textPrimary)
                     }
                     Text(formatTime(duration), color = colors.textPrimary.copy(alpha = 0.7f), fontSize = 12.sp)

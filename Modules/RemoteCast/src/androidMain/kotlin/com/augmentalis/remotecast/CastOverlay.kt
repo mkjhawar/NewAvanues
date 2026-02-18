@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.theme.AvanueTheme
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.augmentalis.remotecast.model.CastState
 
 /**
@@ -81,7 +83,7 @@ fun CastOverlay(
                 )
                 IconButton(
                     onClick = onDisconnect,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp).semantics { contentDescription = "Voice: click stop casting" }
                 ) {
                     Icon(
                         Icons.Default.Stop,
@@ -125,6 +127,7 @@ fun CastOverlay(
                         .size(56.dp)
                         .clip(CircleShape)
                         .background(colors.primary.copy(alpha = 0.15f))
+                        .semantics { contentDescription = "Voice: click connect cast" }
                 ) {
                     Icon(
                         Icons.Default.Cast,

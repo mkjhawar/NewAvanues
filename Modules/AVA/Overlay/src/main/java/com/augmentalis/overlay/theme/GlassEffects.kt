@@ -140,8 +140,14 @@ fun Modifier.panelGlassEffect(): Modifier = glassEffect(
 // =========================================================================
 
 /**
- * Ocean Glass color palette - solid colors for overlay stability
+ * Ocean Glass color palette - solid colors for overlay stability.
+ *
+ * @deprecated Use AvanueTheme.colors.* in composable contexts.
+ * This object is kept for non-composable Modifier extensions that
+ * cannot access the composition context. Migrate composables to
+ * AvanueTheme.colors.background, .surface, .primary, .textPrimary, .borderSubtle.
  */
+@Deprecated("Use AvanueTheme.colors.* in composable contexts")
 object OceanGlassColors {
     val OceanDarker = Color(0xFF0F172A)    // Solid dark ocean
     val OceanDark = Color(0xFF1E293B)      // Primary panel background

@@ -158,3 +158,63 @@ note_clear_format|limpiar formato|quitar formato,texto plano|Eliminar toda la fo
 note_word_count|contar palabras|cuantas palabras|Mostrar conteo de palabras
 note_read_aloud|leer nota en voz alta|leer nota|Leer contenido de nota en voz alta
 note_stop_reading|dejar de leer nota|dejar de leer|Dejar de leer nota en voz alta
+# ── Anotacion (AnnotationAvanue) ──
+ann_pen|herramienta lapiz|lapiz,dibujar,mano alzada|Seleccionar herramienta lapiz
+ann_highlight|resaltador|resaltar,herramienta resaltador|Seleccionar resaltador
+ann_shape_rect|dibujar rectangulo|rectangulo,caja|Dibujar rectangulo
+ann_shape_circle|dibujar circulo|circulo,ovalo,elipse|Dibujar circulo
+ann_shape_arrow|dibujar flecha|flecha,puntero|Dibujar flecha
+ann_shape_line|dibujar linea|linea,linea recta|Dibujar linea recta
+ann_color|selector de color|elegir color,cambiar color|Abrir selector de color
+ann_undo|deshacer anotacion|deshacer dibujo|Deshacer ultimo trazo
+ann_redo|rehacer anotacion|rehacer dibujo|Rehacer ultimo trazo deshecho
+ann_clear|borrar anotaciones|borrar todo,limpiar todo|Borrar todas las anotaciones
+ann_save|guardar anotacion|guardar dibujo,exportar dibujo|Guardar anotacion como imagen
+ann_share|compartir anotacion|enviar dibujo|Compartir anotacion
+ann_eraser|herramienta borrador|borrador,borrar|Cambiar a borrador
+ann_pen_up|lapiz mas grueso|lapiz mas grande|Aumentar grosor del lapiz
+ann_pen_down|lapiz mas fino|lapiz mas pequeno|Reducir grosor del lapiz
+# ── Imagen (ImageAvanue) ──
+img_open|abrir imagen|ver imagen,mostrar imagen|Abrir visor de imagenes
+img_gallery|abrir galeria|galeria,galeria de fotos,mis fotos|Abrir galeria de fotos
+img_grayscale|escala de grises|blanco y negro,monocromo|Aplicar filtro escala de grises
+img_sepia|sepia|vintage,foto antigua|Aplicar filtro sepia
+img_blur|desenfocar imagen|suavizar,desenfoque|Aplicar filtro de desenfoque
+img_sharpen|enfocar imagen|enfocar,mejorar|Aplicar filtro de enfoque
+img_brightness|ajustar brillo|mas brillo,menos brillo|Ajustar brillo de imagen
+img_contrast|ajustar contraste|mas contraste,menos contraste|Ajustar contraste de imagen
+img_rotate_left|girar izquierda|voltear izquierda|Girar imagen 90 grados izquierda
+img_rotate_right|girar derecha|voltear derecha|Girar imagen 90 grados derecha
+img_flip_h|voltear horizontal|espejo,voltear|Voltear imagen horizontalmente
+img_flip_v|voltear vertical|voltear boca abajo|Voltear imagen verticalmente
+img_crop|recortar imagen|recortar,cortar|Modo recorte
+img_share|compartir imagen|enviar imagen|Compartir imagen
+img_delete|eliminar imagen|borrar imagen|Eliminar imagen
+img_info|informacion imagen|detalles imagen,exif,metadatos|Mostrar metadatos de imagen
+img_next|siguiente imagen|siguiente foto|Ver siguiente imagen
+img_prev|imagen anterior|foto anterior|Ver imagen anterior
+# ── Video (VideoAvanue) ──
+vid_play|reproducir video|reproducir,reanudar video|Reproducir o reanudar video
+vid_pause|pausar video|pausa|Pausar reproduccion
+vid_stop|detener video|detener|Detener reproduccion
+vid_fwd|avanzar|adelantar,saltar adelante|Avanzar 10 segundos
+vid_back|retroceder|rebobinar,saltar atras|Retroceder 10 segundos
+vid_faster|mas rapido|velocidad rapida,aumentar velocidad|Aumentar velocidad
+vid_slower|mas lento|velocidad lenta,reducir velocidad|Reducir velocidad
+vid_normal|velocidad normal|restablecer velocidad|Restablecer velocidad normal
+vid_fullscreen|pantalla completa|maximizar video|Alternar pantalla completa
+vid_mute|silenciar video|video sin sonido|Silenciar audio del video
+vid_unmute|activar sonido video|sonido del video|Activar sonido del video
+vid_loop|repetir video|bucle,repetir|Alternar reproduccion en bucle
+# ── Transmision (RemoteCast) ──
+cast_start|iniciar transmision|transmitir pantalla,compartir pantalla|Iniciar transmision de pantalla
+cast_stop|detener transmision|terminar transmision|Detener transmision
+cast_connect|conectar dispositivo|conectar,emparejar dispositivo|Conectar a dispositivo
+cast_disconnect|desconectar dispositivo|desconectar|Desconectar dispositivo
+cast_quality|calidad transmision|calidad de streaming|Cambiar calidad de transmision
+# ── IA ──
+ai_summarize|resumir|resumen ia,generar resumen|Generar resumen con IA
+ai_chat|chat ia|hablar con ia,preguntar ia|Abrir chat de IA
+ai_search|buscar ia|buscar conocimiento|Buscar en base de conocimiento
+ai_teach|ensenar ia|entrenar ia,agregar conocimiento|Ensenar nuevo conocimiento a IA
+ai_clear|limpiar contexto ia|reiniciar ia,nueva conversacion|Limpiar contexto de conversacion
