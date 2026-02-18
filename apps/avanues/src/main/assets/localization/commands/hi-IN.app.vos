@@ -158,3 +158,63 @@ note_clear_format|formatting mitao|formatting hatao,seedha text|Saari formatting
 note_word_count|shabd ginti|kitne shabd|Shabd ginti dikhaein
 note_read_aloud|note padho|note sunao|Note content zor se padhein
 note_stop_reading|padhna band karo|band karo|Note padhna band karein
+# ── Annotation (AnnotationAvanue) ──
+ann_pen|pen tool|pen,draw karo,hath se likho|Pen drawing tool chunein
+ann_highlight|highlighter|highlight karo|Highlighter tool chunein
+ann_shape_rect|rectangle banao|rectangle,box,dabba|Rectangle shape banaaein
+ann_shape_circle|circle banao|gol,oval|Circle shape banaaein
+ann_shape_arrow|arrow banao|teer,pointer|Arrow shape banaaein
+ann_shape_line|line banao|rekha,seedhi line|Seedhi line banaaein
+ann_color|rang chuno|rang badlo,colour picker|Rang chunne ka upkaran kholein
+ann_undo|annotation vaapas|drawing vaapas|Pichla stroke vaapas karein
+ann_redo|annotation dubara|drawing dubara|Pichla vaapas kiya gaya stroke dubara karein
+ann_clear|annotation mitao|sab mitao,sab saaf karo|Saari annotation mitaaein
+ann_save|annotation save karo|drawing save karo|Annotation ko image mein save karein
+ann_share|annotation share karo|drawing bhejo|Annotation share karein
+ann_eraser|eraser tool|eraser,mita do|Eraser tool pe jaaein
+ann_pen_up|mota pen|bada pen|Pen ki motaayi badhaaein
+ann_pen_down|patla pen|chhota pen|Pen ki motaayi ghataaein
+# ── Tasveer (ImageAvanue) ──
+img_open|tasveer kholo|tasveer dekho,image dikhao|Image viewer kholein
+img_gallery|gallery kholo|gallery,photo gallery,meri tasveeren|Photo gallery kholein
+img_grayscale|grayscale|kala safed,monochrome|Grayscale filter lagaaein
+img_sepia|sepia|purani tasveer,vintage|Sepia filter lagaaein
+img_blur|tasveer dhundhli karo|dhundhla,blur|Blur filter lagaaein
+img_sharpen|tasveer tez karo|tez,sudhar|Sharpen filter lagaaein
+img_brightness|chamak badlo|zyada chamak,kam chamak|Tasveer ki chamak badlein
+img_contrast|contrast badlo|zyada contrast,kam contrast|Tasveer ka contrast badlein
+img_rotate_left|baaein ghoomao|baaein mudo|Tasveer 90 degree baaein ghoomaaein
+img_rotate_right|daaein ghoomao|daaein mudo|Tasveer 90 degree daaein ghoomaaein
+img_flip_h|ulta karo|sheeshe mein,flip|Tasveer aaditirik roop se paltein
+img_flip_v|oopar neeche karo|ulta pulta|Tasveer ko oopar neeche paltein
+img_crop|tasveer kaato|kaato,trim|Crop mode mein jaaein
+img_share|tasveer share karo|tasveer bhejo|Tasveer share karein
+img_delete|tasveer mitao|tasveer hatao|Tasveer mitaaein
+img_info|tasveer jaankari|tasveer details,exif|Tasveer ki jaankari dikhaaein
+img_next|agli tasveer|agla photo|Agli tasveer dekhein
+img_prev|pichli tasveer|pichla photo|Pichli tasveer dekhein
+# ── Video (VideoAvanue) ──
+vid_play|video chalao|chalao,video shuru karo|Video chalaein ya phir se shuru karein
+vid_pause|video roko|roko|Video rok dein
+vid_stop|video band karo|band karo|Video band karein
+vid_fwd|aage badho|tez aage,aage koodo|10 second aage badhein
+vid_back|peeche jao|vaapas jao,peeche koodo|10 second peeche jaaein
+vid_faster|tez karo|speed badhao|Speed badhaaein
+vid_slower|dheema karo|speed ghatao|Speed ghataaein
+vid_normal|saamaanya speed|speed reset karo|Saamaanya speed vaapas karein
+vid_fullscreen|poori screen|video badhao|Fullscreen mode badlein
+vid_mute|video mute karo|chup,awaaz band|Video ka awaaz band karein
+vid_unmute|video awaaz chalu|awaaz chalu|Video ki awaaz chalu karein
+vid_loop|video doharao|doharao,loop|Loop playback badlein
+# ── Prasar (RemoteCast) ──
+cast_start|prasar shuru karo|screen cast karo,screen share karo|Screen casting shuru karein
+cast_stop|prasar band karo|cast band karo|Screen casting band karein
+cast_connect|device jodo|jodo,device pair karo|Cast device se judein
+cast_disconnect|device hatao|alag karo|Cast device alag karein
+cast_quality|prasar gunvatta|streaming quality|Casting quality badlein
+# ── AI ──
+ai_summarize|saransh banao|ai saransh,saransh nikalo|AI se saransh banaaein
+ai_chat|ai se baatein karo|ai se pucho|AI chat kholein
+ai_search|ai khoj|gyaan khojo|Gyaan sanchaalan mein khojein
+ai_teach|ai ko sikhao|ai ko train karo,gyaan jodein|AI ko naya gyaan sikhaaein
+ai_clear|ai sandarabh mitao|ai reset karo,nayi baatcheet|AI baatcheet sandarabh saaf karein

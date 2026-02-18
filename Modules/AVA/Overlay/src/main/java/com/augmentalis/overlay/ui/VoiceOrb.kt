@@ -27,8 +27,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.overlay.controller.OrbState
-import com.augmentalis.overlay.theme.OceanGlassColors
 import com.augmentalis.overlay.theme.OverlayAnimations
 import com.augmentalis.overlay.theme.orbSolidEffect
 import kotlin.math.roundToInt
@@ -60,6 +62,7 @@ fun VoiceOrb(
             .size(64.dp)
             .orbSolidEffect()  // Ocean Glass v2.3 - solid colors for stability
             .clickable { onTap() }
+            .semantics { contentDescription = "Voice: click voice orb" }
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()
@@ -82,6 +85,7 @@ fun VoiceOrb(
  */
 @Composable
 private fun IdleMicIcon() {
+    val colors = AvanueTheme.colors
     val infiniteTransition = rememberInfiniteTransition(label = "orb_pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1.0f,
@@ -93,7 +97,7 @@ private fun IdleMicIcon() {
     Icon(
         imageVector = Icons.Default.Mic,
         contentDescription = "Voice input",
-        tint = OceanGlassColors.TextPrimary,
+        tint = colors.textPrimary,
         modifier = Modifier
             .size(28.dp)
             .scale(scale)
@@ -105,6 +109,7 @@ private fun IdleMicIcon() {
  */
 @Composable
 private fun ListeningWaveform() {
+    val colors = AvanueTheme.colors
     val infiniteTransition = rememberInfiniteTransition(label = "waveform")
 
     Row(
@@ -127,7 +132,7 @@ private fun ListeningWaveform() {
                     .width(4.dp)
                     .height(20.dp * scale)
                     .clip(CircleShape)
-                    .background(OceanGlassColors.CoralBlue)
+                    .background(colors.primary)
             )
         }
     }
@@ -138,6 +143,7 @@ private fun ListeningWaveform() {
  */
 @Composable
 private fun ProcessingSpinner() {
+    val colors = AvanueTheme.colors
     val infiniteTransition = rememberInfiniteTransition(label = "spinner")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -149,7 +155,7 @@ private fun ProcessingSpinner() {
     Icon(
         imageVector = Icons.Default.Mic,
         contentDescription = "Processing",
-        tint = OceanGlassColors.CoralBlue,
+        tint = colors.primary,
         modifier = Modifier
             .size(28.dp)
             .rotate(rotation)
@@ -161,6 +167,7 @@ private fun ProcessingSpinner() {
  */
 @Composable
 private fun SpeakingGlow() {
+    val colors = AvanueTheme.colors
     val infiniteTransition = rememberInfiniteTransition(label = "glow")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.6f,
@@ -175,14 +182,14 @@ private fun SpeakingGlow() {
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(OceanGlassColors.CoralBlue.copy(alpha * 0.3f))
+                .background(colors.primary.copy(alpha * 0.3f))
         )
 
         // Icon
         Icon(
             imageVector = Icons.Default.Mic,
             contentDescription = "Speaking",
-            tint = OceanGlassColors.TextPrimary,
+            tint = colors.textPrimary,
             modifier = Modifier.size(28.dp)
         )
     }
