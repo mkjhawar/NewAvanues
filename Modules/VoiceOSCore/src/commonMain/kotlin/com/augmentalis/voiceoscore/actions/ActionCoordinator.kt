@@ -64,6 +64,65 @@ class ActionCoordinator(
      */
     val dynamicCommandCount: Int get() = commandRegistry.size
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Domain Activation System
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Active domains — "app" is always present and cannot be deactivated.
+     * When a module activates (e.g., browser enters foreground), its domain
+     * is added here. Module-specific commands become routable only when
+     * their domain is active. Non-app domains take priority over app domain
+     * for phrase conflicts (e.g., "go back" routes to WebCommandHandler
+     * when "web" domain is active, SystemHandler otherwise).
+     */
+    private val _activeDomains = mutableSetOf("app")
+
+    /**
+     * Read-only view of currently active domains.
+     */
+    val activeDomains: Set<String> get() = _activeDomains.toSet()
+
+    /**
+     * Activate a module's domain, making its static commands routable.
+     * "app" domain is always active and cannot be deactivated.
+     *
+     * @param domain Domain identifier (e.g., "web", "notes", "cockpit")
+     */
+    fun activateModule(domain: String) {
+        _activeDomains.add(domain)
+        LoggingUtils.d("Module activated: $domain (active: $_activeDomains)", TAG)
+    }
+
+    /**
+     * Deactivate a module's domain.
+     * "app" domain cannot be deactivated (always present).
+     *
+     * @param domain Domain identifier to deactivate
+     */
+    fun deactivateModule(domain: String) {
+        if (domain != "app") {
+            _activeDomains.remove(domain)
+            LoggingUtils.d("Module deactivated: $domain (active: $_activeDomains)", TAG)
+        }
+    }
+
+    /**
+     * Check if a module's domain is currently active.
+     */
+    fun isModuleActive(domain: String): Boolean = domain in _activeDomains
+
+    // Domain-to-category mapping for handler routing
+    private fun domainToCategory(domain: String): ActionCategory {
+        return when (domain) {
+            "web" -> ActionCategory.BROWSER
+            "notes" -> ActionCategory.NOTE
+            "cockpit" -> ActionCategory.COCKPIT
+            "camera" -> ActionCategory.CAMERA
+            else -> ActionCategory.APP
+        }
+    }
+
     // Coroutine scope for async operations
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -172,12 +231,15 @@ class ActionCoordinator(
         val startTime = currentTimeMillis()
         LoggingUtils.d("processCommand: phrase='${command.phrase}', actionType=${command.actionType}, bounds=${command.metadata["bounds"]}", TAG)
 
-        // Find handler — web-source commands bypass priority-based routing.
-        // Without this bypass, SystemHandler (priority 1) or AndroidGestureHandler
-        // (priority 2) steal overlapping phrases ("go back", "swipe up") before
-        // WebCommandHandler (BROWSER, priority 11) gets a chance.
-        val handler = if (command.metadata["source"] == "web") {
-            handlerRegistry.getHandlersForCategory(ActionCategory.BROWSER)
+        // Domain-aware handler routing.
+        // Non-app domain commands route to their domain-specific handler category
+        // first (e.g., web → BROWSER, notes → NOTE), bypassing priority-based scan.
+        // This prevents SystemHandler/AndroidGestureHandler from stealing overlapping
+        // phrases ("go back", "swipe up") when a module domain is active.
+        val commandDomain = command.metadata["domain"] ?: command.metadata["source"] ?: "app"
+        val handler = if (commandDomain != "app" && commandDomain in _activeDomains) {
+            val domainCategory = domainToCategory(commandDomain)
+            handlerRegistry.getHandlersForCategory(domainCategory)
                 .firstOrNull { it.canHandle(command) }
                 ?: handlerRegistry.findHandler(command)  // Fallback to priority scan
         } else {
@@ -421,6 +483,22 @@ class ActionCoordinator(
             CommandActionType.EXPOSURE_DOWN -> "exposure down"
             CommandActionType.MODE_PHOTO -> "photo mode"
             CommandActionType.MODE_VIDEO -> "video mode"
+            CommandActionType.BOKEH_MODE -> "portrait mode"
+            CommandActionType.HDR_MODE -> "hdr mode"
+            CommandActionType.NIGHT_MODE -> "night mode"
+            CommandActionType.RETOUCH_MODE -> "face retouch"
+            CommandActionType.EXTENSION_OFF -> "auto mode"
+            CommandActionType.PRO_MODE_ON -> "pro mode on"
+            CommandActionType.PRO_MODE_OFF -> "pro mode off"
+            CommandActionType.ISO_UP -> "increase iso"
+            CommandActionType.ISO_DOWN -> "decrease iso"
+            CommandActionType.FOCUS_NEAR -> "focus near"
+            CommandActionType.FOCUS_FAR -> "focus far"
+            CommandActionType.WB_AUTO -> "white balance auto"
+            CommandActionType.WB_DAYLIGHT -> "white balance daylight"
+            CommandActionType.WB_CLOUDY -> "white balance cloudy"
+            CommandActionType.RAW_ON -> "raw capture on"
+            CommandActionType.RAW_OFF -> "raw capture off"
 
             // Cockpit actions (dispatched by CockpitCommandHandler)
             CommandActionType.ADD_FRAME -> "add frame"
@@ -505,20 +583,27 @@ class ActionCoordinator(
         LoggingUtils.d("processVoiceCommand: '$normalizedText' (conf: $confidence)", TAG)
 
         // ═══════════════════════════════════════════════════════════════════
+        // Step 0: Domain-aware static command routing
+        // ═══════════════════════════════════════════════════════════════════
+        // Check if phrase matches a static command in an active non-app domain.
+        // Module-specific commands take priority over app commands when the
+        // module is active (e.g., "go back" → WebCommandHandler when browser active).
+        if (_activeDomains.size > 1) { // More than just "app"
+            val domainMatch = StaticCommandRegistry.findByPhraseInDomains(normalizedText, _activeDomains)
+            if (domainMatch != null && domainMatch.domain != "app") {
+                LoggingUtils.d("Domain match: '${domainMatch.primaryPhrase}' in domain=${domainMatch.domain}", TAG)
+                val quantized = domainMatch.toQuantizedCommand().copy(
+                    metadata = domainMatch.toQuantizedCommand().metadata + mapOf("domain" to domainMatch.domain)
+                )
+                return processCommand(quantized)
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
         // Step 1: Try dynamic command lookup (has AVID for direct execution)
         // ═══════════════════════════════════════════════════════════════════
         LoggingUtils.d("Dynamic command registry size: ${commandRegistry.size}", TAG)
         if (commandRegistry.size > 0) {
-            // Pre-check: Full-phrase match for web-source commands.
-            // Web static commands ("go back", "swipe up") are registered as dynamic
-            // commands with source="web" when browser is active. This catches them
-            // before extractVerbAndTarget short-circuits on StaticCommandRegistry.
-            val webFullPhraseMatch = commandRegistry.findByPhrase(normalizedText)
-            if (webFullPhraseMatch != null && webFullPhraseMatch.metadata["source"] == "web") {
-                LoggingUtils.d("Web full-phrase match: '${webFullPhraseMatch.phrase}'", TAG)
-                return processCommand(webFullPhraseMatch)
-            }
-
             // Extract verb and target from voice input
             // e.g., "click 4" -> verb="click", target="4"
             val (verb, target) = extractVerbAndTarget(normalizedText)
@@ -529,11 +614,12 @@ class ActionCoordinator(
                 val exactMatch = commandRegistry.findByPhrase(target)
                 LoggingUtils.d("findByPhrase('$target') = ${exactMatch?.phrase ?: "null"}", TAG)
                 if (exactMatch != null) {
-                    // Web-sourced commands: pass directly without phrase rewriting.
+                    // Domain-sourced commands (web, notes, etc.): pass directly without phrase rewriting.
                     // WebCommandHandler uses metadata (selector, xpath) for JS execution,
                     // not accessibility gesture bounds. Rewriting would route to AndroidGestureHandler.
-                    if (exactMatch.metadata["source"] == "web") {
-                        LoggingUtils.d("Web command match! phrase='${exactMatch.phrase}', selector=${exactMatch.metadata["selector"]}", TAG)
+                    val matchDomain = exactMatch.metadata["domain"] ?: exactMatch.metadata["source"] ?: "app"
+                    if (matchDomain != "app" && matchDomain in _activeDomains) {
+                        LoggingUtils.d("Domain command match! phrase='${exactMatch.phrase}', domain=$matchDomain", TAG)
                         return processCommand(exactMatch)
                     }
 
@@ -561,7 +647,8 @@ class ActionCoordinator(
                 when (matchResult) {
                     is CommandMatcher.MatchResult.Exact -> {
                         val matched = matchResult.command
-                        if (matched.metadata["source"] == "web") {
+                        val fuzzyDomain = matched.metadata["domain"] ?: matched.metadata["source"] ?: "app"
+                        if (fuzzyDomain != "app" && fuzzyDomain in _activeDomains) {
                             return processCommand(matched)
                         }
                         val actionPhrase = if (verb != null) {
@@ -576,7 +663,8 @@ class ActionCoordinator(
                     is CommandMatcher.MatchResult.Fuzzy -> {
                         if (matchResult.confidence >= HIGH_CONFIDENCE_THRESHOLD) {
                             val matched = matchResult.command
-                            if (matched.metadata["source"] == "web") {
+                            val fuzzyDomain = matched.metadata["domain"] ?: matched.metadata["source"] ?: "app"
+                            if (fuzzyDomain != "app" && fuzzyDomain in _activeDomains) {
                                 return processCommand(matched)
                             }
                             val actionPhrase = if (verb != null) {

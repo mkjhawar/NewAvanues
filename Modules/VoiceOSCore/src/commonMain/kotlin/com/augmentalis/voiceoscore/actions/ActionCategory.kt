@@ -94,8 +94,14 @@ enum class ActionCategory {
     COCKPIT,
 
     /**
+     * Camera/photo actions (capture, flash, zoom, switch lens, etc.)
+     * Priority: 14
+     */
+    CAMERA,
+
+    /**
      * Custom actions (user-defined, extensions, etc.)
-     * Priority: 14 (lowest)
+     * Priority: 15 (lowest)
      */
     CUSTOM;
 
@@ -118,6 +124,7 @@ enum class ActionCategory {
             BROWSER,
             NOTE,
             COCKPIT,
+            CAMERA,
             CUSTOM
         )
     }

@@ -73,7 +73,7 @@ class CommandLoader(
 
             // 0. CHECK if database already loaded with correct version
             val existingVersion = versionDao.getVersion()
-            val requiredVersion = "3.0" // v3.0: compact pipe-delimited format with compiled maps
+            val requiredVersion = "3.1" // v3.1: domain activation system — domain column in commands_static
 
             if (existingVersion != null && existingVersion.jsonVersion == requiredVersion) {
                 val commandCount = commandDao.getCommandCount(FALLBACK_LOCALE)
@@ -344,6 +344,7 @@ class CommandLoader(
         category = category,
         actionType = actionType,
         metadata = metadata,
+        domain = domain,
         priority = 50,
         isFallback = isFallback
     )

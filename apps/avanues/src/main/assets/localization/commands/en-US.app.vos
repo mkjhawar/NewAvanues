@@ -82,6 +82,22 @@ cam_exposure_up|more exposure|brighter camera,lighten,increase exposure|Increase
 cam_exposure_down|less exposure|darker camera,darken,decrease exposure|Decrease camera exposure
 cam_mode_photo|photo mode|picture mode,camera mode|Switch to photo capture mode
 cam_mode_video|video mode|movie mode,recording mode|Switch to video recording mode
+cam_bokeh|portrait mode|bokeh,bokeh mode,depth effect|Enable portrait/bokeh extension
+cam_hdr|hdr mode|high dynamic range,hdr on|Enable HDR extension
+cam_night|night mode|low light,night photo,dark mode camera|Enable night mode extension
+cam_retouch|face retouch|beauty mode,retouch mode,smoothing|Enable face retouch extension
+cam_ext_off|auto mode camera|normal mode,no extension,extension off|Disable all camera extensions
+cam_pro_on|pro mode|manual mode,pro controls,manual controls|Enable pro camera manual controls
+cam_pro_off|auto camera|disable pro,pro off,auto controls|Disable pro mode
+cam_iso_up|increase iso|higher iso,more sensitivity|Increase ISO sensitivity
+cam_iso_down|decrease iso|lower iso,less sensitivity|Decrease ISO sensitivity
+cam_focus_near|focus near|macro focus,close focus|Focus on nearby objects
+cam_focus_far|focus far|infinity focus,distant focus|Focus on distant objects
+cam_wb_auto|white balance auto|auto white balance|Set white balance to auto
+cam_wb_daylight|white balance daylight|sunny white balance,daylight|Set white balance to daylight
+cam_wb_cloudy|white balance cloudy|overcast white balance|Set white balance to cloudy
+cam_raw_on|raw capture on|enable raw,dng on,shoot raw|Enable RAW/DNG capture
+cam_raw_off|raw capture off|disable raw,dng off,jpeg only|Disable RAW capture
 # ── Cockpit ──
 cockpit_open|open cockpit|cockpit view,launch cockpit,cockpit mode|Launch Cockpit standalone
 cockpit_add_frame|add frame|new frame,create frame,add panel|Add a new content frame

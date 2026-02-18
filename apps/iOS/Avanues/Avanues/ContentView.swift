@@ -22,9 +22,9 @@ struct ContentView: View {
                 case .browser:
                     BrowserView()
                 case .voice:
-                    PlaceholderView(mode: .voice)
+                    VoiceAvanueView()
                 case .commands:
-                    PlaceholderView(mode: .commands)
+                    VoiceCommandsView()
                 case .settings:
                     SettingsView()
                 case .about:

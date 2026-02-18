@@ -116,8 +116,9 @@ struct VoiceStatusBar: View {
 
 /// Observable state for the voice recognition system.
 ///
-/// Bridges between the KMP SpeechRecognition module and SwiftUI.
-/// Phase 4 wires this to the real AppleSpeechEngine.
+/// Bridges between the SpeechRecognitionManager and SwiftUI views.
+/// Provides real SFSpeechRecognizer integration with partial results,
+/// command routing, and continuous listening support.
 @MainActor
 final class VoiceState: ObservableObject {
     enum State {
@@ -131,9 +132,53 @@ final class VoiceState: ObservableObject {
     @Published var confidence: Double = 0.0
     @Published var availableCommandCount: Int = 0
     @Published var errorMessage: String? = nil
+    @Published var recentCommands: [(text: String, success: Bool, timestamp: Date)] = []
 
     var isListening: Bool { state == .listening }
     var isProcessing: Bool { state == .processing }
+
+    /// The speech recognition engine (injected).
+    var speechManager: SpeechRecognitionManager?
+
+    /// The command router (injected by BrowserView).
+    var commandRouter: CommandRouter?
+
+    /// Configure the speech manager and wire callbacks.
+    func configure(speechManager: SpeechRecognitionManager) {
+        self.speechManager = speechManager
+
+        speechManager.onPartialResult = { [weak self] text, conf in
+            self?.partialText = text
+            self?.confidence = Double(conf)
+        }
+
+        speechManager.onFinalResult = { [weak self] text, conf, alternatives in
+            guard let self = self else { return }
+            self.confidence = Double(conf)
+            self.partialText = ""
+
+            // Route the recognized text as a command
+            if Float(conf) >= Float(UserDefaults.standard.double(forKey: "voice_confidence_threshold").clamped(to: 0.1...1.0)) {
+                self.state = .processing
+                self.commandRouter?.processCommand(text)
+            } else {
+                self.onCommandExecuted(text: text, success: false)
+            }
+        }
+
+        speechManager.onError = { [weak self] error in
+            self?.state = .error
+            self?.errorMessage = error.localizedDescription
+        }
+
+        speechManager.onStateChange = { [weak self] isListening in
+            if isListening {
+                self?.state = .listening
+            } else if self?.state == .listening {
+                self?.state = .idle
+            }
+        }
+    }
 
     /// Toggle listening on/off.
     func toggleListening() {
@@ -146,16 +191,40 @@ final class VoiceState: ObservableObject {
     }
 
     /// Start speech recognition.
-    /// Phase 4 replaces this with real SFSpeechRecognizer integration.
     func startListening() {
-        state = .listening
+        errorMessage = nil
         partialText = ""
         lastCommand = nil
-        errorMessage = nil
+
+        guard let manager = speechManager else {
+            state = .error
+            errorMessage = "Speech recognition not configured"
+            return
+        }
+
+        Task {
+            if !manager.isAuthorized {
+                let granted = await manager.requestAuthorization()
+                if !granted {
+                    state = .error
+                    errorMessage = "Microphone or speech permission denied"
+                    return
+                }
+            }
+
+            do {
+                try manager.startListening()
+                state = .listening
+            } catch {
+                state = .error
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     /// Stop speech recognition.
     func stopListening() {
+        speechManager?.stopListening()
         state = .idle
         partialText = ""
     }
@@ -164,13 +233,28 @@ final class VoiceState: ObservableObject {
     func onCommandExecuted(text: String, success: Bool) {
         lastCommand = text
         lastCommandSuccess = success
+        state = .listening
 
-        // Clear after 3 seconds
+        // Add to recent commands (keep last 20)
+        recentCommands.insert((text: text, success: success, timestamp: Date()), at: 0)
+        if recentCommands.count > 20 {
+            recentCommands.removeLast()
+        }
+
+        // Clear last command display after 3 seconds
         Task {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             if lastCommand == text {
                 lastCommand = nil
             }
         }
+    }
+}
+
+// MARK: - Double Clamped Helper
+
+private extension Double {
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        return min(max(self, range.lowerBound), range.upperBound)
     }
 }
