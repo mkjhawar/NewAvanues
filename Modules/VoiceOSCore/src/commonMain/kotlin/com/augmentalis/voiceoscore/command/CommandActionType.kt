@@ -654,6 +654,191 @@ enum class CommandActionType {
     /** Add terminal frame */
     ADD_TERMINAL,
 
+    // ═══════════════════════════════════════════════════════════════
+    // Annotation/Drawing Actions
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Select pen drawing tool */
+    ANNOTATION_PEN,
+
+    /** Select highlighter tool */
+    ANNOTATION_HIGHLIGHTER,
+
+    /** Draw rectangle shape */
+    ANNOTATION_SHAPE_RECT,
+
+    /** Draw circle/oval shape */
+    ANNOTATION_SHAPE_CIRCLE,
+
+    /** Draw arrow shape */
+    ANNOTATION_SHAPE_ARROW,
+
+    /** Draw straight line */
+    ANNOTATION_SHAPE_LINE,
+
+    /** Open color picker */
+    ANNOTATION_COLOR_PICKER,
+
+    /** Undo last annotation stroke */
+    ANNOTATION_UNDO,
+
+    /** Redo last undone stroke */
+    ANNOTATION_REDO,
+
+    /** Clear all annotations */
+    ANNOTATION_CLEAR,
+
+    /** Save annotation as image */
+    ANNOTATION_SAVE,
+
+    /** Share annotation */
+    ANNOTATION_SHARE,
+
+    /** Switch to eraser tool */
+    ANNOTATION_ERASER,
+
+    /** Increase pen thickness */
+    ANNOTATION_PEN_SIZE_UP,
+
+    /** Decrease pen thickness */
+    ANNOTATION_PEN_SIZE_DOWN,
+
+    // ═══════════════════════════════════════════════════════════════
+    // Image Viewing/Editing Actions
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Open image viewer */
+    IMAGE_OPEN,
+
+    /** Open photo gallery */
+    IMAGE_GALLERY,
+
+    /** Apply grayscale filter */
+    IMAGE_FILTER_GRAYSCALE,
+
+    /** Apply sepia filter */
+    IMAGE_FILTER_SEPIA,
+
+    /** Apply blur filter */
+    IMAGE_FILTER_BLUR,
+
+    /** Apply sharpen filter */
+    IMAGE_FILTER_SHARPEN,
+
+    /** Adjust image brightness */
+    IMAGE_FILTER_BRIGHTNESS,
+
+    /** Adjust image contrast */
+    IMAGE_FILTER_CONTRAST,
+
+    /** Rotate image 90° left */
+    IMAGE_ROTATE_LEFT,
+
+    /** Rotate image 90° right */
+    IMAGE_ROTATE_RIGHT,
+
+    /** Flip image horizontally */
+    IMAGE_FLIP_H,
+
+    /** Flip image vertically */
+    IMAGE_FLIP_V,
+
+    /** Enter crop mode */
+    IMAGE_CROP,
+
+    /** Share image */
+    IMAGE_SHARE,
+
+    /** Delete image */
+    IMAGE_DELETE,
+
+    /** Show image EXIF/metadata */
+    IMAGE_INFO,
+
+    /** View next image in gallery */
+    IMAGE_NEXT,
+
+    /** View previous image in gallery */
+    IMAGE_PREVIOUS,
+
+    // ═══════════════════════════════════════════════════════════════
+    // Video Playback Actions
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Play/resume video */
+    VIDEO_PLAY,
+
+    /** Pause video */
+    VIDEO_PAUSE,
+
+    /** Stop video playback */
+    VIDEO_STOP,
+
+    /** Skip forward (10 seconds) */
+    VIDEO_SEEK_FWD,
+
+    /** Skip backward (10 seconds) */
+    VIDEO_SEEK_BACK,
+
+    /** Increase playback speed */
+    VIDEO_SPEED_UP,
+
+    /** Decrease playback speed */
+    VIDEO_SPEED_DOWN,
+
+    /** Reset playback to normal speed */
+    VIDEO_SPEED_NORMAL,
+
+    /** Toggle fullscreen mode */
+    VIDEO_FULLSCREEN,
+
+    /** Mute video audio */
+    VIDEO_MUTE,
+
+    /** Unmute video audio */
+    VIDEO_UNMUTE,
+
+    /** Toggle loop playback */
+    VIDEO_LOOP,
+
+    // ═══════════════════════════════════════════════════════════════
+    // Screen Casting Actions
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Start screen casting */
+    CAST_START,
+
+    /** Stop screen casting */
+    CAST_STOP,
+
+    /** Connect to cast device */
+    CAST_CONNECT,
+
+    /** Disconnect from cast device */
+    CAST_DISCONNECT,
+
+    /** Change cast quality */
+    CAST_QUALITY,
+
+    // ═══════════════════════════════════════════════════════════════
+    // AI Actions
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Generate AI summary */
+    AI_SUMMARIZE,
+
+    /** Open AI chat */
+    AI_CHAT,
+
+    /** Search knowledge base via RAG */
+    AI_RAG_SEARCH,
+
+    /** Teach AI new knowledge */
+    AI_TEACH,
+
+    /** Clear AI conversation context */
+    AI_CLEAR_CONTEXT,
+
     /** Custom/specialized action */
     CUSTOM,
 
@@ -716,6 +901,51 @@ enum class CommandActionType {
     fun isVoiceOSAction(): Boolean = this in listOf(
         VOICE_MUTE, VOICE_WAKE, DICTATION_START, DICTATION_STOP, SHOW_COMMANDS,
         NUMBERS_ON, NUMBERS_OFF, NUMBERS_AUTO
+    )
+
+    /**
+     * Check if this is an annotation/drawing action
+     */
+    fun isAnnotationAction(): Boolean = this in listOf(
+        ANNOTATION_PEN, ANNOTATION_HIGHLIGHTER, ANNOTATION_SHAPE_RECT,
+        ANNOTATION_SHAPE_CIRCLE, ANNOTATION_SHAPE_ARROW, ANNOTATION_SHAPE_LINE,
+        ANNOTATION_COLOR_PICKER, ANNOTATION_UNDO, ANNOTATION_REDO, ANNOTATION_CLEAR,
+        ANNOTATION_SAVE, ANNOTATION_SHARE, ANNOTATION_ERASER,
+        ANNOTATION_PEN_SIZE_UP, ANNOTATION_PEN_SIZE_DOWN
+    )
+
+    /**
+     * Check if this is an image viewing/editing action
+     */
+    fun isImageAction(): Boolean = this in listOf(
+        IMAGE_OPEN, IMAGE_GALLERY, IMAGE_FILTER_GRAYSCALE, IMAGE_FILTER_SEPIA,
+        IMAGE_FILTER_BLUR, IMAGE_FILTER_SHARPEN, IMAGE_FILTER_BRIGHTNESS,
+        IMAGE_FILTER_CONTRAST, IMAGE_ROTATE_LEFT, IMAGE_ROTATE_RIGHT,
+        IMAGE_FLIP_H, IMAGE_FLIP_V, IMAGE_CROP, IMAGE_SHARE, IMAGE_DELETE,
+        IMAGE_INFO, IMAGE_NEXT, IMAGE_PREVIOUS
+    )
+
+    /**
+     * Check if this is a video playback action
+     */
+    fun isVideoAction(): Boolean = this in listOf(
+        VIDEO_PLAY, VIDEO_PAUSE, VIDEO_STOP, VIDEO_SEEK_FWD, VIDEO_SEEK_BACK,
+        VIDEO_SPEED_UP, VIDEO_SPEED_DOWN, VIDEO_SPEED_NORMAL, VIDEO_FULLSCREEN,
+        VIDEO_MUTE, VIDEO_UNMUTE, VIDEO_LOOP
+    )
+
+    /**
+     * Check if this is a screen casting action
+     */
+    fun isCastAction(): Boolean = this in listOf(
+        CAST_START, CAST_STOP, CAST_CONNECT, CAST_DISCONNECT, CAST_QUALITY
+    )
+
+    /**
+     * Check if this is an AI action
+     */
+    fun isAIAction(): Boolean = this in listOf(
+        AI_SUMMARIZE, AI_CHAT, AI_RAG_SEARCH, AI_TEACH, AI_CLEAR_CONTEXT
     )
 
     /**

@@ -100,8 +100,32 @@ enum class ActionCategory {
     CAMERA,
 
     /**
+     * Annotation/drawing actions (pen, shapes, color, whiteboard tools)
+     * Priority: 15
+     */
+    ANNOTATION,
+
+    /**
+     * Image viewing/editing actions (gallery, filters, rotate, crop)
+     * Priority: 16
+     */
+    IMAGE,
+
+    /**
+     * Video playback/editing actions (play, pause, seek, speed, loop)
+     * Priority: 17
+     */
+    VIDEO,
+
+    /**
+     * Screen casting actions (start, stop, connect, disconnect, quality)
+     * Priority: 18
+     */
+    CAST,
+
+    /**
      * Custom actions (user-defined, extensions, etc.)
-     * Priority: 15 (lowest)
+     * Priority: 19 (lowest)
      */
     CUSTOM;
 
@@ -125,6 +149,10 @@ enum class ActionCategory {
             NOTE,
             COCKPIT,
             CAMERA,
+            ANNOTATION,
+            IMAGE,
+            VIDEO,
+            CAST,
             CUSTOM
         )
     }

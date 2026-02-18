@@ -22,7 +22,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.augmentalis.overlay.controller.Suggestion
-import com.augmentalis.overlay.theme.OceanGlassColors
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.overlay.theme.OverlayAnimations
 
 /**
@@ -88,15 +90,15 @@ private fun SuggestionChip(
         label = {
             Text(
                 text = suggestion.label,
-                color = OceanGlassColors.TextPrimary
+                color = AvanueTheme.colors.textPrimary
             )
         },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = OceanGlassColors.OceanMedium,  // Ocean Glass v2.3 - solid color
-            labelColor = OceanGlassColors.TextPrimary,
-            leadingIconContentColor = OceanGlassColors.TextSecondary
+            containerColor = AvanueTheme.colors.surfaceVariant,  // Ocean Glass v2.3 - solid color
+            labelColor = AvanueTheme.colors.textPrimary,
+            leadingIconContentColor = AvanueTheme.colors.textSecondary
         ),
-        border = BorderStroke(1.dp, OceanGlassColors.Border),
+        border = BorderStroke(1.dp, AvanueTheme.colors.borderSubtle),
         modifier = Modifier.scale(scale)
     )
 
