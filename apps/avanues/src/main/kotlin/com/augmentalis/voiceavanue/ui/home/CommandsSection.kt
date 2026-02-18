@@ -49,6 +49,7 @@ import com.augmentalis.avanueui.components.AvanueSurface
 import com.augmentalis.avanueui.tokens.SpacingTokens
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceavanue.ui.sync.PhraseSuggestionDialog
 
 @Composable
 fun CommandsSection(
@@ -71,7 +72,8 @@ fun CommandsSection(
                 synonymEntries = commands.synonymEntries,
                 onToggleCommand = callbacks.onToggleStaticCommand,
                 onAddSynonym = callbacks.onAddSynonym,
-                onRemoveSynonym = callbacks.onRemoveSynonym
+                onRemoveSynonym = callbacks.onRemoveSynonym,
+                onSuggestPhrase = callbacks.onSuggestPhrase
             )
             1 -> DynamicCommandsInfoTab(dynamicCount = commands.dynamicCount)
             2 -> CustomCommandsTab(
@@ -107,7 +109,8 @@ private fun StaticCommandsTab(
     synonymEntries: List<SynonymEntryInfo>,
     onToggleCommand: (String) -> Unit,
     onAddSynonym: (String, List<String>) -> Unit,
-    onRemoveSynonym: (String) -> Unit
+    onRemoveSynonym: (String) -> Unit,
+    onSuggestPhrase: (String, String, String, String) -> Unit = { _, _, _, _ -> }
 ) {
     if (categories.isEmpty() && synonymEntries.isEmpty()) {
         EmptyStateMessage("No static commands loaded")
@@ -120,7 +123,8 @@ private fun StaticCommandsTab(
                 ExpandableCommandCategory(
                     category = category,
                     onToggleCommand = onToggleCommand,
-                    onAddSynonym = onAddSynonym
+                    onAddSynonym = onAddSynonym,
+                    onSuggestPhrase = onSuggestPhrase
                 )
             }
             if (synonymEntries.isNotEmpty()) {
@@ -140,7 +144,8 @@ private fun StaticCommandsTab(
 private fun ExpandableCommandCategory(
     category: CommandCategory,
     onToggleCommand: (String) -> Unit,
-    onAddSynonym: (String, List<String>) -> Unit = { _, _ -> }
+    onAddSynonym: (String, List<String>) -> Unit = { _, _ -> },
+    onSuggestPhrase: (String, String, String, String) -> Unit = { _, _, _, _ -> }
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(SpacingTokens.xs)) {
@@ -168,7 +173,8 @@ private fun ExpandableCommandCategory(
                     CommandRow(
                         command = command,
                         onToggle = { onToggleCommand(command.id) },
-                        onAddAlias = { alias -> onAddSynonym(command.phrase, listOf(alias)) }
+                        onAddAlias = { alias -> onAddSynonym(command.phrase, listOf(alias)) },
+                        onSuggestPhrase = onSuggestPhrase
                     )
                 }
             }
@@ -192,11 +198,13 @@ private fun formatActionType(actionType: CommandActionType): String {
 private fun CommandRow(
     command: StaticCommand,
     onToggle: () -> Unit,
-    onAddAlias: (String) -> Unit = {}
+    onAddAlias: (String) -> Unit = {},
+    onSuggestPhrase: (String, String, String, String) -> Unit = { _, _, _, _ -> }
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showAliasField by remember { mutableStateOf(false) }
     var aliasText by remember { mutableStateOf("") }
+    var showSuggestionDialog by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxWidth()) {
         // Collapsed row: checkbox + primary phrase + action badge + expand chevron
@@ -328,19 +336,35 @@ private fun CommandRow(
                     )
                 }
 
-                // Add alias chip + inline field
-                AvanueChip(
-                    onClick = { showAliasField = !showAliasField },
-                    label = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
-                        ) {
-                            Icon(Icons.Default.Add, null, modifier = Modifier.size(12.dp), tint = AvanueTheme.colors.primary)
-                            Text("Add Alias", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.primary)
+                // Add alias + suggest translation chips
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm)
+                ) {
+                    AvanueChip(
+                        onClick = { showAliasField = !showAliasField },
+                        label = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                            ) {
+                                Icon(Icons.Default.Add, null, modifier = Modifier.size(12.dp), tint = AvanueTheme.colors.primary)
+                                Text("Add Alias", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.primary)
+                            }
                         }
-                    }
-                )
+                    )
+                    AvanueChip(
+                        onClick = { showSuggestionDialog = true },
+                        label = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.xs)
+                            ) {
+                                Icon(Icons.Default.Add, null, modifier = Modifier.size(12.dp), tint = AvanueTheme.colors.info)
+                                Text("Suggest Translation", style = MaterialTheme.typography.labelSmall, color = AvanueTheme.colors.info)
+                            }
+                        }
+                    )
+                }
 
                 AnimatedVisibility(visible = showAliasField) {
                     Row(
@@ -379,6 +403,17 @@ private fun CommandRow(
                     }
                 }
             }
+        }
+
+        // Phrase suggestion dialog
+        if (showSuggestionDialog) {
+            PhraseSuggestionDialog(
+                commandId = command.id,
+                originalPhrase = command.phrase,
+                locale = java.util.Locale.getDefault().toLanguageTag(),
+                onSubmit = onSuggestPhrase,
+                onDismiss = { showSuggestionDialog = false }
+            )
         }
     }
 }

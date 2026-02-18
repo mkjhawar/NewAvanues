@@ -73,7 +73,8 @@ data class CommandCallbacks(
     val onRemoveCustomCommand: (String) -> Unit = {},
     val onToggleCustomCommand: (String) -> Unit = {},
     val onAddSynonym: (String, List<String>) -> Unit = { _, _ -> },
-    val onRemoveSynonym: (String) -> Unit = {}
+    val onRemoveSynonym: (String) -> Unit = {},
+    val onSuggestPhrase: (commandId: String, originalPhrase: String, suggestedPhrase: String, locale: String) -> Unit = { _, _, _, _ -> }
 )
 
 /**
@@ -115,7 +116,8 @@ fun HomeScreen(
             onRemoveCustomCommand = viewModel::removeCustomCommand,
             onToggleCustomCommand = viewModel::toggleCustomCommand,
             onAddSynonym = viewModel::addSynonym,
-            onRemoveSynonym = viewModel::removeSynonym
+            onRemoveSynonym = viewModel::removeSynonym,
+            onSuggestPhrase = viewModel::submitPhraseSuggestion
         )
     }
 
@@ -177,7 +179,8 @@ fun CommandsScreen(
             onRemoveCustomCommand = viewModel::removeCustomCommand,
             onToggleCustomCommand = viewModel::toggleCustomCommand,
             onAddSynonym = viewModel::addSynonym,
-            onRemoveSynonym = viewModel::removeSynonym
+            onRemoveSynonym = viewModel::removeSynonym,
+            onSuggestPhrase = viewModel::submitPhraseSuggestion
         )
     }
 
