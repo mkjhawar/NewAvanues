@@ -4,19 +4,16 @@
  */
 package com.augmentalis.foundation.settings
 
-import com.augmentalis.foundation.ICredentialStore
-import kotlinx.cinterop.CFBridgingRelease
-import kotlinx.cinterop.CFDictionaryRef
-import kotlinx.cinterop.CFTypeRefVar
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
-import platform.CoreFoundation.CFBridgingRelease as CFBridgingReleaseType
+import platform.CoreFoundation.CFDictionaryRef
+import platform.CoreFoundation.CFTypeRefVar
 import platform.CoreFoundation.kCFBooleanTrue
-import platform.Foundation.CFBridgingRelease as FoundationCFBridgingRelease
-import platform.Foundation.NSCopying
+import platform.Foundation.NSCopyingProtocol
 import platform.Foundation.NSData
 import platform.Foundation.NSMutableDictionary
 import platform.Foundation.NSString
@@ -38,7 +35,7 @@ import platform.Security.kSecMatchLimitOne
 import platform.Security.kSecReturnData
 import platform.Security.kSecValueData
 
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class KeychainCredentialStore(
     private val serviceName: String = "com.augmentalis.foundation.credentials"
 ) : ICredentialStore {
@@ -47,11 +44,13 @@ class KeychainCredentialStore(
         delete(key)
         val data = (value as NSString).dataUsingEncoding(NSUTF8StringEncoding)
             ?: throw IllegalArgumentException("Could not encode credential value as UTF-8")
-        val query = keychainQuery(key).apply {
-            setObject(data, forKey = kSecValueData!! as NSCopying)
+        val query = buildQuery(key).apply {
+            @Suppress("UNCHECKED_CAST")
+            setObject(data, forKey = kSecValueData as NSCopyingProtocol)
+            @Suppress("UNCHECKED_CAST")
             setObject(
                 kSecAttrAccessibleWhenUnlockedThisDeviceOnly!!,
-                forKey = kSecAttrAccessible!! as NSCopying
+                forKey = kSecAttrAccessible as NSCopyingProtocol
             )
         }
         @Suppress("UNCHECKED_CAST")
@@ -63,40 +62,45 @@ class KeychainCredentialStore(
 
     override suspend fun retrieve(key: String): String? = memScoped {
         val result = alloc<CFTypeRefVar>()
-        val searchQuery = keychainQuery(key).apply {
-            setObject(kCFBooleanTrue!!, forKey = kSecReturnData!! as NSCopying)
-            setObject(kSecMatchLimitOne!!, forKey = kSecMatchLimit!! as NSCopying)
+        val searchQuery = buildQuery(key).apply {
+            @Suppress("UNCHECKED_CAST")
+            setObject(kCFBooleanTrue!!, forKey = kSecReturnData as NSCopyingProtocol)
+            @Suppress("UNCHECKED_CAST")
+            setObject(kSecMatchLimitOne!!, forKey = kSecMatchLimit as NSCopyingProtocol)
         }
         @Suppress("UNCHECKED_CAST")
         val status = SecItemCopyMatching(searchQuery as CFDictionaryRef, result.ptr)
         if (status == errSecSuccess) {
-            val data = FoundationCFBridgingRelease(result.value) as? NSData
+            @Suppress("UNCHECKED_CAST")
+            val data = result.value as? NSData
             data?.let { NSString.create(data = it, encoding = NSUTF8StringEncoding) as? String }
         } else null
     }
 
     override suspend fun delete(key: String) {
         @Suppress("UNCHECKED_CAST")
-        SecItemDelete(keychainQuery(key) as CFDictionaryRef)
+        SecItemDelete(buildQuery(key) as CFDictionaryRef)
     }
 
     override suspend fun hasCredential(key: String): Boolean = memScoped {
         val result = alloc<CFTypeRefVar>()
-        val searchQuery = keychainQuery(key).apply {
-            setObject(kCFBooleanTrue!!, forKey = kSecReturnData!! as NSCopying)
-            setObject(kSecMatchLimitOne!!, forKey = kSecMatchLimit!! as NSCopying)
+        val searchQuery = buildQuery(key).apply {
+            @Suppress("UNCHECKED_CAST")
+            setObject(kCFBooleanTrue!!, forKey = kSecReturnData as NSCopyingProtocol)
+            @Suppress("UNCHECKED_CAST")
+            setObject(kSecMatchLimitOne!!, forKey = kSecMatchLimit as NSCopyingProtocol)
         }
         @Suppress("UNCHECKED_CAST")
         val status = SecItemCopyMatching(searchQuery as CFDictionaryRef, result.ptr)
-        if (status == errSecSuccess) {
-            FoundationCFBridgingRelease(result.value)
-            true
-        } else false
+        status == errSecSuccess
     }
 
-    private fun keychainQuery(key: String): NSMutableDictionary = NSMutableDictionary().apply {
-        setObject(kSecClassGenericPassword!!, forKey = kSecClass!! as NSCopying)
-        setObject(serviceName, forKey = kSecAttrService!! as NSCopying)
-        setObject(key, forKey = kSecAttrAccount!! as NSCopying)
+    private fun buildQuery(key: String): NSMutableDictionary = NSMutableDictionary().apply {
+        @Suppress("UNCHECKED_CAST")
+        setObject(kSecClassGenericPassword!!, forKey = kSecClass as NSCopyingProtocol)
+        @Suppress("UNCHECKED_CAST")
+        setObject(serviceName, forKey = kSecAttrService as NSCopyingProtocol)
+        @Suppress("UNCHECKED_CAST")
+        setObject(key, forKey = kSecAttrAccount as NSCopyingProtocol)
     }
 }

@@ -4,8 +4,6 @@
  */
 package com.augmentalis.foundation.platform
 
-import com.augmentalis.foundation.IPermissionChecker
-
 /**
  * iOS permission checker. Real permission requests are handled by the Swift
  * app layer. This serves as a KMP bridge for shared code that needs to
