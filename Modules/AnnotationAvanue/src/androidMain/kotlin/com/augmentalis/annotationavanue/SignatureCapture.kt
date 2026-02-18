@@ -23,21 +23,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.augmentalis.annotationavanue.controller.BezierSmoother
+import com.augmentalis.annotationavanue.model.AnnotationTool
 import com.augmentalis.annotationavanue.model.StrokePoint
 import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Simplified signature capture UI — pen-only drawing with clear/done controls.
  * Designed for quick signature or initials input within a Cockpit frame.
+ * Uses Bezier smoothing for a natural signature feel.
  *
  * @param onComplete Called with the list of strokes when the user taps "Done".
  * @param onClear Called when the user clears the signature.
@@ -70,13 +76,13 @@ fun SignatureCapture(
 
         Spacer(Modifier.height(12.dp))
 
-        // Signature area
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .border(1.dp, colors.borderSubtle, RoundedCornerShape(8.dp))
                 .background(colors.surface, RoundedCornerShape(8.dp))
+                .semantics { contentDescription = "Voice: click signature pad" }
         ) {
             Canvas(
                 modifier = Modifier
@@ -94,10 +100,12 @@ fun SignatureCapture(
                             onDragEnd = {
                                 if (currentPoints.size >= 2) {
                                     val newStroke = com.augmentalis.annotationavanue.model.Stroke(
+                                        id = "sig_${System.currentTimeMillis()}",
                                         points = currentPoints,
                                         color = penColor.value.toLong(),
                                         width = 3f,
-                                        tool = com.augmentalis.annotationavanue.model.AnnotationTool.PEN
+                                        tool = AnnotationTool.PEN,
+                                        alpha = 1f
                                     )
                                     strokes = strokes + newStroke
                                 }
@@ -106,13 +114,14 @@ fun SignatureCapture(
                         )
                     }
             ) {
-                // Render committed strokes
+                // Render committed strokes with Bezier smoothing
                 strokes.forEach { stroke ->
                     if (stroke.points.size < 2) return@forEach
+                    val smoothed = if (stroke.points.size > 3) BezierSmoother.smooth(stroke.points) else stroke.points
                     val path = Path().apply {
-                        moveTo(stroke.points.first().x, stroke.points.first().y)
-                        for (i in 1 until stroke.points.size) {
-                            lineTo(stroke.points[i].x, stroke.points[i].y)
+                        moveTo(smoothed.first().x, smoothed.first().y)
+                        for (i in 1 until smoothed.size) {
+                            lineTo(smoothed[i].x, smoothed[i].y)
                         }
                     }
                     drawPath(
@@ -124,10 +133,11 @@ fun SignatureCapture(
 
                 // Render current in-progress stroke
                 if (currentPoints.size >= 2) {
+                    val smoothed = if (currentPoints.size > 3) BezierSmoother.smooth(currentPoints) else currentPoints
                     val path = Path().apply {
-                        moveTo(currentPoints.first().x, currentPoints.first().y)
-                        for (i in 1 until currentPoints.size) {
-                            lineTo(currentPoints[i].x, currentPoints[i].y)
+                        moveTo(smoothed.first().x, smoothed.first().y)
+                        for (i in 1 until smoothed.size) {
+                            lineTo(smoothed[i].x, smoothed[i].y)
                         }
                     }
                     drawPath(
@@ -141,8 +151,8 @@ fun SignatureCapture(
                 val lineY = size.height * 0.75f
                 drawLine(
                     color = Color(colors.textPrimary.value).copy(alpha = 0.2f),
-                    start = androidx.compose.ui.geometry.Offset(20f, lineY),
-                    end = androidx.compose.ui.geometry.Offset(size.width - 20f, lineY),
+                    start = Offset(20f, lineY),
+                    end = Offset(size.width - 20f, lineY),
                     strokeWidth = 1f
                 )
             }
@@ -150,20 +160,23 @@ fun SignatureCapture(
 
         Spacer(Modifier.height(12.dp))
 
-        // Action buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            TextButton(onClick = {
-                strokes = emptyList()
-                onClear()
-            }) {
+            TextButton(
+                onClick = {
+                    strokes = emptyList()
+                    onClear()
+                },
+                modifier = Modifier.semantics { contentDescription = "Voice: click clear" }
+            ) {
                 Text("Clear", color = colors.error)
             }
             TextButton(
                 onClick = { onComplete(strokes) },
-                enabled = strokes.isNotEmpty()
+                enabled = strokes.isNotEmpty(),
+                modifier = Modifier.semantics { contentDescription = "Voice: click done" }
             ) {
                 Text(
                     "Done",

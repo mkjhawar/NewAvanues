@@ -158,3 +158,63 @@ note_clear_format|Formatierung entfernen|Klartext|Alle Formatierung entfernen
 note_word_count|Wortanzahl|Woerter zaehlen|Wortanzahl anzeigen
 note_read_aloud|Notiz vorlesen|Notiz lesen|Notizinhalt vorlesen
 note_stop_reading|Vorlesen stoppen|aufhoeren zu lesen|Vorlesen der Notiz stoppen
+# ── Anmerkung (AnnotationAvanue) ──
+ann_pen|Stiftwerkzeug|Stift,zeichnen,Freihand|Stift Zeichenwerkzeug waehlen
+ann_highlight|Textmarker|hervorheben,Markierer|Textmarker waehlen
+ann_shape_rect|Rechteck zeichnen|Rechteck,Kasten|Rechteck zeichnen
+ann_shape_circle|Kreis zeichnen|Kreis,Oval,Ellipse|Kreis zeichnen
+ann_shape_arrow|Pfeil zeichnen|Pfeil,Zeiger|Pfeil zeichnen
+ann_shape_line|Linie zeichnen|Linie,gerade Linie|Gerade Linie zeichnen
+ann_color|Farbwaehler|Farbe waehlen,Farbe aendern|Farbwaehler oeffnen
+ann_undo|Anmerkung rueckgaengig|Zeichnung rueckgaengig|Letzten Strich rueckgaengig machen
+ann_redo|Anmerkung wiederholen|Zeichnung wiederholen|Letzten Strich wiederherstellen
+ann_clear|Anmerkungen loeschen|alles loeschen,alles entfernen|Alle Anmerkungen loeschen
+ann_save|Anmerkung speichern|Zeichnung speichern|Anmerkung als Bild speichern
+ann_share|Anmerkung teilen|Zeichnung senden|Anmerkung teilen
+ann_eraser|Radierer|radieren,loeschen|Zum Radierer wechseln
+ann_pen_up|Stift dicker|groesserer Stift|Stiftstaerke erhoehen
+ann_pen_down|Stift duenner|kleinerer Stift|Stiftstaerke verringern
+# ── Bild (ImageAvanue) ──
+img_open|Bild oeffnen|Bild anzeigen,Bild zeigen|Bildbetrachter oeffnen
+img_gallery|Galerie oeffnen|Galerie,Fotogalerie,meine Fotos|Fotogalerie oeffnen
+img_grayscale|Graustufen|Schwarz-Weiss,einfarbig|Graustufenfilter anwenden
+img_sepia|Sepia|Vintage,altes Foto|Sepiafilter anwenden
+img_blur|Bild weichzeichnen|weichzeichnen,Unschaerfe|Weichzeichner anwenden
+img_sharpen|Bild schaerfen|schaerfen,verbessern|Schaerfefilter anwenden
+img_brightness|Helligkeit anpassen|heller,dunkler|Bildhelligkeit anpassen
+img_contrast|Kontrast anpassen|mehr Kontrast,weniger Kontrast|Bildkontrast anpassen
+img_rotate_left|nach links drehen|links drehen|Bild 90 Grad links drehen
+img_rotate_right|nach rechts drehen|rechts drehen|Bild 90 Grad rechts drehen
+img_flip_h|horizontal spiegeln|spiegeln|Bild horizontal spiegeln
+img_flip_v|vertikal spiegeln|umdrehen|Bild vertikal spiegeln
+img_crop|Bild zuschneiden|zuschneiden|Zuschneidemodus
+img_share|Bild teilen|Bild senden|Bild teilen
+img_delete|Bild loeschen|Bild entfernen|Bild loeschen
+img_info|Bildinformationen|Bilddetails,EXIF,Metadaten|Bild-Metadaten anzeigen
+img_next|naechstes Bild|naechstes Foto|Naechstes Bild anzeigen
+img_prev|vorheriges Bild|vorheriges Foto|Vorheriges Bild anzeigen
+# ── Video (VideoAvanue) ──
+vid_play|Video abspielen|abspielen,Video fortsetzen|Video abspielen oder fortsetzen
+vid_pause|Video pausieren|Pause|Videowiedergabe pausieren
+vid_stop|Video stoppen|stoppen|Videowiedergabe stoppen
+vid_fwd|vorspulen|schnell vorwaerts,weiter springen|10 Sekunden vorspulen
+vid_back|zurueckspulen|zurueck springen|10 Sekunden zurueckspulen
+vid_faster|schneller|Geschwindigkeit erhoehen|Wiedergabegeschwindigkeit erhoehen
+vid_slower|langsamer|Geschwindigkeit verringern|Wiedergabegeschwindigkeit verringern
+vid_normal|normale Geschwindigkeit|Geschwindigkeit zuruecksetzen|Normale Geschwindigkeit wiederherstellen
+vid_fullscreen|Vollbild|Video maximieren|Vollbildmodus umschalten
+vid_mute|Video stummschalten|Video stumm|Video stummschalten
+vid_unmute|Video Ton an|Video Ton|Video Ton aktivieren
+vid_loop|Video Schleife|wiederholen,Schleife|Schleifenwiedergabe umschalten
+# ── Uebertragung (RemoteCast) ──
+cast_start|Uebertragung starten|Bildschirm uebertragen,Bildschirm teilen|Bildschirmuebertragung starten
+cast_stop|Uebertragung stoppen|Uebertragung beenden|Uebertragung stoppen
+cast_connect|Geraet verbinden|verbinden,Geraet koppeln|Mit Geraet verbinden
+cast_disconnect|Geraet trennen|trennen|Geraet trennen
+cast_quality|Uebertragungsqualitaet|Streamingqualitaet|Uebertragungsqualitaet aendern
+# ── KI ──
+ai_summarize|zusammenfassen|KI Zusammenfassung|Mit KI zusammenfassen
+ai_chat|KI Chat|mit KI sprechen,KI fragen|KI Chat oeffnen
+ai_search|KI Suche|Wissen suchen|Wissensdatenbank durchsuchen
+ai_teach|KI beibringen|KI trainieren,Wissen hinzufuegen|KI neues Wissen beibringen
+ai_clear|KI Kontext loeschen|KI zuruecksetzen,neues Gespraech|KI Gespraechskontext loeschen

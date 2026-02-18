@@ -158,3 +158,63 @@ note_clear_format|effacer formatage|supprimer formatage,texte brut|Supprimer tou
 note_word_count|compter mots|combien de mots|Afficher le nombre de mots
 note_read_aloud|lire note a voix haute|lire note|Lire contenu de note a voix haute
 note_stop_reading|arreter lecture note|arreter lecture|Arreter lecture de note
+# ── Annotation (AnnotationAvanue) ──
+ann_pen|outil stylo|stylo,dessiner,main levee|Selectionner outil stylo
+ann_highlight|surligneur|surligner,outil surligneur|Selectionner surligneur
+ann_shape_rect|dessiner rectangle|rectangle,boite|Dessiner rectangle
+ann_shape_circle|dessiner cercle|cercle,ovale,ellipse|Dessiner cercle
+ann_shape_arrow|dessiner fleche|fleche,pointeur|Dessiner fleche
+ann_shape_line|dessiner ligne|ligne,ligne droite|Dessiner ligne droite
+ann_color|selecteur couleur|choisir couleur,changer couleur|Ouvrir selecteur de couleur
+ann_undo|annuler annotation|annuler dessin|Annuler dernier trait
+ann_redo|retablir annotation|retablir dessin|Retablir dernier trait annule
+ann_clear|effacer annotations|tout effacer,tout supprimer|Effacer toutes les annotations
+ann_save|sauvegarder annotation|sauvegarder dessin|Sauvegarder annotation en image
+ann_share|partager annotation|envoyer dessin|Partager annotation
+ann_eraser|outil gomme|gomme,effacer|Passer a la gomme
+ann_pen_up|stylo plus epais|stylo plus gros|Augmenter epaisseur du stylo
+ann_pen_down|stylo plus fin|stylo plus petit|Reduire epaisseur du stylo
+# ── Image (ImageAvanue) ──
+img_open|ouvrir image|voir image,afficher image|Ouvrir visionneuse images
+img_gallery|ouvrir galerie|galerie,galerie photos,mes photos|Ouvrir galerie photos
+img_grayscale|niveaux de gris|noir et blanc,monochrome|Appliquer filtre niveaux de gris
+img_sepia|sepia|vintage,vieille photo|Appliquer filtre sepia
+img_blur|flouter image|adoucir,flou|Appliquer filtre flou
+img_sharpen|accentuer image|accentuer,ameliorer|Appliquer filtre accentuation
+img_brightness|ajuster luminosite|plus lumineux,plus sombre|Ajuster luminosite image
+img_contrast|ajuster contraste|plus contraste,moins contraste|Ajuster contraste image
+img_rotate_left|tourner gauche|pivoter gauche|Tourner image 90 degres gauche
+img_rotate_right|tourner droite|pivoter droite|Tourner image 90 degres droite
+img_flip_h|retourner horizontal|miroir,retourner|Retourner image horizontalement
+img_flip_v|retourner vertical|retourner haut bas|Retourner image verticalement
+img_crop|rogner image|rogner,decouper|Mode rognage
+img_share|partager image|envoyer image|Partager image
+img_delete|supprimer image|effacer image|Supprimer image
+img_info|infos image|details image,exif,metadonnees|Afficher metadonnees image
+img_next|image suivante|photo suivante|Voir image suivante
+img_prev|image precedente|photo precedente|Voir image precedente
+# ── Video (VideoAvanue) ──
+vid_play|lire video|lire,reprendre video|Lire ou reprendre video
+vid_pause|mettre en pause|pause|Mettre video en pause
+vid_stop|arreter video|arreter|Arreter lecture video
+vid_fwd|avancer|avance rapide,sauter avant|Avancer 10 secondes
+vid_back|reculer|rembobiner,sauter arriere|Reculer 10 secondes
+vid_faster|plus vite|vitesse rapide,accelerer|Augmenter vitesse
+vid_slower|plus lent|vitesse lente,ralentir|Reduire vitesse
+vid_normal|vitesse normale|reinitialiser vitesse|Retablir vitesse normale
+vid_fullscreen|plein ecran|maximiser video|Basculer plein ecran
+vid_mute|couper son video|video muet|Couper son video
+vid_unmute|activer son video|son video|Activer son video
+vid_loop|boucle video|repeter,boucle|Basculer lecture en boucle
+# ── Diffusion (RemoteCast) ──
+cast_start|commencer diffusion|diffuser ecran,partager ecran|Commencer diffusion ecran
+cast_stop|arreter diffusion|fin diffusion|Arreter diffusion
+cast_connect|connecter appareil|connecter,appairer|Connecter a appareil
+cast_disconnect|deconnecter appareil|deconnecter|Deconnecter appareil
+cast_quality|qualite diffusion|qualite streaming|Changer qualite diffusion
+# ── IA ──
+ai_summarize|resumer|resume ia,generer resume|Generer resume avec IA
+ai_chat|chat ia|parler a ia,demander ia|Ouvrir chat IA
+ai_search|recherche ia|chercher connaissance|Rechercher base de connaissances
+ai_teach|enseigner ia|entrainer ia,ajouter connaissance|Enseigner nouveau savoir a IA
+ai_clear|effacer contexte ia|reinitialiser ia,nouvelle conversation|Effacer contexte conversation
