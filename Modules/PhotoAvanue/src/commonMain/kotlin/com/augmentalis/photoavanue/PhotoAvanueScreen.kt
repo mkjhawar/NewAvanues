@@ -1,6 +1,12 @@
 package com.augmentalis.photoavanue
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,57 +17,82 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Exposure
 import androidx.compose.material.icons.filled.ExposureNeg1
 import androidx.compose.material.icons.filled.ExposurePlus1
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material.icons.filled.HdrOn
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Portrait
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.photoavanue.model.CaptureMode
+import com.augmentalis.photoavanue.model.ExtensionMode
 import com.augmentalis.photoavanue.model.FlashMode
 import com.augmentalis.photoavanue.model.RecordingState
+import com.augmentalis.photoavanue.model.WhiteBalanceMode
 
 /**
  * Standalone full-screen camera experience.
  *
  * Can be launched independently from the app hub or via voice command.
  * Includes its own TopAppBar, mode selector, capture controls, zoom/exposure,
- * and recording indicators. All state is driven by [controller].
+ * recording indicators, extension mode chips, and pro controls panel.
  *
- * For embedding inside a Cockpit frame (no chrome), use [CameraPreview] instead.
+ * If [controller] implements [IProCameraController], pro features are enabled:
+ * - Extension chips (Bokeh, HDR, Night, FaceRetouch)
+ * - Pro mode toggle with ISO, Shutter, Focus sliders
+ * - White balance presets
+ *
+ * For embedding inside a Cockpit frame (no chrome), use CameraPreview instead.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +103,8 @@ fun PhotoAvanueScreen(
 ) {
     val cameraState by controller.state.collectAsState()
     val colors = AvanueTheme.colors
+    val proController = controller as? IProCameraController
+    var showProPanel by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -92,7 +125,10 @@ fun PhotoAvanueScreen(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = colors.textPrimary)
                 }
             },
@@ -104,14 +140,43 @@ fun PhotoAvanueScreen(
                         color = colors.success,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(end = 12.dp)
+                        modifier = Modifier.padding(end = 8.dp)
                     )
                 }
+                // Extension mode indicator
+                if (cameraState.extensions.activeMode != ExtensionMode.NONE) {
+                    Text(
+                        text = cameraState.extensions.activeMode.name,
+                        color = colors.warning,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+                // Pro mode toggle
+                if (proController != null) {
+                    IconButton(
+                        onClick = { showProPanel = !showProPanel },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Pro Controls" }
+                    ) {
+                        Icon(
+                            Icons.Default.Tune,
+                            "Pro Controls",
+                            tint = if (cameraState.pro.isProMode) colors.warning else colors.textPrimary
+                        )
+                    }
+                }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent
-            )
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
         )
+
+        // ── Extension Mode Chips (if pro controller) ─────────────────
+        if (proController != null && cameraState.extensions.hasAnyExtension) {
+            ExtensionChipsRow(
+                extensions = cameraState.extensions,
+                onSelect = { proController.setExtensionMode(it) }
+            )
+        }
 
         // ── Camera Preview Area ──────────────────────────────────────
         Box(
@@ -146,7 +211,6 @@ fun PhotoAvanueScreen(
                 modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Zoom level
                 IconButton(onClick = { controller.zoomIn() }) {
                     Icon(Icons.Default.ZoomIn, "Zoom In", tint = colors.textPrimary.copy(alpha = 0.7f))
                 }
@@ -161,7 +225,6 @@ fun PhotoAvanueScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Exposure level
                 IconButton(onClick = { controller.increaseExposure() }) {
                     Icon(Icons.Default.ExposurePlus1, "Exposure +", tint = colors.textPrimary.copy(alpha = 0.7f))
                 }
@@ -169,6 +232,38 @@ fun PhotoAvanueScreen(
                 IconButton(onClick = { controller.decreaseExposure() }) {
                     Icon(Icons.Default.ExposureNeg1, "Exposure -", tint = colors.textPrimary.copy(alpha = 0.7f))
                 }
+            }
+
+            // Pro control readouts (left side, when pro mode is active)
+            if (cameraState.pro.isProMode) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(colors.surface.copy(alpha = 0.7f))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    ProReadout("ISO", cameraState.pro.iso.displayText, cameraState.pro.isIsoLocked)
+                    ProReadout("SS", cameraState.pro.shutterSpeed.displayText, cameraState.pro.isShutterLocked)
+                    ProReadout("F", cameraState.pro.focusDistance.displayText, cameraState.pro.isFocusLocked)
+                    ProReadout("WB", cameraState.pro.whiteBalance.name, cameraState.pro.isWhiteBalanceLocked)
+                }
+            }
+        }
+
+        // ── Pro Controls Panel (expandable) ──────────────────────────
+        if (proController != null) {
+            AnimatedVisibility(
+                visible = showProPanel,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                ProControlsPanel(
+                    controller = proController,
+                    pro = cameraState.pro
+                )
             }
         }
 
@@ -181,13 +276,13 @@ fun PhotoAvanueScreen(
             ModeChip(
                 label = "Photo",
                 selected = cameraState.captureMode == CaptureMode.PHOTO,
-                onClick = { /* Mode switch handled by controller or parent */ }
+                onClick = { }
             )
             Spacer(Modifier.width(12.dp))
             ModeChip(
                 label = "Video",
                 selected = cameraState.captureMode == CaptureMode.VIDEO,
-                onClick = { /* Mode switch handled by controller or parent */ }
+                onClick = { }
             )
             Spacer(Modifier.weight(1f))
         }
@@ -207,15 +302,18 @@ fun PhotoAvanueScreen(
                 FlashMode.AUTO -> Icons.Default.FlashAuto
                 FlashMode.TORCH -> Icons.Default.FlashlightOn
             }
-            IconButton(onClick = {
-                val nextFlash = when (cameraState.flashMode) {
-                    FlashMode.OFF -> FlashMode.ON
-                    FlashMode.ON -> FlashMode.AUTO
-                    FlashMode.AUTO -> FlashMode.TORCH
-                    FlashMode.TORCH -> FlashMode.OFF
-                }
-                controller.setFlashMode(nextFlash)
-            }) {
+            IconButton(
+                onClick = {
+                    val nextFlash = when (cameraState.flashMode) {
+                        FlashMode.OFF -> FlashMode.ON
+                        FlashMode.ON -> FlashMode.AUTO
+                        FlashMode.AUTO -> FlashMode.TORCH
+                        FlashMode.TORCH -> FlashMode.OFF
+                    }
+                    controller.setFlashMode(nextFlash)
+                },
+                modifier = Modifier.semantics { contentDescription = "Voice: click Flash" }
+            ) {
                 Icon(flashIcon, "Flash", tint = colors.textPrimary)
             }
 
@@ -225,7 +323,6 @@ fun PhotoAvanueScreen(
             when {
                 cameraState.captureMode == CaptureMode.VIDEO && cameraState.recording.isRecording -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Pause/Resume
                         IconButton(onClick = {
                             if (cameraState.recording.isPaused) controller.resumeRecording()
                             else controller.pauseRecording()
@@ -237,7 +334,6 @@ fun PhotoAvanueScreen(
                             )
                         }
                         Spacer(Modifier.width(8.dp))
-                        // Stop recording
                         IconButton(
                             onClick = { controller.stopRecording() },
                             modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.error.copy(alpha = 0.3f))
@@ -249,7 +345,11 @@ fun PhotoAvanueScreen(
                 cameraState.captureMode == CaptureMode.VIDEO -> {
                     IconButton(
                         onClick = { controller.startRecording() },
-                        modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.error.copy(alpha = 0.3f))
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(colors.error.copy(alpha = 0.3f))
+                            .semantics { contentDescription = "Voice: click Record" }
                     ) {
                         Icon(Icons.Default.FiberManualRecord, "Record", tint = colors.error, modifier = Modifier.size(40.dp))
                     }
@@ -257,7 +357,11 @@ fun PhotoAvanueScreen(
                 else -> {
                     IconButton(
                         onClick = { controller.capturePhoto() },
-                        modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.primary.copy(alpha = 0.3f))
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(colors.primary.copy(alpha = 0.3f))
+                            .semantics { contentDescription = "Voice: click Capture" }
                     ) {
                         Icon(Icons.Default.Camera, "Capture", tint = colors.textPrimary, modifier = Modifier.size(40.dp))
                     }
@@ -267,12 +371,265 @@ fun PhotoAvanueScreen(
             Spacer(Modifier.weight(1f))
 
             // Lens switch
-            IconButton(onClick = { controller.switchLens() }) {
+            IconButton(
+                onClick = { controller.switchLens() },
+                modifier = Modifier.semantics { contentDescription = "Voice: click Switch Lens" }
+            ) {
                 Icon(Icons.Default.Cameraswitch, "Switch Lens", tint = colors.textPrimary)
             }
         }
     }
 }
+
+// ── Extension Mode Chips ──────────────────────────────────────────────
+
+@Composable
+private fun ExtensionChipsRow(
+    extensions: com.augmentalis.photoavanue.model.CameraExtensions,
+    onSelect: (ExtensionMode) -> Unit
+) {
+    val colors = AvanueTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ExtensionChip("Auto", Icons.Default.Autorenew, extensions.activeMode == ExtensionMode.NONE, true) {
+            onSelect(ExtensionMode.NONE)
+        }
+        if (extensions.bokehAvailable) {
+            ExtensionChip("Portrait", Icons.Default.Portrait, extensions.activeMode == ExtensionMode.BOKEH, true) {
+                onSelect(ExtensionMode.BOKEH)
+            }
+        }
+        if (extensions.hdrAvailable) {
+            ExtensionChip("HDR", Icons.Default.HdrOn, extensions.activeMode == ExtensionMode.HDR, true) {
+                onSelect(ExtensionMode.HDR)
+            }
+        }
+        if (extensions.nightAvailable) {
+            ExtensionChip("Night", Icons.Default.DarkMode, extensions.activeMode == ExtensionMode.NIGHT, true) {
+                onSelect(ExtensionMode.NIGHT)
+            }
+        }
+        if (extensions.faceRetouchAvailable) {
+            ExtensionChip("Retouch", Icons.Default.Face, extensions.activeMode == ExtensionMode.FACE_RETOUCH, true) {
+                onSelect(ExtensionMode.FACE_RETOUCH)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExtensionChip(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    available: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = AvanueTheme.colors
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) colors.primary.copy(alpha = 0.25f) else colors.surface.copy(alpha = 0.4f))
+            .clickable(enabled = available, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .semantics { contentDescription = "Voice: click $label" }
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, modifier = Modifier.size(14.dp), tint = if (selected) colors.primary else colors.textSecondary)
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected) colors.primary else colors.textSecondary
+            )
+        }
+    }
+}
+
+// ── Pro Controls Panel ────────────────────────────────────────────────
+
+@Composable
+private fun ProControlsPanel(
+    controller: IProCameraController,
+    pro: com.augmentalis.photoavanue.model.ProCameraState
+) {
+    val colors = AvanueTheme.colors
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface.copy(alpha = 0.85f))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        // Pro mode toggle row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("PRO", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (pro.isProMode) colors.warning else colors.textSecondary)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MiniChip("ON", pro.isProMode) { controller.setProMode(true) }
+                MiniChip("OFF", !pro.isProMode) { controller.setProMode(false) }
+            }
+        }
+
+        if (pro.isProMode) {
+            // ISO slider
+            ProSliderRow(
+                label = "ISO",
+                value = pro.iso.normalized,
+                displayText = pro.iso.displayText,
+                locked = pro.isIsoLocked,
+                onValueChange = {
+                    val isoValue = (pro.iso.minValue + it * (pro.iso.maxValue - pro.iso.minValue)).toInt()
+                    controller.setIso(isoValue)
+                },
+                onLockToggle = { controller.lockIso(!pro.isIsoLocked) }
+            )
+
+            // Shutter speed slider
+            ProSliderRow(
+                label = "SS",
+                value = pro.shutterSpeed.normalized,
+                displayText = pro.shutterSpeed.displayText,
+                locked = pro.isShutterLocked,
+                onValueChange = {
+                    val nanos = (pro.shutterSpeed.minNanos + it * (pro.shutterSpeed.maxNanos - pro.shutterSpeed.minNanos)).toLong()
+                    controller.setShutterSpeed(nanos)
+                },
+                onLockToggle = { controller.lockShutter(!pro.isShutterLocked) }
+            )
+
+            // Focus distance slider
+            ProSliderRow(
+                label = "Focus",
+                value = pro.focusDistance.normalized,
+                displayText = pro.focusDistance.displayText,
+                locked = pro.isFocusLocked,
+                onValueChange = {
+                    val diopters = pro.focusDistance.minDiopters + it * (pro.focusDistance.maxDiopters - pro.focusDistance.minDiopters)
+                    controller.setFocusDistance(diopters)
+                },
+                onLockToggle = { controller.lockFocus(!pro.isFocusLocked) }
+            )
+
+            // White balance chips
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("WB", fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
+                WhiteBalanceMode.entries.forEach { mode ->
+                    MiniChip(
+                        label = mode.name.take(4),
+                        selected = pro.whiteBalance == mode,
+                        onClick = { controller.setWhiteBalance(mode) }
+                    )
+                }
+            }
+
+            // RAW toggle
+            if (pro.isRawSupported) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("RAW", fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
+                    MiniChip("DNG", pro.isRawEnabled) { controller.setRawCapture(!pro.isRawEnabled) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProSliderRow(
+    label: String,
+    value: Float,
+    displayText: String,
+    locked: Boolean,
+    onValueChange: (Float) -> Unit,
+    onLockToggle: () -> Unit
+) {
+    val colors = AvanueTheme.colors
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(label, fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium, modifier = Modifier.width(38.dp))
+        Slider(
+            value = value,
+            onValueChange = { if (!locked) onValueChange(it) },
+            enabled = !locked,
+            modifier = Modifier.weight(1f).height(24.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = colors.primary,
+                activeTrackColor = colors.primary,
+                inactiveTrackColor = colors.textDisabled
+            )
+        )
+        Text(displayText, fontSize = 10.sp, color = colors.textPrimary, modifier = Modifier.width(48.dp))
+        IconButton(
+            onClick = onLockToggle,
+            modifier = Modifier.size(24.dp)
+        ) {
+            Icon(
+                if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
+                "Lock $label",
+                tint = if (locked) colors.warning else colors.textSecondary,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProReadout(label: String, value: String, locked: Boolean) {
+    val colors = AvanueTheme.colors
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, fontSize = 9.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.width(4.dp))
+        Text(value, fontSize = 10.sp, color = colors.textPrimary, fontWeight = FontWeight.Bold)
+        if (locked) {
+            Icon(Icons.Default.Lock, null, modifier = Modifier.size(8.dp).padding(start = 2.dp), tint = colors.warning)
+        }
+    }
+}
+
+@Composable
+private fun MiniChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = AvanueTheme.colors
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) colors.primary.copy(alpha = 0.25f) else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) colors.primary else colors.textSecondary
+        )
+    }
+}
+
+// ── Helper Composables ────────────────────────────────────────────────
 
 @Composable
 private fun RecordingOverlay(
