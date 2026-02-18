@@ -29,6 +29,8 @@ data class VoiceCommandEntity(
     val actionType: String = "",
     /** JSON metadata string (v2.0+). Empty string if no metadata. */
     val metadata: String = "",
+    /** Domain this command belongs to: "app" (global), "web" (browser), "notes", "cockpit", etc. */
+    val domain: String = "app",
     val priority: Int = 50,
     val isFallback: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
@@ -80,6 +82,7 @@ data class VoiceCommandEntity(
         action = resolvedAction,
         description = description,
         category = category,
+        domain = domain,
         priority = priority.toLong(),
         isFallback = if (isFallback) 1L else 0L,
         isEnabled = 1L,
@@ -122,6 +125,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
             action = command.resolvedAction,
             description = command.description,
             category = command.category,
+            domain = command.domain,
             priority = command.priority.toLong(),
             is_fallback = if (command.isFallback) 1L else 0L,
             is_enabled = 1L,
@@ -146,6 +150,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
                     action = command.resolvedAction,
                     description = command.description,
                     category = command.category,
+                    domain = command.domain,
                     priority = command.priority.toLong(),
                     is_fallback = if (command.isFallback) 1L else 0L,
                     is_enabled = 1L,
@@ -308,6 +313,7 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
         description = this.description,
         category = this.category,
         actionType = this.action,
+        domain = this.domain,
         priority = this.priority.toInt(),
         isFallback = this.is_fallback == 1L,
         createdAt = this.created_at

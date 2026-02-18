@@ -36,7 +36,8 @@ data class VosParsedCommand(
     val category: String,
     val actionType: String,
     val metadata: String,
-    val isFallback: Boolean
+    val isFallback: Boolean,
+    val domain: String = "app"
 )
 
 /**
@@ -391,7 +392,7 @@ object VosParser {
                 ?: return VosParseResult.Error("Missing 'commands' array")
 
             val commands = parseJsonCommandsArray(
-                commandsArray, locale, isFallback,
+                commandsArray, locale, isFallback, domain,
                 categoryMap, actionMap, metaMap
             )
 
@@ -410,6 +411,7 @@ object VosParser {
         commandsArray: JsonArray,
         locale: String,
         isFallback: Boolean,
+        domain: String,
         categoryMap: JsonObject?,
         actionMap: JsonObject?,
         metaMap: JsonObject?
@@ -441,7 +443,8 @@ object VosParser {
                         category = category,
                         actionType = actionType,
                         metadata = metadata,
-                        isFallback = isFallback
+                        isFallback = isFallback,
+                        domain = domain
                     )
                 )
             } catch (_: Exception) {
@@ -538,7 +541,8 @@ object VosParser {
                         category = category,
                         actionType = actionType,
                         metadata = metadata,
-                        isFallback = isFallback
+                        isFallback = isFallback,
+                        domain = domain
                     )
                 )
             }
