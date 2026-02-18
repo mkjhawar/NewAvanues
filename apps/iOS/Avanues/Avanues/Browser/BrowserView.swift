@@ -12,7 +12,10 @@ struct BrowserView: View {
 
     @StateObject private var coordinator = WebViewCoordinator()
     @StateObject private var tabManager: TabManager
+    @StateObject private var voiceState = VoiceState()
+    @StateObject private var speechManager: SpeechRecognitionManager
 
+    @State private var commandRouter: CommandRouter?
     @State private var addressBarText: String = ""
     @State private var isEditingAddress: Bool = false
     @State private var showOverlay: Bool = false
@@ -28,6 +31,17 @@ struct BrowserView: View {
         let coord = WebViewCoordinator()
         _coordinator = StateObject(wrappedValue: coord)
         _tabManager = StateObject(wrappedValue: TabManager(coordinator: coord))
+
+        let locale = UserDefaults.standard.string(forKey: "voice_locale") ?? "en-US"
+        let onDevice = UserDefaults.standard.bool(forKey: "voice_on_device")
+        let threshold = UserDefaults.standard.double(forKey: "voice_confidence_threshold")
+        let continuous = UserDefaults.standard.bool(forKey: "voice_continuous")
+        _speechManager = StateObject(wrappedValue: SpeechRecognitionManager(
+            locale: locale,
+            preferOnDevice: onDevice,
+            confidenceThreshold: Float(threshold > 0 ? threshold : 0.6),
+            continuousListening: continuous
+        ))
     }
 
     var body: some View {
@@ -66,6 +80,9 @@ struct BrowserView: View {
                 webViewFrame = frame
             }
 
+            // Voice status bar
+            VoiceStatusBar(voiceState: voiceState)
+
             // Bottom toolbar
             bottomToolbar
         }
@@ -78,6 +95,26 @@ struct BrowserView: View {
             if !isEditingAddress {
                 addressBarText = displayURL(newURL)
             }
+        }
+        .onAppear {
+            // Wire voice recognition to command router
+            if commandRouter == nil {
+                let router = CommandRouter(
+                    tabManager: tabManager,
+                    domScraper: coordinator.domScraper,
+                    voiceState: voiceState
+                )
+                commandRouter = router
+                voiceState.commandRouter = router
+            }
+            voiceState.configure(speechManager: speechManager)
+            voiceState.availableCommandCount = coordinator.domScraper.elementCount
+        }
+        .onChange(of: coordinator.domScraper.elementCount) { count in
+            voiceState.availableCommandCount = count
+        }
+        .onDisappear {
+            voiceState.stopListening()
         }
     }
 
