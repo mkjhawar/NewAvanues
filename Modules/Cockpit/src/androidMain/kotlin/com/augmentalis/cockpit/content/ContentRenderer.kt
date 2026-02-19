@@ -87,6 +87,8 @@ fun ContentRenderer(
                 uri = content.uri,
                 autoPlay = content.isPlaying,
                 initialPositionMs = content.playbackPositionMs,
+                initialMuted = content.isMuted,
+                initialSpeed = content.playbackSpeed,
                 onPositionChanged = { posMs ->
                     onContentStateChanged(frame.id, content.copy(playbackPositionMs = posMs))
                 },
