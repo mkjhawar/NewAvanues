@@ -257,7 +257,9 @@ object VoiceControlCallbacks {
 }
 ```
 
-The accessibility service sets these callbacks during `onServiceReady()`. The handler invokes them without direct coupling. **Phase B task**: Wire callbacks in `VoiceAvanueAccessibilityService`.
+The accessibility service sets these callbacks during `onServiceReady()`. The handler invokes them without direct coupling.
+
+**`onSetNumbersMode` callback behavior (260219):** After setting `OverlayStateManager.setNumbersOverlayMode()`, the callback also invalidates the `DynamicCommandGenerator` screen hash and launches an immediate `refreshOverlayBadges()`. This ensures badges appear/disappear immediately after a voice command instead of waiting for the next accessibility event.
 
 ### Dispatch Priority
 

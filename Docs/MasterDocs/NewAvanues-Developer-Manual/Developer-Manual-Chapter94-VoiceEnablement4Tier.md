@@ -720,7 +720,13 @@ AccessibilityService.dispatchGesture(gestureDescription)
 | SystemHandler | SYSTEM | performGlobalAction (back, home, recents, notifications) |
 | AppHandler | APP | Launch via Intent |
 | AndroidCursorHandler | GAZE | CursorOverlayService start/stop/click |
+| VoiceControlHandler | SYSTEM | mute/wake voice, dictation, numbers on/off/auto |
 | HelpScreenHandler | ACCESSIBILITY | Show help UI |
+
+> **CursorOverlayService coordinate system**: The cursor overlay window MUST use
+> `FLAG_LAYOUT_IN_SCREEN` so its y=0 matches `dispatchGesture()` absolute screen
+> coordinates. Without this flag, clicks land `statusBarHeight` pixels above the
+> cursor visual position (overlay y=0 defaults to below the status bar).
 
 ---
 
@@ -777,21 +783,31 @@ generateNumericCommands() reads from CommandRegistry["overlay_numbers"]
 
 The overlay render and the voice grammar share the same badge number because they both read from `OverlayItem.badgeNumber` — no separate counter exists anywhere in the pipeline.
 
-### 9.5 AUTO Mode Behaviour Change
+### 9.5 Overlay Mode Behaviour
 
-`NumbersOverlayMode.AUTO` now shows overlay badges on ALL apps, not just the target app. Previously,
-AUTO suppressed badges on non-target apps, leaving users unable to visually verify which badge number
-corresponded to which element. Since badge-based commands are generated for all apps with indexable
-elements, showing the badges consistently is required for the system to be usable.
+`NumbersOverlayMode` controls both badge generation and visibility for ALL app types.
 
-| Mode | Badges visible | Commands generated |
-|------|---------------|-------------------|
-| `OFF` | Never | Never |
-| `ON` | Always | Always |
-| `AUTO` | Always (changed) | Always |
+| Mode | Badges generated | Badges visible | Applies to |
+|------|-----------------|---------------|------------|
+| `OFF` | Never | Never | All apps (target + non-target) |
+| `ON` | Always | Always | All apps |
+| `AUTO` | Always | Always | All apps |
 
-The remaining distinction between `AUTO` and `ON` is preserved for other mode-specific behaviour
-(e.g., passive vs. active VoiceOS activation) — only badge visibility was unified.
+**Important changes:**
+
+1. **Target app mode enforcement (260219):** `DynamicCommandGenerator.processScreen()` now checks
+   `NumbersOverlayMode` BEFORE the target/non-target app split. Previously, target apps (Gmail,
+   WhatsApp, etc.) bypassed the mode check and always generated overlay items — "hide numbers"
+   had no effect on list-based apps.
+
+2. **AUTO mode unification (260215):** `AUTO` shows overlay badges on ALL apps, not just target
+   apps. Since badge-based commands are generated for all apps with indexable elements, showing
+   the badges consistently is required for the system to be usable.
+
+3. **Immediate re-scan on mode change (260219):** When mode changes via voice command
+   ("show numbers", "hide numbers", "numbers auto"), the accessibility service invalidates the
+   screen hash and triggers an immediate `refreshOverlayBadges()`. This ensures badges appear
+   or disappear immediately, without waiting for the next accessibility event.
 
 ---
 
