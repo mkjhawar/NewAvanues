@@ -58,6 +58,13 @@ class CommandRegistry {
 
     private val mutex = Mutex() // Protects ALL concurrent writes
 
+    /** Monotonically increasing counter — incremented on every write for cache invalidation */
+    @Volatile
+    private var _generation: Long = 0
+
+    /** Current generation (snapshot version). Used by CommandMatcher for cache invalidation. */
+    fun generation(): Long = _generation
+
     /**
      * Update registry with new commands, replacing all existing.
      * Commands with null targetAvid are ignored (cannot be executed).
@@ -193,6 +200,7 @@ class CommandRegistry {
 
         // Single atomic write
         snapshot = CommandSnapshot(updatedCommands, newLabelCache, updatedSourceKeys)
+        _generation++
     }
 
     /**
@@ -256,6 +264,7 @@ class CommandRegistry {
 
         // Single atomic write ensures consistent reads
         snapshot = CommandSnapshot(newCommands, newLabelCache)
+        _generation++
     }
 
     /**
@@ -397,6 +406,7 @@ class CommandRegistry {
         LoggingUtils.d("addAll: adding ${toAdd.size} commands: ${toAdd.take(5).map { it.phrase }}", TAG)
         // Single atomic write ensures consistent reads — preserve sourceKeys
         snapshot = CommandSnapshot(newCommands, newLabelCache, snap.sourceKeys)
+        _generation++
     }
 
     /**
@@ -416,6 +426,7 @@ class CommandRegistry {
             withTimeout(5000L) {
                 mutex.withLock {
                     snapshot = CommandSnapshot(emptyMap(), emptyMap())
+                    _generation++
                 }
             }
         }
@@ -427,6 +438,7 @@ class CommandRegistry {
     suspend fun clearSuspend() {
         mutex.withLock {
             snapshot = CommandSnapshot(emptyMap(), emptyMap())
+            _generation++
         }
     }
 

@@ -119,6 +119,7 @@ class ActionCoordinator(
             "notes" -> ActionCategory.NOTE
             "cockpit" -> ActionCategory.COCKPIT
             "camera" -> ActionCategory.CAMERA
+            "ai" -> ActionCategory.AI
             else -> ActionCategory.APP
         }
     }
@@ -202,16 +203,16 @@ class ActionCoordinator(
      *
      * @param source Source identifier to clear
      */
-    fun clearDynamicCommandsBySource(source: String) {
-        commandRegistry.clearBySource(source)
+    suspend fun clearDynamicCommandsBySource(source: String) {
+        commandRegistry.clearBySourceSuspend(source)
     }
 
     /**
      * Clear all dynamic commands.
      * Call when leaving an app or screen context is invalid.
      */
-    fun clearDynamicCommands() {
-        commandRegistry.clear()
+    suspend fun clearDynamicCommands() {
+        commandRegistry.clearSuspend()
     }
 
     /**

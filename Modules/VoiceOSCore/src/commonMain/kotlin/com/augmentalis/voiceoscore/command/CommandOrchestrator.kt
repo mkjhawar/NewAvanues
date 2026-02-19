@@ -32,6 +32,10 @@ import kotlinx.atomicfu.locks.synchronized
  * Generates and registers voice commands for UI elements.
  * Designed to be composed with app-specific overlay handling.
  *
+ * All registry operations use suspend variants to avoid runBlocking on
+ * the calling thread. Callers must invoke from a coroutine context
+ * (e.g., serviceScope.launch).
+ *
  * @param commandRegistry Registry for command lookup during execution
  * @param commandPersistence Optional persistence for static commands
  */
@@ -58,7 +62,7 @@ class CommandOrchestrator(
      * @param updateSpeechEngine Optional callback to update speech engine grammar
      * @return CoreCommandResult with all generated commands
      */
-    fun generateCommands(
+    suspend fun generateCommands(
         elements: List<ElementInfo>,
         packageName: String,
         updateSpeechEngine: ((List<String>) -> Unit)? = null
@@ -72,11 +76,13 @@ class CommandOrchestrator(
         val allCommands = commandResults.map { it.command }
 
         // Register all commands in registry for lookup
-        commandRegistry.updateSync(allCommands)
+        commandRegistry.update(allCommands)
 
-        // Generate additional command types for list items
+        // Generate additional command types
+        // Ordinals ("first", "second") use ALL elements (spatial ordering for non-target apps)
+        val indexCommands = generateAndRegisterIndexCommands(elements, packageName)
+        // Label/numeric commands still use listIndex-filtered items (target app lists only)
         val listItems = elements.filter { it.listIndex >= 0 }
-        val indexCommands = generateAndRegisterIndexCommands(listItems, packageName)
         val labelCommands = generateAndRegisterLabelCommands(listItems, packageName)
         val numericCommands = generateAndRegisterNumericCommands(listItems, packageName)
 
@@ -118,7 +124,7 @@ class CommandOrchestrator(
      * @param updateSpeechEngine Optional callback to update speech engine
      * @return IncrementalCommandResult with merge statistics
      */
-    fun generateCommandsIncremental(
+    suspend fun generateCommandsIncremental(
         elements: List<ElementInfo>,
         packageName: String,
         existingCommands: List<QuantizedCommand>,
@@ -155,11 +161,13 @@ class CommandOrchestrator(
             }
         }
 
-        commandRegistry.updateSync(mergedCommands)
+        commandRegistry.update(mergedCommands)
 
-        // Generate additional commands for list items
+        // Generate additional commands
+        // Ordinals use ALL elements (spatial ordering for non-target apps)
+        val indexCommands = generateAndRegisterIndexCommands(elements, packageName)
+        // Label/numeric commands still use listIndex-filtered items
         val listItems = elements.filter { it.listIndex >= 0 }
-        val indexCommands = generateAndRegisterIndexCommands(listItems, packageName)
         val labelCommands = generateAndRegisterLabelCommands(listItems, packageName)
         val numericCommands = generateAndRegisterNumericCommands(listItems, packageName)
 
@@ -217,30 +225,30 @@ class CommandOrchestrator(
         )
     }
 
-    private fun generateAndRegisterIndexCommands(
+    private suspend fun generateAndRegisterIndexCommands(
         listItems: List<ElementInfo>,
         packageName: String
     ): List<QuantizedCommand> {
         val commands = CommandGenerator.generateListIndexCommands(listItems, packageName)
-        if (commands.isNotEmpty()) commandRegistry.addAll(commands)
+        if (commands.isNotEmpty()) commandRegistry.addAllSuspend(commands)
         return commands
     }
 
-    private fun generateAndRegisterLabelCommands(
+    private suspend fun generateAndRegisterLabelCommands(
         listItems: List<ElementInfo>,
         packageName: String
     ): List<QuantizedCommand> {
         val commands = CommandGenerator.generateListLabelCommands(listItems, packageName)
-        if (commands.isNotEmpty()) commandRegistry.addAll(commands)
+        if (commands.isNotEmpty()) commandRegistry.addAllSuspend(commands)
         return commands
     }
 
-    private fun generateAndRegisterNumericCommands(
+    private suspend fun generateAndRegisterNumericCommands(
         listItems: List<ElementInfo>,
         packageName: String
     ): List<QuantizedCommand> {
         val commands = CommandGenerator.generateNumericCommands(listItems, packageName)
-        if (commands.isNotEmpty()) commandRegistry.addAll(commands)
+        if (commands.isNotEmpty()) commandRegistry.addAllSuspend(commands)
         return commands
     }
 

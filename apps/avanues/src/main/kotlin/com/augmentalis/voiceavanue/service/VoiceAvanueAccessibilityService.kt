@@ -555,7 +555,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
      * Navigation detection is handled by structural-change-ratio in handleScreenContext(),
      * not by event source. This works for both Activity and Fragment transitions.
      */
-    private fun refreshOverlayBadges() {
+    private suspend fun refreshOverlayBadges() {
         try {
             val root = rootInActiveWindow ?: return
             val packageName = root.packageName?.toString() ?: return
@@ -590,7 +590,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
      * - Word: "one", "two", "three" (spoken word form)
      * - Ordinal: "first", "second", "third" (for first 10 items)
      */
-    private fun registerOverlayCommands(packageName: String) {
+    private suspend fun registerOverlayCommands(packageName: String) {
         val overlayItems = OverlayStateManager.numberedOverlayItems.value
         if (overlayItems.isEmpty()) {
             voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("overlay_numbers")
@@ -645,9 +645,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             }
         }
 
-        serviceScope.launch {
-            voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("overlay_numbers", commands)
-        }
+        voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("overlay_numbers", commands)
         Log.d(TAG, "Registered ${commands.size} overlay-aligned commands for ${overlayItems.size} badges")
     }
 

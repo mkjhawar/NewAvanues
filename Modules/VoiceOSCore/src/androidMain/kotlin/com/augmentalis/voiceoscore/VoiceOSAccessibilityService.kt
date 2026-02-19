@@ -383,10 +383,12 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Generate list commands: ordinals ("first"), numeric ("1"), and labels ("Gmail")
+        // Generate ordinal commands ("first", "second") — pass ALL elements for spatial ordering
+        commands.addAll(CommandGenerator.generateListIndexCommands(elements, packageName))
+
+        // Generate numeric ("1") and label ("Gmail") commands for target app lists only
         val listElements = elements.filter { it.listIndex >= 0 }
         if (listElements.isNotEmpty()) {
-            commands.addAll(CommandGenerator.generateListIndexCommands(listElements, packageName))
             commands.addAll(CommandGenerator.generateNumericCommands(listElements, packageName))
             commands.addAll(CommandGenerator.generateListLabelCommands(listElements, packageName))
         }

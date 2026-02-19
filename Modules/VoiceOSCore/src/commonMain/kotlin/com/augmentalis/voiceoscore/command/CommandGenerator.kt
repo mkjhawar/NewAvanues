@@ -179,19 +179,24 @@ object CommandGenerator {
     }
 
     /**
-     * Generate index-based commands for list items.
-     * Creates commands like "first", "second", "item 3" for dynamic list navigation.
+     * Generate ordinal commands for screen elements.
+     * Creates commands like "first", "second", "item 3" for voice navigation.
      *
-     * IMPORTANT: Generates exactly ONE command per unique listIndex to prevent duplicates.
-     * When multiple elements share the same listIndex (e.g., a row and its children),
-     * we keep the best representative element (prefer clickable, in dynamic container).
+     * Dual-path strategy:
+     * - **Target apps** (elements with listIndex >= 0): Groups by listIndex, keeps best
+     *   representative per group, sorts by listIndex. Prevents duplicates from child elements.
+     * - **Non-target apps** (all listIndex = -1): Sorts all clickable elements spatially
+     *   (top-to-bottom, left-to-right) and assigns ordinals by visual position.
      *
-     * @param listItems Elements that are list items (have listIndex >= 0)
+     * Both paths use visualIndex (position in sorted order) for ordinal assignment,
+     * matching the overlay badge numbering.
+     *
+     * @param allElements All screen elements (not pre-filtered by listIndex)
      * @param packageName Host application package name
-     * @return List of index commands (in-memory only, never persisted)
+     * @return List of ordinal commands (in-memory only, never persisted)
      */
     fun generateListIndexCommands(
-        listItems: List<ElementInfo>,
+        allElements: List<ElementInfo>,
         packageName: String
     ): List<QuantizedCommand> {
         val ordinals = listOf(
@@ -199,35 +204,37 @@ object CommandGenerator {
             "sixth", "seventh", "eighth", "ninth", "tenth"
         )
 
-        // Group by listIndex and keep only the best element per index
-        // This prevents duplicates when multiple elements share the same listIndex
-        val bestElementPerIndex = listItems
-            .filter { it.listIndex >= 0 }
-            .groupBy { it.listIndex }
-            .mapValues { (_, elements) ->
-                // Prefer: clickable > has content > in dynamic container > first
-                elements.maxByOrNull { element ->
-                    var score = 0
-                    if (element.isClickable) score += 100
-                    if (element.isInDynamicContainer) score += 50
-                    if (element.text.isNotBlank() || element.contentDescription.isNotBlank()) score += 25
-                    if (element.resourceId.isNotBlank()) score += 10
-                    score
+        val hasTargetAppIndices = allElements.any { it.listIndex >= 0 }
+
+        val candidateElements = if (hasTargetAppIndices) {
+            // Target app path: group by listIndex, keep best per group
+            allElements
+                .filter { it.listIndex >= 0 }
+                .groupBy { it.listIndex }
+                .mapValues { (_, elements) ->
+                    elements.maxByOrNull { element ->
+                        var score = 0
+                        if (element.isClickable) score += 100
+                        if (element.isInDynamicContainer) score += 50
+                        if (element.text.isNotBlank() || element.contentDescription.isNotBlank()) score += 25
+                        if (element.resourceId.isNotBlank()) score += 10
+                        score
+                    }
                 }
-            }
-            .values
-            .filterNotNull()
+                .values
+                .filterNotNull()
+                .sortedBy { it.listIndex }
+        } else {
+            // Non-target app path: spatial ordering for all clickable elements
+            allElements
+                .filter { it.isClickable || it.isLongClickable }
+                .sortedWith(compareBy({ it.bounds.top }, { it.bounds.left }))
+        }
 
-        return bestElementPerIndex.map { element ->
-            val index = element.listIndex
-            val phrase = when {
-                index < ordinals.size -> ordinals[index]
-                else -> "item ${index + 1}"
-            }
-
+        return candidateElements.take(ordinals.size).mapIndexed { visualIndex, element ->
+            val phrase = ordinals[visualIndex]
             val avid = generateAvid(element, packageName)
 
-            // Derive label for fallback search - prioritize text, then contentDescription
             val label = when {
                 element.text.isNotBlank() -> element.text
                 element.contentDescription.isNotBlank() -> element.contentDescription
@@ -244,14 +251,13 @@ object CommandGenerator {
                     "packageName" to packageName,
                     "elementHash" to deriveElementHash(element),
                     "isIndexCommand" to "true",
-                    "listIndex" to index.toString(),
+                    "visualIndex" to visualIndex.toString(),
+                    "listIndex" to element.listIndex.toString(),
                     "bounds" to "${element.bounds.left},${element.bounds.top},${element.bounds.right},${element.bounds.bottom}",
-                    // Additional metadata for BoundsResolver fallback layers
                     "label" to label,
                     "contentDescription" to element.contentDescription,
                     "resourceId" to element.resourceId,
                     "className" to element.className,
-                    // NAV-500 Fix #2: Scroll tracking metadata
                     "containerId" to element.containerResourceId,
                     "scrollOffset" to "${element.scrollOffsetX},${element.scrollOffsetY}"
                 )

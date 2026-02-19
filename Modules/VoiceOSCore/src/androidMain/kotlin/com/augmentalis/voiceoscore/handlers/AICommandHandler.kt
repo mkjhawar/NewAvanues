@@ -22,7 +22,7 @@ class AICommandHandler(
     private val service: AccessibilityService
 ) : BaseHandler() {
 
-    override val category: ActionCategory = ActionCategory.CUSTOM
+    override val category: ActionCategory = ActionCategory.AI
 
     override val supportedActions: List<String> = listOf(
         "summarize", "ai chat", "ai search",
