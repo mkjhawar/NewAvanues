@@ -120,8 +120,9 @@ class DynamicCommandGenerator(
                 // List-based app: find list items and number them
                 OverlayItemGenerator.generateForListApp(elements, hierarchy, labels, packageName)
             } else {
-                // General app with overlay ON mode: number all clickable elements
-                if (OverlayStateManager.numbersOverlayMode.value == NumbersOverlayMode.ON) {
+                // General app: show badges when ON or AUTO (AUTO shows when elements exist)
+                val mode = OverlayStateManager.numbersOverlayMode.value
+                if (mode == NumbersOverlayMode.ON || mode == NumbersOverlayMode.AUTO) {
                     OverlayItemGenerator.generateForAllClickable(elements, labels, packageName)
                 } else {
                     emptyList()

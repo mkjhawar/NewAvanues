@@ -37,7 +37,9 @@ import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.NumbersOverlayMode
 import com.augmentalis.voiceoscore.OverlayNumberingExecutor
 import com.augmentalis.voiceoscore.OverlayStateManager
+import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.TARGET_APPS
+import com.augmentalis.foundation.util.NumberToWords
 import com.augmentalis.voiceavanue.MainActivity
 import com.augmentalis.avanueui.theme.AvanueModuleAccents
 import com.augmentalis.avanueui.theme.ModuleAccent
@@ -567,9 +569,86 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             }
 
             dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
+
+            // Generate voice commands matching overlay badge numbers.
+            // This ensures badge "3" always maps to voice command "3" for ALL apps,
+            // not just target apps with listIndex. The overlay items are the single
+            // source of truth for numbering.
+            registerOverlayCommands(packageName)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating overlay", e)
         }
+    }
+
+    /**
+     * Create QuantizedCommands for each numbered overlay badge and register them
+     * as "overlay_numbers" source. This aligns voice command numbers with visible
+     * badge numbers for all apps (target and non-target alike).
+     *
+     * Commands generated per badge:
+     * - Digit: "1", "2", "3" (direct number)
+     * - Word: "one", "two", "three" (spoken word form)
+     * - Ordinal: "first", "second", "third" (for first 10 items)
+     */
+    private fun registerOverlayCommands(packageName: String) {
+        val overlayItems = OverlayStateManager.numberedOverlayItems.value
+        if (overlayItems.isEmpty()) {
+            voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("overlay_numbers")
+            return
+        }
+
+        val ordinals = listOf(
+            "first", "second", "third", "fourth", "fifth",
+            "sixth", "seventh", "eighth", "ninth", "tenth"
+        )
+
+        val commands = mutableListOf<QuantizedCommand>()
+        for (item in overlayItems) {
+            val bounds = "${item.left},${item.top},${item.right},${item.bottom}"
+            val baseMetadata = mapOf(
+                "packageName" to packageName,
+                "bounds" to bounds,
+                "source" to "overlay_numbers",
+                "overlayNumber" to item.number.toString()
+            )
+
+            // Digit form: "1", "2", "3"
+            commands.add(QuantizedCommand(
+                phrase = item.number.toString(),
+                actionType = CommandActionType.CLICK,
+                targetAvid = item.avid,
+                confidence = 1.0f,
+                metadata = baseMetadata
+            ))
+
+            // Word form: "one", "two", "three"
+            val wordForm = NumberToWords.convert(item.number)
+            if (wordForm.isNotBlank()) {
+                commands.add(QuantizedCommand(
+                    phrase = wordForm,
+                    actionType = CommandActionType.CLICK,
+                    targetAvid = item.avid,
+                    confidence = 0.95f,
+                    metadata = baseMetadata
+                ))
+            }
+
+            // Ordinal form: "first", "second" (first 10 only)
+            if (item.number in 1..ordinals.size) {
+                commands.add(QuantizedCommand(
+                    phrase = ordinals[item.number - 1],
+                    actionType = CommandActionType.CLICK,
+                    targetAvid = item.avid,
+                    confidence = 0.95f,
+                    metadata = baseMetadata
+                ))
+            }
+        }
+
+        serviceScope.launch {
+            voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("overlay_numbers", commands)
+        }
+        Log.d(TAG, "Registered ${commands.size} overlay-aligned commands for ${overlayItems.size} badges")
     }
 
     override fun onDestroy() {
