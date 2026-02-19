@@ -477,39 +477,35 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
             return
         }
 
-        serviceScope.launch {
+        serviceScope.launch(Dispatchers.Default) {
             val coordinator = getActionCoordinator()
             val result = coordinator.processVoiceCommand(utterance, confidence)
 
-            // Handle the result
+            // Handle the result — callbacks on Main for UI safety
+            val cmd = QuantizedCommand(
+                phrase = utterance,
+                actionType = CommandActionType.EXECUTE,
+                targetAvid = null,
+                confidence = confidence
+            )
             when (result) {
                 is HandlerResult.Success -> {
                     Log.d(TAG, "Command executed: ${result.message}")
-                    // Create a placeholder command for the callback
-                    val cmd = QuantizedCommand(
-                        phrase = utterance,
-                        actionType = CommandActionType.EXECUTE,
-                        targetAvid = null,
-                        confidence = confidence
-                    )
-                    onCommandExecuted(cmd, true)
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        onCommandExecuted(cmd, true)
+                    }
                 }
                 is HandlerResult.Failure -> {
                     Log.w(TAG, "Command failed: ${result.reason}")
-                    val cmd = QuantizedCommand(
-                        phrase = utterance,
-                        actionType = CommandActionType.EXECUTE,
-                        targetAvid = null,
-                        confidence = confidence
-                    )
-                    onCommandExecuted(cmd, false)
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        onCommandExecuted(cmd, false)
+                    }
                 }
                 is HandlerResult.NotHandled -> {
                     Log.w(TAG, "No matching command for: $utterance")
                 }
                 is HandlerResult.AwaitingSelection -> {
                     Log.d(TAG, "Awaiting selection: ${result.message}")
-                    // UI layer should handle disambiguation
                 }
                 else -> {
                     Log.d(TAG, "Command result: $result")

@@ -760,7 +760,7 @@ class ActionCoordinator(
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // Step 2: Try static handler lookup
+        // Step 2: Try static handler lookup (single findHandler, no duplicate canHandle)
         // ═══════════════════════════════════════════════════════════════════
         LoggingUtils.d("No dynamic match, trying static handlers", TAG)
         val directCommand = QuantizedCommand(
@@ -770,9 +770,9 @@ class ActionCoordinator(
             confidence = confidence
         )
 
-        val canHandle = handlerRegistry.canHandle(normalizedText)
-        LoggingUtils.d("handlerRegistry.canHandle('$normalizedText') = $canHandle", TAG)
-        if (canHandle) {
+        val staticHandler = handlerRegistry.findHandler(directCommand)
+        LoggingUtils.d("handlerRegistry.findHandler('$normalizedText') = ${staticHandler?.let { it::class.simpleName } ?: "null"}", TAG)
+        if (staticHandler != null) {
             return processCommand(directCommand)
         }
 
