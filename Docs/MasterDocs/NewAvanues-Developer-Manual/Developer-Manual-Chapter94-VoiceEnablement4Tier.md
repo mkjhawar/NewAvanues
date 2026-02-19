@@ -724,9 +724,80 @@ AccessibilityService.dispatchGesture(gestureDescription)
 
 ---
 
-## 9. Adding Voice Support to New UI Components
+## 9. Overlay-Aligned Numeric Command System
 
-### 9.1 For Our Apps (Tier 1 + Tier 2)
+### 9.1 Overview
+
+Starting with commit `2cfc0391`, overlay badge numbers are the single source of truth for all
+numeric voice commands. Before this change, `OverlayItemGenerator` and `generateNumericCommands()`
+maintained independent counters that could diverge when elements were filtered differently. The
+result was that badge "5" might activate what VoiceOS called ordinal "2".
+
+The fix makes badge number assignment authoritative: the overlay drives the commands, not the other way around.
+
+### 9.2 Source Key: `overlay_numbers`
+
+`CommandRegistry` now uses a dedicated source key `"overlay_numbers"` for badge-derived numeric commands. This keeps them separate from DOM-scraped commands (`"web"`), static VOS commands (`"web_static"`), and label-based dynamic commands so they can be cleared and rebuilt independently on each screen change.
+
+```
+CommandRegistry sources (partial list):
+  "static"          — VOS seed commands loaded from DB
+  "web"             — DOM-scraped web element commands
+  "web_static"      — static BROWSER/WEB_GESTURE commands (browser-scoped)
+  "overlay_numbers" — badge-derived numeric commands (NEW)
+```
+
+### 9.3 Three Command Forms Per Badge
+
+For every badge number N assigned by `OverlayItemGenerator`, three voice command phrases are registered:
+
+| Form | Example (N=3) | Pattern |
+|------|--------------|---------|
+| Digit | "3" | `N.toString()` |
+| Word | "three" | `NumberWords.forIndex(N)` |
+| Ordinal | "third" | `OrdinalWords.forIndex(N)` |
+
+All three phrases map to the same `QuantizedCommand` (same AVID, same action). If a user says any of the three, the correct element is activated.
+
+`NumberWords` and `OrdinalWords` cover 1-20 explicitly and fall back to `"{N}th"` for higher numbers.
+
+### 9.4 Data Flow
+
+```
+OverlayItemGenerator.assignBadgeNumbers(elements)
+    ↓
+For each element with listIndex >= 0:
+    overlayItem.badgeNumber = sequentialN
+    ↓
+CommandRegistry.update("overlay_numbers", overlayCommands)
+    ↓
+generateNumericCommands() reads from CommandRegistry["overlay_numbers"]
+    → registers "3", "three", "third" → QuantizedCommand(avid=overlayItem.avid)
+```
+
+The overlay render and the voice grammar share the same badge number because they both read from `OverlayItem.badgeNumber` — no separate counter exists anywhere in the pipeline.
+
+### 9.5 AUTO Mode Behaviour Change
+
+`NumbersOverlayMode.AUTO` now shows overlay badges on ALL apps, not just the target app. Previously,
+AUTO suppressed badges on non-target apps, leaving users unable to visually verify which badge number
+corresponded to which element. Since badge-based commands are generated for all apps with indexable
+elements, showing the badges consistently is required for the system to be usable.
+
+| Mode | Badges visible | Commands generated |
+|------|---------------|-------------------|
+| `OFF` | Never | Never |
+| `ON` | Always | Always |
+| `AUTO` | Always (changed) | Always |
+
+The remaining distinction between `AUTO` and `ON` is preserved for other mode-specific behaviour
+(e.g., passive vs. active VoiceOS activation) — only badge visibility was unified.
+
+---
+
+## 10. Adding Voice Support to New UI Components
+
+### 10.1 For Our Apps (Tier 1 + Tier 2)
 
 1. Use `IconButton` (not `Box + clickable`) for proper accessibility semantics
 2. Set clean `contentDescription` with optional `(Voice: ...)` hint:
@@ -746,19 +817,19 @@ AccessibilityService.dispatchGesture(gestureDescription)
    ```
 4. AVID is automatically assigned by `ElementFingerprint.fromElementInfo()`
 
-### 9.2 For Third-Party Developers (Tier 2)
+### 10.2 For Third-Party Developers (Tier 2)
 
 Tell them to add `(Voice: phrase)` to `contentDescription`. That's it.
 No SDK, no dependency, no build changes. Works in any framework.
 
-### 9.3 For Third-Party Apps Without Cooperation (Tier 3 + 4)
+### 10.3 For Third-Party Apps Without Cooperation (Tier 3 + 4)
 
 Nothing to do — the system works automatically via accessibility tree scraping.
 To improve quality, use the App Trainer to create a .VOS profile.
 
 ---
 
-## 10. Quick Reference: Key Decisions
+## 11. Quick Reference: Key Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
@@ -774,5 +845,5 @@ To improve quality, use the App Trainer to create a .VOS profile.
 ---
 
 *Chapter 94 | 4-Tier Voice Enablement Architecture*
-*Author: VOS4 Development Team | Created: 2026-02-11*
+*Created: 2026-02-11 | Updated: 2026-02-19 (overlay-aligned numeric command system, AUTO mode badge rendering, Section 9 added)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 03 (VoiceOSCore Deep Dive)*
