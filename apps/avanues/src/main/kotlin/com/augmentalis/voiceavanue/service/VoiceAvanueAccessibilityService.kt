@@ -46,7 +46,7 @@ import com.augmentalis.avanueui.theme.ModuleAccent
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.foundation.settings.models.DeveloperSettings
-import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
+import com.augmentalis.voiceoscore.commandmanager.CommandManager
 import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetector
 import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.voicecursor.core.CursorConfig
@@ -348,7 +348,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 // VoiceCommandDaoAdapter is created via CommandDatabase singleton,
                 // which requires VoiceOSDatabase — only available after DB init above.
                 try {
-                    val commandDatabase = com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
+                    val commandDatabase = com.augmentalis.voiceoscore.commandmanager.database.CommandDatabase
                         .getInstance(applicationContext)
                     val commandDao = commandDatabase.voiceCommandDao()
                     val vosRegistry = db.vosFileRegistry
