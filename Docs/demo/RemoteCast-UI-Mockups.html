@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RemoteCast - UI Mockups & Flow Charts</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #131829;
+    --surface2: #1a2035;
+    --primary: #4a7dff;
+    --primary-dim: #2a4d9f;
+    --green: #00ff41;
+    --green-dim: #007a1f;
+    --amber: #ffb020;
+    --error: #ff4444;
+    --text: #e0e4f0;
+    --text-dim: #8890a8;
+    --glass: rgba(255,255,255,0.06);
+    --glass-border: rgba(255,255,255,0.1);
+    --radius: 16px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'SF Pro',system-ui,sans-serif; padding:24px; line-height:1.5; }
+  h1 { font-size:28px; font-weight:700; margin-bottom:8px; background:linear-gradient(135deg,var(--primary),#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  h2 { font-size:20px; font-weight:600; margin:40px 0 16px; color:var(--text); border-bottom:1px solid var(--glass-border); padding-bottom:8px; }
+  h3 { font-size:15px; font-weight:600; color:var(--primary); margin:20px 0 8px; }
+  .subtitle { color:var(--text-dim); font-size:14px; margin-bottom:32px; }
+  .tab-bar { display:flex; gap:4px; margin-bottom:24px; flex-wrap:wrap; }
+  .tab { padding:10px 20px; border-radius:12px; background:var(--glass); border:1px solid var(--glass-border); color:var(--text-dim); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.2s; }
+  .tab:hover { background:var(--primary-dim); color:var(--text); }
+  .tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .section { display:none; }
+  .section.active { display:block; }
+
+  /* Flow chart styles */
+  .flow { background:var(--surface); border-radius:var(--radius); padding:24px; border:1px solid var(--glass-border); overflow-x:auto; }
+  .flow pre { font-family:'SF Mono',Menlo,monospace; font-size:12px; line-height:1.6; color:var(--text); white-space:pre; }
+  .flow .highlight { color:var(--primary); font-weight:600; }
+  .flow .green { color:var(--green); }
+  .flow .amber { color:var(--amber); }
+  .flow .dim { color:var(--text-dim); }
+  .flow .error { color:var(--error); }
+
+  /* Phone mockup */
+  .phone { width:280px; height:560px; background:var(--surface); border-radius:32px; border:2px solid var(--glass-border); padding:12px; display:inline-flex; flex-direction:column; margin:12px; vertical-align:top; position:relative; overflow:hidden; }
+  .phone .notch { width:100px; height:24px; background:var(--bg); border-radius:0 0 16px 16px; margin:0 auto 8px; }
+  .phone .screen { flex:1; background:var(--bg); border-radius:20px; padding:16px; display:flex; flex-direction:column; overflow:hidden; }
+  .phone .status-bar { display:flex; justify-content:space-between; font-size:10px; color:var(--text-dim); margin-bottom:12px; }
+  .phone .title-bar { font-size:16px; font-weight:600; margin-bottom:16px; }
+  .phone .nav-bar { height:4px; width:100px; background:var(--text-dim); border-radius:2px; margin:8px auto 0; }
+
+  /* Glasses mockup */
+  .glasses { width:400px; height:200px; background:#000; border-radius:20px; border:2px solid var(--green-dim); padding:16px; display:inline-flex; flex-direction:column; margin:12px; vertical-align:top; position:relative; }
+  .glasses.mono * { color:var(--green) !important; }
+  .glasses .lens-label { position:absolute; top:-10px; right:20px; font-size:9px; color:var(--green-dim); background:var(--bg); padding:0 8px; }
+
+  /* Browser mockup */
+  .browser { width:500px; height:380px; background:var(--surface); border-radius:12px; border:1px solid var(--glass-border); display:inline-flex; flex-direction:column; margin:12px; vertical-align:top; overflow:hidden; }
+  .browser .toolbar { height:36px; background:var(--surface2); display:flex; align-items:center; padding:0 12px; gap:8px; border-bottom:1px solid var(--glass-border); }
+  .browser .dot { width:10px; height:10px; border-radius:50%; }
+  .browser .url-bar { flex:1; height:22px; background:var(--bg); border-radius:6px; padding:0 10px; font-size:11px; color:var(--text-dim); display:flex; align-items:center; }
+  .browser .content { flex:1; padding:16px; background:var(--bg); }
+
+  /* Common UI elements */
+  .btn { display:inline-flex; align-items:center; justify-content:center; padding:10px 20px; border-radius:12px; font-size:13px; font-weight:500; cursor:pointer; border:none; gap:8px; }
+  .btn-primary { background:var(--primary); color:#fff; }
+  .btn-outline { background:transparent; border:1px solid var(--glass-border); color:var(--text); }
+  .btn-green { background:var(--green-dim); color:var(--green); border:1px solid var(--green); }
+  .btn-danger { background:rgba(255,68,68,0.15); color:var(--error); border:1px solid var(--error); }
+  .card { background:var(--glass); border:1px solid var(--glass-border); border-radius:12px; padding:14px; margin:8px 0; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:600; }
+  .badge-green { background:rgba(0,255,65,0.15); color:var(--green); }
+  .badge-amber { background:rgba(255,176,32,0.15); color:var(--amber); }
+  .badge-blue { background:rgba(74,125,255,0.15); color:var(--primary); }
+  .qr-placeholder { width:120px; height:120px; background:var(--surface2); border:2px dashed var(--glass-border); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--text-dim); margin:12px auto; }
+  .slider-track { height:4px; background:var(--text-dim); border-radius:2px; position:relative; margin:8px 0; }
+  .slider-fill { height:100%; width:35%; background:var(--primary); border-radius:2px; }
+  .slider-thumb { width:12px; height:12px; background:var(--primary); border-radius:50%; position:absolute; top:-4px; left:35%; }
+  .icon-row { display:flex; gap:16px; justify-content:center; align-items:center; margin:8px 0; }
+  .icon-btn { width:40px; height:40px; border-radius:50%; background:var(--glass); border:1px solid var(--glass-border); display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--text); cursor:pointer; }
+  .icon-btn.active { background:var(--primary); border-color:var(--primary); }
+  .device-list { list-style:none; }
+  .device-list li { padding:12px 16px; border-bottom:1px solid var(--glass-border); display:flex; justify-content:space-between; align-items:center; }
+  .mockup-row { display:flex; flex-wrap:wrap; align-items:flex-start; gap:0; }
+  .label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+  .cast-indicator { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--error); }
+  .cast-indicator .dot-live { width:8px; height:8px; background:var(--error); border-radius:50%; animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .video-placeholder { flex:1; background:#111; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--text-dim); font-size:12px; min-height:100px; position:relative; }
+  .avid-badge { position:absolute; background:var(--primary); color:#fff; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; }
+  .controls-bar { background:var(--surface); border-radius:8px; padding:8px 12px; margin-top:8px; }
+  .speed-chip { padding:4px 10px; border-radius:12px; font-size:11px; font-weight:600; background:rgba(74,125,255,0.2); color:var(--primary); display:inline-block; }
+  .connection-line { text-align:center; color:var(--text-dim); font-size:11px; margin:8px 0; }
+  .arrow { font-size:20px; color:var(--primary); }
+</style>
+</head>
+<body>
+
+<h1>RemoteCast UI Mockups</h1>
+<p class="subtitle">VoiceOS Screen Casting & Remote Control System &mdash; SpatialVoice Design Language</p>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="showTab('flow')">System Flow</div>
+  <div class="tab" onclick="showTab('sender')">Sender App</div>
+  <div class="tab" onclick="showTab('pairing')">Pairing Flow</div>
+  <div class="tab" onclick="showTab('browser')">Browser Receiver</div>
+  <div class="tab" onclick="showTab('glasses')">Glasses Client</div>
+  <div class="tab" onclick="showTab('p2p')">Phone-to-Phone</div>
+  <div class="tab" onclick="showTab('modes')">Streaming Modes</div>
+</div>
+
+<!-- ==================== SYSTEM FLOW ==================== -->
+<div id="flow" class="section active">
+<h2>System Architecture Flow</h2>
+
+<h3>High-Level Data Flow</h3>
+<div class="flow"><pre>
+<span class="highlight">SENDER DEVICE</span>                    <span class="dim">Network</span>                 <span class="highlight">RECEIVER DEVICE</span>
+<span class="dim">(Phone/Tablet/Desktop)</span>           <span class="dim">(WiFi LAN)</span>              <span class="dim">(Glasses/Phone/Browser)</span>
+
+ User taps "Start Cast"
+        |
+ <span class="amber">System consent dialog</span>
+ "Allow screen recording?"
+        |
+ <span class="green">MediaProjection token</span>
+        |
+ Foreground Service starts
+ (notification: "Casting...")
+        |
+ ScreenCaptureHelper
+   VirtualDisplay
+     ImageReader
+       Bitmap.compress(JPEG)
+        |                          <span class="highlight">CAST</span>                    MjpegTcpClient
+        +--- JPEG frames -------> <span class="dim">TCP:54321</span> ------------->  OR WebRTC video
+        |                                                   |
+        |                          <span class="green">CMD\0</span>                   VoiceOSCore (relay)
+        |<--- AVU commands ------- <span class="dim">TCP:54321</span> <-----------+  Speech Recognition
+        |                                                   |  "click 3"
+ ActionCoordinator                                          |  VosParser
+   processVoiceCommand()                                    |  CommandRouter
+   AccessibilityService                                     |  (local/remote/auto)
+   dispatches gesture                                       |
+        |                          <span class="amber">IMU\0</span>                   |
+        |<--- Head tracking ------ <span class="dim">TCP:54321</span> <-----------+  IMU sensors
+        |                                                   |  (future)
+ CursorHandler                                              |
+   moves cursor overlay                                     |
+        |                          <span class="error">TTS\0</span>                   |
+        +--- Audio feedback -----> <span class="dim">TCP:54321</span> ------------->  Speaker output
+                                                            |  (future)
+</pre></div>
+
+<h3>Pairing & Connection Flow</h3>
+<div class="flow"><pre>
+<span class="highlight">SENDER</span>                                          <span class="highlight">RECEIVER</span>
+
+ 1. Start RemoteCast service
+    |
+ 2. Get WiFi IP address
+    |
+ 3. Start TCP server (port 54321)             <span class="dim">--- Glasses Mode ---</span>
+    Start HTTPS server (WebRTC)               <span class="dim">--- Browser Mode ---</span>
+    |
+ 4. Generate QR code with:
+    <span class="dim">{"ip":"192.168.1.42",</span>
+    <span class="dim"> "port":54321,</span>
+    <span class="dim"> "mode":"mjpeg|webrtc",</span>
+    <span class="dim"> "name":"Manoj's Phone"}</span>
+    |
+ 5. Display QR + manual IP                     6. Scan QR code
+    on sender screen                               OR enter IP manually
+                                                   |
+                                                7. Connect TCP / Open browser URL
+                                                   |
+ 8. <span class="green">Connection established</span> <----TCP HANDSHAKE----> <span class="green">Connected</span>
+    |                                              |
+ 9. Begin MediaProjection                      10. Begin receiving frames
+    capture + send frames                          Render on display
+    |                                              |
+ 10. <span class="amber">Listen for CMD packets</span>                    11. <span class="amber">Send voice commands</span>
+     (reverse channel)                              as AVU packets
+</pre></div>
+
+<h3>Command Routing (Glasses Split Execution)</h3>
+<div class="flow"><pre>
+ User says: <span class="green">"scroll down"</span>
+                |
+         Speech Recognition
+                |
+            VosParser
+                |
+         CommandRouter
+           /    |    \
+          /     |     \
+   <span class="highlight">LOCAL</span>    <span class="amber">AUTO</span>    <span class="error">REMOTE</span>
+     |        |         |
+  Execute   Check     Serialize to AVU:
+  on        context   <span class="dim">"scroll down|SCROLL_DOWN||1.0|en-US|target:remote"</span>
+  glasses     |         |
+     |     Is cast    Send CMD packet
+  "menu"   active?    via TCP
+  "volume"   |         |
+  "hud"    Yes: REMOTE  Phone receives
+           No: LOCAL    ActionCoordinator
+                        dispatches scroll
+                        gesture via
+                        AccessibilityService
+</pre></div>
+</div>
+
+<!-- ==================== SENDER APP ==================== -->
+<div id="sender" class="section">
+<h2>Sender App Screens</h2>
+<div class="mockup-row">
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen">
+    <div class="status-bar"><span>9:41</span><span>WiFi  100%</span></div>
+    <div class="title-bar">RemoteCast</div>
+    <div style="text-align:center; margin:16px 0;">
+      <div style="width:80px;height:80px;border-radius:50%;background:var(--glass);border:2px solid var(--primary);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:32px;">
+        <span style="filter:grayscale(1)">&#128225;</span>
+      </div>
+      <div style="font-size:14px;font-weight:600;">Ready to Cast</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">WiFi: 192.168.1.42</div>
+    </div>
+    <div class="qr-placeholder">QR Code<br>tap to enlarge</div>
+    <div class="card">
+      <div class="label">Streaming Mode</div>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <span class="badge badge-blue">Auto</span>
+        <span class="badge" style="opacity:0.5">MJPEG</span>
+        <span class="badge" style="opacity:0.5">WebRTC</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Quality</div>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <span class="badge" style="opacity:0.5">SD</span>
+        <span class="badge badge-green">HD</span>
+        <span class="badge" style="opacity:0.5">FHD</span>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="btn btn-primary" style="width:100%;margin-top:8px;">Start Casting</div>
+    <div class="nav-bar"></div>
+  </div>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen" style="background:linear-gradient(180deg,#0a0e1a,#131829);">
+    <div class="status-bar"><span>9:42</span><span>WiFi  98%</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="title-bar" style="margin:0;">Casting</div>
+      <div class="cast-indicator"><div class="dot-live"></div> LIVE</div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;">
+        <div>
+          <div style="font-size:13px;font-weight:600;">Manoj's Glasses</div>
+          <div style="font-size:11px;color:var(--text-dim);">Vuzix Blade 2 &bull; MJPEG</div>
+        </div>
+        <span class="badge badge-green">Connected</span>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;font-size:12px;">
+        <span style="color:var(--text-dim);">Resolution</span>
+        <span>1280x720 HD</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;">
+        <span style="color:var(--text-dim);">FPS</span>
+        <span>15</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;">
+        <span style="color:var(--text-dim);">Latency</span>
+        <span style="color:var(--green);">42ms</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;">
+        <span style="color:var(--text-dim);">Bandwidth</span>
+        <span>2.4 Mbps</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Voice Commands Received</div>
+      <div style="font-size:11px;color:var(--green);margin-top:6px;">"click 3" &rarr; executed</div>
+      <div style="font-size:11px;color:var(--green);margin-top:2px;">"scroll down" &rarr; executed</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">"go back" &rarr; executed</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="btn btn-danger" style="width:100%;">Stop Casting</div>
+    <div class="nav-bar"></div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== PAIRING FLOW ==================== -->
+<div id="pairing" class="section">
+<h2>Pairing Flow</h2>
+<div class="mockup-row">
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen">
+    <div class="status-bar"><span>9:41</span><span>WiFi  100%</span></div>
+    <div class="title-bar">Pair Device</div>
+    <div style="text-align:center;margin:20px 0;">
+      <div class="qr-placeholder" style="width:160px;height:160px;font-size:12px;">
+        QR Code<br><br>
+        <span style="font-size:9px;color:var(--primary);">https://192.168.1.42:8443</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:12px;">Scan with receiver device</div>
+    </div>
+    <div style="text-align:center;color:var(--text-dim);font-size:12px;margin:12px 0;">- or enter manually -</div>
+    <div class="card">
+      <div class="label">Connection Details</div>
+      <div style="font-size:14px;font-weight:600;color:var(--primary);margin-top:6px;">192.168.1.42 : 54321</div>
+    </div>
+    <div class="card">
+      <div class="label">Nearby Devices</div>
+      <ul class="device-list" style="font-size:12px;">
+        <li><span>Manoj's Blade</span> <span class="badge badge-green">Ready</span></li>
+        <li><span>Living Room TV</span> <span class="badge badge-amber">Browser</span></li>
+        <li style="opacity:0.4"><span>Office Laptop</span> <span class="badge">Offline</span></li>
+      </ul>
+    </div>
+    <div class="nav-bar"></div>
+  </div>
+</div>
+
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin:20px;">
+  <div class="arrow">&rarr;</div>
+  <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">WiFi LAN</div>
+  <div style="font-size:10px;color:var(--text-dim);">TCP / WebRTC</div>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen">
+    <div class="status-bar"><span>9:41</span><span>WiFi  95%</span></div>
+    <div class="title-bar">Connect</div>
+    <div style="text-align:center;margin:24px 0;">
+      <div style="font-size:48px;margin-bottom:12px;filter:grayscale(1)">&#128247;</div>
+      <div class="btn btn-primary">Scan QR Code</div>
+    </div>
+    <div style="text-align:center;color:var(--text-dim);font-size:12px;margin:16px 0;">- or -</div>
+    <div class="card">
+      <div class="label">Enter IP Address</div>
+      <div style="background:var(--bg);border-radius:8px;padding:10px;margin-top:6px;color:var(--text-dim);font-size:13px;border:1px solid var(--glass-border);">
+        192.168.1.___
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Recent Connections</div>
+      <ul class="device-list" style="font-size:12px;">
+        <li><span>Manoj's Phone</span> <span style="color:var(--text-dim);">last: 2h ago</span></li>
+        <li><span>Work Tablet</span> <span style="color:var(--text-dim);">last: 1d ago</span></li>
+      </ul>
+    </div>
+    <div class="nav-bar"></div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== BROWSER RECEIVER ==================== -->
+<div id="browser" class="section">
+<h2>Browser Receiver (Zero-Install)</h2>
+<p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">Works on any device with a browser. No app install needed. Phone, tablet, laptop, smart TV.</p>
+
+<div class="browser">
+  <div class="toolbar">
+    <div class="dot" style="background:#ff5f57"></div>
+    <div class="dot" style="background:#febc2e"></div>
+    <div class="dot" style="background:#28c840"></div>
+    <div class="url-bar">https://192.168.1.42:8443</div>
+  </div>
+  <div class="content" style="padding:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:14px;font-weight:600;">Manoj's Phone</span>
+        <div class="cast-indicator"><div class="dot-live"></div> LIVE</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <span class="badge badge-blue">WebRTC</span>
+        <span class="badge badge-green">HD 720p</span>
+      </div>
+    </div>
+    <div class="video-placeholder" style="height:220px;border-radius:8px;background:#111;">
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Phone screen streaming here</div>
+        <div style="font-size:10px;color:var(--text-dim);">(tap/click to control remotely)</div>
+      </div>
+      <div class="avid-badge" style="top:20px;left:20px;">1</div>
+      <div class="avid-badge" style="top:60px;left:20px;">2</div>
+      <div class="avid-badge" style="top:100px;left:20px;">3</div>
+      <div class="avid-badge" style="top:140px;left:20px;">4</div>
+      <div style="position:absolute;bottom:8px;right:8px;font-size:10px;color:var(--text-dim);">42ms latency</div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:12px;margin-top:10px;">
+      <div class="icon-btn" title="Back">&#9664;</div>
+      <div class="icon-btn" title="Home">&#9679;</div>
+      <div class="icon-btn" title="Recent">&#9632;</div>
+      <div class="icon-btn" title="Power">&#9211;</div>
+      <div class="icon-btn" title="Volume+">&#128266;</div>
+      <div class="icon-btn" title="Keyboard">&#9000;</div>
+      <div class="icon-btn" title="Fullscreen">&#x26F6;</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== GLASSES CLIENT ==================== -->
+<div id="glasses" class="section">
+<h2>Smart Glasses Client</h2>
+
+<h3>Tier 1: Full Android Glasses (Color Display)</h3>
+<p style="color:var(--text-dim);font-size:12px;margin-bottom:12px;">Epson Moverio, Rokid, Vuzix Blade &mdash; full cast stream + HUD overlays</p>
+<div class="glasses" style="border-color:var(--primary);">
+  <div class="lens-label">BINOCULAR COLOR &bull; 1920x1080</div>
+  <div style="display:flex;height:100%;gap:8px;">
+    <div class="video-placeholder" style="flex:1;font-size:10px;">
+      Phone Screen (MJPEG Stream)
+      <div class="avid-badge" style="top:10px;left:10px;">1</div>
+      <div class="avid-badge" style="top:35px;left:10px;">2</div>
+      <div class="avid-badge" style="top:60px;left:10px;">3</div>
+    </div>
+    <div style="width:100px;font-size:9px;display:flex;flex-direction:column;gap:4px;">
+      <div style="background:var(--glass);border-radius:6px;padding:6px;border:1px solid var(--glass-border);">
+        <div style="color:var(--primary);font-weight:600;">HUD</div>
+        <div style="color:var(--text-dim);">Say "menu"</div>
+        <div style="color:var(--text-dim);">Say "scroll"</div>
+      </div>
+      <div style="background:var(--glass);border-radius:6px;padding:6px;border:1px solid var(--glass-border);">
+        <div style="color:var(--green);">&#127908; Listening</div>
+        <div style="color:var(--text-dim);margin-top:2px;">Last: "click 3"</div>
+      </div>
+      <div style="background:rgba(74,125,255,0.1);border-radius:6px;padding:6px;border:1px solid var(--primary-dim);">
+        <div style="color:var(--primary);font-size:8px;">42ms &bull; 15fps</div>
+        <div style="color:var(--text-dim);font-size:8px;">HD &bull; WiFi</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Tier 2: Vuzix Z100 (Monochrome Green, BLE)</h3>
+<p style="color:var(--text-dim);font-size:12px;margin-bottom:12px;">HUD text mode only &mdash; no video stream (BLE bandwidth limit)</p>
+<div class="glasses mono" style="width:320px;height:180px;">
+  <div class="lens-label" style="color:var(--green-dim);">MONOCULAR GREEN &bull; 640x480 &bull; BLE</div>
+  <div style="padding:8px;font-family:monospace;font-size:11px;">
+    <div style="border-bottom:1px solid var(--green-dim);padding-bottom:4px;margin-bottom:6px;display:flex;justify-content:space-between;">
+      <span>VoiceOS HUD</span>
+      <span style="font-size:9px;">9:42 AM</span>
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:9px;opacity:0.6;">ACTIVE COMMANDS:</div>
+      <div>1. Gmail</div>
+      <div>2. Chrome</div>
+      <div>3. Settings</div>
+      <div>4. Camera</div>
+    </div>
+    <div style="border-top:1px solid var(--green-dim);padding-top:4px;">
+      <div style="font-size:9px;opacity:0.6;">STATUS:</div>
+      <div>&#x25CF; Connected to Phone</div>
+      <div>Say "click 1" to open Gmail</div>
+    </div>
+  </div>
+</div>
+
+<h3>Tier 1: Monochrome Green Mode (Color Glasses + GPU Filter)</h3>
+<p style="color:var(--text-dim);font-size:12px;margin-bottom:12px;">For future mono hardware &mdash; GPU ColorMatrix converts full-color stream to green luminance</p>
+<div class="glasses mono" style="border-color:var(--green-dim);">
+  <div class="lens-label" style="color:var(--green-dim);">MONO_GREEN MODE &bull; ColorMatrix GPU Filter</div>
+  <div style="display:flex;height:100%;gap:8px;">
+    <div style="flex:1;background:#001a00;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;position:relative;border:1px solid var(--green-dim);">
+      Phone Screen (green filtered)
+      <div style="position:absolute;top:10px;left:10px;background:var(--green-dim);color:var(--green);font-size:9px;padding:1px 5px;border-radius:3px;">1</div>
+      <div style="position:absolute;top:35px;left:10px;background:var(--green-dim);color:var(--green);font-size:9px;padding:1px 5px;border-radius:3px;">2</div>
+      <div style="position:absolute;top:60px;left:10px;background:var(--green-dim);color:var(--green);font-size:9px;padding:1px 5px;border-radius:3px;">3</div>
+    </div>
+    <div style="width:90px;font-size:9px;display:flex;flex-direction:column;gap:4px;">
+      <div style="background:#001a00;border-radius:6px;padding:6px;border:1px solid var(--green-dim);">
+        <div style="font-weight:600;">HUD</div>
+        <div style="opacity:0.6;">&#x25CF; Listening</div>
+        <div style="opacity:0.6;">42ms</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== PHONE TO PHONE ==================== -->
+<div id="p2p" class="section">
+<h2>Phone-to-Phone / Phone-to-Tablet</h2>
+<p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">Receiver just opens a URL in their browser. No app install. WebRTC for high-quality adaptive streaming.</p>
+
+<div class="mockup-row" style="align-items:center;">
+  <div class="phone" style="width:240px;height:480px;">
+    <div class="notch" style="width:80px;height:20px;"></div>
+    <div class="screen" style="padding:10px;">
+      <div class="status-bar"><span>9:42</span><span>&#128225; Casting</span></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <div class="cast-indicator"><div class="dot-live"></div></div>
+        <span style="font-size:12px;font-weight:600;">Casting to 2 devices</span>
+      </div>
+      <div class="card" style="padding:8px;font-size:11px;">
+        <div style="display:flex;justify-content:space-between;">
+          <span>Mom's Phone</span> <span class="badge badge-green" style="font-size:8px;">WebRTC</span>
+        </div>
+      </div>
+      <div class="card" style="padding:8px;font-size:11px;">
+        <div style="display:flex;justify-content:space-between;">
+          <span>Tablet</span> <span class="badge badge-green" style="font-size:8px;">WebRTC</span>
+        </div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="text-align:center;">
+        <div class="qr-placeholder" style="width:100px;height:100px;font-size:9px;">QR Code</div>
+        <div style="font-size:10px;color:var(--text-dim);">Share to connect</div>
+      </div>
+      <div class="nav-bar"></div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;margin:0 16px;">
+    <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">Screen + Overlays</div>
+    <div class="arrow">&rarr;</div>
+    <div style="height:16px;"></div>
+    <div class="arrow">&larr;</div>
+    <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Touch / Commands</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="phone" style="width:240px;height:300px;">
+      <div class="notch" style="width:80px;height:20px;"></div>
+      <div class="screen" style="padding:8px;">
+        <div class="status-bar"><span>9:42</span><span>Chrome</span></div>
+        <div class="video-placeholder" style="height:180px;font-size:10px;">
+          Sender's screen (WebRTC)
+          <div class="avid-badge" style="top:10px;left:10px;font-size:8px;">1</div>
+          <div class="avid-badge" style="top:40px;left:10px;font-size:8px;">2</div>
+          <div style="position:absolute;bottom:4px;right:4px;font-size:8px;color:var(--text-dim);">tap to control</div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:6px;">
+          <div class="icon-btn" style="width:28px;height:28px;font-size:12px;">&#9664;</div>
+          <div class="icon-btn" style="width:28px;height:28px;font-size:12px;">&#9679;</div>
+          <div class="icon-btn" style="width:28px;height:28px;font-size:12px;">&#9632;</div>
+        </div>
+        <div class="nav-bar"></div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:10px;color:var(--text-dim);">Receiver Phone (Chrome browser)</div>
+  </div>
+</div>
+</div>
+
+<!-- ==================== STREAMING MODES ==================== -->
+<div id="modes" class="section">
+<h2>Dual Streaming Modes</h2>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;">
+  <div class="card" style="flex:1;min-width:300px;">
+    <h3 style="margin-top:0;">MJPEG Mode (Glasses)</h3>
+    <div class="flow" style="padding:16px;font-size:11px;">
+<pre>
+Sender                     Receiver
+  |                          |
+  |  <span class="highlight">[CAST] JPEG frame</span>        |
+  | -----------------------> |
+  |                          |
+  |  <span class="green">[CMD\0] AVU command</span>      |
+  | <----------------------- |
+  |                          |
+  |  <span class="amber">[IMU\0] head tracking</span>    |
+  | <----------------------- |
+  |                          |
+
+Protocol: Custom TCP (port 54321)
+Codec: JPEG (per-frame compression)
+Latency: ~40-80ms
+FPS: 10-20 (quality dependent)
+Receiver: GlassClient APK required
+</pre>
+    </div>
+  </div>
+
+  <div class="card" style="flex:1;min-width:300px;">
+    <h3 style="margin-top:0;">WebRTC Mode (Browser)</h3>
+    <div class="flow" style="padding:16px;font-size:11px;">
+<pre>
+Sender                     Receiver
+  |                          |
+  |  <span class="dim">WSS: SDP offer</span>          |
+  | -----------------------> |
+  |  <span class="dim">WSS: SDP answer</span>         |
+  | <----------------------- |
+  |  <span class="dim">WSS: ICE candidates</span>     |
+  | <-------- x  ----------> |
+  |                          |
+  |  <span class="highlight">WebRTC: VP8/H264 video</span>  |
+  | ========================>|
+  |                          |
+  |  <span class="green">WSS: touch/key commands</span> |
+  | <----------------------- |
+
+Protocol: WebRTC P2P + WebSocket signaling
+Codec: VP8 or H264 (adaptive bitrate)
+Latency: ~20-50ms
+FPS: up to 60
+Receiver: Any browser (zero install)
+</pre>
+    </div>
+  </div>
+</div>
+
+<h3>Auto-Selection Logic</h3>
+<div class="flow"><pre>
+Receiver connects to sender
+  |
+  +-- Is receiver our GlassClient APK?
+  |     |
+  |     YES --> <span class="highlight">MJPEG mode</span> (custom TCP, AVU commands, IMU relay)
+  |     |       Lower overhead, glasses-optimized
+  |     |
+  |     NO --> Is receiver a browser?
+  |              |
+  |              YES --> <span class="green">WebRTC mode</span> (P2P video, WebSocket commands)
+  |              |       Higher quality, zero install
+  |              |
+  |              NO --> <span class="amber">BLE HUD mode</span> (Vuzix Z100, text only)
+  |                     Ultralite SDK, push text/images via BLE
+</pre></div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
