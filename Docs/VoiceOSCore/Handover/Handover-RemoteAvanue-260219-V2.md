@@ -63,9 +63,33 @@ for the entire Avanues ecosystem — build it right. HTTP/2 benefits:
 - Cloud API multiplexing for concurrent LLM/license calls
 - AvaConnect is infrastructure — pay the complexity cost once, benefit everywhere
 
-Next session: research AvaConnect's current http-impl module, plan H2 upgrade.
+**WARNING: AvaConnect is WRITTEN but DOES NOT WORK.** Wiring is wrong per user.
+Next session MUST: deep investigation of AvaConnect issues, create rectification plan.
+
+**DESIGN PRINCIPLE: Lightweight like NanoHTTPD (117KB), NOT heavy like Ktor (8-15MB).**
+The goal is a tiny, fast, distributable KMP HTTP module. Ktor is too heavy.
+
+Two paths to evaluate:
+- Path A: Fix AvaConnect's existing wiring issues (existing tech stack)
+- Path B: Rebuild as HTTPAvanue with updated tech stack + HTTP/2
+- Either way: result must be LIGHTWEIGHT and STANDALONE (publishable library)
+
+KEY DECISION: HTTPAvanue should be a STANDALONE distributable module/library
+that others can use. Not just internal — designed for open distribution.
+
+Tech to consider adding to HTTPAvanue:
+- HTTP/2 (RFC 7540 — user confirmed this is needed)
+- WebSocket (already in AvaConnect websocket-impl)
+- TLS/HTTPS (self-signed + CA certs)
+- Server-Sent Events (SSE) for streaming
+- mDNS/DNS-SD for device discovery
+- CORS middleware
+- Rate limiting / QoS (already in AvaConnect qos-api)
+- KMP cross-platform (Android, iOS, Desktop, JS)
+
 AvaConnect location: `/Volumes/M-Drive/Coding/AvaConnect/`
-Key modules: http-api, http-impl, websocket-impl (already production-ready)
+Key modules: http-api, http-impl, websocket-impl, middleware-impl, routing-api
+Sprint 1 status: 3/12 modules clean. Sprint 2: 4 missing interfaces (BLOCKED).
 
 ## User's Pending Requests (In Order)
 1. **Deep research AvaConnect** — understand its API, plan HTTP/2 upgrade to http-impl
