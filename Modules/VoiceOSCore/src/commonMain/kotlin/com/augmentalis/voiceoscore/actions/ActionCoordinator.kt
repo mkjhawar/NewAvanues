@@ -13,7 +13,7 @@ package com.augmentalis.voiceoscore
 
 import com.augmentalis.voiceoscore.Command
 import com.augmentalis.voiceoscore.CommandError
-import com.augmentalis.voiceoscore.CommandResult
+import com.augmentalis.voiceoscore.ActionResult
 import com.augmentalis.voiceoscore.CommandSource
 import com.augmentalis.voiceoscore.ErrorCode
 import com.augmentalis.voiceoscore.command.LocalizedVerbProvider
@@ -917,8 +917,8 @@ class ActionCoordinator(
 
         _results.emit(actionResult)
 
-        // Convert to CommandResult for metrics recording
-        val metricsResult = CommandResult(
+        // Convert to ActionResult for metrics recording
+        val metricsResult = ActionResult(
             success = result.isSuccess,
             command = Command(
                 id = command.avid,

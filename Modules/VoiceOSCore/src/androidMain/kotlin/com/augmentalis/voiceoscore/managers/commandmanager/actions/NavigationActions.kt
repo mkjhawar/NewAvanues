@@ -31,7 +31,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_BACK)) {
                 createSuccessResult(command, "Navigated back")
             } else {
@@ -48,7 +48,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_HOME)) {
                 createSuccessResult(command, "Navigated to home")
             } else {
@@ -65,7 +65,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_RECENTS)) {
                 createSuccessResult(command, "Opened recent apps")
             } else {
@@ -82,7 +82,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)) {
                 createSuccessResult(command, "Opened notifications")
             } else {
@@ -99,7 +99,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)) {
                 createSuccessResult(command, "Opened quick settings")
             } else {
@@ -116,7 +116,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)) {
                 createSuccessResult(command, "Opened power dialog")
             } else {
@@ -133,7 +133,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)) {
                 createSuccessResult(command, "Toggled split screen")
             } else {
@@ -150,7 +150,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)) {
                 createSuccessResult(command, "Locked screen")
             } else {
@@ -167,7 +167,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)) {
                 createSuccessResult(command, "Screenshot taken")
             } else {
@@ -184,7 +184,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -205,7 +205,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE)) {
                 createSuccessResult(command, "Dismissed notifications")
             } else {
@@ -222,7 +222,7 @@ object NavigationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS)) {
                 createSuccessResult(command, "Opened all apps")
             } else {

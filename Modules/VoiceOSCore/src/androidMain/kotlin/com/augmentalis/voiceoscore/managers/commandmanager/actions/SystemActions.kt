@@ -40,7 +40,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 val currentState = wifiManager.isWifiEnabled
@@ -71,7 +71,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 
@@ -102,7 +102,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 
@@ -134,7 +134,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
                 val bluetoothAdapter = bluetoothManager?.adapter
@@ -180,7 +180,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
                 val bluetoothAdapter = bluetoothManager?.adapter
@@ -221,7 +221,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
                 val bluetoothAdapter = bluetoothManager?.adapter
@@ -261,7 +261,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val category = getTextParameter(command, "category")?.lowercase()
             
             return try {
@@ -310,7 +310,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val info = mapOf(
                     "model" to android.os.Build.MODEL,
@@ -339,7 +339,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val batteryIntent = context.registerReceiver(null, 
                     android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -379,7 +379,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                 val (isConnected, networkType) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -435,7 +435,7 @@ object SystemActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val statFs = android.os.StatFs(android.os.Environment.getDataDirectory().path)
                 val bytesAvailable = statFs.blockSizeLong * statFs.availableBlocksLong

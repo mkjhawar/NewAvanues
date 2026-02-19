@@ -510,7 +510,7 @@ class DynamicNavigationAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         return if (performGlobalAction(accessibilityService, globalAction)) {
             createSuccessResult(command, successMessage)
         } else {
@@ -530,7 +530,7 @@ class DynamicIntentAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         return try {
             val intent = Intent(intentAction).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -554,7 +554,7 @@ class DynamicVolumeAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         // Implementation will delegate to VolumeActions
         val volumeAction = when (action) {
             VolumeAction.VOLUME_UP -> VolumeActions.VolumeUpAction()
@@ -578,7 +578,7 @@ class DynamicBluetoothAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         val action = if (enable == null) {
             SystemActions.BluetoothToggleAction()
         } else if (enable) {
@@ -601,7 +601,7 @@ class DynamicWiFiAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         val action = if (enable == null) {
             SystemActions.WifiToggleAction()
         } else if (enable) {
@@ -624,7 +624,7 @@ class DynamicScrollAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         if (accessibilityService == null) {
             return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service not available")
         }
@@ -729,7 +729,7 @@ class DynamicCursorAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         if (accessibilityService == null) {
             return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service not available")
         }
@@ -812,7 +812,7 @@ class DynamicEditingAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         if (accessibilityService == null) {
             return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service not available")
         }
@@ -881,7 +881,7 @@ class DynamicBrowserAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         return when (action) {
             "forward" -> {
                 // Browser forward — use Intent.ACTION_VIEW for generic browser nav
@@ -945,7 +945,7 @@ class DynamicMediaAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         val keyCode = when (action) {
@@ -979,7 +979,7 @@ class DynamicUIAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         return when {
             action.contains("keyboard") && (action.contains("close") || action.contains("hide")) -> {
                 val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -1027,7 +1027,7 @@ class DynamicInteractionAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         if (accessibilityService == null) {
             return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service not available")
         }
@@ -1100,7 +1100,7 @@ class DynamicOverlayAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         // Overlay visibility is controlled via OverlayService broadcast intents
         val intent = Intent().apply {
             setPackage(context.packageName)
@@ -1148,7 +1148,7 @@ class DynamicKeyboardAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         val inputMethodManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
 
         return when (action) {
@@ -1201,7 +1201,7 @@ class DynamicAppAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         // Extract app name from command or action
         val appName = extractAppName(command.text ?: "", action)
 
@@ -1296,7 +1296,7 @@ class DynamicPositionAction(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         if (accessibilityService == null) {
             return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service not available")
         }

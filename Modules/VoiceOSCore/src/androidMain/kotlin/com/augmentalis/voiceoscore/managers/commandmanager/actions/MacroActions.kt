@@ -63,7 +63,7 @@ class MacroActions(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         val macroName = command.text?.lowercase()
 
         // Find matching macro
@@ -88,7 +88,7 @@ class MacroActions(
         macro: Macro,
         @Suppress("UNUSED_PARAMETER") accessibilityService: AccessibilityService?,
         @Suppress("UNUSED_PARAMETER") context: Context
-    ): CommandResult {
+    ): ActionResult {
         val executionStart = System.currentTimeMillis()
         val stepResults = mutableListOf<StepResult>()
 
@@ -191,8 +191,8 @@ class MacroActions(
         errorCode: ErrorCode,
         message: String,
         data: Any? = null
-    ): CommandResult {
-        return CommandResult(
+    ): ActionResult {
+        return ActionResult(
             success = false,
             command = command,
             error = CommandError(errorCode, message),
@@ -330,7 +330,7 @@ class MacroActions(
 
     /**
      * Macro execution data
-     * Returned in CommandResult.data for debugging and analytics
+     * Returned in ActionResult.data for debugging and analytics
      */
     data class MacroExecutionData(
         val macroName: String,
@@ -497,7 +497,7 @@ class MacroActions(
     /**
      * Execute conditional macro with if/else/loop support
      */
-    suspend fun executeConditionalMacro(macro: ConditionalMacro): CommandResult {
+    suspend fun executeConditionalMacro(macro: ConditionalMacro): ActionResult {
         Log.d(TAG, "Executing conditional macro: ${macro.name}")
 
         val executedSteps = mutableListOf<String>()
@@ -523,7 +523,7 @@ class MacroActions(
                         val result = commandExecutor?.execute(command)
                         if (result?.success != true) {
                             Log.w(TAG, "Conditional macro step failed: ${step.action}")
-                            return CommandResult(
+                            return ActionResult(
                                 success = false,
                                 command = command,
                                 error = CommandError(ErrorCode.EXECUTION_FAILED, "Step failed: ${step.action}")
@@ -592,7 +592,7 @@ class MacroActions(
 
         Log.i(TAG, "Conditional macro '${macro.name}' completed: ${executedSteps.size} steps executed")
 
-        return CommandResult(
+        return ActionResult(
             success = true,
             command = Command(
                 id = "conditional_${macro.name}",
@@ -729,5 +729,5 @@ class MacroActions(
  * Injected dependency to avoid circular references
  */
 interface CommandExecutor {
-    suspend fun execute(command: Command): CommandResult
+    suspend fun execute(command: Command): ActionResult
 }

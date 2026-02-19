@@ -36,7 +36,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext createErrorResult(
                 command,
                 ErrorCode.EXECUTION_FAILED,
@@ -55,7 +55,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (performGlobalAction(
                     accessibilityService,
                     AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS
@@ -76,7 +76,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (performGlobalAction(
                     accessibilityService,
                     AccessibilityService.GLOBAL_ACTION_HOME
@@ -97,7 +97,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (performGlobalAction(
                     accessibilityService,
                     AccessibilityService.GLOBAL_ACTION_BACK
@@ -118,7 +118,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (performGlobalAction(
                     accessibilityService,
                     AccessibilityService.GLOBAL_ACTION_RECENTS
@@ -139,7 +139,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (performGlobalAction(
                     accessibilityService,
                     AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
@@ -160,7 +160,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (performGlobalAction(
                     accessibilityService,
                     AccessibilityService.GLOBAL_ACTION_POWER_DIALOG
@@ -181,7 +181,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (performGlobalAction(
                     accessibilityService,
                     AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN
@@ -202,7 +202,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (performGlobalAction(
                     accessibilityService,
                     AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT
@@ -223,7 +223,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 // API 30+ supports accessibility button action
                 if (performGlobalAction(
@@ -253,7 +253,7 @@ object ShortcutActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 // API 30+ supports accessibility shortcut
                 if (performGlobalAction(

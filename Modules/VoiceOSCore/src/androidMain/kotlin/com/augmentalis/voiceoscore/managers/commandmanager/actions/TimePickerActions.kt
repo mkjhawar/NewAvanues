@@ -45,7 +45,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val hour = getNumberParameter(command, "hour")?.toInt()
             val minute = getNumberParameter(command, "minute")?.toInt()
             val isAM = getBooleanParameter(command, "isAM")
@@ -103,7 +103,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val hour = getNumberParameter(command, "hour")?.toInt()
 
             if (hour == null || hour !in 1..12) {
@@ -147,7 +147,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val minute = getNumberParameter(command, "minute")?.toInt()
 
             if (minute == null || minute !in 0..59) {
@@ -191,7 +191,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = incrementHour(accessibilityService)
                 if (success) {
@@ -222,7 +222,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = decrementHour(accessibilityService)
                 if (success) {
@@ -253,7 +253,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = incrementMinute(accessibilityService)
                 if (success) {
@@ -284,7 +284,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = decrementMinute(accessibilityService)
                 if (success) {
@@ -315,7 +315,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = setAMPM(accessibilityService, isAM = true)
                 if (success) {
@@ -346,7 +346,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = setAMPM(accessibilityService, isAM = false)
                 if (success) {
@@ -377,7 +377,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = toggleAMPM(accessibilityService)
                 if (success) {
@@ -408,7 +408,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val calendar = Calendar.getInstance()
                 var hour = calendar.get(Calendar.HOUR)
@@ -448,7 +448,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = setTimePicker(accessibilityService, 12, 0, false)
                 if (success) {
@@ -479,7 +479,7 @@ object TimePickerActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val success = setTimePicker(accessibilityService, 12, 0, true)
                 if (success) {

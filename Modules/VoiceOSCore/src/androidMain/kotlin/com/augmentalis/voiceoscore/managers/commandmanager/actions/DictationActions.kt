@@ -39,7 +39,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (isDictating) {
                 createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Dictation already active")
             } else {
@@ -58,7 +58,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (!isDictating) {
                 createErrorResult(command, ErrorCode.EXECUTION_FAILED, "No active dictation session")
             } else {
@@ -84,7 +84,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val text = getTextParameter(command, "text")
             
             return if (text == null) {
@@ -110,7 +110,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val inputMethodManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                 
@@ -150,7 +150,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val inputMethodManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                 
@@ -180,7 +180,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val count = getNumberParameter(command, "count")?.toInt() ?: 1
             
             return try {
@@ -218,7 +218,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val rootNode = accessibilityService?.rootInActiveWindow
                 val focusedNode = findFocusedEditableNode(rootNode)
@@ -245,7 +245,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 insertText(accessibilityService, "\n")
                 createSuccessResult(command, "Enter pressed")
@@ -263,7 +263,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val count = getNumberParameter(command, "count")?.toInt() ?: 1
             
             return try {
@@ -284,7 +284,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 insertText(accessibilityService, "\t")
                 createSuccessResult(command, "Tab inserted")
@@ -302,7 +302,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val text = getTextParameter(command, "text")
             
             return if (text == null) {
@@ -326,7 +326,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val symbol = getTextParameter(command, "symbol")
             
             return if (symbol == null) {
@@ -386,7 +386,7 @@ object DictationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return try {
                 val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK

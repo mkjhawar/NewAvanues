@@ -17,6 +17,7 @@ package com.augmentalis.voiceoscore.managers.commandmanager.macros
 
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
+import com.augmentalis.voiceoscore.managers.commandmanager.dynamic.CommandResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 
@@ -307,16 +308,8 @@ data class MacroExecutionResult(
     val stepsExecuted: Int = 0
 )
 
-/**
- * Command Result - Result of a single command execution
- *
- * @property success Whether command succeeded
- * @property message Result message
- */
-data class CommandResult(
-    val success: Boolean,
-    val message: String? = null
-)
+// Type C CommandResult deleted — use sealed class from dynamic/VoiceCommand.kt.
+// MacroExecutor.commandProcessor lambda now returns the canonical CommandResult.
 
 /**
  * Macro Execution Exception

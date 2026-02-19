@@ -35,12 +35,12 @@ abstract class BaseAction {
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult
+    ): ActionResult
     
     /**
      * Main entry point - implements CommandHandler pattern
      */
-    suspend operator fun invoke(command: Command): CommandResult {
+    suspend operator fun invoke(command: Command): ActionResult {
         return try {
             val context = getContext(command)
             val accessibilityService = getAccessibilityService(command)
@@ -48,7 +48,7 @@ abstract class BaseAction {
             execute(command, accessibilityService, context)
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error executing action for command ${command.id}", e)
-            CommandResult(
+            ActionResult(
                 success = false,
                 command = command,
                 error = CommandError(
@@ -193,8 +193,8 @@ abstract class BaseAction {
         command: Command,
         message: String,
         data: Any? = null
-    ): CommandResult {
-        return CommandResult(
+    ): ActionResult {
+        return ActionResult(
             success = true,
             command = command,
             response = message,
@@ -209,8 +209,8 @@ abstract class BaseAction {
         command: Command,
         errorCode: ErrorCode,
         message: String
-    ): CommandResult {
-        return CommandResult(
+    ): ActionResult {
+        return ActionResult(
             success = false,
             command = command,
             error = CommandError(errorCode, message)

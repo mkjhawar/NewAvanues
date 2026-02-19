@@ -34,7 +34,7 @@ object NotificationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext try {
                 val notifications = getActiveNotifications(context)
 
@@ -86,7 +86,7 @@ object NotificationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext try {
                 val index = getNumberParameter(command, "index")?.toInt() ?: 1
                 val notifications = getActiveNotifications(context)
@@ -120,7 +120,7 @@ object NotificationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext try {
                 val index = getNumberParameter(command, "index")?.toInt() ?: 1
                 val notifications = getActiveNotifications(context)
@@ -154,7 +154,7 @@ object NotificationActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult = withContext(Dispatchers.Main) {
+        ): ActionResult = withContext(Dispatchers.Main) {
             return@withContext try {
                 val notifications = getActiveNotifications(context)
 

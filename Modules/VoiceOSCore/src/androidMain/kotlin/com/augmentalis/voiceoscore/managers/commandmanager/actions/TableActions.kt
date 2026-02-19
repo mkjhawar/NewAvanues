@@ -34,7 +34,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val rowNumber = getNumberParameter(command, "row")?.toInt()
                 ?: return createErrorResult(command, ErrorCode.INVALID_PARAMETERS, "Row number required")
 
@@ -54,7 +54,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (navigateRow(accessibilityService, NavigationDirection.NEXT)) {
                 createSuccessResult(command, "Moved to next row")
             } else {
@@ -71,7 +71,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (navigateRow(accessibilityService, NavigationDirection.PREVIOUS)) {
                 createSuccessResult(command, "Moved to previous row")
             } else {
@@ -88,7 +88,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (navigateRow(accessibilityService, NavigationDirection.FIRST)) {
                 createSuccessResult(command, "Moved to first row")
             } else {
@@ -105,7 +105,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (navigateRow(accessibilityService, NavigationDirection.LAST)) {
                 createSuccessResult(command, "Moved to last row")
             } else {
@@ -122,7 +122,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val columnName = getTextParameter(command, "column")
                 ?: return createErrorResult(command, ErrorCode.INVALID_PARAMETERS, "Column name required")
             val ascending = getBooleanParameter(command, "ascending") ?: true
@@ -144,7 +144,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val columnName = getTextParameter(command, "column")
                 ?: return createErrorResult(command, ErrorCode.INVALID_PARAMETERS, "Column name required")
             val filterValue = getTextParameter(command, "value")
@@ -166,7 +166,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (clearFilters(accessibilityService)) {
                 createSuccessResult(command, "Filters cleared")
             } else {
@@ -183,7 +183,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (toggleRowExpansion(accessibilityService, expand = true)) {
                 createSuccessResult(command, "Row expanded")
             } else {
@@ -200,7 +200,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             return if (toggleRowExpansion(accessibilityService, expand = false)) {
                 createSuccessResult(command, "Row collapsed")
             } else {
@@ -217,7 +217,7 @@ object TableActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): CommandResult {
+        ): ActionResult {
             val row = getNumberParameter(command, "row")?.toInt()
                 ?: return createErrorResult(command, ErrorCode.INVALID_PARAMETERS, "Row number required")
             val column = getNumberParameter(command, "column")?.toInt()

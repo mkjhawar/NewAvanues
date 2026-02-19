@@ -9,7 +9,7 @@
  */
 package com.augmentalis.voiceoscore
 
-import com.augmentalis.voiceoscore.CommandResult
+import com.augmentalis.voiceoscore.ActionResult
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -32,7 +32,7 @@ class MetricsCollector : IMetricsCollector {
     /**
      * Record a command result.
      */
-    override suspend fun record(result: CommandResult) {
+    override suspend fun record(result: ActionResult) {
         mutex.withLock {
             val phrase = result.command?.text ?: ""
 
@@ -156,7 +156,7 @@ private class CommandMetric(val phrase: String) {
     val successRate: Float
         get() = if (count > 0) successCount.toFloat() / count else 0f
 
-    fun record(result: CommandResult) {
+    fun record(result: ActionResult) {
         count++
         totalDurationMs += result.executionTime
         lastDurationMs = result.executionTime

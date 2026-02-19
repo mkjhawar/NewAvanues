@@ -49,7 +49,7 @@ class EditingActions(
         command: Command,
         accessibilityService: AccessibilityService?,
         context: Context
-    ): CommandResult {
+    ): ActionResult {
         return when (command.text?.lowercase()) {
             CMD_COPY -> performCopy(command)
             CMD_PASTE -> performPaste(command)
@@ -69,7 +69,7 @@ class EditingActions(
      * Copy selected text to clipboard
      * Uses AccessibilityService.performGlobalAction() for system-wide copy
      */
-    private fun performCopy(command: Command): CommandResult {
+    private fun performCopy(command: Command): ActionResult {
         return try {
             val success = accessibilityService?.performGlobalAction(
                 AccessibilityNodeInfo.ACTION_COPY
@@ -105,7 +105,7 @@ class EditingActions(
      * Paste clipboard content
      * Uses AccessibilityService.performGlobalAction() for system-wide paste
      */
-    private fun performPaste(command: Command): CommandResult {
+    private fun performPaste(command: Command): ActionResult {
         return try {
             // Check if clipboard has content
             val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -151,7 +151,7 @@ class EditingActions(
      * Cut selected text to clipboard
      * Copy + delete selected text
      */
-    private fun performCut(command: Command): CommandResult {
+    private fun performCut(command: Command): ActionResult {
         return try {
             val rootNode = accessibilityService?.rootInActiveWindow
             val focusedNode = findFocusedEditableNode(rootNode)
@@ -191,7 +191,7 @@ class EditingActions(
      * Select all text in focused field
      * Uses AccessibilityNodeInfo.ACTION_SELECT_ALL
      */
-    private fun performSelectAll(command: Command): CommandResult {
+    private fun performSelectAll(command: Command): ActionResult {
         return try {
             val rootNode = accessibilityService?.rootInActiveWindow
             val focusedNode = findFocusedEditableNode(rootNode)
@@ -231,7 +231,7 @@ class EditingActions(
      * Undo last edit
      * Uses KeyEvent or node-level undo if available
      */
-    private fun performUndo(command: Command): CommandResult {
+    private fun performUndo(command: Command): ActionResult {
         return try {
             val rootNode = accessibilityService?.rootInActiveWindow
             val focusedNode = findFocusedEditableNode(rootNode)
@@ -271,7 +271,7 @@ class EditingActions(
      * Redo last undo
      * Uses KeyEvent or node-level redo if available
      */
-    private fun performRedo(command: Command): CommandResult {
+    private fun performRedo(command: Command): ActionResult {
         return try {
             val rootNode = accessibilityService?.rootInActiveWindow
             val focusedNode = findFocusedEditableNode(rootNode)
