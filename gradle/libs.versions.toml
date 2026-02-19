@@ -10,7 +10,7 @@ onnxruntime = "1.17.0"  # ONNX Runtime for NLU inference
 # Compose
 compose = "1.7.3"  # JetBrains Compose Multiplatform - requires Kotlin 2.1.0
 compose-ui = "1.5.4"
-compose-bom = "2024.06.00"  # Unified BOM version
+compose-bom = "2024.12.01"  # Aligned with JB Compose 1.7.3 (Foundation 1.7.x)
 
 # Android
 android-gradle = "8.2.0"
