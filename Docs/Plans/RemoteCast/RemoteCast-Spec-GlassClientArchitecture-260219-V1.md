@@ -299,7 +299,96 @@ Apps/Android/GlassClient/
 
 ---
 
-## 9. Implementation Phases
+## 9. GlassAvanue: Server-Side Adaptive Controller
+
+### Architecture Decision
+GlassAvanue is a **phone/tablet/desktop app** (NOT a glasses app). It's the server-side
+controller that detects connected glasses and adapts its output mode automatically.
+
+**Why server-side intelligence:**
+- Glasses stay thin → responsive, long battery life
+- Phone has unlimited compute/memory/battery (plugged in or large battery)
+- One phone app supports ALL glasses types (no per-device glasses app variants)
+- The phone already runs VoiceOSCore, AccessibilityService, all handlers
+- Screen capture (MediaProjection) runs on the phone — glasses just receive
+
+### Two Output Modes (Auto-Selected)
+
+| Mode | Glasses Type | What Phone Sends | Glasses Battery Impact |
+|------|-------------|-----------------|----------------------|
+| **HUD Mode** | Z100, BLE peripherals | Text labels + AVID numbers via BLE (Ultralite SDK) | ~0.1%/hr (BLE idle) |
+| **Cast Mode** | Moverio, RealWear, Blade, Rokid | MJPEG/WebRTC video + VOCAB via WiFi TCP | ~2-5%/hr (WiFi + display) |
+
+### HUD Mode (Z100/BLE Glasses)
+```
+GlassAvanue (phone) → Ultralite SDK → BLE → Z100 display
+  - Push: AVID element labels ("1: Gmail", "2: Chrome", "3: Settings")
+  - Push: Command status ("Executed: click Gmail")
+  - Push: Notifications ("New email from...")
+  - Push: Voice indicator ("Listening...", "Processing...")
+  - Receive: Nothing (Z100 has no mic API; voice captured on PHONE)
+  - Uses: HUDManager for layout/content decisions
+```
+The phone's own microphone captures voice. GlassAvanue's VoiceOSCore processes commands
+locally — no glasses round-trip. The Z100 just shows what the phone tells it to show.
+
+### Cast Mode (Full Android Glasses)
+```
+GlassAvanue (phone) → TCP/WiFi → GlassClient APK (glasses)
+  - Send: CAST video frames (MJPEG or WebRTC)
+  - Send: VOC vocabulary sync (AVU format)
+  - Send: TTS audio feedback (future)
+  - Receive: CMD voice commands (AVU, resolved via VOCAB)
+  - Receive: IMU head tracking data (future)
+  - Uses: AndroidCastManager for streaming
+```
+The glasses run a thin GlassClient APK that: receives video, captures voice, matches
+against synced VOCAB, and relays resolved commands back.
+
+### GlassAvanue App Structure
+```
+Apps/Android/GlassAvanue/
+├── build.gradle.kts
+├── src/main/
+│   ├── AndroidManifest.xml (foreground service, media projection)
+│   └── kotlin/com/augmentalis/glassavanue/
+│       ├── GlassAvanueActivity.kt     ← Main UI: pair, configure, start
+│       ├── GlassAvanueService.kt      ← Foreground service (MediaProjection + streaming)
+│       ├── GlassDetector.kt           ← Uses DeviceManager to identify connected glasses
+│       ├── HudModeController.kt       ← Ultralite SDK integration (Z100/BLE path)
+│       ├── CastModeController.kt      ← MJPEG/WebRTC streaming (WiFi path)
+│       ├── VocabSyncManager.kt        ← Pushes screen commands to receiver
+│       ├── PairingScreen.kt           ← QR code + mDNS + manual IP
+│       └── CastingScreen.kt           ← Live stats, connected devices, command log
+```
+
+### Dependencies
+```
+Apps/Android/GlassAvanue/
+├── Modules:RemoteCast          ← MJPEG/WebRTC transport layer
+├── Modules:VoiceOSCore         ← AccessibilityService, command pipeline
+├── Modules:HUDManager          ← Layout/content for Z100 HUD mode
+├── Modules:DeviceManager       ← Glasses detection, IMU
+├── Modules:AvanueUI            ← Theme for phone UI
+├── Modules:Foundation          ← Settings, logging
+├── Vuzix Ultralite SDK         ← Z100 BLE display (optional, Tier 2)
+└── WebRTC library              ← Browser mode (optional, phone-to-phone)
+```
+
+### GlassClient APK (Thin Receiver on Full Android Glasses)
+Minimal footprint — no AccessibilityService, no screen capture, just:
+```
+Apps/Android/GlassClient/
+├── Receiver (MJPEG/WebRTC decode + display)
+├── Voice capture (speech recognition → VOCAB match → CMD relay)
+├── HUD overlay (AvanueTheme MONO_GREEN or FULL_COLOR)
+├── Connection manager (TCP client, reconnect logic)
+└── ~5MB APK, ~30MB RAM, voice-only UI
+```
+
+---
+
+## 10. Implementation Phases
 
 | Phase | What | Depends On | Est. Files |
 |-------|------|-----------|-----------|
