@@ -965,7 +965,7 @@ class ActionCoordinator(
         try {
             handlerRegistry.disposeAll()
             handlerRegistry.clear()
-            commandRegistry.clear()
+            commandRegistry.clearSuspend()
             scope.cancel()
             _state.value = CoordinatorState.DISPOSED
         } catch (e: Exception) {
