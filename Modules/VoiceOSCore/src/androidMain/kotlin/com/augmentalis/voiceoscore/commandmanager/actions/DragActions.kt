@@ -41,7 +41,7 @@ object DragActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val targetText = getTextParameter(command, "target")
             val x = getNumberParameter(command, "x")?.toFloat()
             val y = getNumberParameter(command, "y")?.toFloat()
@@ -82,7 +82,7 @@ object DragActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val targetText = getTextParameter(command, "target")
             val x = getNumberParameter(command, "x")?.toFloat()
             val y = getNumberParameter(command, "y")?.toFloat()
@@ -135,7 +135,7 @@ object DragActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val fromText = getTextParameter(command, "from")
             val toText = getTextParameter(command, "to")
             val fromX = getNumberParameter(command, "fromX")?.toFloat()
@@ -186,7 +186,7 @@ object DragActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val centerX = getNumberParameter(command, "x")?.toFloat()
             val centerY = getNumberParameter(command, "y")?.toFloat()
             val scale = getNumberParameter(command, "scale")?.toFloat() ?: 2.0f
@@ -211,7 +211,7 @@ object DragActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val centerX = getNumberParameter(command, "x")?.toFloat()
             val centerY = getNumberParameter(command, "y")?.toFloat()
             val scale = getNumberParameter(command, "scale")?.toFloat() ?: 0.5f
@@ -236,7 +236,7 @@ object DragActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val (width, height) = getScreenDimensions(context)
             val centerX = width / 2f
             val centerY = height / 2f
@@ -257,7 +257,7 @@ object DragActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val (width, height) = getScreenDimensions(context)
             val centerX = width / 2f
             val centerY = height / 2f
@@ -278,7 +278,7 @@ object DragActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val direction = getTextParameter(command, "direction") ?: "right"
             val angle = getNumberParameter(command, "angle")?.toFloat() ?: 90f
             val centerX = getNumberParameter(command, "x")?.toFloat()

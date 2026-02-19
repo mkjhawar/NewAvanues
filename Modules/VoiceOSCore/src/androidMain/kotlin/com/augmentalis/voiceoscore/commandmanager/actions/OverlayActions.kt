@@ -69,7 +69,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val mode = detectOverlayMode(context)
 
             return when (mode) {
@@ -82,7 +82,7 @@ object OverlayActions {
             command: Command,
             service: AccessibilityService?,
             @Suppress("UNUSED_PARAMETER") context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return if (isOverlayVisible) {
                 createSuccessResult(command, "Overlay is already visible")
             } else {
@@ -97,7 +97,7 @@ object OverlayActions {
             command: Command,
             service: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             // Audio mode: Use audio feedback + vibration instead of visual overlay
             announceViaAccessibility(service, "Overlay mode unavailable. Overlay permission not granted. Using audio feedback.")
             vibrateDevice(context, 100)
@@ -118,7 +118,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val mode = detectOverlayMode(context)
 
             return when (mode) {
@@ -131,7 +131,7 @@ object OverlayActions {
             command: Command,
             service: AccessibilityService?,
             @Suppress("UNUSED_PARAMETER") context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return if (!isOverlayVisible) {
                 createSuccessResult(command, "Overlay is already hidden")
             } else {
@@ -146,7 +146,7 @@ object OverlayActions {
             command: Command,
             service: AccessibilityService?,
             @Suppress("UNUSED_PARAMETER") context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             // Audio mode: Announce status
             announceViaAccessibility(service, "Audio mode deactivated")
             isOverlayVisible = false
@@ -162,7 +162,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             isOverlayVisible = !isOverlayVisible
             val state = if (isOverlayVisible) "shown" else "hidden"
             return createSuccessResult(command, "Overlay $state")
@@ -177,7 +177,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return if (isCommandHintsVisible) {
                 createSuccessResult(command, "Command hints are already visible")
             } else {
@@ -196,7 +196,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return if (!isCommandHintsVisible) {
                 createSuccessResult(command, "Command hints are already hidden")
             } else {
@@ -214,7 +214,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val topic = getTextParameter(command, "topic")?.lowercase()
             
             return when (topic) {
@@ -254,7 +254,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return if (!isHelpVisible) {
                 createSuccessResult(command, "Help is already hidden")
             } else {
@@ -272,7 +272,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val category = getTextParameter(command, "category")?.lowercase()
             
             val commands = when (category) {
@@ -324,7 +324,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val statusInfo = mapOf(
                 "overlayVisible" to isOverlayVisible,
                 "helpVisible" to isHelpVisible,
@@ -353,7 +353,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val position = getTextParameter(command, "position")?.lowercase()
             
             return when (position) {
@@ -393,7 +393,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val size = getTextParameter(command, "size")?.lowercase()
             
             return when (size) {
@@ -429,7 +429,7 @@ object OverlayActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val transparency = getNumberParameter(command, "transparency")?.toFloat()
             
             return if (transparency == null || transparency < 0f || transparency > 100f) {

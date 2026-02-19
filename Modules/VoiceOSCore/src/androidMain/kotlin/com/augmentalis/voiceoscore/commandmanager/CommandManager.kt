@@ -97,7 +97,7 @@ class CommandManager(private val context: Context) {
     /**
      * Execute command directly with confidence-based filtering
      */
-    suspend fun executeCommand(command: Command): ActionResult {
+    suspend fun executeCommand(command: Command): CommandExecutionResult {
         Log.d(TAG, "Executing command: ${command.id} with confidence: ${command.confidence}")
 
         // Apply confidence-based filtering
@@ -106,7 +106,7 @@ class CommandManager(private val context: Context) {
         when (confidenceLevel) {
             ConfidenceLevel.REJECT -> {
                 Log.w(TAG, "Command rejected due to low confidence: ${command.confidence}")
-                return ActionResult(
+                return CommandExecutionResult(
                     success = false,
                     command = command,
                     error = CommandError(
@@ -143,7 +143,7 @@ class CommandManager(private val context: Context) {
                     val confirmed = callback(command, confidenceLevel)
                     if (!confirmed) {
                         Log.i(TAG, "Command execution cancelled by user")
-                        return ActionResult(
+                        return CommandExecutionResult(
                             success = false,
                             command = command,
                             error = CommandError(ErrorCode.CANCELLED, "User cancelled execution")
@@ -167,7 +167,7 @@ class CommandManager(private val context: Context) {
      * Internal command execution without confidence filtering
      * Includes database pattern matching and fuzzy matching
      */
-    private suspend fun executeCommandInternal(command: Command): ActionResult {
+    private suspend fun executeCommandInternal(command: Command): CommandExecutionResult {
         Log.d(TAG, "executeCommandInternal: text='${command.text}', id='${command.id}'")
 
         // Step 1: Try to match command text against database patterns
@@ -204,7 +204,7 @@ class CommandManager(private val context: Context) {
                 action.invoke(command.copy(id = matchedCommandId))
             } catch (e: Exception) {
                 Log.e(TAG, "Command execution failed", e)
-                ActionResult(
+                CommandExecutionResult(
                     success = false,
                     command = command,
                     error = CommandError(ErrorCode.EXECUTION_FAILED, e.message ?: "Unknown error")
@@ -212,7 +212,7 @@ class CommandManager(private val context: Context) {
             }
         } else {
             Log.w(TAG, "✗ No action found for: '${command.text}' (tried ID: '$matchedCommandId')")
-            ActionResult(
+            CommandExecutionResult(
                 success = false,
                 command = command,
                 error = CommandError(ErrorCode.COMMAND_NOT_FOUND, "Unknown command: ${command.text}")
@@ -340,7 +340,7 @@ class CommandManager(private val context: Context) {
      * Execute command with explicit confidence override
      * Bypasses confidence filtering
      */
-    suspend fun executeCommandWithConfidenceOverride(command: Command): ActionResult {
+    suspend fun executeCommandWithConfidenceOverride(command: Command): CommandExecutionResult {
         Log.d(TAG, "Executing command with confidence override: ${command.id}")
         return executeCommandInternal(command)
     }

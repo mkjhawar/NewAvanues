@@ -20,7 +20,7 @@ interface IMetricsCollector {
      *
      * @param result The command result to record
      */
-    suspend fun record(result: ActionResult)
+    suspend fun record(result: CommandExecutionResult)
 
     /**
      * Get metrics summary.
@@ -55,7 +55,7 @@ interface IMetricsCollector {
  * All operations are no-ops and return empty/default values.
  */
 object NoOpMetricsCollector : IMetricsCollector {
-    override suspend fun record(result: ActionResult) {
+    override suspend fun record(result: CommandExecutionResult) {
         // no-op
     }
 

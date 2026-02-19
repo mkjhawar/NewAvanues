@@ -34,7 +34,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val distance = getNumberParameter(command, "distance")?.toFloat()
             
             return if (performScrollUp(accessibilityService, context, distance)) {
@@ -53,7 +53,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val distance = getNumberParameter(command, "distance")?.toFloat()
             
             return if (performScrollDown(accessibilityService, context, distance)) {
@@ -72,7 +72,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val distance = getNumberParameter(command, "distance")?.toFloat()
             
             return if (performScrollLeft(accessibilityService, context, distance)) {
@@ -91,7 +91,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val distance = getNumberParameter(command, "distance")?.toFloat()
             
             return if (performScrollRight(accessibilityService, context, distance)) {
@@ -110,7 +110,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return if (performPageScroll(accessibilityService, context, true)) {
                 createSuccessResult(command, "Page up")
             } else {
@@ -127,7 +127,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return if (performPageScroll(accessibilityService, context, false)) {
                 createSuccessResult(command, "Page down")
             } else {
@@ -144,7 +144,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val fast = getBooleanParameter(command, "fast") ?: false
             
             return if (performSwipeUp(accessibilityService, context, fast)) {
@@ -163,7 +163,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val fast = getBooleanParameter(command, "fast") ?: false
             
             return if (performSwipeDown(accessibilityService, context, fast)) {
@@ -182,7 +182,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val fast = getBooleanParameter(command, "fast") ?: false
             
             return if (performSwipeLeft(accessibilityService, context, fast)) {
@@ -201,7 +201,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val fast = getBooleanParameter(command, "fast") ?: false
             
             return if (performSwipeRight(accessibilityService, context, fast)) {
@@ -220,7 +220,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             var attempts = 0
             val maxAttempts = 10
             
@@ -245,7 +245,7 @@ object ScrollActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             var attempts = 0
             val maxAttempts = 10
             

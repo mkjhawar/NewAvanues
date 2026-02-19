@@ -13,7 +13,7 @@ package com.augmentalis.voiceoscore.commandmanager.routing
 import android.content.Context
 import android.util.Log
 import com.augmentalis.voiceoscore.Command
-import com.augmentalis.voiceoscore.ActionResult
+import com.augmentalis.voiceoscore.CommandExecutionResult
 import com.augmentalis.voiceoscore.CommandError
 import com.augmentalis.voiceoscore.ErrorCode
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +56,7 @@ class IntentDispatcher(
 
     // Action registry (will be populated by CommandManager)
     // Using simplified structure for now - can be enhanced with BaseAction interface later
-    private val actionHandlers = mutableMapOf<String, suspend (Command) -> ActionResult>()
+    private val actionHandlers = mutableMapOf<String, suspend (Command) -> CommandExecutionResult>()
 
     // Q4 Enhancement 2: User Feedback tracking
     private val feedbackDatabase = mutableListOf<UserFeedback>()
@@ -78,7 +78,7 @@ class IntentDispatcher(
     /**
      * Register action handler for a category
      */
-    fun registerHandler(category: String, handler: suspend (Command) -> ActionResult) {
+    fun registerHandler(category: String, handler: suspend (Command) -> CommandExecutionResult) {
         actionHandlers[category] = handler
         Log.d(TAG, "Registered handler for category: $category")
     }
@@ -91,7 +91,7 @@ class IntentDispatcher(
      * @param routingContext Current routing context (app, screen, etc.)
      * @return Command execution result
      */
-    suspend fun routeCommand(command: Command, routingContext: RoutingContext): ActionResult {
+    suspend fun routeCommand(command: Command, routingContext: RoutingContext): CommandExecutionResult {
         Log.d(TAG, "Routing command: ${command.id} in context: ${routingContext.currentApp}")
 
         // Find candidate handlers
@@ -99,7 +99,7 @@ class IntentDispatcher(
 
         if (candidates.isEmpty()) {
             Log.w(TAG, "No handlers found for command: ${command.id}")
-            return ActionResult(
+            return CommandExecutionResult(
                 success = false,
                 command = command,
                 error = CommandError(ErrorCode.COMMAND_NOT_FOUND, "No handler found for command")
@@ -151,7 +151,7 @@ class IntentDispatcher(
     private fun findCandidateHandlers(
         @Suppress("UNUSED_PARAMETER") command: Command,
         @Suppress("UNUSED_PARAMETER") routingContext: RoutingContext
-    ): List<Pair<String, suspend (Command) -> ActionResult>> {
+    ): List<Pair<String, suspend (Command) -> CommandExecutionResult>> {
         // For now, return all handlers that might handle this command
         // TODO: Implement more sophisticated matching based on command category, keywords, etc.
 
@@ -320,13 +320,13 @@ class IntentDispatcher(
     /**
      * Use generic fallback when all handlers fail
      */
-    private fun useGenericFallback(command: Command, @Suppress("UNUSED_PARAMETER") routingContext: RoutingContext): ActionResult {
+    private fun useGenericFallback(command: Command, @Suppress("UNUSED_PARAMETER") routingContext: RoutingContext): CommandExecutionResult {
         Log.w(TAG, "Using generic fallback for command: ${command.id}")
 
         // Generic fallback: try to execute as global action
         // This would delegate to legacy command handling
 
-        return ActionResult(
+        return CommandExecutionResult(
             success = false,
             command = command,
             error = CommandError(

@@ -30,7 +30,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val streamType = getStreamType(command)
             val steps = getNumberParameter(command, "steps")?.toInt() ?: 1
@@ -55,7 +55,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val streamType = getStreamType(command)
             val steps = getNumberParameter(command, "steps")?.toInt() ?: 1
@@ -80,7 +80,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val streamType = getStreamType(command)
             
@@ -101,7 +101,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val streamType = getStreamType(command)
             
@@ -122,7 +122,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val streamType = getStreamType(command)
             
@@ -144,7 +144,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val streamType = getStreamType(command)
             
@@ -165,7 +165,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val streamType = getStreamType(command)
             val level = getNumberParameter(command, "level")?.toInt()
@@ -194,7 +194,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 1)),
                 accessibilityService,
@@ -211,7 +211,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 2)),
                 accessibilityService,
@@ -228,7 +228,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 3)),
                 accessibilityService,
@@ -245,7 +245,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 4)),
                 accessibilityService,
@@ -262,7 +262,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 5)),
                 accessibilityService,
@@ -279,7 +279,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 6)),
                 accessibilityService,
@@ -296,7 +296,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 7)),
                 accessibilityService,
@@ -313,7 +313,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 8)),
                 accessibilityService,
@@ -330,7 +330,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 9)),
                 accessibilityService,
@@ -347,7 +347,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 10)),
                 accessibilityService,
@@ -364,7 +364,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 11)),
                 accessibilityService,
@@ -381,7 +381,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 12)),
                 accessibilityService,
@@ -398,7 +398,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 13)),
                 accessibilityService,
@@ -415,7 +415,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 14)),
                 accessibilityService,
@@ -432,7 +432,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return SetVolumeLevelAction().execute(
                 command.copy(parameters = command.parameters + ("level" to 15)),
                 accessibilityService,
@@ -449,7 +449,7 @@ object VolumeActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val streamType = getStreamType(command)
             

@@ -120,7 +120,7 @@ class CommandProcessor(
         text: String,
         source: CommandSource,
         context: CommandContext?
-    ): ActionResult {
+    ): CommandExecutionResult {
         val startTime = System.currentTimeMillis()
 
         try {
@@ -132,7 +132,7 @@ class CommandProcessor(
 
             if (matchResult == null) {
                 Log.w(TAG, "Command not recognized: '$text'")
-                return ActionResult(
+                return CommandExecutionResult(
                     success = false,
                     command = Command(
                         id = "unknown",
@@ -164,7 +164,7 @@ class CommandProcessor(
 
         } catch (e: Exception) {
             Log.e(TAG, "Error processing command: $text")
-            return ActionResult(
+            return CommandExecutionResult(
                 success = false,
                 command = Command(
                     id = "error",
@@ -182,7 +182,7 @@ class CommandProcessor(
     /**
      * Execute a specific command
      */
-    suspend fun executeCommand(command: Command): ActionResult {
+    suspend fun executeCommand(command: Command): CommandExecutionResult {
         val startTime = System.currentTimeMillis()
 
         try {
@@ -190,7 +190,7 @@ class CommandProcessor(
             val handler = actionRegistry[command.id]
 
             if (handler == null) {
-                return ActionResult(
+                return CommandExecutionResult(
                     success = false,
                     command = command,
                     error = CommandError(ErrorCode.UNKNOWN_COMMAND, "No handler for command: ${command.id}"),
@@ -213,7 +213,7 @@ class CommandProcessor(
 
         } catch (e: Exception) {
             Log.e(TAG, "Error executing command: ${command.id}")
-            return ActionResult(
+            return CommandExecutionResult(
                 success = false,
                 command = command,
                 error = CommandError(ErrorCode.EXECUTION_FAILED, "Execution error: ${e.message}"),
@@ -584,12 +584,12 @@ class CommandProcessor(
     /**
      * Validate command parameters
      */
-    private fun validateCommand(command: Command): ActionResult? {
+    private fun validateCommand(command: Command): CommandExecutionResult? {
         val definition = commandDefinitions.getAllDefinitions()
             .find { it.id == command.id }
 
         if (definition == null) {
-            return ActionResult(
+            return CommandExecutionResult(
                 success = false,
                 command = command,
                 error = CommandError(ErrorCode.UNKNOWN_COMMAND, "Command definition not found: ${command.id}")
@@ -599,7 +599,7 @@ class CommandProcessor(
         // Check required parameters
         for (paramDef in definition.parameters) {
             if (paramDef.required && !command.parameters.containsKey(paramDef.name)) {
-                return ActionResult(
+                return CommandExecutionResult(
                     success = false,
                     command = command,
                     error = CommandError(ErrorCode.INVALID_PARAMETERS, "Missing required parameter: ${paramDef.name}")

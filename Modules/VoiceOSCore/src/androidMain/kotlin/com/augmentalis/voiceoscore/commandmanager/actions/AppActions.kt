@@ -36,7 +36,7 @@ object AppActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val appName = getTextParameter(command, "app")
             val packageName = getTextParameter(command, "package")
             
@@ -53,7 +53,7 @@ object AppActions {
             }
         }
         
-        private fun openAppByPackage(context: Context, packageName: String): ActionResult {
+        private fun openAppByPackage(context: Context, packageName: String): CommandExecutionResult {
             return try {
                 val intent = context.packageManager.getLaunchIntentForPackage(packageName)
                 if (intent != null) {
@@ -68,7 +68,7 @@ object AppActions {
             }
         }
         
-        private fun openAppByName(context: Context, appName: String): ActionResult {
+        private fun openAppByName(context: Context, appName: String): CommandExecutionResult {
             return try {
                 val packageManager = context.packageManager
                 val intent = Intent(Intent.ACTION_MAIN).apply {
@@ -106,7 +106,7 @@ object AppActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val appName = getTextParameter(command, "app")
             val current = getBooleanParameter(command, "current") ?: true
             
@@ -125,7 +125,7 @@ object AppActions {
             }
         }
         
-        private fun closeSpecificApp(context: Context, appName: String, command: Command): ActionResult {
+        private fun closeSpecificApp(context: Context, appName: String, command: Command): CommandExecutionResult {
             return try {
                 val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
                 val packageManager = context.packageManager
@@ -164,7 +164,7 @@ object AppActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val appName = getTextParameter(command, "app")
             val direction = getTextParameter(command, "direction") // "next", "previous"
             
@@ -202,7 +202,7 @@ object AppActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return try {
                 val packageManager = context.packageManager
                 val appNames = getRunningAppsModern(context, packageManager, 10)
@@ -229,7 +229,7 @@ object AppActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val searchTerm = getTextParameter(command, "search")
             
             return if (searchTerm == null) {
@@ -269,7 +269,7 @@ object AppActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val appName = getTextParameter(command, "app")
             val current = getBooleanParameter(command, "current") ?: false
             
@@ -282,7 +282,7 @@ object AppActions {
             }
         }
         
-        private fun getCurrentAppInfo(context: Context, command: Command): ActionResult {
+        private fun getCurrentAppInfo(context: Context, command: Command): CommandExecutionResult {
             return try {
                 val packageManager = context.packageManager
                 val packageName = getCurrentAppPackageModern(context)
@@ -316,7 +316,7 @@ object AppActions {
             }
         }
         
-        private fun getSpecificAppInfo(context: Context, appName: String, command: Command): ActionResult {
+        private fun getSpecificAppInfo(context: Context, appName: String, command: Command): CommandExecutionResult {
             return try {
                 val packageManager = context.packageManager
                 val intent = Intent(Intent.ACTION_MAIN).apply {
@@ -367,7 +367,7 @@ object AppActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val appName = getTextParameter(command, "app")
             
             return if (appName == null) {

@@ -223,7 +223,7 @@ data class CommandContext(
  * @property error Error details if execution failed
  * @property executionTime Time taken to execute (milliseconds)
  */
-data class ActionResult(
+data class CommandExecutionResult(
     val success: Boolean,
     val command: Command,
     val response: String? = null,
@@ -363,7 +363,7 @@ enum class ParameterType {
  */
 data class CommandHistoryEntry(
     val command: Command,
-    val result: ActionResult,
+    val result: CommandExecutionResult,
     val timestamp: Long
 )
 
@@ -379,7 +379,7 @@ data class CommandHistoryEntry(
 data class CommandEvent(
     val type: EventType,
     val command: Command? = null,
-    val result: ActionResult? = null,
+    val result: CommandExecutionResult? = null,
     val message: String? = null,
     val timestamp: Long
 )
@@ -427,9 +427,9 @@ data class CommandInfo(
 /**
  * Handler function for processing commands.
  *
- * Suspending function that takes a Command and returns a ActionResult.
+ * Suspending function that takes a Command and returns a CommandExecutionResult.
  */
-typealias CommandHandler = suspend (Command) -> ActionResult
+typealias CommandHandler = suspend (Command) -> CommandExecutionResult
 
 /**
  * Statistics about command usage.

@@ -26,8 +26,8 @@ import com.augmentalis.voiceoscore.AccessibilityActions.ACTION_SELECT_ALL
 object TextActions {
     
     // Helper methods for text actions
-    private fun createSuccessResult(command: Command, message: String, data: Any? = null): ActionResult {
-        return ActionResult(
+    private fun createSuccessResult(command: Command, message: String, data: Any? = null): CommandExecutionResult {
+        return CommandExecutionResult(
             success = true,
             command = command,
             response = message,
@@ -35,8 +35,8 @@ object TextActions {
         )
     }
     
-    private fun createErrorResult(command: Command, errorCode: ErrorCode, message: String): ActionResult {
-        return ActionResult(
+    private fun createErrorResult(command: Command, errorCode: ErrorCode, message: String): CommandExecutionResult {
+        return CommandExecutionResult(
             success = false,
             command = command,
             error = CommandError(errorCode, message)
@@ -51,7 +51,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val targetText = (command.parameters["text"] as? String)
             
             return try {
@@ -84,7 +84,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return try {
                 val rootNode = accessibilityService?.rootInActiveWindow
                 val focusedNode = findFocusedEditableNode(rootNode)
@@ -113,7 +113,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return try {
                 val rootNode = accessibilityService?.rootInActiveWindow
                 val focusedNode = findFocusedEditableNode(rootNode)
@@ -143,7 +143,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return try {
                 val rootNode = accessibilityService?.rootInActiveWindow
                 val focusedNode = findFocusedEditableNode(rootNode)
@@ -172,7 +172,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val targetText = (command.parameters["text"] as? String)
             val startPos = (command.parameters["start"] as? Number)?.toInt()
             val endPos = (command.parameters["end"] as? Number)?.toInt()
@@ -208,7 +208,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val oldText = (command.parameters["oldText"] as? String)
             val newText = (command.parameters["newText"] as? String) ?: ""
             
@@ -251,7 +251,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val searchText = (command.parameters["text"] as? String)
             
             return if (searchText == null) {
@@ -288,7 +288,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return try {
                 val rootNode = accessibilityService?.rootInActiveWindow
                 val focusedNode = findFocusedEditableNode(rootNode)
@@ -317,7 +317,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             val text = (command.parameters["text"] as? String)
             val position = (command.parameters["position"] as? Number)?.toInt()
             
@@ -358,7 +358,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return try {
                 // Most apps don't support accessibility undo, so this is limited
                 createSuccessResult(command, "Undo not supported via accessibility API")
@@ -376,7 +376,7 @@ object TextActions {
             command: Command,
             accessibilityService: AccessibilityService?,
             context: Context
-        ): ActionResult {
+        ): CommandExecutionResult {
             return try {
                 // Most apps don't support accessibility redo, so this is limited
                 createSuccessResult(command, "Redo not supported via accessibility API")
@@ -444,7 +444,7 @@ object TextActions {
         rootNode: AccessibilityNodeInfo?,
         targetText: String,
         command: Command
-    ): ActionResult {
+    ): CommandExecutionResult {
         val focusedNode = findFocusedEditableNode(rootNode)
         
         return if (focusedNode != null) {
@@ -470,7 +470,7 @@ object TextActions {
         startPos: Int,
         endPos: Int,
         command: Command
-    ): ActionResult {
+    ): CommandExecutionResult {
         val focusedNode = findFocusedEditableNode(rootNode)
         
         return if (focusedNode != null) {
