@@ -440,10 +440,8 @@ class PersistentCommandRegistry(
                         // Dynamic commands restored from storage are dispatched through
                         // the handler chain (ActionCoordinator → HandlerFactory → IHandler),
                         // not through this action lambda. This is a fallback.
-                        CommandResult(
-                            success = false,
-                            message = "Command '${data.id}' requires handler dispatch (category=${data.category})",
-                            commandId = data.id
+                        CommandResult.Error(
+                            message = "Command '${data.id}' requires handler dispatch (category=${data.category})"
                         )
                     }
                 )
@@ -499,10 +497,8 @@ class PersistentCommandRegistry(
                     createdAt = data.createdAt,
                     metadata = data.metadata,
                     action = { ctx ->
-                        CommandResult(
-                            success = false,
-                            message = "Imported command '${data.id}' requires handler dispatch",
-                            commandId = data.id
+                        CommandResult.Error(
+                            message = "Imported command '${data.id}' requires handler dispatch"
                         )
                     }
                 )

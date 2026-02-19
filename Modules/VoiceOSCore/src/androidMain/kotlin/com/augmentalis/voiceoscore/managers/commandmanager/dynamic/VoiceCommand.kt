@@ -234,6 +234,7 @@ enum class ErrorCode {
     TIMEOUT,                 // Command execution timed out
     NETWORK_ERROR,           // Network-related error
     NOT_AVAILABLE,           // Feature not available on this device
+    NOT_SUPPORTED,           // Action recognized but not implementable via current API
     DISABLED,                // Command is disabled
     CONFLICT,                // Command conflicts with another command
     RESOURCE_UNAVAILABLE     // Required resource is unavailable
