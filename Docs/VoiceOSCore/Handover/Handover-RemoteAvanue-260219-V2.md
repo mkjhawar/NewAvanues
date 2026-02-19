@@ -69,10 +69,11 @@ Next session MUST: deep investigation of AvaConnect issues, create rectification
 **DESIGN PRINCIPLE: Lightweight like NanoHTTPD (117KB), NOT heavy like Ktor (8-15MB).**
 The goal is a tiny, fast, distributable KMP HTTP module. Ktor is too heavy.
 
-Two paths to evaluate:
-- Path A: Fix AvaConnect's existing wiring issues (existing tech stack)
-- Path B: Rebuild as HTTPAvanue with updated tech stack + HTTP/2
-- Either way: result must be LIGHTWEIGHT and STANDALONE (publishable library)
+THREE paths to evaluate (user wants ALL THREE investigated):
+- Path A: Fix AvaConnect's existing wiring issues (keep existing tech stack, repair what's broken)
+- Path B: Rebuild AvaConnect as HTTPAvanue from scratch (NanoHTTPD-weight, modern Kotlin, HTTP/2)
+- Path C: Hybrid — salvage working parts of AvaConnect (websocket-impl is clean), rebuild broken parts (http-impl) as HTTPAvanue lightweight module
+- ALL THREE must be evaluated with effort/risk/size analysis before deciding
 
 KEY DECISION: HTTPAvanue should be a STANDALONE distributable module/library
 that others can use. Not just internal — designed for open distribution.
