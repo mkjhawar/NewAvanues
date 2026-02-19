@@ -95,6 +95,10 @@ jsch = "0.2.16"
 # Rich Text Editor
 richeditor = "1.0.0-rc13"
 
+# HTTP/IO
+okio = "3.9.0"
+bouncycastle = "1.78.1"
+
 # gRPC/Wire
 wire = "5.4.0"
 grpc-kotlin = "1.4.1"
@@ -257,6 +261,11 @@ jsch = { module = "com.github.mwiede:jsch", version.ref = "jsch" }
 
 # Rich Text Editor (KMP — Compose Multiplatform)
 richeditor-compose = { module = "com.mohamedrejeb.richeditor:richeditor-compose", version.ref = "richeditor" }
+
+# HTTP/IO
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
 
 [bundles]
 compose = [
