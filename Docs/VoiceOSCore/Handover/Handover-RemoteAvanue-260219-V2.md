@@ -55,13 +55,26 @@ AvaConnect is a FULL modular KMP networking stack — 12 modules including:
 - UI mockups: `demo/remoteavanue/RemoteCast-UI-Mockups.html`
 - AvaConnect README: `/Volumes/M-Drive/Coding/AvaConnect/README.md`
 
+## Architecture Decision: HTTP/2 in AvaConnect
+User decision: ADD HTTP/2 to AvaConnect NOW. AvaConnect is the networking foundation
+for the entire Avanues ecosystem — build it right. HTTP/2 benefits:
+- Browser receiver prefers H2, server push for VOCAB sync
+- Multiplexed streams for concurrent VOCAB + settings + commands
+- Cloud API multiplexing for concurrent LLM/license calls
+- AvaConnect is infrastructure — pay the complexity cost once, benefit everywhere
+
+Next session: research AvaConnect's current http-impl module, plan H2 upgrade.
+AvaConnect location: `/Volumes/M-Drive/Coding/AvaConnect/`
+Key modules: http-api, http-impl, websocket-impl (already production-ready)
+
 ## User's Pending Requests (In Order)
-1. **Deep research AvaConnect** — understand its API, evaluate using it for RemoteCast/GlassAvanue
-2. **Self-announcing settings protocol** — implement ModuleSettingsManifest
-3. **Wake-word KMP** — implement with system settings
-4. **Receiver app settings integration** — receiver shows synced settings
-5. **Begin Phase 1** — HUDManager + LocalizationManager extraction
-6. **Begin Phase 2** — RemoteCast foreground service wiring
+1. **Deep research AvaConnect** — understand its API, plan HTTP/2 upgrade to http-impl
+2. **Integrate AvaConnect into RemoteCast** — replace NanoHTTPD/raw TCP with AvaConnect modules
+3. **Self-announcing settings protocol** — implement ModuleSettingsManifest
+4. **Wake-word KMP** — implement with system settings
+5. **Receiver app settings integration** — receiver shows synced settings
+6. **Begin Phase 1** — HUDManager + LocalizationManager extraction
+7. **Begin Phase 2** — RemoteCast foreground service wiring
 
 ## Quick Resume
 Read this handover + AvaConnect README at `/Volumes/M-Drive/Coding/AvaConnect/README.md`, then:
