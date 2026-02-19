@@ -75,6 +75,9 @@ kotlin {
             kotlin.srcDir("src/androidMain/main/java")
 
             dependencies {
+                // AvanueUI theme system (required for dashboard UI)
+                implementation(project(":Modules:AvanueUI"))
+
                 // Coroutines Android
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
@@ -87,8 +90,8 @@ kotlin {
                 implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
                 implementation("androidx.activity:activity-compose:1.8.2")
 
-                // Compose BOM
-                implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+                // Compose BOM — aligned with JB Compose 1.7.3 (Foundation 1.7.x)
+                implementation(platform("androidx.compose:compose-bom:2024.12.01"))
                 implementation("androidx.compose.ui:ui")
                 implementation("androidx.compose.ui:ui-tooling-preview")
                 implementation("androidx.compose.material3:material3")
@@ -165,7 +168,7 @@ kotlin {
             dependencies {
                 implementation("androidx.test.ext:junit:1.1.5")
                 implementation("androidx.test.espresso:espresso-core:3.5.1")
-                implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+                implementation(platform("androidx.compose:compose-bom:2024.12.01"))
                 implementation("androidx.compose.ui:ui-test-junit4")
             }
         }
