@@ -317,7 +317,54 @@ Phases A + B can run in parallel.
 
 ---
 
-## 10. Open Research Questions
+## 10. iOS Cross-Platform Support (iPhone → Android Glasses)
+
+### Architecture
+The RemoteCast protocol is platform-agnostic at the wire level (raw TCP + JPEG + AVU text).
+Any device that speaks TCP can participate. The sender doesn't know the receiver's OS.
+
+```
+iOS iPhone (sender) ── CAST frames → Android Glasses (receiver)
+                    ← CMD (AVU)  ──
+```
+
+### iOS Sender Requirements
+| Component | Android (exists) | iOS (needed) |
+|-----------|-----------------|-------------|
+| Screen capture | MediaProjection | ReplayKit (RPScreenRecorder, iOS 12+) |
+| JPEG encode | Bitmap.compress() | CGImage → UIImageJPEGRepresentation |
+| TCP server | java.net.ServerSocket | Network.framework NWListener |
+| VoiceOSCore | androidMain (full) | iosMain (KMP, partial — Foundation abstractions exist) |
+| Cast manager | AndroidCastManager | New: IosCastManager (iosMain) |
+
+### KMP Sharing
+- commonMain (SHARED): ICastManager, CastState, CastFrameData (protocol encode/decode), AVU format
+- Platform-specific (NEW): IosCastManager using ReplayKit + Network.framework
+- Wire protocol identical — iOS-generated CAST frames are byte-identical to Android ones
+
+### ReplayKit Screen Capture (iOS)
+- `RPScreenRecorder.shared().startCapture { sampleBuffer, type, error in ... }`
+- Requires user consent (system dialog, like Android MediaProjection)
+- iOS 12+: in-app capture. iOS 15+: system-wide via Broadcast Upload Extension
+- CMSampleBuffer → CVPixelBuffer → CGImage → JPEG data → CastFrameData.buildPacket()
+
+### Cross-Platform Sender/Receiver Matrix
+| Sender | Receiver | Status |
+|--------|----------|--------|
+| Android Phone → Android Glasses | Phase B-F | Primary target |
+| iOS iPhone → Android Glasses | Needs IosCastManager | KMP iosMain, Phase 2 |
+| Desktop → Android Glasses | DesktopCastManager exists | Needs TCP server wiring |
+| Android Phone → Desktop Cockpit | Works (receiver side) | Complete |
+| iOS iPhone → Desktop Cockpit | Needs IosCastManager | Same iosMain work |
+| Any sender → iOS receiver | Needs iOS receiver app | Phase 3 |
+
+### iOS Timeline
+Phase 2 (after Android→Glasses working): implement IosCastManager in RemoteCast iosMain.
+Most code is shared via commonMain. Only capture + TCP transport need platform impl.
+
+---
+
+## 11. Open Research Questions
 
 ### Vendor SDK Requirements
 - [ ] **Vuzix Z100:** Does the Z100 require the Vuzix SDK for speech/display/IMU? Or is standard Android sufficient?

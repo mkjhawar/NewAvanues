@@ -208,6 +208,147 @@ Our MONO_GREEN ColorMatrix is specifically for Z100 (and future mono displays).
 
 ---
 
+## Additional Devices: RealWear + Full Android Glasses
+
+### RealWear Navigator 500/520
+
+**Architecture:** Full Android (AOSP). Voice-first industrial head-mounted tablet. Sideload APKs via ADB or RealWear MDM.
+
+**Specs:** WVGA 854x480 24-bit color LCD, 20° FoV, WiFi, BT 5.1, 3x IMU (accelerometer + gyro + compass), boom microphone, hot-swap battery.
+
+**SDK:** [RealWear Developer Examples (GitHub)](https://github.com/realwear/Developer-Examples) — WearML scripting for voice-first UI optimization. Standard Android development. WearML is OPTIONAL — it maps voice commands to UI elements (similar to our AVID system).
+
+**Impact:** Full Android with WiFi — standard GlassClient APK works. RealWear's WearML voice mapping is redundant with VoiceOSCore's AVID system. Our approach is superior (dynamic scraping vs static XML annotation).
+
+**Verdict:** Tier 1 — direct APK sideload, full TCP streaming. Add to primary target list.
+
+### Updated Tier 1 Device List
+
+| Device | OS | Display | WiFi | Voice | Sideload APK |
+|--------|-----|---------|------|-------|-------------|
+| RealWear Navigator 500/520 | Android 12 | 854x480 color | Yes | Built-in (WearML) | Yes (ADB/MDM) |
+| Epson Moverio BT-45 | Android 9 | 1920x1080 color binocular | Yes | Via mic | Yes (ADB) |
+| Rokid Glasses | Android | 1920x1080 color | Yes | Built-in AI | Yes |
+| Vuzix Blade 2 | Android | 480x480 color | Yes | Via mic | Yes (ADB) |
+
+---
+
+## Legacy VoiceOS ScreenShare App (Reusable Code)
+
+**Location:** `/Users/manoj_mbpm14/Coding/voiceos/app/src/main/java/com/augmentalis/dev/screenshare/`
+
+### Architecture: WebRTC + WebSocket (Browser Receiver)
+
+```
+Android Phone (sender)
+├── MediaProjection → WebRTC ScreenCapture (VP8/H264, 60fps)
+├── NanoHTTPD HTTPS server (self-signed cert via BouncyCastle)
+├── WebSocket signaling (SDP offer/answer, ICE candidates)
+└── Foreground service (AppService.kt)
+
+        HTTPS + WebRTC P2P (same WiFi)
+
+ANY Browser (receiver) — phone, tablet, laptop, glasses with browser
+├── index.html served from Android assets
+├── <video> element renders WebRTC stream
+├── Mouse/touch/keyboard → WebSocket → Android
+└── System buttons (back, home, recent) → WebSocket → Android
+```
+
+### Key Files (13 files, Java+Kotlin)
+| File | Purpose |
+|------|---------|
+| WebRtcManager.java | Core: MediaProjection → WebRTC PeerConnection (VP8/H264) |
+| HttpServer.java | NanoHTTPD HTTPS + WebSocket server (signaling + file transfer) |
+| AppService.kt | Foreground service orchestrating everything |
+| ScreenShareActivity.kt | UI: start/stop, URL display, voice commands |
+| HttpsConfig.kt | BouncyCastle self-signed TLS cert generation |
+| NetworkHelper.java | WiFi IP discovery via ConnectivityManager |
+| NanoHTTPD.java | Vendored embedded HTTP server |
+| NanoWSD.java | Vendored WebSocket extension |
+| CustomPeerConnectionObserver.java | WebRTC PeerConnection callbacks |
+| CustomSdpObserver.java | SDP negotiation callbacks |
+| assets/screen_share/html/index.html | Browser receiver UI |
+| assets/screen_share/js/main.js | Browser WebRTC client |
+| assets/screen_share/js/mouse.js | Browser input capture (mouse/touch/keyboard) |
+
+### WebSocket Command Protocol (Browser → Android)
+```json
+{"type": "mouse_down", "x": 0.45, "y": 0.72}
+{"type": "mouse_move", "x": 0.46, "y": 0.73}
+{"type": "mouse_up", "x": 0.46, "y": 0.73}
+{"type": "mouse_zoom_in"}
+{"type": "button_back"}
+{"type": "button_home"}
+{"type": "key_press", "key": "hello"}
+```
+Coordinates normalized to video pixel space (0.0-1.0).
+
+### What's Reusable vs What to Redesign
+
+**Directly reusable (port to KMP androidMain):**
+- `HttpsConfig.kt` — BouncyCastle self-signed cert generation (production quality)
+- `NetworkHelper.java` — WiFi IP discovery pattern
+- `WebRtcManager.java` — MediaProjection + WebRTC setup (core valuable piece)
+- Browser receiver HTML/JS — solid foundation for zero-install receiver
+
+**Redesign for RemoteCast KMP module:**
+- Replace manual IP with QR code display + mDNS auto-discovery
+- Replace malformed JSON WebSocket messages with AVU wire format
+- Port VoiceOsService integration through proper binder IPC (was broken in original)
+- Replace vendored NanoHTTPD with Ktor server (already in our stack)
+- Replace jQuery CDN dependency with bundled assets
+- Add rotation detection via OrientationEventListener (not 500ms polling Thread)
+
+### Key Insight: Two Streaming Modes
+
+The old app uses **WebRTC** (high quality, codec negotiation, adaptive bitrate).
+The new RemoteCast module uses **MJPEG-over-TCP** (simple, no signaling, custom protocol).
+
+**Recommendation: Support BOTH as streaming backends:**
+
+| Mode | Transport | Quality | Complexity | Receiver | Best For |
+|------|-----------|---------|-----------|----------|----------|
+| MJPEG | Custom TCP (port 54321) | Medium (JPEG artifacts) | Simple | Our GlassClient APK | Glasses (low bandwidth, guaranteed delivery) |
+| WebRTC | P2P + WS signaling | High (VP8/H264, adaptive) | Complex | ANY browser (zero install) | Phone-to-phone, phone-to-tablet, phone-to-laptop |
+
+The sender auto-selects based on receiver capabilities:
+- Receiver is our GlassClient APK → MJPEG mode (simpler, lower latency for glasses)
+- Receiver is a browser → WebRTC mode (higher quality, zero install)
+
+---
+
+## Expanded Use Case Matrix (Phone-to-Phone, Phone-to-Tablet)
+
+| Sender | Receiver | Mode | Install on Receiver | Use Case |
+|--------|----------|------|-------------------|----------|
+| Android Phone | Android Glasses (Tier 1) | MJPEG TCP | GlassClient APK | Primary: voice-controlled remote phone |
+| Android Phone | Vuzix Z100 | BLE HUD | None (phone companion) | Text/status overlay on monocular |
+| Android Phone | Android Phone | WebRTC | Just open browser URL | Screen share + remote touch control |
+| Android Phone | Android Tablet | WebRTC | Just open browser URL | Screen share to bigger display |
+| Android Phone | Laptop/Desktop | WebRTC | Just open browser URL | Present phone screen on PC |
+| Android Phone | Smart TV (browser) | WebRTC | Just open browser URL | Cast phone to TV |
+| iOS Phone | Android Glasses | MJPEG TCP | GlassClient APK | Phase 2: iOS sender |
+| Desktop | Android Glasses | MJPEG TCP | GlassClient APK | Cast desktop to glasses |
+
+### Phone-to-Phone Remote Control Flow
+```
+Phone A (sender):
+  1. Start RemoteCast → foreground service + MediaProjection consent
+  2. HTTPS server starts on WiFi IP:port
+  3. Display QR code with URL
+
+Phone B (receiver):
+  1. Scan QR code → opens URL in Chrome
+  2. Browser loads receiver HTML from Phone A's HTTP server
+  3. WebRTC P2P stream begins (screen video)
+  4. Touch the video → coordinates sent via WebSocket → Phone A dispatches gesture
+
+No app install needed on Phone B. Works on any device with a browser.
+```
+
+---
+
 ## Open Questions After Research
 
 - [ ] Can we sideload native APK on MentraOS? (It's Android-based, MIT licensed)
