@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RemoteCast - UI Mockups & Flow Charts</title>
+<title>RemoteAvanue - UI Mockups & Flow Charts</title>
 <style>
   :root {
     --bg: #0a0e1a;
@@ -98,7 +98,7 @@
 </head>
 <body>
 
-<h1>RemoteCast UI Mockups</h1>
+<h1>RemoteAvanue UI Mockups</h1>
 <p class="subtitle">VoiceOS Screen Casting & Remote Control System &mdash; SpatialVoice Design Language</p>
 
 <div class="tab-bar">
@@ -109,6 +109,7 @@
   <div class="tab" onclick="showTab('glasses')">Glasses Client</div>
   <div class="tab" onclick="showTab('p2p')">Phone-to-Phone</div>
   <div class="tab" onclick="showTab('modes')">Streaming Modes</div>
+  <div class="tab" onclick="showTab('vocab')">VOCAB Sync</div>
 </div>
 
 <!-- ==================== SYSTEM FLOW ==================== -->
@@ -158,7 +159,7 @@
 <div class="flow"><pre>
 <span class="highlight">SENDER</span>                                          <span class="highlight">RECEIVER</span>
 
- 1. Start RemoteCast service
+ 1. Start RemoteAvanue service
     |
  2. Get WiFi IP address
     |
@@ -221,7 +222,7 @@
   <div class="notch"></div>
   <div class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi  100%</span></div>
-    <div class="title-bar">RemoteCast</div>
+    <div class="title-bar">RemoteAvanue</div>
     <div style="text-align:center; margin:16px 0;">
       <div style="width:80px;height:80px;border-radius:50%;background:var(--glass);border:2px solid var(--primary);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:32px;">
         <span style="filter:grayscale(1)">&#128225;</span>
@@ -639,6 +640,201 @@ Receiver connects to sender
   |              NO --> <span class="amber">BLE HUD mode</span> (Vuzix Z100, text only)
   |                     Ultralite SDK, push text/images via BLE
 </pre></div>
+</div>
+
+<!-- ==================== VOCAB SYNC ==================== -->
+<div id="vocab" class="section">
+<h2>VOCAB Sync Protocol</h2>
+<p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">Sender pushes actionable items to receiver on every screen change. Receiver matches voice commands locally (zero round-trip) before relaying.</p>
+
+<h3>VOCAB Sync Flow</h3>
+<div class="flow"><pre>
+<span class="highlight">SENDER (Phone)</span>                                    <span class="highlight">RECEIVER (Glasses/Browser)</span>
+
+ Screen change detected
+ (AccessibilityService)
+        |
+ CommandOrchestrator
+ generates commands
+        |
+ Overlay badges rendered             <span class="highlight">VOC\0</span>
+ on screen (visible in stream)  ──────────────>  Receive VOCAB list
+        |                                              |
+ VOCAB packet sent:                             Parse AVU lines
+ ┌──────────────────────────┐                   Load into local
+ │ <span class="green">Gmail|CLICK|BTN:a3f2|1.0</span>  │                   speech grammar
+ │ <span class="green">Chrome|CLICK|BTN:b4e1|1.0</span> │                          |
+ │ <span class="green">Settings|CLICK|BTN:c5d|1.0</span>│                   <span class="amber">User says "click Gmail"</span>
+ │ <span class="green">scroll down|SCROLL_DOWN</span>  │                          |
+ │ <span class="green">go back|NAVIGATE</span>         │                   LOCAL match! (no round-trip)
+ │ <span class="green">1|CLICK|BTN:a3f2|0.9</span>     │                   Confidence: 1.0
+ │ <span class="green">first|CLICK|BTN:a3f2|0.7</span> │                   targetAvid: BTN:a3f2
+ │ <span class="dim">... (all screen commands)</span> │                          |
+ └──────────────────────────┘                   Send resolved CMD:
+                                         <span class="error">CMD\0</span>
+ ActionCoordinator          <──────────────  <span class="green">"Gmail|CLICK|BTN:a3f2|1.0"</span>
+ receives fully-resolved cmd                       |
+ (no fuzzy matching needed!)                 Latency: ~50ms total
+ Executes via Accessibility                  (vs ~200ms without VOCAB)
+</pre></div>
+
+<h3>Protocol Messages (Complete)</h3>
+<div style="display:flex;gap:16px;flex-wrap:wrap;">
+  <div class="card" style="flex:1;min-width:200px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="badge badge-blue" style="font-family:monospace;">CAST</span>
+      <span style="font-size:12px;font-weight:600;">Video Frame</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);">
+      Sender &rarr; Receiver<br>
+      JPEG payload (10-60 FPS)<br>
+      Continuous while casting
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:200px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="badge badge-green" style="font-family:monospace;">VOC\0</span>
+      <span style="font-size:12px;font-weight:600;">Vocabulary Sync</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);">
+      Sender &rarr; Receiver<br>
+      AVU text (full command list)<br>
+      On every screen change
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:200px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="badge" style="background:rgba(255,68,68,0.15);color:var(--error);font-family:monospace;">CMD\0</span>
+      <span style="font-size:12px;font-weight:600;">Voice Command</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);">
+      Receiver &rarr; Sender<br>
+      AVU text (resolved command)<br>
+      On voice recognition
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:200px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="badge badge-amber" style="font-family:monospace;">IMU\0</span>
+      <span style="font-size:12px;font-weight:600;">Head Tracking</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);">
+      Receiver &rarr; Sender<br>
+      Binary IMU data<br>
+      Continuous (future)
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:200px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="badge" style="background:rgba(139,92,246,0.15);color:#8b5cf6;font-family:monospace;">TTS\0</span>
+      <span style="font-size:12px;font-weight:600;">Audio Feedback</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);">
+      Sender &rarr; Receiver<br>
+      Audio payload<br>
+      On command execution (future)
+    </div>
+  </div>
+</div>
+
+<h3>VOCAB Payload Example (AVU Format)</h3>
+<div class="flow"><pre>
+<span class="dim"># Screen: Home screen with 4 apps visible</span>
+<span class="dim"># Sent as VOC\0 packet on screen change</span>
+<span class="dim"># Each line = one actionable item</span>
+
+<span class="green">Gmail</span>|CLICK|BTN:a3f2b1c0|1.0|en-US
+<span class="green">Chrome</span>|CLICK|BTN:b4e1d2a3|1.0|en-US
+<span class="green">Settings</span>|CLICK|BTN:c5d3e4f5|1.0|en-US
+<span class="green">Camera</span>|CLICK|BTN:d6e4f5a6|1.0|en-US
+<span class="amber">1</span>|CLICK|BTN:a3f2b1c0|0.9|en-US
+<span class="amber">2</span>|CLICK|BTN:b4e1d2a3|0.9|en-US
+<span class="amber">3</span>|CLICK|BTN:c5d3e4f5|0.9|en-US
+<span class="amber">4</span>|CLICK|BTN:d6e4f5a6|0.9|en-US
+<span class="amber">first</span>|CLICK|BTN:a3f2b1c0|0.7|en-US
+<span class="amber">second</span>|CLICK|BTN:b4e1d2a3|0.7|en-US
+<span class="highlight">scroll down</span>|SCROLL_DOWN||1.0|en-US|target:remote
+<span class="highlight">scroll up</span>|SCROLL_UP||1.0|en-US|target:remote
+<span class="highlight">go back</span>|NAVIGATE||1.0|en-US|target:auto
+<span class="highlight">go home</span>|NAVIGATE||1.0|en-US|target:remote
+
+<span class="dim"># Total: 14 commands for this screen</span>
+<span class="dim"># Labels (Gmail, Chrome) + numbers (1,2,3) + ordinals (first, second)</span>
+<span class="dim"># + static navigation commands</span>
+</pre></div>
+
+<h3>Latency Comparison</h3>
+<div style="display:flex;gap:24px;flex-wrap:wrap;">
+  <div class="card" style="flex:1;min-width:260px;">
+    <div style="font-size:13px;font-weight:600;color:var(--error);margin-bottom:8px;">Without VOCAB Sync (~200ms)</div>
+    <div style="font-size:11px;color:var(--text-dim);line-height:1.8;">
+      1. Glasses hear "click Gmail" <span style="color:var(--text-dim);">(50ms)</span><br>
+      2. Send raw text to phone <span style="color:var(--text-dim);">(20ms)</span><br>
+      3. Phone fuzzy-matches against registry <span style="color:var(--text-dim);">(30ms)</span><br>
+      4. Phone resolves AVID + bounds <span style="color:var(--text-dim);">(10ms)</span><br>
+      5. Phone dispatches gesture <span style="color:var(--text-dim);">(20ms)</span><br>
+      6. Screen updates in next cast frame <span style="color:var(--text-dim);">(70ms)</span><br>
+      <span style="color:var(--error);font-weight:600;">Total: ~200ms voice-to-visual</span>
+    </div>
+  </div>
+  <div class="card" style="flex:1;min-width:260px;">
+    <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px;">With VOCAB Sync (~120ms)</div>
+    <div style="font-size:11px;color:var(--text-dim);line-height:1.8;">
+      1. Glasses hear "click Gmail" <span style="color:var(--text-dim);">(50ms)</span><br>
+      2. LOCAL match (VOCAB has "Gmail|BTN:a3f2") <span style="color:var(--green);">(1ms)</span><br>
+      3. Send resolved CMD with AVID <span style="color:var(--text-dim);">(20ms)</span><br>
+      4. Phone skips matching, dispatches directly <span style="color:var(--green);">(5ms)</span><br>
+      5. Screen updates in next cast frame <span style="color:var(--text-dim);">(44ms)</span><br>
+      <br>
+      <span style="color:var(--green);font-weight:600;">Total: ~120ms voice-to-visual (40% faster)</span>
+    </div>
+  </div>
+</div>
+
+<h3>Browser Receiver: Command Palette from VOCAB</h3>
+<div class="browser" style="height:320px;">
+  <div class="toolbar">
+    <div class="dot" style="background:#ff5f57"></div>
+    <div class="dot" style="background:#febc2e"></div>
+    <div class="dot" style="background:#28c840"></div>
+    <div class="url-bar">https://192.168.1.42:8443</div>
+  </div>
+  <div class="content" style="display:flex;gap:8px;padding:8px;">
+    <div class="video-placeholder" style="flex:1;height:240px;font-size:10px;">
+      Phone Screen (WebRTC)
+      <div class="avid-badge" style="top:20px;left:15px;">1</div>
+      <div class="avid-badge" style="top:60px;left:15px;">2</div>
+      <div class="avid-badge" style="top:100px;left:15px;">3</div>
+      <div class="avid-badge" style="top:140px;left:15px;">4</div>
+    </div>
+    <div style="width:140px;font-size:10px;">
+      <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Available Commands</div>
+      <div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;padding:4px;margin-bottom:3px;cursor:pointer;">
+        <span class="badge badge-blue" style="font-size:8px;">1</span> Gmail
+      </div>
+      <div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;padding:4px;margin-bottom:3px;cursor:pointer;">
+        <span class="badge badge-blue" style="font-size:8px;">2</span> Chrome
+      </div>
+      <div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;padding:4px;margin-bottom:3px;cursor:pointer;">
+        <span class="badge badge-blue" style="font-size:8px;">3</span> Settings
+      </div>
+      <div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;padding:4px;margin-bottom:3px;cursor:pointer;">
+        <span class="badge badge-blue" style="font-size:8px;">4</span> Camera
+      </div>
+      <div style="border-top:1px solid var(--glass-border);margin:6px 0;"></div>
+      <div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;padding:4px;margin-bottom:3px;cursor:pointer;color:var(--text-dim);">
+        scroll down
+      </div>
+      <div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;padding:4px;margin-bottom:3px;cursor:pointer;color:var(--text-dim);">
+        go back
+      </div>
+      <div style="font-size:8px;color:var(--text-dim);margin-top:6px;text-align:center;">
+        Synced from sender<br>Updates on screen change
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script>
