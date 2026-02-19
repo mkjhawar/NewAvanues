@@ -163,13 +163,27 @@ class MacroExecutor(
     private suspend fun executeAction(step: MacroStep.Action, @Suppress("UNUSED_PARAMETER") context: MacroContext) {
         Log.d(TAG, "Executing action: ${step.command.phrase}")
 
-        val result = commandProcessor(step.command)
-
-        if (!result.success) {
-            throw MacroExecutionException("Action failed: ${step.command.phrase} - ${result.message}")
+        when (val result = commandProcessor(step.command)) {
+            is CommandResult.Success -> {
+                Log.d(TAG, "Action completed: ${step.command.phrase}")
+            }
+            is CommandResult.Error -> {
+                throw MacroExecutionException("Action failed: ${step.command.phrase} - ${result.message}")
+            }
+            is CommandResult.Partial -> {
+                Log.d(TAG, "Action partially completed (${result.completionPercentage}%): ${result.message}")
+            }
+            is CommandResult.RequiresConfirmation -> {
+                Log.w(TAG, "Action requires confirmation, auto-confirming in macro: ${result.message}")
+                val confirmResult = result.confirmAction()
+                if (confirmResult is CommandResult.Error) {
+                    throw MacroExecutionException("Confirmed action failed: ${step.command.phrase} - ${confirmResult.message}")
+                }
+            }
+            is CommandResult.Cancelled -> {
+                throw MacroExecutionException("Action was cancelled: ${step.command.phrase}")
+            }
         }
-
-        Log.d(TAG, "Action completed: ${result.message}")
     }
 
     /**
