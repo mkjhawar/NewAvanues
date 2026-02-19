@@ -60,7 +60,7 @@ class VoiceControlHandler(
     private val service: AccessibilityService
 ) : BaseHandler() {
 
-    override val category: ActionCategory = ActionCategory.UI
+    override val category: ActionCategory = ActionCategory.SYSTEM
 
     override val supportedActions: List<String> = listOf(
         // Mute/Wake

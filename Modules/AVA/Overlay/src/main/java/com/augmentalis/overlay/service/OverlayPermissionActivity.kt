@@ -27,6 +27,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.theme.AvanueThemeProvider
+import com.augmentalis.avanueui.theme.HydraColors
+import com.augmentalis.avanueui.theme.HydraGlass
+import com.augmentalis.avanueui.theme.HydraWater
+import com.augmentalis.avanueui.theme.MaterialMode
 
 /**
  * Permission request activity for overlay and microphone access.
@@ -77,7 +83,13 @@ class OverlayPermissionActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme {
+            AvanueThemeProvider(
+                colors = HydraColors.dark,
+                glass = HydraGlass.dark,
+                water = HydraWater.dark,
+                materialMode = MaterialMode.Water,
+                isDark = true
+            ) {
                 PermissionRequestScreen(
                     hasOverlayPermission = hasOverlayPermission,
                     hasMicrophonePermission = hasMicrophonePermission,
@@ -170,7 +182,7 @@ private fun PermissionRequestScreen(
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = AvanueTheme.colors.background
     ) {
         Column(
             modifier = Modifier
@@ -190,7 +202,7 @@ private fun PermissionRequestScreen(
                 text = "AVA needs the following permissions to provide voice assistance over any app:",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -238,9 +250,9 @@ private fun PermissionCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isGranted) {
-                MaterialTheme.colorScheme.primaryContainer
+                AvanueTheme.colors.surfaceVariant
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                AvanueTheme.colors.surface
             }
         )
     ) {
@@ -263,7 +275,7 @@ private fun PermissionCard(
                     Text(
                         text = "✓ Granted",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = AvanueTheme.colors.primary
                     )
                 }
             }
@@ -271,7 +283,7 @@ private fun PermissionCard(
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
 
             if (!isGranted) {

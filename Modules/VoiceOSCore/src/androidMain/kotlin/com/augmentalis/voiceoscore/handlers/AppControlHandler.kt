@@ -14,6 +14,7 @@ import com.augmentalis.voiceoscore.ActionCategory
 import com.augmentalis.voiceoscore.BaseHandler
 import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
+import kotlinx.coroutines.delay
 
 private const val TAG = "AppControlHandler"
 
@@ -40,14 +41,13 @@ class AppControlHandler(
         }
     }
 
-    private fun closeApp(): HandlerResult {
-        // Use BACK action twice to close most apps, then HOME to return to launcher
+    private suspend fun closeApp(): HandlerResult {
+        // Use BACK action to close the current activity, then delay and go HOME
+        // to ensure the app is fully backgrounded before returning to launcher.
         return try {
             service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
-            // Small delay then go home to ensure app is closed
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
-            }, 300)
+            delay(300)
+            service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
             HandlerResult.success("App closed")
         } catch (e: Exception) {
             Log.e(TAG, "Close app failed", e)

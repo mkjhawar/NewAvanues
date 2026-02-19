@@ -114,6 +114,13 @@ fun ContentRenderer(
                 transcription = content.transcript,
                 isRecording = content.isRecording,
                 durationMs = content.durationMs,
+                onStateChanged = { isRec, durMs, transcript ->
+                    onContentStateChanged(frame.id, content.copy(
+                        isRecording = isRec,
+                        durationMs = durMs,
+                        transcript = transcript
+                    ))
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -121,6 +128,12 @@ fun ContentRenderer(
                 transcription = "",
                 isRecording = content.isRecording,
                 durationMs = content.durationMs,
+                onStateChanged = { isRec, durMs, _ ->
+                    onContentStateChanged(frame.id, content.copy(
+                        isRecording = isRec,
+                        durationMs = durMs
+                    ))
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -261,6 +274,7 @@ private fun VoiceNoteRenderer(
     transcription: String,
     isRecording: Boolean,
     durationMs: Long,
+    onStateChanged: (isRecording: Boolean, durationMs: Long, transcript: String) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors

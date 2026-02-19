@@ -66,10 +66,7 @@ import platform.Foundation.*
  *
  * Integration:
  * - Called by IntentClassifier.kt for semantic classification
- * - Uses CoreMLBackendSelector for compute unit selection
  * - Coordinates with ModelManager.kt for model file handling
- *
- * @see CoreMLBackendSelector for backend selection strategy
  * @see com.augmentalis.nlu.IntentClassifier
  * @see com.augmentalis.nlu.ModelManager
  */

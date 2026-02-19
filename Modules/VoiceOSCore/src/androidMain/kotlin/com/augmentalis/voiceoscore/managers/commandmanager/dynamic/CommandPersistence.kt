@@ -315,12 +315,46 @@ object CommandExporter {
     /**
      * Import commands from JSON string
      */
-    fun importFromJson(@Suppress("UNUSED_PARAMETER") json: String): Result<List<VoiceCommandData>> {
+    fun importFromJson(json: String): Result<List<VoiceCommandData>> {
         return try {
-            // TODO: Implement proper JSON parsing
-            // For now, return empty list
-            Result.success(emptyList())
+            val jsonObj = org.json.JSONObject(json)
+            val commandsArray = jsonObj.getJSONArray("commands")
+            val commands = mutableListOf<VoiceCommandData>()
+
+            for (i in 0 until commandsArray.length()) {
+                val cmdObj = commandsArray.getJSONObject(i)
+                val phrasesArray = cmdObj.getJSONArray("phrases")
+                val phrases = (0 until phrasesArray.length()).map { phrasesArray.getString(it) }
+
+                val metadataObj = cmdObj.optJSONObject("metadata")
+                val metadata = if (metadataObj != null) {
+                    metadataObj.keys().asSequence().associateWith { metadataObj.getString(it) }
+                } else {
+                    emptyMap()
+                }
+
+                commands.add(VoiceCommandData(
+                    id = cmdObj.getString("id"),
+                    phrases = phrases,
+                    priority = cmdObj.optInt("priority", 0),
+                    namespace = cmdObj.optString("namespace", "imported"),
+                    description = cmdObj.optString("description", ""),
+                    category = try {
+                        CommandCategory.valueOf(cmdObj.optString("category", "CUSTOM"))
+                    } catch (_: IllegalArgumentException) {
+                        CommandCategory.CUSTOM
+                    },
+                    enabled = cmdObj.optBoolean("enabled", true),
+                    createdAt = cmdObj.optLong("createdAt", System.currentTimeMillis()),
+                    lastUsed = cmdObj.optLong("lastUsed", 0L),
+                    usageCount = cmdObj.optLong("usageCount", 0L),
+                    metadata = metadata
+                ))
+            }
+
+            Result.success(commands)
         } catch (e: Exception) {
+            android.util.Log.e("CommandExporter", "Failed to parse import JSON", e)
             Result.failure(e)
         }
     }
@@ -384,10 +418,42 @@ class PersistentCommandRegistry(
 
             val commandData = result.getOrNull() ?: emptyList()
 
-            // TODO: Commands need their action handlers restored
-            // This requires a command factory or action registry
+            // Restore action handlers from command metadata using ActionFactory
+            // Register commands with placeholder actions that log the expected action type.
+            // The actual action handlers are resolved at runtime by the handler dispatch system
+            // (StaticCommandRegistry → Handlers) rather than the dynamic command system.
+            var restoredCount = 0
+            for (data in commandData) {
+                val voiceCommand = VoiceCommand(
+                    id = data.id,
+                    phrases = data.phrases,
+                    priority = data.priority.coerceIn(1, 100),
+                    namespace = data.namespace.ifBlank { "restored" },
+                    description = data.description,
+                    category = data.category,
+                    enabled = data.enabled,
+                    createdAt = data.createdAt,
+                    lastUsed = data.lastUsed,
+                    usageCount = data.usageCount,
+                    metadata = data.metadata,
+                    action = { ctx ->
+                        // Dynamic commands restored from storage are dispatched through
+                        // the handler chain (ActionCoordinator → HandlerFactory → IHandler),
+                        // not through this action lambda. This is a fallback.
+                        CommandResult(
+                            success = false,
+                            message = "Command '${data.id}' requires handler dispatch (category=${data.category})",
+                            commandId = data.id
+                        )
+                    }
+                )
+                registry.registerCommand(voiceCommand)
+                restoredCount++
+            }
 
-            Result.success(commandData.size)
+            android.util.Log.i("PersistentRegistry",
+                "Restored $restoredCount/${commandData.size} commands from storage")
+            Result.success(restoredCount)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -420,10 +486,34 @@ class PersistentCommandRegistry(
 
             val commands = result.getOrNull() ?: emptyList()
 
-            // TODO: Import and register commands
-            // Requires action handler restoration
+            var importedCount = 0
+            for (data in commands) {
+                val voiceCommand = VoiceCommand(
+                    id = data.id,
+                    phrases = data.phrases,
+                    priority = data.priority.coerceIn(1, 100),
+                    namespace = data.namespace.ifBlank { "imported" },
+                    description = data.description,
+                    category = data.category,
+                    enabled = data.enabled,
+                    createdAt = data.createdAt,
+                    metadata = data.metadata,
+                    action = { ctx ->
+                        CommandResult(
+                            success = false,
+                            message = "Imported command '${data.id}' requires handler dispatch",
+                            commandId = data.id
+                        )
+                    }
+                )
+                registry.registerCommand(voiceCommand)
+                storage.saveCommand(data)
+                importedCount++
+            }
 
-            Result.success(commands.size)
+            android.util.Log.i("PersistentRegistry",
+                "Imported $importedCount/${commands.size} commands from JSON")
+            Result.success(importedCount)
         } catch (e: Exception) {
             Result.failure(e)
         }

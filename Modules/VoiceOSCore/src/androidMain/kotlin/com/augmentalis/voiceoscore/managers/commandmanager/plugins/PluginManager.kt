@@ -549,11 +549,16 @@ class PluginManager(
     }
 
     /**
-     * Get current VOS version code
+     * Get current VOS version code from the installed package.
      */
     private fun getCurrentVOSVersion(): Int {
-        // TODO: Get from BuildConfig or version constant
-        return 40100 // VOS 4.1.0
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            info.longVersionCode.toInt()
+        } else {
+            @Suppress("DEPRECATION")
+            info.versionCode
+        }
     }
 
     /**

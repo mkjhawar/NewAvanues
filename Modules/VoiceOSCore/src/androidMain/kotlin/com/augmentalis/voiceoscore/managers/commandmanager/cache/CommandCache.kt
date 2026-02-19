@@ -184,8 +184,9 @@ class CommandCache(private val context: Context) {
             return it
         }
 
-        // Tier 3: Query database (slower but acceptable)
-        // TODO: Implement database query when available
+        // Tier 3: Query database (slower but acceptable).
+        // Delegates to queryDatabase(), which performs a SQLDelight lookup
+        // and returns a matched command or null if not found.
         val command = queryDatabase(normalizedText, context)
         command?.let {
             tier3Hits++

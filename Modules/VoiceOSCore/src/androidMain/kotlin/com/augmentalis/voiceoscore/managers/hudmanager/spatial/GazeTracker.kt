@@ -50,6 +50,19 @@ class GazeTracker(
     @Suppress("UNUSED_PARAMETER") private val context: Context
 ) {
 
+    companion object {
+        /**
+         * Gaze tracking is disabled until ML Kit Face Detection is integrated.
+         *
+         * To re-enable:
+         * 1. Add to build.gradle.kts: implementation("com.google.mlkit:face-detection:16.1.5")
+         * 2. Restore CameraX imports above
+         * 3. Restore full implementation from git history (pre-stubbing commit)
+         * 4. Set this flag to true
+         */
+        const val GAZE_TRACKING_ENABLED = false
+    }
+
     // Gaze state management
     private val _currentGaze = mutableStateOf<GazeTarget?>(null)
     val currentGaze: State<GazeTarget?> = _currentGaze
@@ -61,11 +74,15 @@ class GazeTracker(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /**
-     * Initialize gaze tracking system
-     * STUBBED: Returns false - feature not available
+     * Initialize gaze tracking system.
+     * Returns false — gaze tracking is disabled (GAZE_TRACKING_ENABLED = false).
      */
     fun initialize(): Boolean {
-        // ML Kit face detection disabled
+        if (!GAZE_TRACKING_ENABLED) {
+            android.util.Log.i("GazeTracker",
+                "Gaze tracking disabled. Set GAZE_TRACKING_ENABLED=true after adding ML Kit dependency.")
+            return false
+        }
         return false
     }
 

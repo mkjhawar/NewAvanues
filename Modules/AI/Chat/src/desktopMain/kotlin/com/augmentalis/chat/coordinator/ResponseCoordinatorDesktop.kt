@@ -8,6 +8,11 @@
 package com.augmentalis.chat.coordinator
 
 import com.augmentalis.chat.data.BuiltInIntents
+import com.augmentalis.llm.GenerationOptions
+import com.augmentalis.llm.LLMConfig
+import com.augmentalis.llm.LLMResponse
+import com.augmentalis.llm.LLMResult
+import com.augmentalis.llm.OllamaProvider
 import com.augmentalis.llm.response.ResponseContext
 import com.augmentalis.nlu.IntentClassification
 import kotlinx.coroutines.CoroutineScope
@@ -34,6 +39,11 @@ class ResponseCoordinatorDesktop(
     private val llmFallbackThresholdValue: Float = 0.6f,
     private val selfLearningThresholdValue: Float = 0.4f
 ) : IResponseCoordinator {
+
+    // ==================== LLM Provider ====================
+
+    private val ollamaProvider: OllamaProvider by lazy { OllamaProvider() }
+    private var ollamaInitialized = false
 
     // ==================== State ====================
 
@@ -189,11 +199,24 @@ class ResponseCoordinatorDesktop(
         ragContext: String?,
         context: ResponseContext
     ): IResponseCoordinator.ResponseResult {
-        // TODO: Integrate with LLM module for actual LLM responses
-        // For now, return a placeholder response
-
         setResponder("LLM")
         _llmFallbackInvoked.value = true
+
+        // Lazy-init Ollama on first LLM call
+        if (!ollamaInitialized) {
+            val initResult = ollamaProvider.initialize(
+                LLMConfig(modelPath = "llama3.2")
+            )
+            ollamaInitialized = initResult is LLMResult.Success
+            if (!ollamaInitialized) {
+                return IResponseCoordinator.ResponseResult(
+                    content = "Local LLM is not available. Please install and start Ollama " +
+                            "(https://ollama.ai) with a model (e.g., `ollama pull llama3.2`).",
+                    wasLLMFallback = true,
+                    respondedBy = "LLM"
+                )
+            }
+        }
 
         // Build prompt with RAG context if available
         val prompt = if (!ragContext.isNullOrBlank()) {
@@ -209,10 +232,30 @@ class ResponseCoordinatorDesktop(
             userMessage
         }
 
-        // Placeholder LLM response
-        // In production, this would call the LLM module
-        val response = "I understand you're asking about: $userMessage. " +
-                "Let me help you with that. (LLM integration pending)"
+        // Collect streaming response into full text
+        val responseBuilder = StringBuilder()
+        ollamaProvider.generateResponse(prompt, GenerationOptions(
+            temperature = 0.7f,
+            maxTokens = 1024
+        )).collect { llmResponse ->
+            when (llmResponse) {
+                is LLMResponse.Streaming -> responseBuilder.append(llmResponse.chunk)
+                is LLMResponse.Complete -> {
+                    if (responseBuilder.isEmpty()) {
+                        responseBuilder.append(llmResponse.fullText)
+                    }
+                }
+                is LLMResponse.Error -> {
+                    if (responseBuilder.isEmpty()) {
+                        responseBuilder.append("LLM error: ${llmResponse.message}")
+                    }
+                }
+            }
+        }
+
+        val response = responseBuilder.toString().ifBlank {
+            "I received your message but couldn't generate a response. Please try again."
+        }
 
         return IResponseCoordinator.ResponseResult(
             content = response,

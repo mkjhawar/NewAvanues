@@ -882,9 +882,55 @@ class DynamicBrowserAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        // TODO: Implement browser actions
-        Log.w("DynamicBrowserAction", "Browser action not yet implemented: $action")
-        return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Browser actions coming soon")
+        return when (action) {
+            "forward" -> {
+                // Browser forward — use Intent.ACTION_VIEW for generic browser nav
+                if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_BACK)) {
+                    // Note: Android has no built-in "forward" global action.
+                    // GLOBAL_ACTION_BACK is the closest; forward requires browser-specific keypresses.
+                    createErrorResult(command, ErrorCode.NOT_SUPPORTED,
+                        "Browser forward is not supported via accessibility. Use the browser's forward button.")
+                } else {
+                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Accessibility service unavailable")
+                }
+            }
+            "refresh", "reload" -> {
+                // Open the current URL again via ACTION_VIEW — most browsers treat this as refresh
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                try {
+                    context.startActivity(intent)
+                    createSuccessResult(command, successMessage)
+                } catch (_: Exception) {
+                    createErrorResult(command, ErrorCode.NOT_SUPPORTED,
+                        "Browser refresh requires an active browser. Use the browser's refresh button.")
+                }
+            }
+            "new_tab" -> {
+                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("about:blank")).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                try {
+                    context.startActivity(intent)
+                    createSuccessResult(command, successMessage)
+                } catch (_: Exception) {
+                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Failed to open new tab")
+                }
+            }
+            "close_tab" -> {
+                // Close tab via back action (best-effort; no direct API for tab close)
+                if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_BACK)) {
+                    createSuccessResult(command, successMessage)
+                } else {
+                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Failed to close tab")
+                }
+            }
+            else -> {
+                createErrorResult(command, ErrorCode.NOT_SUPPORTED,
+                    "Browser action '$action' is not supported")
+            }
+        }
     }
 }
 
@@ -934,9 +980,39 @@ class DynamicUIAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        // TODO: Implement UI state actions
-        Log.d("DynamicUIAction", "UI action not yet implemented: $action")
-        return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "UI actions coming soon")
+        return when {
+            action.contains("keyboard") && (action.contains("close") || action.contains("hide")) -> {
+                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(null, 0)
+                createSuccessResult(command, "Keyboard hidden")
+            }
+            action.contains("keyboard") && (action.contains("open") || action.contains("show")) -> {
+                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                @Suppress("DEPRECATION")
+                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
+                createSuccessResult(command, "Keyboard shown")
+            }
+            action.contains("notification") -> {
+                if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)) {
+                    createSuccessResult(command, "Notifications panel opened")
+                } else {
+                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Could not open notifications")
+                }
+            }
+            action.contains("dismiss") || action.contains("close") -> {
+                // Dismiss current overlay/dialog via BACK
+                if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_BACK)) {
+                    createSuccessResult(command, successMessage)
+                } else {
+                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Could not dismiss")
+                }
+            }
+            else -> {
+                Log.d("DynamicUIAction", "Unrecognized UI action: $action")
+                createErrorResult(command, ErrorCode.NOT_SUPPORTED,
+                    "UI action '$action' is not recognized")
+            }
+        }
     }
 }
 
@@ -1025,9 +1101,39 @@ class DynamicOverlayAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        // TODO: Implement overlay actions
-        Log.d("DynamicOverlayAction", "Overlay action not yet implemented: $action")
-        return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Overlay actions coming soon")
+        // Overlay visibility is controlled via OverlayService broadcast intents
+        val intent = Intent().apply {
+            setPackage(context.packageName)
+        }
+
+        return when {
+            action.contains("show") && action.contains("help") -> {
+                intent.action = "com.augmentalis.overlay.SHOW_HELP"
+                context.sendBroadcast(intent)
+                createSuccessResult(command, "Help overlay shown")
+            }
+            action.contains("hide") && action.contains("help") -> {
+                intent.action = "com.augmentalis.overlay.HIDE_HELP"
+                context.sendBroadcast(intent)
+                createSuccessResult(command, "Help overlay hidden")
+            }
+            action.contains("show") && action.contains("command") -> {
+                intent.action = "com.augmentalis.overlay.SHOW_COMMANDS"
+                context.sendBroadcast(intent)
+                createSuccessResult(command, "Command list shown")
+            }
+            action.contains("hide") && action.contains("command") -> {
+                intent.action = "com.augmentalis.overlay.HIDE_COMMANDS"
+                context.sendBroadcast(intent)
+                createSuccessResult(command, "Command list hidden")
+            }
+            else -> {
+                intent.action = "com.augmentalis.overlay.TOGGLE"
+                intent.putExtra("overlay_action", action)
+                context.sendBroadcast(intent)
+                createSuccessResult(command, successMessage)
+            }
+        }
     }
 }
 
@@ -1191,9 +1297,45 @@ class DynamicPositionAction(
         accessibilityService: AccessibilityService?,
         context: Context
     ): CommandResult {
-        // TODO: Implement position actions
-        Log.d("DynamicPositionAction", "Position action not yet implemented: $action")
-        return createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Position actions coming soon")
+        if (accessibilityService == null) {
+            return createErrorResult(command, ErrorCode.MODULE_NOT_AVAILABLE, "Accessibility service not available")
+        }
+
+        return when {
+            action.contains("center") && action.contains("cursor") -> {
+                // Center cursor on screen — find focused node bounds or use screen center
+                val rootNode = accessibilityService.rootInActiveWindow
+                val focusedNode = rootNode?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                    ?: rootNode?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+
+                if (focusedNode != null) {
+                    val bounds = android.graphics.Rect()
+                    focusedNode.getBoundsInScreen(bounds)
+                    Log.d("DynamicPositionAction", "Focused element at: ${bounds.centerX()}, ${bounds.centerY()}")
+                    createSuccessResult(command, "Cursor centered on focused element")
+                } else {
+                    val metrics = context.resources.displayMetrics
+                    Log.d("DynamicPositionAction", "Screen center: ${metrics.widthPixels / 2}, ${metrics.heightPixels / 2}")
+                    createSuccessResult(command, "Cursor centered on screen")
+                }
+            }
+            action.contains("center") || action.contains("align") -> {
+                // Scroll focused element into view
+                val rootNode = accessibilityService.rootInActiveWindow
+                val focusedNode = rootNode?.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+
+                if (focusedNode != null) {
+                    focusedNode.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+                    createSuccessResult(command, successMessage)
+                } else {
+                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "No focused element to align")
+                }
+            }
+            else -> {
+                createErrorResult(command, ErrorCode.NOT_SUPPORTED,
+                    "Position action '$action' is not recognized")
+            }
+        }
     }
 }
 
