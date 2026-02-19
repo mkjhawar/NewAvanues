@@ -129,6 +129,21 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      */
     protected open fun onInAppNavigation(packageName: String) {}
 
+    /**
+     * Called immediately when the user switches to a different app (package change).
+     *
+     * Unlike onInAppNavigation, this fires on cross-app switches. Override this
+     * to clear overlay badges synchronously so stale badges from the previous app
+     * don't persist during the async screen extraction gap (~100-500ms).
+     *
+     * Note: CommandRegistry is NOT cleared here to avoid the empty-registry race
+     * condition (commands atomically replace on the next update). Only overlay
+     * visuals should be cleared.
+     *
+     * @param newPackageName The new app's package name
+     */
+    protected open fun onAppSwitched(newPackageName: String) {}
+
     // =========================================================================
     // AccessibilityService lifecycle
     // =========================================================================
@@ -224,6 +239,11 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
             // so explicit clearing is unnecessary. Stale commands during the brief scan
             // window (~100-500ms) are strictly better UX than "no commands available".
             lastScreenHash = ""
+
+            // Clear overlay badges immediately so stale badges from previous app
+            // don't persist during the async screen extraction gap.
+            // This is safe — only affects visible overlay, not CommandRegistry.
+            onAppSwitched(packageName)
 
             // Package change = always process immediately
             handleScreenChange(event)
