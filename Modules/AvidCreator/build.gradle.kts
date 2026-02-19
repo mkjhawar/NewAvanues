@@ -89,7 +89,7 @@ kotlin {
                 implementation("com.google.code.gson:gson:2.10.1")
 
                 // Compose dependencies
-                implementation(platform(libs.compose.bom))
+                implementation(platform(libs.compose.bom.get()))
                 implementation("androidx.compose.runtime:runtime")
                 implementation("androidx.compose.ui:ui")
                 implementation("androidx.compose.ui:ui-tooling-preview")

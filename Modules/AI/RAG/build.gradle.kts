@@ -79,7 +79,7 @@ kotlin {
                 implementation(project(":Modules:AI:LLM"))
 
                 // Compose dependencies
-                implementation(platform(libs.compose.bom))
+                implementation(platform(libs.compose.bom.get()))
                 implementation("androidx.compose.ui:ui")
                 implementation("androidx.compose.ui:ui-graphics")
                 implementation("androidx.compose.foundation:foundation")

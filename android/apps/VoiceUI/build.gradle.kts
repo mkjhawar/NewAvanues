@@ -52,7 +52,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
     
     // Compose dependencies
-    implementation(platform(libs.compose.bom))
+    implementation(platform(libs.compose.bom.get()))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")

@@ -56,7 +56,7 @@ kotlin {
                 implementation(libs.androidx.lifecycle.runtime.ktx)
                 implementation(libs.androidx.activity.compose)
                 // Compose - using string notation for platform() in KMP
-                implementation(platform(libs.compose.bom))
+                implementation(platform(libs.compose.bom.get()))
                 implementation("androidx.compose.ui:ui")
                 implementation("androidx.compose.ui:ui-tooling-preview")
                 implementation("androidx.compose.material3:material3")
