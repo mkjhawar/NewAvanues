@@ -332,7 +332,16 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                 else -> NumbersOverlayMode.AUTO
                             }
                             OverlayStateManager.setNumbersOverlayMode(overlayMode)
-                            Log.i(TAG, "Numbers mode set to: $overlayMode")
+                            // Invalidate screen hash so processScreen() runs a full
+                            // re-scan on the next accessibility event. Without this,
+                            // switching OFF→ON would show an empty overlay until the
+                            // user triggers a screen change (items are empty because
+                            // processScreen() skipped generation while mode was OFF).
+                            dynamicCommandGenerator?.invalidateScreenHash()
+                            // Trigger immediate overlay refresh so badges appear
+                            // without waiting for the next accessibility event.
+                            serviceScope.launch { refreshOverlayBadges() }
+                            Log.i(TAG, "Numbers mode set to: $overlayMode (re-scan triggered)")
                             true
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to set numbers mode", e)

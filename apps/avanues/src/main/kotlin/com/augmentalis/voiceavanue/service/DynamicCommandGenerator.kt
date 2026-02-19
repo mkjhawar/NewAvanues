@@ -114,19 +114,19 @@ class DynamicCommandGenerator(
             // Derive labels for all elements
             val labels = ElementLabels.deriveElementLabels(elements, hierarchy)
 
-            // Generate overlay items based on app type
-            // packageName included in AVID hash for cross-app uniqueness and VOS export portability
-            val overlayItems = if (isTargetApp) {
-                // List-based app: find list items and number them
+            // Generate overlay items based on app type and current overlay mode.
+            // All apps respect NumbersOverlayMode — previously target apps bypassed the
+            // mode check, causing "hide numbers" to be ignored for list-based apps.
+            val mode = OverlayStateManager.numbersOverlayMode.value
+            val overlayItems = if (mode == NumbersOverlayMode.OFF) {
+                // Mode OFF: never generate badges, regardless of app type
+                emptyList()
+            } else if (isTargetApp) {
+                // List-based app: find list items and number them (mode ON or AUTO)
                 OverlayItemGenerator.generateForListApp(elements, hierarchy, labels, packageName)
             } else {
                 // General app: show badges when ON or AUTO (AUTO shows when elements exist)
-                val mode = OverlayStateManager.numbersOverlayMode.value
-                if (mode == NumbersOverlayMode.ON || mode == NumbersOverlayMode.AUTO) {
-                    OverlayItemGenerator.generateForAllClickable(elements, labels, packageName)
-                } else {
-                    emptyList()
-                }
+                OverlayItemGenerator.generateForAllClickable(elements, labels, packageName)
             }
 
             // Executor assigns per-container numbers, then simple setter
