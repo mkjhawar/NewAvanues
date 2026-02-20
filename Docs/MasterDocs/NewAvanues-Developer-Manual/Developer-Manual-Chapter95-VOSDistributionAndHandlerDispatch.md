@@ -210,7 +210,7 @@ VOS seed files defined 107+ commands across 11 categories, but originally only 4
 | **InputHandler** | INPUT | show/hide keyboard | SoftKeyboardController | v2.1 |
 | **AppControlHandler** | APP | close app, exit, quit | GLOBAL_ACTION_BACK + HOME | v2.1 |
 | **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal | v2.1 |
-| **VoiceControlHandler** | UI | mute/wake, dictation, help, numbers | VoiceControlCallbacks | v2.1 |
+| **VoiceControlHandler** | SYSTEM | mute/wake, dictation mode switch, help, list commands | VoiceControlCallbacks + OverlayStateManager feedback | v2.4 |
 | **WebCommandHandler** | BROWSER | 45 web commands | IWebCommandExecutor + DOMScraperBridge | v2.1 |
 | **NoteCommandHandler** | NOTE | 48 note commands (format, dictate, navigate) | INoteController + RichTextState | v2.2 |
 | **CockpitCommandHandler** | COCKPIT | 26 cockpit commands (frames, layouts, content) | Intent broadcast to CockpitViewModel | v2.3 |
@@ -252,14 +252,18 @@ object VoiceControlCallbacks {
     @Volatile var onStartDictation: (() -> Boolean)? = null
     @Volatile var onStopDictation: (() -> Boolean)? = null
     @Volatile var onShowCommands: (() -> Boolean)? = null
-    @Volatile var onSetNumbersMode: ((String) -> Boolean)? = null
+    @Volatile var onListCommands: (() -> Boolean)? = null
     fun clear() { /* nullify all */ }
 }
 ```
 
-The accessibility service sets these callbacks during `onServiceReady()`. The handler invokes them without direct coupling.
+The accessibility service sets these callbacks during `onServiceReady()`. The handler invokes them without direct coupling. All callbacks use `serviceScope.launch` (fire-and-forget) to avoid blocking Main thread.
 
-**`onSetNumbersMode` callback behavior (260219):** After setting `OverlayStateManager.setNumbersOverlayMode()`, the callback also invalidates the `DynamicCommandGenerator` screen hash and launches an immediate `refreshOverlayBadges()`. This ensures badges appear/disappear immediately after a voice command instead of waiting for the next accessibility event.
+**Visual feedback (260220):** Every callback calls `OverlayStateManager.showFeedback("message")` before executing the action. The `FeedbackToast` composable in `CommandOverlayService` renders the message at the top of the screen and auto-dismisses after 2 seconds.
+
+**Dictation mode switch (260220):** `onStartDictation` calls `core?.setSpeechMode(SpeechMode.DICTATION, exitCommands)` instead of `stopListening()`. The recognizer stays active with a minimal grammar containing only exit commands ("stop dictation", "end dictation", "command mode"). `onStopDictation` calls `core?.setSpeechMode(SpeechMode.COMBINED_COMMAND)` to restore full grammar.
+
+**Numbers overlay:** Handled exclusively by `NumbersOverlayHandler` (ACCESSIBILITY category) using `NumbersOverlayExecutor`. A `numbersOverlayModeJob` observer in the service watches `OverlayStateManager.numbersOverlayMode` and triggers `invalidateScreenHash()` + `refreshOverlayBadges()` on mode change.
 
 ### Dispatch Priority
 

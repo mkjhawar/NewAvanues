@@ -720,7 +720,7 @@ AccessibilityService.dispatchGesture(gestureDescription)
 | SystemHandler | SYSTEM | performGlobalAction (back, home, recents, notifications) |
 | AppHandler | APP | Launch via Intent |
 | AndroidCursorHandler | GAZE | CursorOverlayService start/stop/click |
-| VoiceControlHandler | SYSTEM | mute/wake voice, dictation, numbers on/off/auto |
+| VoiceControlHandler | SYSTEM | mute/wake voice, dictation mode switch, help, list commands |
 | HelpScreenHandler | ACCESSIBILITY | Show help UI |
 
 > **CursorOverlayService coordinate system**: The cursor overlay window MUST use
