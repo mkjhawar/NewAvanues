@@ -7,7 +7,7 @@
  * Structure:
  * - commonMain: Shared API, models, and logic
  * - androidMain: Android-specific engines (Vosk, Vivoka, Google, Whisper)
- * - iosMain: iOS-specific engines (placeholder)
+ * - iosMain: iOS-specific engines (Apple Speech + Whisper via cinterop)
  * - desktopMain: Desktop-specific engines (placeholder)
  * - jsMain: Web-specific engines (placeholder)
  */
@@ -33,7 +33,7 @@ kotlin {
     if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
         gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
     ) {
-        // iOS targets
+        // iOS targets with whisper_bridge cinterop
         listOf(
             iosX64(),
             iosArm64(),
@@ -42,6 +42,22 @@ kotlin {
             it.binaries.framework {
                 baseName = "SpeechRecognition"
                 isStatic = true
+                // Link against whisper_bridge static library when available
+                // Build: cd Modules/Whisper && ./build-xcframework.sh
+                // The library must be placed at:
+                //   libs/ios-arm64/libwhisper_bridge.a (device)
+                //   libs/ios-x64/libwhisper_bridge.a (simulator x64)
+                //   libs/ios-sim-arm64/libwhisper_bridge.a (simulator arm64)
+            }
+
+            // Generate Kotlin bindings from whisper_bridge.h via cinterop
+            it.compilations.getByName("main") {
+                cinterops {
+                    val whisper by creating {
+                        defFile("src/nativeInterop/cinterop/whisper.def")
+                        includeDirs("src/nativeInterop/cinterop")
+                    }
+                }
             }
         }
     }

@@ -1,0 +1,17 @@
+package = com.augmentalis.speechrecognition.native.whisper
+headers = whisper_bridge.h
+
+# The static library containing whisper_bridge.c + whisper.cpp + ggml compiled for iOS
+# Place the compiled library at one of:
+#   Modules/SpeechRecognition/libs/ios-arm64/libwhisper_bridge.a
+#   or specify via -include-dirs / -library-dirs
+
+# Header search path (relative to this .def file)
+headerFilter = whisper_bridge.h
+
+# Compiler options for the stub generator
+compilerOpts = -I.
+
+# Linker options — link against the prebuilt static library
+# These are resolved at link time when building the iOS framework
+# linkerOpts = -L${path_to_libs} -lwhisper_bridge -lwhisper -lggml

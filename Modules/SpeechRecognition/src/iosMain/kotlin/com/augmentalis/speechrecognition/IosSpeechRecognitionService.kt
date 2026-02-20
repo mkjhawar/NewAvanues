@@ -1,15 +1,21 @@
 /**
- * IosSpeechRecognitionService.kt - iOS speech recognition using Apple SFSpeechRecognizer
+ * IosSpeechRecognitionService.kt - iOS speech recognition with Apple Speech + Whisper
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  *
- * Merged implementation: SFSpeechRecognizer engine + SpeechRecognitionService.
- * No separate engine class needed — Apple Speech integration lives directly here.
- * Same pattern applies to macOS (shared Speech framework), Windows (SAPI), Linux (Vosk).
+ * Dual-engine implementation supporting:
+ * - Apple SFSpeechRecognizer (default): streaming, on-device (iOS 16+), multi-locale
+ * - Whisper (fallback/offline): batch via cinterop whisper_bridge, auto-download models
+ *
+ * Engine selection based on SpeechConfig.engine:
+ * - APPLE_SPEECH → SFSpeechRecognizer (this class, inline)
+ * - WHISPER → delegates to IosWhisperEngine
  */
 package com.augmentalis.speechrecognition
 
 import com.augmentalis.nlu.matching.CommandMatchingService
+import com.augmentalis.speechrecognition.whisper.IosWhisperConfig
+import com.augmentalis.speechrecognition.whisper.IosWhisperEngine
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -20,11 +26,16 @@ import platform.Foundation.*
 import platform.Speech.*
 
 /**
- * iOS implementation of SpeechRecognitionService using SFSpeechRecognizer.
+ * iOS implementation of SpeechRecognitionService.
  *
- * Uses AVAudioEngine for microphone input and SFSpeechAudioBufferRecognitionRequest
- * for streaming speech-to-text. Supports on-device recognition (iOS 16+),
- * multi-locale switching, and partial results.
+ * Supports two engines:
+ * - **APPLE_SPEECH**: SFSpeechRecognizer with streaming recognition, on-device mode,
+ *   and native platform integration. This is the default and recommended engine.
+ * - **WHISPER**: Offline Whisper.cpp via Kotlin/Native cinterop. Provides guaranteed
+ *   offline recognition with multi-language support and translation capabilities.
+ *
+ * Engine switching happens at `initialize()` time based on `SpeechConfig.engine`.
+ * Both engines share the same result/error/state flows for transparent integration.
  */
 @OptIn(ExperimentalForeignApi::class)
 class IosSpeechRecognitionService : SpeechRecognitionService {
@@ -63,18 +74,25 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     private val _stateFlow = MutableSharedFlow<ServiceState>(replay = 1)
     override val stateFlow: SharedFlow<ServiceState> = _stateFlow.asSharedFlow()
 
-    // Apple Speech components
+    // Apple Speech components (used when engine == APPLE_SPEECH)
     private var speechRecognizer: SFSpeechRecognizer? = null
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest? = null
     private var recognitionTask: SFSpeechRecognitionTask? = null
     private var audioEngine: AVAudioEngine? = null
+
+    // Whisper engine (used when engine == WHISPER)
+    private var whisperEngine: IosWhisperEngine? = null
+    private var whisperResultJob: Job? = null
+
+    // Track which engine is active
+    private var activeEngine: SpeechEngine = SpeechEngine.APPLE_SPEECH
 
     // Coroutine scope for processing results
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     /**
      * Initialize with configuration.
-     * Creates SFSpeechRecognizer for the configured locale and requests authorization.
+     * Routes to the appropriate engine based on config.engine.
      */
     override suspend fun initialize(config: SpeechConfig): Result<Unit> {
         return try {
@@ -88,33 +106,103 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
             resultProcessor.setConfidenceThreshold(config.confidenceThreshold)
             resultProcessor.setFuzzyMatchingEnabled(config.enableFuzzyMatching)
 
-            // Create SFSpeechRecognizer with locale
-            val locale = NSLocale(localeIdentifier = config.language)
-            speechRecognizer = SFSpeechRecognizer(locale = locale)
+            activeEngine = config.engine
 
-            if (speechRecognizer == null) {
-                logError(TAG, "SFSpeechRecognizer unavailable for locale: ${config.language}")
-                updateState(ServiceState.ERROR)
-                _errorFlow.emit(SpeechError.modelError("Speech recognition unavailable for ${config.language}"))
-                return Result.failure(IllegalStateException("SFSpeechRecognizer unavailable"))
+            when (config.engine) {
+                SpeechEngine.WHISPER -> initializeWhisper()
+                else -> initializeAppleSpeech()
             }
-
-            // Request authorization
-            requestAuthorization()
-
-            // Create audio engine
-            audioEngine = AVAudioEngine()
-
-            logInfo(TAG, "Initialized with locale: ${config.language}, on-device: ${speechRecognizer?.supportsOnDeviceRecognition}")
-            updateState(ServiceState.READY)
-
-            Result.success(Unit)
         } catch (e: Exception) {
             logError(TAG, "Initialization failed", e)
             updateState(ServiceState.ERROR)
             _errorFlow.emit(SpeechError.unknownError(e.message))
             Result.failure(e)
         }
+    }
+
+    /**
+     * Initialize Apple SFSpeechRecognizer engine.
+     */
+    private suspend fun initializeAppleSpeech(): Result<Unit> {
+        activeEngine = SpeechEngine.APPLE_SPEECH
+
+        // Create SFSpeechRecognizer with locale
+        val locale = NSLocale(localeIdentifier = config.language)
+        speechRecognizer = SFSpeechRecognizer(locale = locale)
+
+        if (speechRecognizer == null) {
+            logError(TAG, "SFSpeechRecognizer unavailable for locale: ${config.language}")
+            updateState(ServiceState.ERROR)
+            _errorFlow.emit(SpeechError.modelError("Speech recognition unavailable for ${config.language}"))
+            return Result.failure(IllegalStateException("SFSpeechRecognizer unavailable"))
+        }
+
+        // Request authorization
+        requestAuthorization()
+
+        // Create audio engine
+        audioEngine = AVAudioEngine()
+
+        logInfo(TAG, "Apple Speech initialized with locale: ${config.language}, " +
+                "on-device: ${speechRecognizer?.supportsOnDeviceRecognition}")
+        updateState(ServiceState.READY)
+
+        return Result.success(Unit)
+    }
+
+    /**
+     * Initialize Whisper engine via cinterop.
+     */
+    private suspend fun initializeWhisper(): Result<Unit> {
+        activeEngine = SpeechEngine.WHISPER
+
+        // Map SpeechConfig to IosWhisperConfig
+        val whisperConfig = IosWhisperConfig(
+            language = config.language.substringBefore("-"), // BCP-47 → ISO 639-1
+            numThreads = 0 // auto-detect
+        )
+
+        val engine = IosWhisperEngine()
+        val success = engine.initialize(whisperConfig)
+
+        if (!success) {
+            logError(TAG, "Whisper engine initialization failed")
+            updateState(ServiceState.ERROR)
+            _errorFlow.emit(SpeechError.modelError("Whisper model initialization failed"))
+            return Result.failure(IllegalStateException("Whisper engine init failed"))
+        }
+
+        whisperEngine = engine
+
+        // Forward Whisper result and error flows to our shared flows
+        whisperResultJob?.cancel()
+        whisperResultJob = scope.launch {
+            launch {
+                engine.resultFlow.collect { result ->
+                    // Process through command matching pipeline
+                    val processed = resultProcessor.processResult(
+                        text = result.text,
+                        confidence = result.confidence,
+                        engine = config.engine,
+                        isPartial = result.isPartial,
+                        alternatives = result.alternatives
+                    )
+                    processed?.let { _resultFlow.emit(it) }
+                        ?: _resultFlow.emit(result) // Emit raw if processor returns null
+                }
+            }
+            launch {
+                engine.errorFlow.collect { error ->
+                    _errorFlow.emit(error)
+                }
+            }
+        }
+
+        logInfo(TAG, "Whisper engine initialized: model=${whisperConfig.modelSize}, " +
+                "threads=${whisperConfig.effectiveThreadCount()}")
+        updateState(ServiceState.READY)
+
+        return Result.success(Unit)
     }
 
     /**
@@ -157,6 +245,16 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     }
 
     override suspend fun startListening(): Result<Unit> {
+        return when (activeEngine) {
+            SpeechEngine.WHISPER -> startWhisperListening()
+            else -> startAppleSpeechListening()
+        }
+    }
+
+    /**
+     * Start Apple Speech listening.
+     */
+    private suspend fun startAppleSpeechListening(): Result<Unit> {
         return try {
             if (!state.canStart()) {
                 return Result.failure(IllegalStateException("Cannot start from state: $state"))
@@ -238,11 +336,38 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
             }
 
             updateState(ServiceState.LISTENING)
-            logInfo(TAG, "Started listening")
+            logInfo(TAG, "Apple Speech listening started")
 
             Result.success(Unit)
         } catch (e: Exception) {
-            logError(TAG, "Failed to start listening", e)
+            logError(TAG, "Failed to start Apple Speech listening", e)
+            _errorFlow.emit(SpeechError.audioError(e.message))
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Start Whisper listening.
+     */
+    private suspend fun startWhisperListening(): Result<Unit> {
+        return try {
+            val engine = whisperEngine
+                ?: return Result.failure(IllegalStateException("Whisper engine not initialized"))
+
+            if (!state.canStart()) {
+                return Result.failure(IllegalStateException("Cannot start from state: $state"))
+            }
+
+            val started = engine.startListening(config.mode)
+            if (!started) {
+                return Result.failure(IllegalStateException("Whisper engine failed to start listening"))
+            }
+
+            updateState(ServiceState.LISTENING)
+            logInfo(TAG, "Whisper listening started")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            logError(TAG, "Failed to start Whisper listening", e)
             _errorFlow.emit(SpeechError.audioError(e.message))
             Result.failure(e)
         }
@@ -250,10 +375,17 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
 
     override suspend fun stopListening(): Result<Unit> {
         return try {
-            stopAudioEngine()
-            cancelRecognitionTask()
+            when (activeEngine) {
+                SpeechEngine.WHISPER -> {
+                    whisperEngine?.stopListening()
+                }
+                else -> {
+                    stopAudioEngine()
+                    cancelRecognitionTask()
+                }
+            }
             updateState(ServiceState.STOPPED)
-            logInfo(TAG, "Stopped listening")
+            logInfo(TAG, "Stopped listening (engine=$activeEngine)")
             Result.success(Unit)
         } catch (e: Exception) {
             logError(TAG, "Failed to stop listening", e)
@@ -264,9 +396,12 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun pause(): Result<Unit> {
         return try {
             if (state == ServiceState.LISTENING) {
-                audioEngine?.pause()
+                when (activeEngine) {
+                    SpeechEngine.WHISPER -> whisperEngine?.pause()
+                    else -> audioEngine?.pause()
+                }
                 updateState(ServiceState.PAUSED)
-                logInfo(TAG, "Paused")
+                logInfo(TAG, "Paused (engine=$activeEngine)")
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -277,9 +412,12 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun resume(): Result<Unit> {
         return try {
             if (state == ServiceState.PAUSED) {
-                audioEngine?.startAndReturnError(null)
+                when (activeEngine) {
+                    SpeechEngine.WHISPER -> whisperEngine?.resume()
+                    else -> audioEngine?.startAndReturnError(null)
+                }
                 updateState(ServiceState.LISTENING)
-                logInfo(TAG, "Resumed")
+                logInfo(TAG, "Resumed (engine=$activeEngine)")
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -300,6 +438,7 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     override fun setMode(mode: SpeechMode) {
         config = config.withMode(mode)
         resultProcessor.setMode(mode)
+        whisperEngine?.setMode(mode)
         logInfo(TAG, "Mode set to: $mode")
     }
 
@@ -307,9 +446,16 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
         config = config.withLanguage(language)
         logInfo(TAG, "Language set to: $language")
 
-        // Recreate speech recognizer with new locale
-        val locale = NSLocale(localeIdentifier = language)
-        speechRecognizer = SFSpeechRecognizer(locale = locale)
+        when (activeEngine) {
+            SpeechEngine.WHISPER -> {
+                whisperEngine?.setLanguage(language.substringBefore("-"))
+            }
+            else -> {
+                // Recreate speech recognizer with new locale
+                val locale = NSLocale(localeIdentifier = language)
+                speechRecognizer = SFSpeechRecognizer(locale = locale)
+            }
+        }
     }
 
     override fun isListening(): Boolean = state == ServiceState.LISTENING
@@ -321,6 +467,14 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun release() {
         try {
             updateState(ServiceState.DESTROYING)
+
+            // Release Whisper engine if active
+            whisperResultJob?.cancel()
+            whisperResultJob = null
+            whisperEngine?.destroy()
+            whisperEngine = null
+
+            // Release Apple Speech components
             stopAudioEngine()
             cancelRecognitionTask()
 
@@ -333,13 +487,13 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
             scope.cancel()
 
             updateState(ServiceState.UNINITIALIZED)
-            logInfo(TAG, "Released")
+            logInfo(TAG, "Released (engine=$activeEngine)")
         } catch (e: Exception) {
             logError(TAG, "Error during release", e)
         }
     }
 
-    // MARK: - Internal Callbacks
+    // MARK: - Internal Callbacks (Apple Speech)
 
     /**
      * Process recognition result from Apple Speech.

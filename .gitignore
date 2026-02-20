@@ -53,6 +53,9 @@ DerivedData/
 ios/build/
 **/ios/build/
 
+# External native dependencies (cloned on demand, not committed)
+Modules/Whisper/
+
 # AVA Migration - Exclude large model files (>100MB)
 android/apps/AVA/external-models/**/*.bin
 android/apps/AVA/external-models/**/*.gguf
