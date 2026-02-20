@@ -4,9 +4,9 @@
  * Handles: tool selection (pen, highlighter, shapes, eraser),
  * color picker, undo/redo, clear, save, share, pen size.
  *
- * This handler dispatches to the active IAnnotationController instance
- * via a static holder. When AnnotationAvanue is not in the foreground,
- * commands return notHandled().
+ * Dispatches to the active IAnnotationController via
+ * ModuleCommandCallbacks.annotationExecutor. When AnnotationAvanue
+ * is not in the foreground, commands return failure.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -21,6 +21,7 @@ import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
 
 private const val TAG = "AnnotationCmdHandler"
+private const val MODULE_NAME = "AnnotationAvanue"
 
 class AnnotationCommandHandler(
     private val service: AccessibilityService
@@ -42,38 +43,25 @@ class AnnotationCommandHandler(
     ): HandlerResult {
         Log.d(TAG, "execute: '${command.phrase}', actionType=${command.actionType}")
 
-        return when (command.actionType) {
-            // Tool selection
-            CommandActionType.ANNOTATION_PEN -> success("Pen tool selected")
-            CommandActionType.ANNOTATION_HIGHLIGHTER -> success("Highlighter selected")
-            CommandActionType.ANNOTATION_SHAPE_RECT -> success("Rectangle tool selected")
-            CommandActionType.ANNOTATION_SHAPE_CIRCLE -> success("Circle tool selected")
-            CommandActionType.ANNOTATION_SHAPE_ARROW -> success("Arrow tool selected")
-            CommandActionType.ANNOTATION_SHAPE_LINE -> success("Line tool selected")
-            CommandActionType.ANNOTATION_ERASER -> success("Eraser selected")
+        val executor = ModuleCommandCallbacks.annotationExecutor
+            ?: return moduleNotActive(command.actionType)
 
-            // Color
-            CommandActionType.ANNOTATION_COLOR_PICKER -> success("Color picker opened")
-
-            // Undo/redo/clear
-            CommandActionType.ANNOTATION_UNDO -> success("Annotation undone")
-            CommandActionType.ANNOTATION_REDO -> success("Annotation redone")
-            CommandActionType.ANNOTATION_CLEAR -> success("Annotations cleared")
-
-            // Save/share
-            CommandActionType.ANNOTATION_SAVE -> success("Annotation saved")
-            CommandActionType.ANNOTATION_SHARE -> success("Annotation shared")
-
-            // Pen size
-            CommandActionType.ANNOTATION_PEN_SIZE_UP -> success("Pen size increased")
-            CommandActionType.ANNOTATION_PEN_SIZE_DOWN -> success("Pen size decreased")
-
-            else -> HandlerResult.notHandled()
+        return try {
+            executor(command.actionType, extractMetadata(command))
+        } catch (e: Exception) {
+            Log.e(TAG, "Annotation command failed: ${command.actionType}", e)
+            HandlerResult.failure("Annotation command failed: ${e.message}", recoverable = true)
         }
     }
 
-    private fun success(message: String): HandlerResult {
-        Log.d(TAG, message)
-        return HandlerResult.success(message)
+    private fun moduleNotActive(action: CommandActionType): HandlerResult {
+        Log.w(TAG, "$MODULE_NAME not active for: $action")
+        return HandlerResult.failure(
+            "$MODULE_NAME not active — open an annotation to use this command",
+            recoverable = true
+        )
     }
+
+    private fun extractMetadata(command: QuantizedCommand): Map<String, String> =
+        command.metadata.mapValues { it.value.toString() }
 }

@@ -5,9 +5,9 @@
  * navigation (go to top/bottom, next/prev heading), editing (undo/redo/delete),
  * voice mode switching (dictation/command/continuous), and note lifecycle.
  *
- * This handler dispatches to the active INoteController instance via a
- * static holder. When NoteAvanue is not in the foreground, commands
- * return notHandled() to avoid side effects.
+ * Dispatches to the active INoteController via ModuleCommandCallbacks.noteExecutor.
+ * When NoteAvanue is not in the foreground, commands return failure with
+ * "NoteAvanue not active" to provide honest feedback.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -22,6 +22,7 @@ import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
 
 private const val TAG = "NoteCommandHandler"
+private const val MODULE_NAME = "NoteAvanue"
 
 class NoteCommandHandler(
     private val service: AccessibilityService
@@ -65,84 +66,28 @@ class NoteCommandHandler(
         command: QuantizedCommand,
         params: Map<String, Any>
     ): HandlerResult {
-        val phrase = command.phrase.lowercase().trim()
-        Log.d(TAG, "NoteCommandHandler.execute: '$phrase', actionType=${command.actionType}")
+        Log.d(TAG, "NoteCommandHandler.execute: '${command.phrase}', actionType=${command.actionType}")
 
-        return when (command.actionType) {
-            // ── Formatting ──────────────────────────────────────────
-            CommandActionType.FORMAT_BOLD -> success("Bold toggled")
-            CommandActionType.FORMAT_ITALIC -> success("Italic toggled")
-            CommandActionType.FORMAT_UNDERLINE -> success("Underline toggled")
-            CommandActionType.FORMAT_STRIKETHROUGH -> success("Strikethrough toggled")
-            CommandActionType.HEADING_1 -> success("Heading 1 applied")
-            CommandActionType.HEADING_2 -> success("Heading 2 applied")
-            CommandActionType.HEADING_3 -> success("Heading 3 applied")
-            CommandActionType.BULLET_LIST -> success("Bullet list toggled")
-            CommandActionType.NUMBERED_LIST -> success("Numbered list toggled")
-            CommandActionType.CHECKLIST -> success("Checklist toggled")
-            CommandActionType.CODE_BLOCK -> success("Code block toggled")
-            CommandActionType.BLOCKQUOTE -> success("Blockquote toggled")
-            CommandActionType.INSERT_DIVIDER -> success("Divider inserted")
+        val executor = ModuleCommandCallbacks.noteExecutor
+            ?: return moduleNotActive(command.actionType)
 
-            // ── Editing ─────────────────────────────────────────────
-            CommandActionType.NOTE_UNDO -> success("Undo")
-            CommandActionType.NOTE_REDO -> success("Redo")
-            CommandActionType.SELECT_ALL -> success("All selected")
-            CommandActionType.DELETE_LINE -> success("Line deleted")
-            CommandActionType.NEW_PARAGRAPH -> success("New paragraph")
-
-            // ── Navigation ──────────────────────────────────────────
-            CommandActionType.GO_TO_TOP -> success("Moved to top")
-            CommandActionType.GO_TO_BOTTOM -> success("Moved to bottom")
-            CommandActionType.NEXT_HEADING -> success("Next heading")
-            CommandActionType.PREVIOUS_HEADING -> success("Previous heading")
-            CommandActionType.SCROLL_UP -> success("Scrolled up")
-            CommandActionType.SCROLL_DOWN -> success("Scrolled down")
-
-            // ── Voice mode ──────────────────────────────────────────
-            CommandActionType.DICTATION_MODE -> success("Dictation mode")
-            CommandActionType.COMMAND_MODE -> success("Command mode")
-            CommandActionType.CONTINUOUS_MODE -> success("Continuous dictation")
-
-            // ── Clipboard ───────────────────────────────────────────
-            CommandActionType.COPY -> success("Copied")
-            CommandActionType.PASTE -> success("Pasted")
-            CommandActionType.CUT -> success("Cut")
-
-            // ── Note actions ────────────────────────────────────────
-            CommandActionType.OPEN_MODULE -> success("NoteAvanue opened")
-            CommandActionType.NEW_NOTE -> success("New note created")
-            CommandActionType.SAVE_NOTE -> success("Note saved")
-            CommandActionType.TOGGLE_PIN -> success("Pin toggled")
-            CommandActionType.EXPORT_NOTE -> success("Note exported")
-            CommandActionType.SEARCH_NOTES -> success("Search opened")
-            CommandActionType.CLOSE_APP -> success("Note closed")
-
-            // ── Attachments ─────────────────────────────────────────
-            CommandActionType.CAPTURE_PHOTO -> success("Photo attached")
-            CommandActionType.ATTACH_FILE -> success("File attached")
-            CommandActionType.ATTACH_AUDIO -> success("Audio attached")
-
-            // ── Font ────────────────────────────────────────────────
-            CommandActionType.INCREASE_FONT -> success("Font increased")
-            CommandActionType.DECREASE_FONT -> success("Font decreased")
-
-            // ── Misc ────────────────────────────────────────────────
-            CommandActionType.CLEAR_FORMATTING -> success("Formatting cleared")
-            CommandActionType.WORD_COUNT -> success("Word count shown")
-            CommandActionType.ZOOM_IN -> success("Zoomed in")
-            CommandActionType.ZOOM_OUT -> success("Zoomed out")
-
-            // ── TTS ─────────────────────────────────────────────────
-            CommandActionType.READ_SCREEN -> success("Reading note")
-            CommandActionType.STOP_READING -> success("Stopped reading")
-
-            else -> HandlerResult.notHandled()
+        return try {
+            executor(command.actionType, extractMetadata(command))
+        } catch (e: Exception) {
+            Log.e(TAG, "Note command failed: ${command.actionType}", e)
+            HandlerResult.failure("Note command failed: ${e.message}", recoverable = true)
         }
     }
 
-    private fun success(label: String): HandlerResult {
-        Log.i(TAG, "Note command: $label")
-        return HandlerResult.success(label)
+    private fun moduleNotActive(action: CommandActionType): HandlerResult {
+        Log.w(TAG, "$MODULE_NAME not active for: $action")
+        return HandlerResult.failure(
+            "$MODULE_NAME not active — open a note to use this command",
+            recoverable = true,
+            suggestedAction = "Say 'open note avanue' first"
+        )
     }
+
+    private fun extractMetadata(command: QuantizedCommand): Map<String, String> =
+        command.metadata.mapValues { it.value.toString() }
 }

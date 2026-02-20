@@ -3,6 +3,10 @@
  *
  * Handles: gallery, viewer, filters, rotate, flip, crop, share, delete, info, navigation.
  *
+ * Dispatches to the active IImageController via
+ * ModuleCommandCallbacks.imageExecutor. When ImageAvanue is not
+ * in the foreground, commands return failure.
+ *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 package com.augmentalis.voiceoscore.handlers
@@ -16,6 +20,7 @@ import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
 
 private const val TAG = "ImageCmdHandler"
+private const val MODULE_NAME = "ImageAvanue"
 
 class ImageCommandHandler(
     private val service: AccessibilityService
@@ -37,31 +42,25 @@ class ImageCommandHandler(
     ): HandlerResult {
         Log.d(TAG, "execute: '${command.phrase}', actionType=${command.actionType}")
 
-        return when (command.actionType) {
-            CommandActionType.IMAGE_OPEN -> success("Image viewer opened")
-            CommandActionType.IMAGE_GALLERY -> success("Gallery opened")
-            CommandActionType.IMAGE_FILTER_GRAYSCALE -> success("Grayscale filter applied")
-            CommandActionType.IMAGE_FILTER_SEPIA -> success("Sepia filter applied")
-            CommandActionType.IMAGE_FILTER_BLUR -> success("Blur filter applied")
-            CommandActionType.IMAGE_FILTER_SHARPEN -> success("Sharpen filter applied")
-            CommandActionType.IMAGE_FILTER_BRIGHTNESS -> success("Brightness adjusted")
-            CommandActionType.IMAGE_FILTER_CONTRAST -> success("Contrast adjusted")
-            CommandActionType.IMAGE_ROTATE_LEFT -> success("Rotated left")
-            CommandActionType.IMAGE_ROTATE_RIGHT -> success("Rotated right")
-            CommandActionType.IMAGE_FLIP_H -> success("Flipped horizontally")
-            CommandActionType.IMAGE_FLIP_V -> success("Flipped vertically")
-            CommandActionType.IMAGE_CROP -> success("Crop mode activated")
-            CommandActionType.IMAGE_SHARE -> success("Image shared")
-            CommandActionType.IMAGE_DELETE -> success("Image deleted")
-            CommandActionType.IMAGE_INFO -> success("Image info displayed")
-            CommandActionType.IMAGE_NEXT -> success("Next image")
-            CommandActionType.IMAGE_PREVIOUS -> success("Previous image")
-            else -> HandlerResult.notHandled()
+        val executor = ModuleCommandCallbacks.imageExecutor
+            ?: return moduleNotActive(command.actionType)
+
+        return try {
+            executor(command.actionType, extractMetadata(command))
+        } catch (e: Exception) {
+            Log.e(TAG, "Image command failed: ${command.actionType}", e)
+            HandlerResult.failure("Image command failed: ${e.message}", recoverable = true)
         }
     }
 
-    private fun success(message: String): HandlerResult {
-        Log.d(TAG, message)
-        return HandlerResult.success(message)
+    private fun moduleNotActive(action: CommandActionType): HandlerResult {
+        Log.w(TAG, "$MODULE_NAME not active for: $action")
+        return HandlerResult.failure(
+            "$MODULE_NAME not active — open an image to use this command",
+            recoverable = true
+        )
     }
+
+    private fun extractMetadata(command: QuantizedCommand): Map<String, String> =
+        command.metadata.mapValues { it.value.toString() }
 }

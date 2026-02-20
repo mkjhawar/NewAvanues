@@ -3,6 +3,10 @@
  *
  * Handles: start/stop casting, connect/disconnect, quality change.
  *
+ * Dispatches to the active ICastManager via
+ * ModuleCommandCallbacks.castExecutor. When no cast session is
+ * active, commands return failure with recovery guidance.
+ *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
 package com.augmentalis.voiceoscore.handlers
@@ -16,6 +20,7 @@ import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
 
 private const val TAG = "CastCmdHandler"
+private const val MODULE_NAME = "RemoteCast"
 
 class CastCommandHandler(
     private val service: AccessibilityService
@@ -35,23 +40,26 @@ class CastCommandHandler(
     ): HandlerResult {
         Log.d(TAG, "execute: '${command.phrase}', actionType=${command.actionType}")
 
-        return when (command.actionType) {
-            CommandActionType.CAST_START ->
-                failure("Start casting requires an active RemoteCast session", recoverable = true)
-            CommandActionType.CAST_STOP ->
-                failure("No active cast session to stop", recoverable = false)
-            CommandActionType.CAST_CONNECT ->
-                failure("Cast connect requires RemoteCast module configuration", recoverable = true)
-            CommandActionType.CAST_DISCONNECT ->
-                failure("No active cast connection to disconnect", recoverable = false)
-            CommandActionType.CAST_QUALITY ->
-                failure("Cast quality change requires an active cast session", recoverable = true)
-            else -> HandlerResult.notHandled()
+        val executor = ModuleCommandCallbacks.castExecutor
+            ?: return moduleNotActive(command.actionType)
+
+        return try {
+            executor(command.actionType, extractMetadata(command))
+        } catch (e: Exception) {
+            Log.e(TAG, "Cast command failed: ${command.actionType}", e)
+            HandlerResult.failure("Cast command failed: ${e.message}", recoverable = true)
         }
     }
 
-    private fun failure(message: String, recoverable: Boolean): HandlerResult {
-        Log.w(TAG, message)
-        return HandlerResult.failure(message, recoverable = recoverable)
+    private fun moduleNotActive(action: CommandActionType): HandlerResult {
+        Log.w(TAG, "$MODULE_NAME not active for: $action")
+        return HandlerResult.failure(
+            "$MODULE_NAME not active — start a cast session to use this command",
+            recoverable = true,
+            suggestedAction = "Say 'open cockpit' then 'start casting'"
+        )
     }
+
+    private fun extractMetadata(command: QuantizedCommand): Map<String, String> =
+        command.metadata.mapValues { it.value.toString() }
 }

@@ -6,9 +6,8 @@
  * (web/camera/note/pdf/image/video/whiteboard/terminal), and in-frame
  * navigation (scroll, zoom, page back/forward/refresh).
  *
- * This handler dispatches to the active Cockpit module via a broadcast intent
- * or static holder. When Cockpit is not in the foreground, commands return
- * notHandled() to allow fallback to other handlers.
+ * Dispatches to the active Cockpit module via ModuleCommandCallbacks.cockpitExecutor.
+ * When Cockpit is not in the foreground, commands return failure.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -23,6 +22,7 @@ import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
 
 private const val TAG = "CockpitCommandHandler"
+private const val MODULE_NAME = "Cockpit"
 
 class CockpitCommandHandler(
     private val service: AccessibilityService
@@ -50,52 +50,28 @@ class CockpitCommandHandler(
         command: QuantizedCommand,
         params: Map<String, Any>
     ): HandlerResult {
-        val phrase = command.phrase.lowercase().trim()
-        Log.d(TAG, "CockpitCommandHandler.execute: '$phrase', actionType=${command.actionType}")
+        Log.d(TAG, "CockpitCommandHandler.execute: '${command.phrase}', actionType=${command.actionType}")
 
-        return when (command.actionType) {
-            // ── Module lifecycle ───────────────────────────────────────
-            CommandActionType.OPEN_MODULE -> success("Cockpit opened")
+        val executor = ModuleCommandCallbacks.cockpitExecutor
+            ?: return moduleNotActive(command.actionType)
 
-            // ── Frame management ──────────────────────────────────────
-            CommandActionType.ADD_FRAME -> success("Frame added")
-            CommandActionType.MINIMIZE_FRAME -> success("Frame minimized")
-            CommandActionType.MAXIMIZE_FRAME -> success("Frame maximized")
-            CommandActionType.CLOSE_FRAME -> success("Frame closed")
-
-            // ── Layout switching ──────────────────────────────────────
-            CommandActionType.LAYOUT_PICKER -> success("Layout picker opened")
-            CommandActionType.LAYOUT_GRID -> success("Grid layout applied")
-            CommandActionType.LAYOUT_SPLIT -> success("Split layout applied")
-            CommandActionType.LAYOUT_FREEFORM -> success("Freeform layout applied")
-            CommandActionType.LAYOUT_FULLSCREEN -> success("Fullscreen layout applied")
-            CommandActionType.LAYOUT_WORKFLOW -> success("Workflow layout applied")
-
-            // ── Content insertion ──────────────────────────────────────
-            CommandActionType.ADD_WEB -> success("Web frame added")
-            CommandActionType.ADD_CAMERA -> success("Camera frame added")
-            CommandActionType.ADD_NOTE -> success("Note frame added")
-            CommandActionType.ADD_PDF -> success("PDF frame added")
-            CommandActionType.ADD_IMAGE -> success("Image frame added")
-            CommandActionType.ADD_VIDEO -> success("Video frame added")
-            CommandActionType.ADD_WHITEBOARD -> success("Whiteboard frame added")
-            CommandActionType.ADD_TERMINAL -> success("Terminal frame added")
-
-            // ── In-frame navigation ───────────────────────────────────
-            CommandActionType.PAGE_BACK -> success("Navigated back")
-            CommandActionType.PAGE_FORWARD -> success("Navigated forward")
-            CommandActionType.PAGE_REFRESH -> success("Page refreshed")
-            CommandActionType.SCROLL_UP -> success("Scrolled up")
-            CommandActionType.SCROLL_DOWN -> success("Scrolled down")
-            CommandActionType.ZOOM_IN -> success("Zoomed in")
-            CommandActionType.ZOOM_OUT -> success("Zoomed out")
-
-            else -> HandlerResult.notHandled()
+        return try {
+            executor(command.actionType, extractMetadata(command))
+        } catch (e: Exception) {
+            Log.e(TAG, "Cockpit command failed: ${command.actionType}", e)
+            HandlerResult.failure("Cockpit command failed: ${e.message}", recoverable = true)
         }
     }
 
-    private fun success(label: String): HandlerResult {
-        Log.i(TAG, "Cockpit command: $label")
-        return HandlerResult.success(label)
+    private fun moduleNotActive(action: CommandActionType): HandlerResult {
+        Log.w(TAG, "$MODULE_NAME not active for: $action")
+        return HandlerResult.failure(
+            "$MODULE_NAME not active — open Cockpit to use this command",
+            recoverable = true,
+            suggestedAction = "Say 'open cockpit' first"
+        )
     }
+
+    private fun extractMetadata(command: QuantizedCommand): Map<String, String> =
+        command.metadata.mapValues { it.value.toString() }
 }

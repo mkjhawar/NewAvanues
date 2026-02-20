@@ -48,6 +48,7 @@ import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 import com.augmentalis.voiceoscore.handlers.VoiceControlCallbacks
 import com.augmentalis.voiceoscore.vos.VosFileImporter
 import com.augmentalis.voiceoscore.vos.sync.VosSyncManager
@@ -520,6 +521,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
         // Clear VoiceControlCallbacks to prevent stale references
         VoiceControlCallbacks.clear()
+        ModuleCommandCallbacks.clearAll()
 
         // Cancel speech result collection
         speechCollectorJob?.cancel()
