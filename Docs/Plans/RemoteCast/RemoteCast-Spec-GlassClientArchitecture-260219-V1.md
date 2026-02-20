@@ -24,14 +24,15 @@ MediaProjection
   → ImageReader (acquires RGBA_8888 frames)
   → Bitmap.compress(JPEG, quality%)
   → CastFrameData (20-byte header + JPEG payload)
-  → MjpegTcpServer (TCP port 54321)
+  → CastWebSocketServer (ws://host:54321/cast/stream)  [Updated 260220: was MjpegTcpServer]
 ```
 
 ### Receiver Path (Network → Display)
 ```
-MjpegTcpClient (TCP port 54321)
-  → Read 20-byte header (validate "CAST" magic)
-  → Read N bytes JPEG payload
+CastWebSocketClient (ws://host:54321/cast/stream)       [Updated 260220: was MjpegTcpClient]
+  → WebSocket binary message
+  → Read 20-byte CAST header (validate "CAST" magic)
+  → Extract JPEG payload
   → Flow<ByteArray> of frames
   → BitmapFactory.decodeByteArray()
   → Compose Image() renders
@@ -59,13 +60,15 @@ Offset  Size  Field           Value
 | ICastManager.kt | commonMain | Complete |
 | CastState.kt | commonMain | Complete |
 | CastFrameData.kt | commonMain | Complete (encode/decode/buildPacket) |
+| CastWebSocketServer.kt | commonMain | Complete (HTTPAvanue WebSocket, 260220) |
+| CastWebSocketClient.kt | commonMain | Complete (HTTPAvanue WebSocket, 260220) |
 | ScreenCaptureHelper.kt | androidMain | Complete (VirtualDisplay → JPEG Flow) |
-| MjpegTcpServer.kt | androidMain | Complete (ServerSocket, mutex writes) |
-| MjpegTcpClient.kt | androidMain | Complete (cold Flow, magic validation) |
-| AndroidCastManager.kt | androidMain | Complete (orchestrator, needs MediaProjection) |
+| MjpegTcpServer.kt | androidMain | @Deprecated (replaced by CastWebSocketServer) |
+| MjpegTcpClient.kt | androidMain | @Deprecated (replaced by CastWebSocketClient) |
+| AndroidCastManager.kt | androidMain | Complete (uses CastWebSocket*, 260220) |
 | CastOverlay.kt | androidMain | Complete (sender HUD overlay, AVID) |
 | CastReceiverView.kt | androidMain | Complete (JPEG → Bitmap → Compose) |
-| DesktopCastManager.kt | desktopMain | Complete (java.awt.Robot, no TCP wired) |
+| DesktopCastManager.kt | desktopMain | Complete (java.awt.Robot + CastWebSocketServer, 260220) |
 | CastCommandHandler.kt | VoiceOSCore handlers | Stub (returns failure, not wired) |
 
 ### What's Missing (The "Wiring")
@@ -409,7 +412,7 @@ Phases A + B can run in parallel.
 ## 10. iOS Cross-Platform Support (iPhone → Android Glasses)
 
 ### Architecture
-The RemoteCast protocol is platform-agnostic at the wire level (raw TCP + JPEG + AVU text).
+The RemoteCast protocol is platform-agnostic at the wire level (WebSocket binary + CAST header + JPEG + AVU text). Transport migrated from raw TCP to HTTPAvanue WebSocket (260220).
 Any device that speaks TCP can participate. The sender doesn't know the receiver's OS.
 
 ```

@@ -102,6 +102,9 @@ implementation(libs.bouncycastle.bcpkix)  // NEW: 1.78.1
 | `4415fd97` | build: add okio 3.9.0 + bouncycastle 1.78.1 deps, include HTTPAvanue module |
 | `d49c6d20` | fix(build): platform(libs.compose.bom) -> platform(libs.compose.bom.get()) across 14 modules |
 | `8c4cc839` | docs(HTTPAvanue): plan and analysis for hybrid extraction from AvaConnect |
+| `7969aa92` | fix(HTTPAvanue): resolve 5 audit issues — serialization, equals, EOF, error codes |
+| `61458dd6` | feat(HTTPAvanue): wire HTTP/2 auto-detection into HttpServer |
+| `48aeaa77` | docs: update Chapter 101 + fix docs for HTTPAvanue/RemoteCast audit + migration |
 
 ## Pre-existing Bug Fixed
 
@@ -117,3 +120,35 @@ implementation(libs.bouncycastle.bcpkix)  // NEW: 1.78.1
 3. **HPACK without Huffman** — Non-Huffman encoding is valid per RFC 7541; Huffman tables (~4KB) can be added incrementally
 4. **Local auth types** — Minimal AuthenticationManager interface avoids coupling to AvaConnect's security module
 5. **Three iOS targets** — iosArm64 + iosSimulatorArm64, sharing a single iosMain source set with BSD socket implementation
+
+---
+
+## v1.1 Updates (260220)
+
+### Audit Bug Fixes (5 issues)
+
+| Fix | Severity | File(s) | Description |
+|---|---|---|---|
+| 1.1+1.2 | CRITICAL | HttpRequest.kt, HttpResponse.kt | Removed `@Serializable` — server-internal types, never JSON-serialized |
+| 1.3 | CRITICAL | HttpRequest.kt, HttpResponse.kt | `equals()` null-body: `== true` → `!= false` |
+| 1.4 | SIGNIFICANT | HttpParser.kt | EOF check before `readByte()` in `readUtf8Line()` |
+| 1.5 | SIGNIFICANT | ErrorHandlerMiddleware.kt | Use `HttpStatus.from(e.statusCode)` instead of hardcoded 400 |
+| 1.6 | MINOR | SseEmitter.kt | Removed unused `HttpRequest` and `Socket` imports |
+
+### HTTP/2 Auto-Detection (wired into HttpServer)
+
+`HttpServer.handleConnection()` now transparently serves HTTP/1.1 and HTTP/2 on the same port:
+
+- **Prior Knowledge**: Peeks at first 24 bytes via Okio `request()` + `buffer.snapshot()` (non-consuming read). If matches `PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n`, consumes the preface and delegates to `Http2ServerHandler.handlePriorKnowledge()`.
+- **h2c Upgrade**: After parsing HTTP/1.1 request, checks `Upgrade: h2c` + `HTTP2-Settings` headers. If matched, sends `101 Switching Protocols` and delegates to `Http2ServerHandler.handleH2cUpgrade()`.
+- **ServerConfig additions**: `http2Enabled: Boolean = true`, `http2Settings: Http2Settings = Http2Settings()`
+- Also unified `HttpException` catch handling to use `HttpStatus.from(e.statusCode)` (consistency with ErrorHandlerMiddleware fix)
+
+### First Consumer: RemoteCast Module
+
+RemoteCast's transport layer migrated from raw TCP (`MjpegTcpServer`/`MjpegTcpClient`) to HTTPAvanue WebSocket:
+
+- `CastWebSocketServer` — HTTPAvanue `HttpServer` + WebSocket handler at `/cast/stream`
+- `CastWebSocketClient` — HTTPAvanue `WebSocketClient` wrapper with CAST frame decoding
+- Both in commonMain → Desktop gets network transport for the first time
+- See: `Docs/fixes/RemoteCast/RemoteCast-Fix-AuditBugsAndWebSocketMigration-260220-V1.md`

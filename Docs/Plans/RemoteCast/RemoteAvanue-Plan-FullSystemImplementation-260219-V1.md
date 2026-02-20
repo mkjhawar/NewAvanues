@@ -99,8 +99,8 @@ Extend CastFrameData to support multiple magic types:
 - `VOC\0` — vocabulary sync (AVU command list)
 - `IMU\0` — head tracking data (future)
 - `TTS\0` — audio feedback (future)
-Add message router in MjpegTcpClient/Server.
-**Files:** CastFrameData.kt (commonMain), MjpegTcpServer.kt, MjpegTcpClient.kt
+Add message router in CastWebSocketServer/Client (updated 260220: was MjpegTcp*).
+**Files:** CastFrameData.kt (commonMain), CastWebSocketServer.kt, CastWebSocketClient.kt
 **Est:** ~60 lines changed
 
 ### 3.2 AVU Command Serialization
@@ -116,11 +116,12 @@ to AVU format and send as VOC packet to all connected receivers.
 **Files:** New: VocabSyncManager.kt (commonMain)
 **Est:** ~80 lines
 
-### 3.4 Bidirectional TCP
-Enable reverse channel on same TCP connection.
+### 3.4 Bidirectional WebSocket
+Enable reverse channel on same WebSocket connection (updated 260220: was TCP).
 Server reads CMD packets from client. Client reads CAST+VOC packets from server.
 Mux by magic byte header (first 4 bytes determine handler).
-**Files:** MjpegTcpServer.kt, MjpegTcpClient.kt
+WebSocket binary messages naturally support bidirectional communication.
+**Files:** CastWebSocketServer.kt, CastWebSocketClient.kt
 **Est:** ~80 lines changed
 
 ---

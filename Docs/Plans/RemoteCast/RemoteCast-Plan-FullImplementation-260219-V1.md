@@ -618,3 +618,85 @@ The theoretical maximum for a screen-casting module is ~40% (the capture API its
 | Six-Module Unified Spec | `docs/plans/Modules-Spec-SixModuleImplementation-260219-V1.md` |
 | Handler Architecture (Chapter 95) | `Docs/MasterDocs/NewAvanues-Developer-Manual/Developer-Manual-Chapter95-VOSDistributionAndHandlerDispatch.md` |
 | Session Handover | `Docs/handover/handover-260219-0100.md` |
+| HTTPAvanue Chapter 101 | `Docs/MasterDocs/HTTPAvanue/Developer-Manual-Chapter101-HTTPAvanueKMPHttpServerLibrary.md` |
+| WebSocket Migration Fix Doc | `Docs/fixes/RemoteCast/RemoteCast-Fix-AuditBugsAndWebSocketMigration-260220-V1.md` |
+
+---
+
+## ADDENDUM: Transport Migration (260220)
+
+**Status:** COMPLETE | **Branch:** HTTPAvanue | **Commits:** `67ddd322`, `3e58d282`
+
+### Summary
+
+The MJPEG-over-TCP transport described in Sections 6.3–6.4 and 7 (Desktop) has been replaced with HTTPAvanue WebSocket transport. The CAST wire protocol (20-byte header + JPEG payload) is preserved — only the transport layer changed.
+
+### Architecture Change
+
+```
+BEFORE (260219 plan):                 AFTER (260220 migration):
+  androidMain/transport/                commonMain/transport/
+    MjpegTcpServer.kt (raw TCP)           CastWebSocketServer.kt (HTTPAvanue)
+    MjpegTcpClient.kt (raw TCP)           CastWebSocketClient.kt (HTTPAvanue)
+  desktopMain/transport/
+    (planned, never built)              androidMain/transport/
+                                          MjpegTcpServer.kt (@Deprecated)
+                                          MjpegTcpClient.kt (@Deprecated)
+```
+
+### What Changed
+
+1. **CastWebSocketServer** (commonMain) wraps HTTPAvanue `HttpServer` + WebSocket handler:
+   - `WS /cast/stream` — binary CAST-framed JPEG broadcast
+   - `GET /cast/status` — JSON status endpoint
+   - `GET /cast/health` — health check
+   - Multi-client broadcast with dead-client cleanup
+
+2. **CastWebSocketClient** (commonMain) wraps HTTPAvanue `WebSocketClient`:
+   - Connects to `ws://host:port/cast/stream`
+   - Decodes CAST headers, emits `Flow<ByteArray>` of raw JPEG data
+   - Auto-reconnect via `WebSocketReconnectConfig`
+
+3. **AndroidCastManager** — swapped `MjpegTcpServer`/`MjpegTcpClient` for `CastWebSocket*`
+4. **DesktopCastManager** — wired `CastWebSocketServer` (first time Desktop has network transport)
+5. **MjpegTcpServer/MjpegTcpClient** — kept but `@Deprecated`
+
+### Why WebSocket Over Raw TCP
+
+- **Cross-platform**: HTTPAvanue's Socket is expect/actual (JVM+iOS+Desktop) vs. `java.net.Socket` (JVM only)
+- **Protocol upgradeability**: WebSocket allows text commands (quality change, pause) alongside binary frames
+- **Diagnostic endpoints**: REST `/cast/status` for debugging
+- **Reuses existing infrastructure**: No new networking code — HTTPAvanue already handles sockets, buffering, connection lifecycle
+
+### Impact on Plan Sections
+
+| Section | Impact |
+|---|---|
+| 6.3 MjpegTcpServer | **SUPERSEDED** by CastWebSocketServer (commonMain) |
+| 6.4 MjpegTcpClient | **SUPERSEDED** by CastWebSocketClient (commonMain) |
+| 7 Desktop Transport | **RESOLVED** — Desktop uses same commonMain CastWebSocketServer |
+| 13 Implementation Order item 2 | Updated: "commonMain transport" replaces "androidMain transport" |
+| 13 Implementation Order item 6 | **RESOLVED** — no separate Desktop transport files needed |
+| 14 Integration Tests | Server+Client test should use CastWebSocketServer/Client |
+| 15 KMP Score | **IMPROVED** — transport now in commonMain (was androidMain-only) |
+
+### Updated KMP Score
+
+| Source Set | Files | Notes |
+|---|---|---|
+| commonMain | 7 | Models + protocol + transport (was 5) |
+| androidMain | 9 | Capture, service, UI (unchanged) |
+| desktopMain | 1 | DesktopCastManager only (was planned 3) |
+| VoiceOSCore | 1 | Handler (unchanged) |
+
+KMP Score = 7 / (7 + 9 + 1 + 1) ≈ **39%** (up from planned 27%). Transport promotion to commonMain significantly improved the score.
+
+### Bug Fixes Included
+
+| Fix | File | Issue |
+|---|---|---|
+| `MemoryCacheImageOutputStream` | DesktopCastManager.kt | Typo: non-existent `MemoryImageOutputStream` |
+| `@Serializable CastResolution` | CastState.kt | Missing annotation on enum |
+| Duplicate `CastFrameData` | DesktopCastManager.kt | Shadowed commonMain version with incompatible fields |
+| `scope.cancel()` | DesktopCastManager.kt | Coroutine scope leak in `release()` |
+| Compose runtime | build.gradle.kts | Missing JB Compose plugin + runtime for desktop target |

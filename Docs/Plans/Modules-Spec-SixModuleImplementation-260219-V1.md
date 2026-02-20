@@ -330,49 +330,49 @@ desktopMain/
 - `src/commonMain/.../model/CastState.kt` — connection state model
 - `src/androidMain/.../CastOverlay.kt` — overlay indicator
 
-**Target Architecture:**
+**Target Architecture:** *(Updated 260220: transport migrated from raw TCP to HTTPAvanue WebSocket)*
 ```
 commonMain/
   model/
     CastState.kt              — Enhanced: connection status, device info, quality, latency
     CastDevice.kt             — Target device: id, name, address, type
-    CastQualityProfile.kt     — LOW (360p/5fps), MEDIUM (720p/15fps), HIGH (1080p/30fps)
   protocol/
     ICastManager.kt           — Interface: startCast, stopCast, connect, disconnect, setQuality
-    CastFrameData.kt          — Byte array frame + timestamp + sequence number
+    CastFrameData.kt          — Byte array frame + timestamp + sequence number + CAST wire format
+  transport/
+    CastWebSocketServer.kt    — HTTPAvanue HttpServer + WebSocket (/cast/stream, /cast/status)
+    CastWebSocketClient.kt    — HTTPAvanue WebSocketClient wrapper with CAST frame decoding
 
 androidMain/
   service/
     CastCaptureService.kt     — Foreground service with MediaProjection capture
     ScreenCaptureHelper.kt    — MediaProjection → ImageReader → JPEG frames
   transport/
-    MjpegTcpServer.kt         — TCP server streaming MJPEG frames (ktor-network)
-    MjpegTcpClient.kt         — TCP client receiving MJPEG frames
+    MjpegTcpServer.kt         — @Deprecated (replaced by CastWebSocketServer)
+    MjpegTcpClient.kt         — @Deprecated (replaced by CastWebSocketClient)
   ui/
     CastOverlay.kt            — REWRITE: connection indicator + quality badge
-    CastReceiverView.kt       — Composable displaying received MJPEG stream
+    CastReceiverView.kt       — Composable displaying received cast stream
   controller/
-    AndroidCastManager.kt     — Android MediaProjection implementation
+    AndroidCastManager.kt     — Android MediaProjection + CastWebSocketServer/Client
   handler/
     CastCommandHandler.kt     — Voice command handler
 
 desktopMain/
-  transport/
-    DesktopMjpegServer.kt     — Java NIO TCP server
-    DesktopMjpegClient.kt     — Java NIO TCP client
   controller/
-    DesktopCastManager.kt     — java.awt.Robot screen capture
+    DesktopCastManager.kt     — java.awt.Robot screen capture + CastWebSocketServer
 ```
 
-**KMP Score Target: ~35%** (protocol models in commonMain, capture APIs 100% platform-specific)
+**KMP Score Target: ~39%** (transport now in commonMain alongside protocol models; up from 35% planned)
 
 **Key Design Decisions:**
-- MJPEG-over-TCP (simplest streaming protocol — no codec complexity).
+- ~~MJPEG-over-TCP~~ **WebSocket via HTTPAvanue** (cross-platform, supports diagnostic endpoints + text commands).
+- CAST wire protocol preserved (20-byte header + JPEG payload) for backward compatibility.
 - Android capture: MediaProjection API → VirtualDisplay → ImageReader → JPEG encode.
 - Desktop capture: java.awt.Robot.createScreenCapture() → JPEG encode.
 - Quality profiles control resolution + FPS + JPEG quality.
 - Foreground service required on Android for MediaProjection.
-- Device discovery: mDNS/Bonjour via existing ktor-network dependency.
+- Device discovery: mDNS/Bonjour (deferred to future iteration).
 
 ### 3.5 AI Module Unification
 
@@ -443,7 +443,7 @@ desktopMain/
 | io.coil-kt.coil3:coil-network-ktor3 | ImageAvanue | 3.0.4 | Network image loading |
 | androidx.media3:media3-exoplayer | VideoAvanue | 1.5.1 | Android video playback |
 | androidx.media3:media3-ui | VideoAvanue | 1.5.1 | Video player UI components |
-| io.ktor:ktor-network | RemoteCast | 3.0.3 | TCP networking for MJPEG |
+| ~~io.ktor:ktor-network~~ | ~~RemoteCast~~ | ~~3.0.3~~ | ~~TCP networking~~ — replaced by HTTPAvanue WebSocket (260220) |
 
 ### Existing Dependencies (already in project)
 
