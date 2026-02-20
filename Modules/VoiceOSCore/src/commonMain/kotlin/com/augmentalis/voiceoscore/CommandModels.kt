@@ -286,7 +286,10 @@ enum class ErrorCode {
     NO_ACCESSIBILITY_SERVICE,
 
     /** Action execution failed */
-    ACTION_FAILED
+    ACTION_FAILED,
+
+    /** Action recognized but not implementable via current API**/
+    NOT_SUPPORTED
 }
 
 /**

@@ -91,7 +91,7 @@ kotlin {
                 implementation("androidx.activity:activity-compose:1.8.2")
 
                 // Compose BOM — aligned with JB Compose 1.7.3 (Foundation 1.7.x)
-                implementation(platform(libs.compose.bom))
+                implementation(project.dependencies.platform(libs.compose.bom))
                 implementation("androidx.compose.ui:ui")
                 implementation("androidx.compose.ui:ui-tooling-preview")
                 implementation("androidx.compose.material3:material3")
@@ -168,7 +168,7 @@ kotlin {
             dependencies {
                 implementation("androidx.test.ext:junit:1.1.5")
                 implementation("androidx.test.espresso:espresso-core:3.5.1")
-                implementation(platform(libs.compose.bom))
+                implementation(project.dependencies.platform(libs.compose.bom))
                 implementation("androidx.compose.ui:ui-test-junit4")
             }
         }
