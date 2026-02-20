@@ -2,6 +2,9 @@ package com.augmentalis.httpavanue.server
 
 import com.avanues.logging.LoggerFactory
 import com.augmentalis.httpavanue.http.*
+import com.augmentalis.httpavanue.http2.Http2FrameCodec
+import com.augmentalis.httpavanue.http2.Http2ServerHandler
+import com.augmentalis.httpavanue.http2.Http2Settings
 import com.augmentalis.httpavanue.middleware.Middleware
 import com.augmentalis.httpavanue.middleware.MiddlewarePipeline
 import com.augmentalis.httpavanue.platform.Socket
@@ -20,6 +23,8 @@ data class ServerConfig(
     val requestTimeout: Long = 30_000,
     val maxRequestBodySize: Long = 10 * 1024 * 1024,
     val socketConfig: SocketConfig = SocketConfig(),
+    val http2Enabled: Boolean = true,
+    val http2Settings: Http2Settings = Http2Settings(),
 )
 
 /**
@@ -95,17 +100,63 @@ class HttpServer(
 
     private suspend fun handleConnection(socket: Socket) {
         withContext(Dispatchers.IO) {
-            var isWebSocket = false
-            var websocketRequest: HttpRequest? = null
+            var isLongLived = false // WebSocket or HTTP/2 — don't close socket in finally
             try {
+                val source = socket.source()
+
+                // ── HTTP/2 prior knowledge detection ──
+                // Peek at the first bytes to check for the 24-byte HTTP/2 connection preface.
+                // Okio's request(n) fills the internal buffer without consuming; the bytes
+                // remain available for the HTTP/1.1 parser if this isn't HTTP/2.
+                if (config.http2Enabled) {
+                    val prefaceSize = Http2FrameCodec.CONNECTION_PREFACE.size.toLong()
+                    if (source.request(prefaceSize)) {
+                        val peeked = source.buffer.snapshot().toByteArray()
+                        if (Http2ServerHandler.isPriorKnowledgePreface(peeked)) {
+                            // Consume the preface bytes so Http2Connection starts at the SETTINGS frame
+                            source.skip(prefaceSize)
+                            isLongLived = true
+                            logger.i { "HTTP/2 prior knowledge from ${socket.remoteAddress()}" }
+                            Http2ServerHandler.handlePriorKnowledge(
+                                socket = socket,
+                                settings = config.http2Settings,
+                                requestHandler = { req ->
+                                    middlewarePipeline.execute(req) { r -> router.handle(r) }
+                                }
+                            )
+                            return@withContext
+                        }
+                    }
+                }
+
+                // ── HTTP/1.1 path ──
+                var websocketRequest: HttpRequest? = null
                 withTimeout(config.requestTimeout) {
-                    val request = HttpParser.parse(socket.source(), config.maxRequestBodySize)
+                    val request = HttpParser.parse(source, config.maxRequestBodySize)
                     logger.d { "${request.method} ${request.uri}" }
+
+                    // Check for WebSocket upgrade
                     if (WebSocketHandshake.isWebSocketRequest(request)) {
-                        isWebSocket = true
+                        isLongLived = true
                         websocketRequest = request
                         return@withTimeout
                     }
+
+                    // Check for HTTP/2 h2c upgrade (Upgrade: h2c header)
+                    if (config.http2Enabled && Http2ServerHandler.isH2cUpgradeRequest(request)) {
+                        isLongLived = true
+                        logger.i { "HTTP/2 h2c upgrade from ${socket.remoteAddress()}" }
+                        Http2ServerHandler.handleH2cUpgrade(
+                            socket = socket,
+                            request = request,
+                            settings = config.http2Settings,
+                            requestHandler = { req ->
+                                middlewarePipeline.execute(req) { r -> router.handle(r) }
+                            }
+                        )
+                        return@withTimeout
+                    }
+
                     val response = middlewarePipeline.execute(request) { req -> router.handle(req) }
                     socket.sink().apply { write(response.toBytes()); flush() }
                     if (!request.isKeepAlive) socket.close()
@@ -119,12 +170,12 @@ class HttpServer(
                 sendError(socket, HttpResponse.payloadTooLarge(e.message ?: "Payload Too Large"))
             } catch (e: HttpException) {
                 logger.w { "HTTP error: ${e.message}" }
-                sendError(socket, HttpResponse.badRequest(e.message ?: "Bad request"))
+                sendError(socket, HttpResponse.error(HttpStatus.from(e.statusCode), e.message ?: "Bad request"))
             } catch (e: Exception) {
                 logger.e({ "Error handling connection" }, e)
                 sendError(socket, HttpResponse.internalError())
             } finally {
-                if (!isWebSocket) socket.close()
+                if (!isLongLived) socket.close()
             }
         }
     }
