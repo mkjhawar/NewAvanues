@@ -258,7 +258,7 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
                     val processed = resultProcessor.processResult(
                         text = result.text,
                         confidence = result.confidence,
-                        engine = result.engine,
+                        engine = config.engine,
                         isPartial = false,
                         alternatives = emptyList()
                     )
