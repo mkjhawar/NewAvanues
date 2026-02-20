@@ -87,9 +87,11 @@ class WhisperEngine(
     val errorFlow: SharedFlow<SpeechError> = _errorFlow.asSharedFlow()
 
     // Performance tracking
-    @Volatile var totalTranscriptions: Int = 0; private set
-    @Volatile var averageLatencyMs: Long = 0; private set
-    private var latencySum: Long = 0
+    val performance = WhisperPerformance()
+
+    // Legacy accessors for backward compatibility
+    val totalTranscriptions: Int get() = performance.totalTranscriptions
+    val averageLatencyMs: Long get() = performance.getAverageLatencyMs()
 
     /**
      * Initialize the engine: load native library and model.
@@ -111,15 +113,21 @@ class WhisperEngine(
         config = whisperConfig
         engineState.set(WhisperEngineState.LOADING_MODEL)
 
+        val initStartMs = System.currentTimeMillis()
+
         return withContext(Dispatchers.IO) {
             var lastError: Exception? = null
+            var attempts = 0
 
             for (attempt in 1..MAX_INIT_RETRIES) {
+                attempts = attempt
                 try {
                     val success = performInitialization()
                     if (success) {
                         engineState.set(WhisperEngineState.READY)
-                        Log.i(TAG, "Engine initialized: model=${config.modelSize}, " +
+                        val initTime = System.currentTimeMillis() - initStartMs
+                        performance.recordInitialization(initTime, config.modelSize, attempts)
+                        Log.i(TAG, "Engine initialized in ${initTime}ms: model=${config.modelSize}, " +
                                 "threads=${config.effectiveThreadCount()}, lang=${config.language}")
                         return@withContext true
                     }
@@ -283,14 +291,13 @@ class WhisperEngine(
     /** Access the model manager for download/delete operations. */
     fun getModelManager(): WhisperModelManager = modelManager
 
-    fun getPerformanceMetrics(): Map<String, Any> = mapOf(
-        "engineVersion" to ENGINE_VERSION,
-        "modelSize" to config.modelSize.name,
-        "totalTranscriptions" to totalTranscriptions,
-        "averageLatencyMs" to averageLatencyMs,
-        "threads" to config.effectiveThreadCount(),
-        "language" to config.language
-    )
+    fun getPerformanceMetrics(): Map<String, Any> {
+        val metrics = performance.getMetrics().toMutableMap()
+        metrics["engineVersion"] = ENGINE_VERSION
+        metrics["threads"] = config.effectiveThreadCount()
+        metrics["language"] = config.language
+        return metrics
+    }
 
     /**
      * Destroy the engine and release all resources.
@@ -455,36 +462,47 @@ class WhisperEngine(
 
             if (result.text.isBlank()) {
                 Log.d(TAG, "Empty transcription result (${audioDurationMs}ms audio, ${result.processingTimeMs}ms processing)")
+                performance.recordEmptyTranscription(audioDurationMs, result.processingTimeMs)
                 return
             }
 
             // Update performance stats
-            totalTranscriptions++
-            latencySum += result.processingTimeMs
-            averageLatencyMs = latencySum / totalTranscriptions
-
             val realTimeFactor = if (audioDurationMs > 0) {
                 result.processingTimeMs.toFloat() / audioDurationMs
             } else 0f
 
-            Log.i(TAG, "Transcribed: '${result.text}' " +
-                    "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, RTF=${"%.2f".format(realTimeFactor)})")
+            performance.recordTranscription(
+                audioDurationMs = audioDurationMs,
+                processingTimeMs = result.processingTimeMs,
+                textLength = result.text.length,
+                segmentCount = result.segments.size,
+                avgConfidence = result.confidence
+            )
 
-            // Build word timestamps from segments
+            // Record language detection
+            result.detectedLanguage?.let { lang ->
+                performance.recordLanguageDetection(lang)
+            }
+
+            Log.i(TAG, "Transcribed: '${result.text}' " +
+                    "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, " +
+                    "RTF=${"%.2f".format(realTimeFactor)}, conf=${"%.2f".format(result.confidence)})")
+
+            // Build word timestamps from segments with actual confidence
             val wordTimestamps = result.segments.map { seg ->
                 com.augmentalis.speechrecognition.WordTimestamp(
                     word = seg.text,
                     startTime = seg.startTimeMs / 1000f,
                     endTime = seg.endTimeMs / 1000f,
-                    confidence = 0.85f // whisper doesn't expose per-segment confidence yet
+                    confidence = seg.confidence
                 )
             }
 
-            // Emit recognition result
+            // Emit recognition result with real confidence from token probabilities
             val recognitionResult = RecognitionResult(
                 text = result.text,
                 originalText = result.text,
-                confidence = 0.85f, // Default confidence for whisper — refined in Phase E
+                confidence = result.confidence,
                 isPartial = false,
                 isFinal = true,
                 engine = ENGINE_NAME,
@@ -495,7 +513,8 @@ class WhisperEngine(
                     "audioDurationMs" to audioDurationMs,
                     "realTimeFactor" to realTimeFactor,
                     "segmentCount" to result.segments.size,
-                    "modelSize" to config.modelSize.name
+                    "modelSize" to config.modelSize.name,
+                    "detectedLanguage" to (result.detectedLanguage ?: config.language)
                 )
             )
 

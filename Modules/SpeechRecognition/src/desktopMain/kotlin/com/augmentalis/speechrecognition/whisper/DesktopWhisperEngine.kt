@@ -84,9 +84,10 @@ class DesktopWhisperEngine {
     val errorFlow: SharedFlow<SpeechError> = _errorFlow.asSharedFlow()
 
     // Performance tracking
-    @Volatile var totalTranscriptions: Int = 0; private set
-    @Volatile var averageLatencyMs: Long = 0; private set
-    private var latencySum: Long = 0
+    val performance = WhisperPerformance()
+
+    val totalTranscriptions: Int get() = performance.totalTranscriptions
+    val averageLatencyMs: Long get() = performance.getAverageLatencyMs()
 
     /**
      * Initialize the engine: load native library and model.
@@ -105,15 +106,21 @@ class DesktopWhisperEngine {
         config = whisperConfig
         engineState.set(WhisperEngineState.LOADING_MODEL)
 
+        val initStartMs = System.currentTimeMillis()
+
         return withContext(Dispatchers.IO) {
             var lastError: Exception? = null
+            var attempts = 0
 
             for (attempt in 1..MAX_INIT_RETRIES) {
+                attempts = attempt
                 try {
                     val success = performInitialization()
                     if (success) {
                         engineState.set(WhisperEngineState.READY)
-                        logInfo(TAG, "Engine initialized: model=${config.modelSize}, " +
+                        val initTime = System.currentTimeMillis() - initStartMs
+                        performance.recordInitialization(initTime, config.modelSize, attempts)
+                        logInfo(TAG, "Engine initialized in ${initTime}ms: model=${config.modelSize}, " +
                                 "threads=${config.effectiveThreadCount()}, lang=${config.language}")
                         return@withContext true
                     }
@@ -403,33 +410,43 @@ class DesktopWhisperEngine {
 
             if (result.text.isBlank()) {
                 logDebug(TAG, "Empty transcription (${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc)")
+                performance.recordEmptyTranscription(audioDurationMs, result.processingTimeMs)
                 return
             }
-
-            totalTranscriptions++
-            latencySum += result.processingTimeMs
-            averageLatencyMs = latencySum / totalTranscriptions
 
             val realTimeFactor = if (audioDurationMs > 0) {
                 result.processingTimeMs.toFloat() / audioDurationMs
             } else 0f
 
+            performance.recordTranscription(
+                audioDurationMs = audioDurationMs,
+                processingTimeMs = result.processingTimeMs,
+                textLength = result.text.length,
+                segmentCount = result.segments.size,
+                avgConfidence = result.confidence
+            )
+
+            result.detectedLanguage?.let { lang ->
+                performance.recordLanguageDetection(lang)
+            }
+
             logInfo(TAG, "Transcribed: '${result.text}' " +
-                    "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, RTF=${"%.2f".format(realTimeFactor)})")
+                    "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, " +
+                    "RTF=${"%.2f".format(realTimeFactor)}, conf=${"%.2f".format(result.confidence)})")
 
             val wordTimestamps = result.segments.map { seg ->
                 com.augmentalis.speechrecognition.WordTimestamp(
                     word = seg.text,
                     startTime = seg.startTimeMs / 1000f,
                     endTime = seg.endTimeMs / 1000f,
-                    confidence = 0.85f
+                    confidence = seg.confidence
                 )
             }
 
             val recognitionResult = RecognitionResult(
                 text = result.text,
                 originalText = result.text,
-                confidence = 0.85f,
+                confidence = result.confidence,
                 isPartial = false,
                 isFinal = true,
                 engine = ENGINE_NAME,
@@ -440,6 +457,7 @@ class DesktopWhisperEngine {
                     "audioDurationMs" to audioDurationMs,
                     "realTimeFactor" to realTimeFactor,
                     "segmentCount" to result.segments.size,
+                    "detectedLanguage" to (result.detectedLanguage ?: config.language),
                     "modelSize" to config.modelSize.name,
                     "platform" to "desktop"
                 )

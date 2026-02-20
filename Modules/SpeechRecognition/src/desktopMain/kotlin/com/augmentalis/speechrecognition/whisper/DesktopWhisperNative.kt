@@ -127,6 +127,15 @@ object DesktopWhisperNative {
     @JvmStatic
     private external fun nativeGetSystemInfo(): String
 
+    @JvmStatic
+    private external fun nativeGetTextSegmentTokenCount(contextPtr: Long, segmentIndex: Int): Int
+
+    @JvmStatic
+    private external fun nativeGetTextSegmentTokenProb(contextPtr: Long, segmentIndex: Int, tokenIndex: Int): Float
+
+    @JvmStatic
+    private external fun nativeGetDetectedLanguage(contextPtr: Long): String
+
     // --- Public Thread-Safe API ---
 
     fun initContext(modelPath: String): Long {
@@ -158,8 +167,45 @@ object DesktopWhisperNative {
     }
 
     /**
+     * Get the average token probability for a segment as confidence [0,1].
+     * Falls back to DEFAULT_CONFIDENCE if the native method isn't linked.
+     */
+    fun getSegmentConfidence(contextPtr: Long, segmentIndex: Int): Float {
+        if (contextPtr == 0L) return DEFAULT_CONFIDENCE
+        return try {
+            synchronized(this) {
+                val tokenCount = nativeGetTextSegmentTokenCount(contextPtr, segmentIndex)
+                if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+                var probSum = 0f
+                for (t in 0 until tokenCount) {
+                    probSum += nativeGetTextSegmentTokenProb(contextPtr, segmentIndex, t)
+                }
+                probSum / tokenCount
+            }
+        } catch (e: UnsatisfiedLinkError) {
+            DEFAULT_CONFIDENCE
+        }
+    }
+
+    /**
+     * Get the detected language code after transcription.
+     * Falls back to null if the native method isn't linked.
+     */
+    fun getDetectedLanguage(contextPtr: Long): String? {
+        if (contextPtr == 0L) return null
+        return try {
+            synchronized(this) { nativeGetDetectedLanguage(contextPtr) }
+        } catch (e: UnsatisfiedLinkError) {
+            null
+        }
+    }
+
+    /**
      * Run transcription and collect all segments into a single result.
      * One synchronized block for the entire transcribe+read cycle.
+     *
+     * Now includes per-segment confidence from token probabilities and
+     * language detection when available.
      */
     fun transcribeToText(contextPtr: Long, numThreads: Int, audioData: FloatArray): TranscriptionResult {
         if (contextPtr == 0L) return TranscriptionResult("", emptyList(), 0L)
@@ -172,16 +218,54 @@ object DesktopWhisperNative {
             val segCount = nativeGetTextSegmentCount(contextPtr)
             val segments = ArrayList<TranscriptionSegment>(segCount)
             val text = StringBuilder()
+            var totalConfidence = 0f
 
             for (i in 0 until segCount) {
                 val segText = nativeGetTextSegment(contextPtr, i)
                 val t0 = nativeGetTextSegmentT0(contextPtr, i)
                 val t1 = nativeGetTextSegmentT1(contextPtr, i)
-                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10))
+
+                val segConfidence = getSegmentConfidenceUnsafe(contextPtr, i)
+
+                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10, segConfidence))
                 text.append(segText)
+                totalConfidence += segConfidence
             }
 
-            TranscriptionResult(text.toString().trim(), segments, (System.nanoTime() - startNs) / 1_000_000)
+            val avgConfidence = if (segCount > 0) totalConfidence / segCount else 0f
+            val detectedLang = getDetectedLanguageUnsafe(contextPtr)
+
+            TranscriptionResult(
+                text = text.toString().trim(),
+                segments = segments,
+                processingTimeMs = (System.nanoTime() - startNs) / 1_000_000,
+                confidence = avgConfidence,
+                detectedLanguage = detectedLang
+            )
         }
     }
+
+    private fun getSegmentConfidenceUnsafe(contextPtr: Long, segmentIndex: Int): Float {
+        return try {
+            val tokenCount = nativeGetTextSegmentTokenCount(contextPtr, segmentIndex)
+            if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+            var probSum = 0f
+            for (t in 0 until tokenCount) {
+                probSum += nativeGetTextSegmentTokenProb(contextPtr, segmentIndex, t)
+            }
+            probSum / tokenCount
+        } catch (e: UnsatisfiedLinkError) {
+            DEFAULT_CONFIDENCE
+        }
+    }
+
+    private fun getDetectedLanguageUnsafe(contextPtr: Long): String? {
+        return try {
+            nativeGetDetectedLanguage(contextPtr)
+        } catch (e: UnsatisfiedLinkError) {
+            null
+        }
+    }
+
+    private const val DEFAULT_CONFIDENCE = 0.85f
 }

@@ -51,6 +51,18 @@ class WhisperLib {
         @JvmStatic
         external fun getSystemInfo(): String
 
+        /** Get token count for a segment (for confidence scoring). */
+        @JvmStatic
+        external fun getTextSegmentTokenCount(contextPtr: Long, segmentIndex: Int): Int
+
+        /** Get token probability [0,1] for confidence scoring. */
+        @JvmStatic
+        external fun getTextSegmentTokenProb(contextPtr: Long, segmentIndex: Int, tokenIndex: Int): Float
+
+        /** Get detected language code after transcription (e.g., "en", "es"). */
+        @JvmStatic
+        external fun getDetectedLanguage(contextPtr: Long): String
+
         @JvmStatic
         external fun benchMemcpy(numThreads: Int): String
 

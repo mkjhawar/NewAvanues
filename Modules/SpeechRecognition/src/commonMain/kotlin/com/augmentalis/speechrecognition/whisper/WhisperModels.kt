@@ -69,14 +69,20 @@ enum class WhisperModelSize(
 data class TranscriptionResult(
     val text: String,
     val segments: List<TranscriptionSegment>,
-    val processingTimeMs: Long
+    val processingTimeMs: Long,
+    /** Average confidence across all segments [0.0-1.0]. 0 if not available. */
+    val confidence: Float = 0f,
+    /** Detected language code (e.g., "en", "es"). Null if not available. */
+    val detectedLanguage: String? = null
 )
 
 /** A single timed segment from transcription. */
 data class TranscriptionSegment(
     val text: String,
     val startTimeMs: Long,
-    val endTimeMs: Long
+    val endTimeMs: Long,
+    /** Average token probability for this segment [0.0-1.0]. 0 if not available. */
+    val confidence: Float = 0f
 )
 
 /**

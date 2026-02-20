@@ -121,9 +121,49 @@ object WhisperNative {
     }
 
     /**
+     * Get the average token probability for a segment as confidence [0,1].
+     * Falls back to DEFAULT_CONFIDENCE if the native method isn't linked.
+     */
+    fun getSegmentConfidence(contextPtr: Long, segmentIndex: Int): Float {
+        if (contextPtr == 0L) return DEFAULT_CONFIDENCE
+        return try {
+            synchronized(this) {
+                val tokenCount = WhisperLib.getTextSegmentTokenCount(contextPtr, segmentIndex)
+                if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+                var probSum = 0f
+                for (t in 0 until tokenCount) {
+                    probSum += WhisperLib.getTextSegmentTokenProb(contextPtr, segmentIndex, t)
+                }
+                probSum / tokenCount
+            }
+        } catch (e: UnsatisfiedLinkError) {
+            // Native method not yet compiled — fall back
+            Log.d(TAG, "getSegmentConfidence: native method not available, using default")
+            DEFAULT_CONFIDENCE
+        }
+    }
+
+    /**
+     * Get the detected language code after transcription.
+     * Falls back to null if the native method isn't linked.
+     */
+    fun getDetectedLanguage(contextPtr: Long): String? {
+        if (contextPtr == 0L) return null
+        return try {
+            synchronized(this) { WhisperLib.getDetectedLanguage(contextPtr) }
+        } catch (e: UnsatisfiedLinkError) {
+            Log.d(TAG, "getDetectedLanguage: native method not available")
+            null
+        }
+    }
+
+    /**
      * Run transcription and collect all segments into a single result.
      * This is the primary entry point — one synchronized block for the
      * entire transcribe+read cycle to prevent interleaving.
+     *
+     * Now includes per-segment confidence from token probabilities and
+     * language detection when available.
      */
     fun transcribeToText(contextPtr: Long, numThreads: Int, audioData: FloatArray): TranscriptionResult {
         if (contextPtr == 0L) return TranscriptionResult("", emptyList(), 0L)
@@ -136,16 +176,61 @@ object WhisperNative {
             val segCount = WhisperLib.getTextSegmentCount(contextPtr)
             val segments = ArrayList<TranscriptionSegment>(segCount)
             val text = StringBuilder()
+            var totalConfidence = 0f
 
             for (i in 0 until segCount) {
                 val segText = WhisperLib.getTextSegment(contextPtr, i)
                 val t0 = WhisperLib.getTextSegmentT0(contextPtr, i)
                 val t1 = WhisperLib.getTextSegmentT1(contextPtr, i)
-                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10))
+
+                // Per-segment confidence from token probabilities
+                val segConfidence = getSegmentConfidenceUnsafe(contextPtr, i)
+
+                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10, segConfidence))
                 text.append(segText)
+                totalConfidence += segConfidence
             }
 
-            TranscriptionResult(text.toString().trim(), segments, (System.nanoTime() - startNs) / 1_000_000)
+            val avgConfidence = if (segCount > 0) totalConfidence / segCount else 0f
+            val detectedLang = getDetectedLanguageUnsafe(contextPtr)
+
+            TranscriptionResult(
+                text = text.toString().trim(),
+                segments = segments,
+                processingTimeMs = (System.nanoTime() - startNs) / 1_000_000,
+                confidence = avgConfidence,
+                detectedLanguage = detectedLang
+            )
         }
     }
+
+    /**
+     * Get segment confidence WITHOUT acquiring the lock (called from within synchronized block).
+     */
+    private fun getSegmentConfidenceUnsafe(contextPtr: Long, segmentIndex: Int): Float {
+        return try {
+            val tokenCount = WhisperLib.getTextSegmentTokenCount(contextPtr, segmentIndex)
+            if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+            var probSum = 0f
+            for (t in 0 until tokenCount) {
+                probSum += WhisperLib.getTextSegmentTokenProb(contextPtr, segmentIndex, t)
+            }
+            probSum / tokenCount
+        } catch (e: UnsatisfiedLinkError) {
+            DEFAULT_CONFIDENCE
+        }
+    }
+
+    /**
+     * Get detected language WITHOUT acquiring the lock (called from within synchronized block).
+     */
+    private fun getDetectedLanguageUnsafe(contextPtr: Long): String? {
+        return try {
+            WhisperLib.getDetectedLanguage(contextPtr)
+        } catch (e: UnsatisfiedLinkError) {
+            null
+        }
+    }
+
+    private const val DEFAULT_CONFIDENCE = 0.85f
 }
