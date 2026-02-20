@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -36,6 +37,7 @@ kotlin {
             dependencies {
                 api(project(":Modules:Foundation"))
                 api(project(":Modules:Logging"))
+                api(project(":Modules:HTTPAvanue"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
             }
@@ -64,7 +66,12 @@ kotlin {
             }
         }
 
-        val desktopMain by getting { dependsOn(commonMain) }
+        val desktopMain by getting {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(compose.runtime)
+            }
+        }
         val desktopTest by getting { dependsOn(commonTest) }
     }
 }

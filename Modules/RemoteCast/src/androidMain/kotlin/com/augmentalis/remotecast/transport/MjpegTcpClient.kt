@@ -32,6 +32,13 @@ import java.net.SocketException
  * @param scope CoroutineScope owning connection coroutines. Cancelling the scope
  *              is equivalent to calling [disconnect].
  */
+@Deprecated(
+    message = "Use CastWebSocketClient from commonMain transport package instead",
+    replaceWith = ReplaceWith(
+        "CastWebSocketClient(scope)",
+        "com.augmentalis.remotecast.transport.CastWebSocketClient"
+    )
+)
 class MjpegTcpClient(
     private val scope: CoroutineScope
 ) {

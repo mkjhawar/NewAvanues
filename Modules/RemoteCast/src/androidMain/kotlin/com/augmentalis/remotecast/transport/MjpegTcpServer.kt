@@ -35,6 +35,13 @@ import java.net.SocketException
  * @param port  TCP port to bind on (default 54321).
  * @param scope CoroutineScope that owns the accept loop. Cancelling the scope stops the server.
  */
+@Deprecated(
+    message = "Use CastWebSocketServer from commonMain transport package instead",
+    replaceWith = ReplaceWith(
+        "CastWebSocketServer(port, scope)",
+        "com.augmentalis.remotecast.transport.CastWebSocketServer"
+    )
+)
 class MjpegTcpServer(
     private val port: Int = 54321,
     private val scope: CoroutineScope
