@@ -14,6 +14,8 @@
  * - jsMain: Web-specific engines (placeholder)
  */
 
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
@@ -219,6 +221,9 @@ kotlin {
             dependsOn(jvmMain)
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
+                // Compose runtime needed for kotlin.compose plugin on JVM target
+                // (same as iosMain/macosMain — compiler plugin applied to all targets)
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
             }
         }
 
@@ -245,14 +250,14 @@ android {
         // Vivoka download credentials — injected from local.properties or CI environment
         // NEVER hardcode credentials in source files
         val localProps = rootProject.file("local.properties")
-        val vivokaUser = if (localProps.exists()) {
-            java.util.Properties().apply { load(localProps.inputStream()) }
-                .getProperty("vivoka.download.username", "")
-        } else System.getenv("VIVOKA_DOWNLOAD_USERNAME") ?: ""
-        val vivokaPwd = if (localProps.exists()) {
-            java.util.Properties().apply { load(localProps.inputStream()) }
-                .getProperty("vivoka.download.password", "")
-        } else System.getenv("VIVOKA_DOWNLOAD_PASSWORD") ?: ""
+        val props = Properties()
+        if (localProps.exists()) {
+            localProps.inputStream().use { props.load(it) }
+        }
+        val vivokaUser = props.getProperty("vivoka.download.username")
+            ?: System.getenv("VIVOKA_DOWNLOAD_USERNAME") ?: ""
+        val vivokaPwd = props.getProperty("vivoka.download.password")
+            ?: System.getenv("VIVOKA_DOWNLOAD_PASSWORD") ?: ""
         buildConfigField("String", "VIVOKA_DOWNLOAD_USERNAME", "\"$vivokaUser\"")
         buildConfigField("String", "VIVOKA_DOWNLOAD_PASSWORD", "\"$vivokaPwd\"")
     }
@@ -305,4 +310,21 @@ android {
 dependencies {
     // KSP for Hilt
     add("kspAndroid", libs.hilt.compiler)
+}
+
+// VLM Tool — CLI for encrypting/decrypting Whisper model files
+// Usage: ./gradlew :Modules:SpeechRecognition:runVlmTool --args="batch-encode VLMFiles/"
+afterEvaluate {
+    if (kotlin.targets.findByName("desktop") != null) {
+        tasks.register<JavaExec>("runVlmTool") {
+            group = "application"
+            description = "Run the VLM Encryption Tool (encrypt/decrypt Whisper models)"
+            mainClass.set("com.augmentalis.speechrecognition.cli.VLMToolKt")
+            val desktopTarget = kotlin.targets.getByName<org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget>("desktop")
+            classpath = desktopTarget.compilations.getByName("main").runtimeDependencyFiles +
+                files(desktopTarget.compilations.getByName("main").output.allOutputs)
+            // Resolve paths relative to project root (not module dir)
+            workingDir = rootProject.projectDir
+        }
+    }
 }
