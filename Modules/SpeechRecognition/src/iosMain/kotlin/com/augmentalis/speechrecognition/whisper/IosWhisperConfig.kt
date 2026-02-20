@@ -10,6 +10,8 @@
 package com.augmentalis.speechrecognition.whisper
 
 import com.augmentalis.speechrecognition.logInfo
+import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
+import com.augmentalis.speechrecognition.whisper.vsm.vsmFileName
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathDirectory
 import platform.Foundation.NSSearchPathDomainMask
@@ -74,11 +76,7 @@ data class IosWhisperConfig(
          */
         fun getModelsDirectory(): String {
             val fileManager = NSFileManager.defaultManager
-            val documentsDir = fileManager.URLsForDirectory(
-                NSSearchPathDirectory.NSDocumentDirectory,
-                NSSearchPathDomainMask.NSUserDomainMask
-            ).firstOrNull()?.path ?: ""
-
+            val documentsDir = getDocumentsDirectory()
             val modelsPath = "$documentsDir/$MODELS_SUBDIR"
 
             // Create directory if needed
@@ -93,17 +91,57 @@ data class IosWhisperConfig(
 
             return modelsPath
         }
+
+        /**
+         * Get the shared VLM storage directory: {Documents}/ava-ai-models/vlm/
+         * Creates the directory if it doesn't exist.
+         */
+        fun getSharedVsmDirectory(): String {
+            val fileManager = NSFileManager.defaultManager
+            val documentsDir = getDocumentsDirectory()
+            val vsmPath = "$documentsDir/${VSMFormat.SHARED_STORAGE_DIR}"
+
+            if (!fileManager.fileExistsAtPath(vsmPath)) {
+                fileManager.createDirectoryAtPath(
+                    vsmPath,
+                    withIntermediateDirectories = true,
+                    attributes = null,
+                    error = null
+                )
+            }
+
+            return vsmPath
+        }
+
+        /**
+         * Get the iOS Documents directory path.
+         */
+        private fun getDocumentsDirectory(): String {
+            val fileManager = NSFileManager.defaultManager
+            return fileManager.URLsForDirectory(
+                NSSearchPathDirectory.NSDocumentDirectory,
+                NSSearchPathDomainMask.NSUserDomainMask
+            ).firstOrNull()?.path ?: ""
+        }
     }
 
     /**
      * Resolve the model file path on this iOS device.
+     * Check order: 1) Shared VLM storage (.vlm) 2) Legacy storage (.bin)
      * @return Full path to the model file, or null if not downloaded
      */
     fun resolveModelPath(): String? {
-        val modelsDir = getModelsDirectory()
-        val modelFile = "$modelsDir/${modelSize.ggmlFileName}"
         val fileManager = NSFileManager.defaultManager
-        return if (fileManager.fileExistsAtPath(modelFile)) modelFile else null
+
+        // 1. Shared VLM storage: {Documents}/ava-ai-models/vlm/ (encrypted .vlm)
+        val sharedVsm = "${getSharedVsmDirectory()}/${vsmFileName(modelSize.ggmlFileName)}"
+        if (fileManager.fileExistsAtPath(sharedVsm)) return sharedVsm
+
+        // 2. Legacy storage: {Documents}/whisper/models/ (unencrypted .bin)
+        val legacyBin = "${getModelsDirectory()}/${modelSize.ggmlFileName}"
+        if (fileManager.fileExistsAtPath(legacyBin)) return legacyBin
+
+        return null
     }
 
     /**

@@ -25,6 +25,8 @@ import com.augmentalis.speechrecognition.logDebug
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.logWarn
+import com.augmentalis.speechrecognition.whisper.vsm.IosVSMCodec
+import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
@@ -42,6 +44,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSDate
+import platform.Foundation.NSFileManager
+import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.timeIntervalSince1970
 
 /**
@@ -361,7 +365,36 @@ class IosWhisperEngine {
         }
 
         logInfo(TAG, "Loading model: $modelPath")
-        val ptr = IosWhisperNative.initContext(modelPath)
+
+        val ptr: Long
+        if (modelPath.endsWith(VSMFormat.VSM_EXTENSION)) {
+            // Encrypted .vsm — decrypt to temp file, load, then delete
+            val tempDir = "${NSTemporaryDirectory()}vlm_tmp"
+            val fileManager = NSFileManager.defaultManager
+            if (!fileManager.fileExistsAtPath(tempDir)) {
+                fileManager.createDirectoryAtPath(
+                    tempDir,
+                    withIntermediateDirectories = true,
+                    attributes = null,
+                    error = null
+                )
+            }
+
+            val codec = IosVSMCodec()
+            val decryptedPath = codec.decryptToTempFile(modelPath, tempDir)
+                ?: throw IllegalStateException("VSM decryption failed: $modelPath")
+
+            try {
+                ptr = IosWhisperNative.initContext(decryptedPath)
+            } finally {
+                // Always clean up the decrypted temp file
+                fileManager.removeItemAtPath(decryptedPath, error = null)
+            }
+        } else {
+            // Legacy unencrypted .bin — load directly
+            ptr = IosWhisperNative.initContext(modelPath)
+        }
+
         if (ptr == 0L) {
             throw IllegalStateException("Failed to load whisper model: $modelPath")
         }

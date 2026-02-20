@@ -15,6 +15,9 @@ import com.augmentalis.speechrecognition.logDebug
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.logWarn
+import com.augmentalis.speechrecognition.whisper.vsm.IosVSMCodec
+import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
+import com.augmentalis.speechrecognition.whisper.vsm.vsmFileName
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,46 +96,81 @@ class IosWhisperModelManager {
 
     /**
      * Check if a model is downloaded and valid.
+     * Checks shared VSM storage first, then legacy storage.
      */
     fun isModelDownloaded(modelSize: WhisperModelSize): Boolean {
-        val modelPath = getModelFilePath(modelSize)
         val fileManager = NSFileManager.defaultManager
-        if (!fileManager.fileExistsAtPath(modelPath)) return false
 
-        // Verify file size is reasonable (at least 50% of expected)
-        val attrs = fileManager.attributesOfItemAtPath(modelPath, error = null)
+        // 1. Check shared VSM storage
+        val sharedVsm = getSharedVsmPath(modelSize)
+        if (fileManager.fileExistsAtPath(sharedVsm)) {
+            val attrs = fileManager.attributesOfItemAtPath(sharedVsm, error = null)
+            val fileSize = (attrs?.get(NSFileSize) as? NSNumber)?.longValue ?: 0L
+            if (fileSize > 0) return true
+        }
+
+        // 2. Check legacy storage (.bin)
+        val legacyPath = getModelFilePath(modelSize)
+        if (!fileManager.fileExistsAtPath(legacyPath)) return false
+
+        val attrs = fileManager.attributesOfItemAtPath(legacyPath, error = null)
         val fileSize = (attrs?.get(NSFileSize) as? NSNumber)?.longValue ?: 0L
         return fileSize >= modelSize.approxSizeMB * 1024L * 1024L / 2
     }
 
     /**
-     * Get the file path for a model (whether or not it's downloaded).
+     * Get the file path for a model.
+     * Returns shared .vsm path if available, legacy .bin path otherwise.
      */
     fun getModelPath(modelSize: WhisperModelSize): String? {
-        val path = getModelFilePath(modelSize)
-        return if (NSFileManager.defaultManager.fileExistsAtPath(path)) path else null
+        val fileManager = NSFileManager.defaultManager
+
+        // Shared .vsm takes priority
+        val sharedVsm = getSharedVsmPath(modelSize)
+        if (fileManager.fileExistsAtPath(sharedVsm)) return sharedVsm
+
+        // Legacy .bin fallback
+        val legacyPath = getModelFilePath(modelSize)
+        return if (fileManager.fileExistsAtPath(legacyPath)) legacyPath else null
     }
 
     /**
-     * Get all downloaded models.
+     * Get all downloaded models (from both shared VSM and legacy locations).
      */
     fun getDownloadedModels(): List<LocalModelInfo> {
-        val modelsDir = IosWhisperConfig.getModelsDirectory()
+        val fileManager = NSFileManager.defaultManager
 
         return WhisperModelSize.entries.mapNotNull { size ->
-            val path = "$modelsDir/${size.ggmlFileName}"
-            val fileManager = NSFileManager.defaultManager
-            if (fileManager.fileExistsAtPath(path)) {
-                val attrs = fileManager.attributesOfItemAtPath(path, error = null)
+            // Check shared VSM first
+            val sharedVsm = getSharedVsmPath(size)
+            if (fileManager.fileExistsAtPath(sharedVsm)) {
+                val attrs = fileManager.attributesOfItemAtPath(sharedVsm, error = null)
+                val fileSize = (attrs?.get(NSFileSize) as? NSNumber)?.longValue ?: 0L
+                val modDate = (attrs?.get(NSFileModificationDate) as? NSDate)
+                val modTimeMs = ((modDate?.timeIntervalSince1970 ?: 0.0) * 1000).toLong()
+
+                return@mapNotNull LocalModelInfo(
+                    modelSize = size,
+                    filePath = sharedVsm,
+                    fileSizeBytes = fileSize,
+                    isVerified = true,
+                    downloadedAtMs = modTimeMs
+                )
+            }
+
+            // Legacy .bin fallback
+            val legacyPath = "${ IosWhisperConfig.getModelsDirectory()}/${size.ggmlFileName}"
+            if (fileManager.fileExistsAtPath(legacyPath)) {
+                val attrs = fileManager.attributesOfItemAtPath(legacyPath, error = null)
                 val fileSize = (attrs?.get(NSFileSize) as? NSNumber)?.longValue ?: 0L
                 val modDate = (attrs?.get(NSFileModificationDate) as? NSDate)
                 val modTimeMs = ((modDate?.timeIntervalSince1970 ?: 0.0) * 1000).toLong()
 
                 LocalModelInfo(
                     modelSize = size,
-                    filePath = path,
+                    filePath = legacyPath,
                     fileSizeBytes = fileSize,
-                    isVerified = fileManager.fileExistsAtPath("$path$CHECKSUM_SUFFIX"),
+                    isVerified = fileManager.fileExistsAtPath("$legacyPath$CHECKSUM_SUFFIX"),
                     downloadedAtMs = modTimeMs
                 )
             } else null
@@ -140,15 +178,23 @@ class IosWhisperModelManager {
     }
 
     /**
-     * Delete a downloaded model.
+     * Delete a downloaded model (from both shared VSM and legacy locations).
      */
     fun deleteModel(modelSize: WhisperModelSize): Boolean {
         val fileManager = NSFileManager.defaultManager
+        var deleted = true
+
+        // Delete shared .vsm
+        val sharedVsm = getSharedVsmPath(modelSize)
+        if (fileManager.fileExistsAtPath(sharedVsm)) {
+            deleted = fileManager.removeItemAtPath(sharedVsm, error = null) && deleted
+        }
+
+        // Delete legacy .bin + partial + checksum
         val modelPath = getModelFilePath(modelSize)
         val partialPath = "$modelPath$PARTIAL_SUFFIX"
         val checksumPath = "$modelPath$CHECKSUM_SUFFIX"
 
-        var deleted = true
         if (fileManager.fileExistsAtPath(modelPath)) {
             deleted = fileManager.removeItemAtPath(modelPath, error = null) && deleted
         }
@@ -260,21 +306,36 @@ class IosWhisperModelManager {
 
                     _downloadState.value = ModelDownloadState.Verifying(modelSize)
 
-                    // Rename partial to final
-                    val fileManager = NSFileManager.defaultManager
-                    if (fileManager.fileExistsAtPath(modelPath)) {
-                        fileManager.removeItemAtPath(modelPath, error = null)
-                    }
-                    val renamed = fileManager.moveItemAtPath(partialPath, toPath = modelPath, error = null)
+                    // Encrypt to VSM format in shared storage
+                    val vsmDir = IosWhisperConfig.getSharedVsmDirectory()
+                    val vsmPath = "$vsmDir/${vsmFileName(modelSize.ggmlFileName)}"
+                    logInfo(TAG, "Encrypting to VSM: $vsmPath")
 
-                    if (renamed) {
-                        _downloadState.value = ModelDownloadState.Completed(modelSize, modelPath)
-                        logInfo(TAG, "Model ${modelSize.displayName} ready at: $modelPath")
-                        cont.resume(true) {}
-                    } else {
-                        _downloadState.value = ModelDownloadState.Failed(modelSize, "Failed to rename file")
+                    val codec = IosVSMCodec()
+                    val metadata = mapOf(
+                        "model" to modelSize.displayName,
+                        "ggml" to modelSize.ggmlFileName,
+                        "platform" to "ios"
+                    )
+                    if (!codec.encryptFile(partialPath, vsmPath, metadata)) {
+                        // Clean up partial file on encryption failure
+                        val fm = NSFileManager.defaultManager
+                        fm.removeItemAtPath(partialPath, error = null)
+                        _downloadState.value = ModelDownloadState.Failed(
+                            modelSize, "VSM encryption failed for ${modelSize.displayName}"
+                        )
                         cont.resume(false) {}
+                        return@dataTaskWithRequest
                     }
+
+                    // Delete the plaintext .bin partial file
+                    val fm = NSFileManager.defaultManager
+                    fm.removeItemAtPath(partialPath, error = null)
+                    logInfo(TAG, "VSM encryption complete: $vsmPath")
+
+                    _downloadState.value = ModelDownloadState.Completed(modelSize, vsmPath)
+                    logInfo(TAG, "Model ${modelSize.displayName} ready at: $vsmPath")
+                    cont.resume(true) {}
                 } ?: run {
                     _downloadState.value = ModelDownloadState.Failed(modelSize, "No data received")
                     cont.resume(false) {}
@@ -292,5 +353,43 @@ class IosWhisperModelManager {
 
     private fun getModelFilePath(modelSize: WhisperModelSize): String {
         return "${IosWhisperConfig.getModelsDirectory()}/${modelSize.ggmlFileName}"
+    }
+
+    /** Get the .vsm file path in shared storage for a given model size */
+    private fun getSharedVsmPath(modelSize: WhisperModelSize): String {
+        return "${IosWhisperConfig.getSharedVsmDirectory()}/${vsmFileName(modelSize.ggmlFileName)}"
+    }
+
+    /**
+     * Migrate existing legacy .bin models to encrypted .vsm in shared storage.
+     * Safe to call multiple times.
+     */
+    fun migrateExistingModels() {
+        val fileManager = NSFileManager.defaultManager
+        val legacyDir = IosWhisperConfig.getModelsDirectory()
+
+        val contents = fileManager.contentsOfDirectoryAtPath(legacyDir, error = null)
+            ?: return
+        val binFiles = (contents as List<*>).filterIsInstance<String>()
+            .filter { it.endsWith(".bin") }
+
+        if (binFiles.isEmpty()) return
+
+        val codec = IosVSMCodec()
+        for (binName in binFiles) {
+            val binPath = "$legacyDir/$binName"
+            val vsmName = vsmFileName(binName)
+            val vsmPath = "${IosWhisperConfig.getSharedVsmDirectory()}/$vsmName"
+
+            if (fileManager.fileExistsAtPath(vsmPath)) continue
+
+            logInfo(TAG, "Migrating $binName → $vsmName")
+            if (codec.encryptFile(binPath, vsmPath)) {
+                fileManager.removeItemAtPath(binPath, error = null)
+                logInfo(TAG, "Migration complete: $vsmName")
+            } else {
+                logWarn(TAG, "Migration failed for $binName, keeping original")
+            }
+        }
     }
 }

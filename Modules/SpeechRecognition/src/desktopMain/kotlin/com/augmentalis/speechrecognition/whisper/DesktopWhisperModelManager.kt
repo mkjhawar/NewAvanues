@@ -17,6 +17,9 @@ import com.augmentalis.speechrecognition.logDebug
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.logWarn
+import com.augmentalis.speechrecognition.whisper.vsm.VSMCodec
+import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
+import com.augmentalis.speechrecognition.whisper.vsm.vsmFileName
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -114,30 +117,58 @@ class DesktopWhisperModelManager {
 
     /**
      * Check if a model is downloaded and valid.
+     * Checks shared VSM storage first, then legacy storage.
      */
     fun isModelDownloaded(modelSize: WhisperModelSize): Boolean {
-        val modelFile = getModelFile(modelSize)
-        if (!modelFile.exists()) return false
-        // Verify file size is reasonable (at least 50% of expected)
-        return modelFile.length() >= modelSize.approxSizeMB * 1024L * 1024L / 2
+        // 1. Check shared VSM storage
+        val sharedVsm = getSharedVsmFile(modelSize)
+        if (sharedVsm.exists() && sharedVsm.length() > 0) return true
+
+        // 2. Check legacy .bin
+        val legacyBin = getModelFile(modelSize)
+        if (legacyBin.exists() && legacyBin.length() >= modelSize.approxSizeMB * 1024L * 1024L / 2) {
+            return true
+        }
+
+        return false
     }
 
     /**
-     * Get the file path for a model (whether or not it's downloaded).
+     * Get the file path for a model.
+     * Returns shared .vsm path if available, legacy .bin path otherwise.
      */
     fun getModelPath(modelSize: WhisperModelSize): String? {
-        val file = getModelFile(modelSize)
-        return if (file.exists()) file.absolutePath else null
+        // Shared .vsm takes priority
+        val sharedVsm = getSharedVsmFile(modelSize)
+        if (sharedVsm.exists() && sharedVsm.length() > 0) return sharedVsm.absolutePath
+
+        // Legacy .bin fallback
+        val legacyBin = getModelFile(modelSize)
+        if (legacyBin.exists()) return legacyBin.absolutePath
+
+        return null
     }
 
     /**
-     * Get all downloaded models.
+     * Get all downloaded models (from both shared VSM and legacy locations).
      */
     fun getDownloadedModels(): List<LocalModelInfo> {
-        val dir = getModelsDirectory()
-        if (!dir.exists()) return emptyList()
-
         return WhisperModelSize.entries.mapNotNull { size ->
+            // Check shared VSM first
+            val sharedVsm = getSharedVsmFile(size)
+            if (sharedVsm.exists() && sharedVsm.length() > 0) {
+                return@mapNotNull LocalModelInfo(
+                    modelSize = size,
+                    filePath = sharedVsm.absolutePath,
+                    fileSizeBytes = sharedVsm.length(),
+                    isVerified = true,
+                    downloadedAtMs = sharedVsm.lastModified()
+                )
+            }
+
+            // Legacy .bin fallback
+            val dir = getModelsDirectory()
+            if (!dir.exists()) return@mapNotNull null
             val file = File(dir, size.ggmlFileName)
             if (file.exists()) {
                 LocalModelInfo(
@@ -152,14 +183,19 @@ class DesktopWhisperModelManager {
     }
 
     /**
-     * Delete a downloaded model.
+     * Delete a downloaded model (from both shared VSM and legacy locations).
      */
     fun deleteModel(modelSize: WhisperModelSize): Boolean {
+        var deleted = true
+
+        // Delete shared .vsm
+        val sharedVsm = getSharedVsmFile(modelSize)
+        if (sharedVsm.exists()) deleted = sharedVsm.delete() && deleted
+
+        // Delete legacy .bin + partial + checksum
         val modelFile = getModelFile(modelSize)
         val partialFile = getPartialFile(modelSize)
         val checksumFile = getChecksumFile(modelSize)
-
-        var deleted = true
         if (modelFile.exists()) deleted = modelFile.delete() && deleted
         if (partialFile.exists()) deleted = partialFile.delete() && deleted
         if (checksumFile.exists()) deleted = checksumFile.delete() && deleted
@@ -282,7 +318,7 @@ class DesktopWhisperModelManager {
                     outputStream.close()
                     inputStream.close()
 
-                    // Verify and rename
+                    // Verify download
                     _downloadState.value = ModelDownloadState.Verifying(modelSize)
 
                     val sha256 = computeSHA256(partialFile)
@@ -296,15 +332,28 @@ class DesktopWhisperModelManager {
                         )
                     }
 
-                    if (modelFile.exists()) modelFile.delete()
-                    if (!partialFile.renameTo(modelFile)) {
-                        throw IllegalStateException("Failed to rename partial file to ${modelFile.name}")
+                    // Encrypt to VSM format in shared storage
+                    val sharedDir = getSharedModelsDir()
+                    val vsmFile = getSharedVsmFile(modelSize)
+                    logInfo(TAG, "Encrypting to VSM: ${vsmFile.absolutePath}")
+
+                    val codec = VSMCodec()
+                    val metadata = mapOf(
+                        "model" to modelSize.displayName,
+                        "ggml" to modelSize.ggmlFileName,
+                        "sha256" to sha256
+                    )
+                    if (!codec.encryptFile(partialFile.absolutePath, vsmFile.absolutePath, metadata)) {
+                        partialFile.delete()
+                        throw IllegalStateException("VSM encryption failed for ${modelSize.displayName}")
                     }
 
-                    getChecksumFile(modelSize).writeText(sha256)
+                    // Delete the plaintext .bin
+                    partialFile.delete()
+                    logInfo(TAG, "VSM encryption complete: ${vsmFile.length() / (1024 * 1024)}MB")
 
-                    _downloadState.value = ModelDownloadState.Completed(modelSize, modelFile.absolutePath)
-                    logInfo(TAG, "Model ${modelSize.displayName} ready at: ${modelFile.absolutePath}")
+                    _downloadState.value = ModelDownloadState.Completed(modelSize, vsmFile.absolutePath)
+                    logInfo(TAG, "Model ${modelSize.displayName} ready at: ${vsmFile.absolutePath}")
                     true
 
                 } catch (e: CancellationException) {
@@ -335,6 +384,22 @@ class DesktopWhisperModelManager {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
+    // --- Shared VSM storage ---
+
+    /** Shared model storage: ~/.augmentalis/models/vsm/ */
+    private fun getSharedModelsDir(): File {
+        val dir = DesktopWhisperConfig.SHARED_VSM_DIR
+        if (!dir.exists()) dir.mkdirs()
+        return dir
+    }
+
+    /** Get the .vsm file in shared storage for a given model size */
+    private fun getSharedVsmFile(modelSize: WhisperModelSize): File {
+        return File(getSharedModelsDir(), vsmFileName(modelSize.ggmlFileName))
+    }
+
+    // --- Legacy storage ---
+
     private fun getModelsDirectory(): File {
         if (!DEFAULT_MODEL_DIR.exists()) DEFAULT_MODEL_DIR.mkdirs()
         return DEFAULT_MODEL_DIR
@@ -350,5 +415,33 @@ class DesktopWhisperModelManager {
 
     private fun getChecksumFile(modelSize: WhisperModelSize): File {
         return File(getModelsDirectory(), modelSize.ggmlFileName + CHECKSUM_SUFFIX)
+    }
+
+    // --- Migration ---
+
+    /**
+     * Migrate existing legacy .bin models to encrypted .vsm in shared storage.
+     * Safe to call multiple times.
+     */
+    fun migrateExistingModels() {
+        val legacyDir = getModelsDirectory()
+        if (!legacyDir.exists()) return
+
+        val binFiles = legacyDir.listFiles()?.filter { it.extension == "bin" } ?: return
+        if (binFiles.isEmpty()) return
+
+        val codec = VSMCodec()
+        for (binFile in binFiles) {
+            val vsmFile = File(getSharedModelsDir(), vsmFileName(binFile.name))
+            if (vsmFile.exists()) continue
+
+            logInfo(TAG, "Migrating ${binFile.name} → ${vsmFile.name}")
+            if (codec.encryptFile(binFile.absolutePath, vsmFile.absolutePath)) {
+                binFile.delete()
+                logInfo(TAG, "Migration complete: ${vsmFile.name}")
+            } else {
+                logWarn(TAG, "Migration failed for ${binFile.name}, keeping original")
+            }
+        }
     }
 }

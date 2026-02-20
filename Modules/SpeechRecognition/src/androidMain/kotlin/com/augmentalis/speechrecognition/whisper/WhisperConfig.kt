@@ -11,7 +11,10 @@ package com.augmentalis.speechrecognition.whisper
 
 import android.app.ActivityManager
 import android.content.Context
+import android.os.Environment
 import android.util.Log
+import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
+import com.augmentalis.speechrecognition.whisper.vsm.vsmFileName
 import java.io.File
 
 /**
@@ -60,7 +63,7 @@ data class WhisperConfig(
 
     /**
      * Resolve the model file path, checking multiple locations.
-     * Priority: customModelPath > internal storage > external files > assets
+     * Priority: customModelPath > shared VSM storage > internal storage > external files
      */
     fun resolveModelPath(context: Context): String? {
         // 1. Custom path takes priority
@@ -71,11 +74,18 @@ data class WhisperConfig(
 
         val fileName = modelSize.ggmlFileName
 
-        // 2. Internal storage: /data/data/<pkg>/files/whisper/models/
+        // 2. Shared VLM storage: /sdcard/ava-ai-models/vlm/ (encrypted .vlm)
+        val sharedVsm = File(
+            Environment.getExternalStorageDirectory(),
+            "${VSMFormat.SHARED_STORAGE_DIR}/${vsmFileName(fileName)}"
+        )
+        if (sharedVsm.exists() && sharedVsm.length() > 0) return sharedVsm.absolutePath
+
+        // 3. Internal storage: /data/data/<pkg>/files/whisper/models/ (legacy .bin)
         val internalModel = File(context.filesDir, "whisper/models/$fileName")
         if (internalModel.exists()) return internalModel.absolutePath
 
-        // 3. External files: /sdcard/Android/data/<pkg>/files/whisper/models/
+        // 4. External files: /sdcard/Android/data/<pkg>/files/whisper/models/ (legacy .bin)
         context.getExternalFilesDir(null)?.let { extDir ->
             val externalModel = File(extDir, "whisper/models/$fileName")
             if (externalModel.exists()) return externalModel.absolutePath

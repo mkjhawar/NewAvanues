@@ -21,6 +21,9 @@ import com.augmentalis.speechrecognition.logDebug
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.logWarn
+import com.augmentalis.speechrecognition.whisper.vsm.VSMCodec
+import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -326,10 +329,34 @@ class DesktopWhisperEngine {
                 )
         }
 
+        // Load model — decrypt .vsm to temp file if needed
         logInfo(TAG, "Loading model: $modelPath")
-        val ptr = DesktopWhisperNative.initContext(modelPath)
-        if (ptr == 0L) {
-            throw IllegalStateException("Failed to load whisper model: $modelPath")
+        val ptr: Long
+
+        if (modelPath.endsWith(VSMFormat.VSM_EXTENSION)) {
+            // Encrypted VSM: decrypt to temp file, load, delete temp
+            val tempDir = File(System.getProperty("java.io.tmpdir", "/tmp"), "vlm_tmp")
+            tempDir.mkdirs()
+
+            val codec = VSMCodec()
+            val decryptedFile = codec.decryptToTempFile(modelPath, tempDir)
+                ?: throw IllegalStateException("VSM decryption failed: $modelPath")
+
+            try {
+                ptr = DesktopWhisperNative.initContext(decryptedFile.absolutePath)
+                if (ptr == 0L) {
+                    throw IllegalStateException("Failed to load whisper model from decrypted VSM")
+                }
+            } finally {
+                decryptedFile.delete()
+                logDebug(TAG, "Deleted decrypted temp file")
+            }
+        } else {
+            // Legacy unencrypted .bin
+            ptr = DesktopWhisperNative.initContext(modelPath)
+            if (ptr == 0L) {
+                throw IllegalStateException("Failed to load whisper model: $modelPath")
+            }
         }
 
         contextPtr = ptr

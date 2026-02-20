@@ -20,6 +20,8 @@ import com.augmentalis.speechrecognition.RecognitionResult
 import com.augmentalis.speechrecognition.SpeechError
 import com.augmentalis.speechrecognition.SpeechMode
 import com.augmentalis.speechrecognition.VoiceStateManager
+import com.augmentalis.speechrecognition.whisper.vsm.VSMCodec
+import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -371,10 +374,35 @@ class WhisperEngine(
                 )
         }
 
+        // Load model — decrypt .vsm to temp file if needed
         Log.i(TAG, "Loading model: $modelPath")
-        val ptr = WhisperNative.initContext(modelPath)
-        if (ptr == 0L) {
-            throw IllegalStateException("Failed to load whisper model: $modelPath")
+        val ptr: Long
+
+        if (modelPath.endsWith(VSMFormat.VSM_EXTENSION)) {
+            // Encrypted VSM: decrypt to temp file, load, delete temp
+            val tempDir = File(context.cacheDir, "vlm_tmp")
+            tempDir.mkdirs()
+
+            val codec = VSMCodec()
+            val decryptedFile = codec.decryptToTempFile(modelPath, tempDir)
+                ?: throw IllegalStateException("VSM decryption failed: $modelPath")
+
+            try {
+                ptr = WhisperNative.initContext(decryptedFile.absolutePath)
+                if (ptr == 0L) {
+                    throw IllegalStateException("Failed to load whisper model from decrypted VSM")
+                }
+            } finally {
+                // Always clean up decrypted temp file
+                decryptedFile.delete()
+                Log.d(TAG, "Deleted decrypted temp file")
+            }
+        } else {
+            // Legacy unencrypted .bin — load directly
+            ptr = WhisperNative.initContext(modelPath)
+            if (ptr == 0L) {
+                throw IllegalStateException("Failed to load whisper model: $modelPath")
+            }
         }
 
         contextPtr = ptr

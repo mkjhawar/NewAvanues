@@ -28,26 +28,30 @@ enum class WhisperEngineState {
 /**
  * Whisper model sizes with approximate resource requirements.
  *
- * Model files follow ggml format: ggml-{size}.bin
+ * Model files follow ggml format: ggml-{size}.bin (download source name).
+ * On-device storage uses clean .vlm filenames with no whisper/ggml traces.
  * English-only models are smaller and faster for English-only use cases.
  */
 enum class WhisperModelSize(
     val displayName: String,
+    /** Original HuggingFace filename (used ONLY for downloads, never stored) */
     val ggmlFileName: String,
+    /** Clean on-device filename: VoiceOS-{Size}-{Lang}.vlm — no whisper/ggml traces */
+    val vsmName: String,
     val approxSizeMB: Int,
     val minRAMMB: Int,
     val isEnglishOnly: Boolean,
     /** Relative speed vs TINY baseline (higher = slower but more accurate) */
     val relativeSpeed: Float = 1.0f
 ) {
-    TINY("Tiny", "ggml-tiny.bin", 75, 256, false, 1.0f),
-    TINY_EN("Tiny (English)", "ggml-tiny.en.bin", 75, 256, true, 1.0f),
-    BASE("Base", "ggml-base.bin", 142, 512, false, 2.0f),
-    BASE_EN("Base (English)", "ggml-base.en.bin", 142, 512, true, 2.0f),
-    SMALL("Small", "ggml-small.bin", 466, 1024, false, 6.0f),
-    SMALL_EN("Small (English)", "ggml-small.en.bin", 466, 1024, true, 6.0f),
-    MEDIUM("Medium", "ggml-medium.bin", 1500, 2048, false, 20.0f),
-    MEDIUM_EN("Medium (English)", "ggml-medium.en.bin", 1500, 2048, true, 20.0f);
+    TINY("Tiny", "ggml-tiny.bin", "VoiceOS-Tin-MUL.vlm", 75, 256, false, 1.0f),
+    TINY_EN("Tiny (English)", "ggml-tiny.en.bin", "VoiceOS-Tin-EN.vlm", 75, 256, true, 1.0f),
+    BASE("Base", "ggml-base.bin", "VoiceOS-Bas-MUL.vlm", 142, 512, false, 2.0f),
+    BASE_EN("Base (English)", "ggml-base.en.bin", "VoiceOS-Bas-EN.vlm", 142, 512, true, 2.0f),
+    SMALL("Small", "ggml-small.bin", "VoiceOS-Sml-MUL.vlm", 466, 1024, false, 6.0f),
+    SMALL_EN("Small (English)", "ggml-small.en.bin", "VoiceOS-Sml-EN.vlm", 466, 1024, true, 6.0f),
+    MEDIUM("Medium", "ggml-medium.bin", "VoiceOS-Med-MUL.vlm", 1500, 2048, false, 20.0f),
+    MEDIUM_EN("Medium (English)", "ggml-medium.en.bin", "VoiceOS-Med-EN.vlm", 1500, 2048, true, 20.0f);
 
     companion object {
         /**

@@ -13,6 +13,8 @@
 package com.augmentalis.speechrecognition.whisper
 
 import com.augmentalis.speechrecognition.logWarn
+import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
+import com.augmentalis.speechrecognition.whisper.vsm.vsmFileName
 import java.io.File
 
 /**
@@ -46,10 +48,16 @@ data class DesktopWhisperConfig(
     companion object {
         private const val TAG = "DesktopWhisperConfig"
 
-        /** Default model directory under user home */
+        /** Default model directory under user home (legacy .bin storage) */
         private val DEFAULT_MODEL_DIR = File(
             System.getProperty("user.home", "."),
             ".avanues/whisper/models"
+        )
+
+        /** Shared VLM storage: ~/.augmentalis/models/vlm/ (matches AI/ALC pattern) */
+        val SHARED_VSM_DIR: File = File(
+            System.getProperty("user.home", "."),
+            ".augmentalis/models/vlm"
         )
 
         /**
@@ -76,7 +84,7 @@ data class DesktopWhisperConfig(
 
     /**
      * Resolve the model file path, checking multiple locations.
-     * Priority: customModelPath > default model dir > working directory
+     * Priority: customModelPath > shared VSM storage > default model dir > working directory
      */
     fun resolveModelPath(): String? {
         // 1. Custom path takes priority
@@ -87,19 +95,23 @@ data class DesktopWhisperConfig(
 
         val fileName = modelSize.ggmlFileName
 
-        // 2. Default model directory: ~/.avanues/whisper/models/
+        // 2. Shared VLM storage: ~/.augmentalis/models/vlm/ (encrypted .vlm)
+        val sharedVsm = File(SHARED_VSM_DIR, vsmFileName(fileName))
+        if (sharedVsm.exists() && sharedVsm.length() > 0) return sharedVsm.absolutePath
+
+        // 3. Default model directory: ~/.avanues/whisper/models/ (legacy .bin)
         val defaultModel = File(DEFAULT_MODEL_DIR, fileName)
         if (defaultModel.exists()) return defaultModel.absolutePath
 
-        // 3. Working directory / models/
+        // 4. Working directory / models/
         val cwdModel = File("models/$fileName")
         if (cwdModel.exists()) return cwdModel.absolutePath
 
-        // 4. Working directory direct
+        // 5. Working directory direct
         val cwdDirect = File(fileName)
         if (cwdDirect.exists()) return cwdDirect.absolutePath
 
-        logWarn(TAG, "Model not found: $fileName. Download to: ${DEFAULT_MODEL_DIR.absolutePath}")
+        logWarn(TAG, "Model not found: $fileName. Download to: ${SHARED_VSM_DIR.absolutePath}")
         return null
     }
 
