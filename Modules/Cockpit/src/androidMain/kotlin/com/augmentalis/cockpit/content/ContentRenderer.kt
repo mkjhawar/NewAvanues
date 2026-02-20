@@ -17,10 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.annotationavanue.AnnotationCanvas
 import com.augmentalis.annotationavanue.SignatureCapture
-import com.augmentalis.annotationavanue.controller.AnnotationSerializer
-import com.augmentalis.annotationavanue.model.AnnotationTool
 import com.augmentalis.avanueui.theme.AvanueTheme
-import com.augmentalis.photoavanue.CameraPreview
+import com.augmentalis.cameraavanue.CameraPreview
 import com.augmentalis.cockpit.AndroidExternalAppResolver
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.FrameContent
@@ -46,7 +44,7 @@ import com.augmentalis.videoavanue.VideoPlayer
  * - Image -> ImageAvanue (ImageViewer)
  * - Video -> VideoAvanue (VideoPlayer)
  * - Note -> NoteAvanue (NoteEditor)
- * - Camera -> PhotoAvanue (CameraPreview)
+ * - Camera -> CameraAvanue (CameraPreview)
  * - Whiteboard/Signature -> AnnotationAvanue (AnnotationCanvas/SignatureCapture)
  * - ScreenCast -> RemoteCast (CastOverlay)
  */
@@ -80,15 +78,11 @@ fun ContentRenderer(
                 uri = content.uri,
                 modifier = Modifier.fillMaxSize()
             )
-            // Note: Image state (zoom/pan) is transient per-session.
-            // Persistence for showMetadata is handled via FrameContent.Image.showMetadata.
 
             is FrameContent.Video -> VideoPlayer(
                 uri = content.uri,
                 autoPlay = content.isPlaying,
                 initialPositionMs = content.playbackPositionMs,
-                initialMuted = content.isMuted,
-                initialSpeed = content.playbackSpeed,
                 onPositionChanged = { posMs ->
                     onContentStateChanged(frame.id, content.copy(playbackPositionMs = posMs))
                 },
@@ -116,13 +110,6 @@ fun ContentRenderer(
                 transcription = content.transcript,
                 isRecording = content.isRecording,
                 durationMs = content.durationMs,
-                onStateChanged = { isRec, durMs, transcript ->
-                    onContentStateChanged(frame.id, content.copy(
-                        isRecording = isRec,
-                        durationMs = durMs,
-                        transcript = transcript
-                    ))
-                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -130,12 +117,6 @@ fun ContentRenderer(
                 transcription = "",
                 isRecording = content.isRecording,
                 durationMs = content.durationMs,
-                onStateChanged = { isRec, durMs, _ ->
-                    onContentStateChanged(frame.id, content.copy(
-                        isRecording = isRec,
-                        durationMs = durMs
-                    ))
-                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -146,29 +127,13 @@ fun ContentRenderer(
                 modifier = Modifier.fillMaxSize()
             )
 
-            is FrameContent.Whiteboard -> {
-                val restoredStrokes = remember(content.strokesJson) {
-                    AnnotationSerializer.strokesFromJson(content.strokesJson)
-                }
-                AnnotationCanvas(
-                    initialStrokes = restoredStrokes,
-                    currentTool = AnnotationTool.PEN,
-                    strokeColor = content.penColor,
-                    strokeWidth = content.penWidth,
-                    onStrokeCompleted = { stroke ->
-                        val updated = restoredStrokes + stroke
-                        val json = AnnotationSerializer.strokesToJson(updated)
-                        onContentStateChanged(frame.id, content.copy(strokesJson = json))
-                    },
-                    onStrokesErased = { erasedIds ->
-                        val remaining = restoredStrokes.filter { it.id !in erasedIds }
-                        val json = AnnotationSerializer.strokesToJson(remaining)
-                        onContentStateChanged(frame.id, content.copy(strokesJson = json))
-                    },
-                    canUndo = restoredStrokes.isNotEmpty(),
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            is FrameContent.Whiteboard -> AnnotationCanvas(
+                onStrokesChanged = { _ ->
+                    // Stroke data is managed internally by AnnotationCanvas.
+                    // Whiteboard content tracks pen/color config, not stroke data.
+                },
+                modifier = Modifier.fillMaxSize()
+            )
 
             is FrameContent.ScreenCast -> CastOverlay(
                 castState = CastState(
@@ -276,7 +241,6 @@ private fun VoiceNoteRenderer(
     transcription: String,
     isRecording: Boolean,
     durationMs: Long,
-    onStateChanged: (isRecording: Boolean, durationMs: Long, transcript: String) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors

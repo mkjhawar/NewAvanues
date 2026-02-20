@@ -1,8 +1,9 @@
 /**
- * CameraAvanue — Cross-Platform Camera Capture Module
+ * NoteAvanue — Cross-Platform Rich Notes Module
  *
- * Standalone KMP camera preview using CameraX (Android), with photo capture,
- * flash control, lens switching, zoom, and scan mode.
+ * Voice-first rich text notes with Markdown round-trip, embedded photos,
+ * documents, voice transcription, auto-save, tagging, and export.
+ * Self-running via NoteAvanueScreen or embeddable via NoteEditor.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -11,6 +12,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -36,8 +38,27 @@ kotlin {
             dependencies {
                 api(project(":Modules:Foundation"))
                 api(project(":Modules:Logging"))
+                implementation(project(":Modules:Database"))
+
+                // Compose Multiplatform (shared across Android + Desktop)
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
+                implementation(compose.ui)
+
+                // AvanueUI v5.1 — Theme + Unified Components (KMP)
+                implementation(project(":Modules:AvanueUI"))
+
+                // Rich Text Editor — Markdown round-trip
+                implementation(libs.richeditor.compose)
+
+                // SQLDelight coroutine extensions (asFlow/mapToList for reactive queries)
+                implementation(libs.sqldelight.coroutines.extensions)
+
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
             }
         }
 
@@ -49,17 +70,10 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
-                implementation(project(":Modules:AvanueUI"))
                 implementation(libs.androidx.core.ktx)
-                implementation(platform(libs.compose.bom.get()))
-                implementation(libs.compose.ui.ui)
-                implementation(libs.compose.material3)
-                implementation(libs.compose.material.icons.extended)
-                implementation(libs.androidx.camera.core)
-                implementation(libs.androidx.camera.camera2)
-                implementation(libs.androidx.camera.lifecycle)
-                implementation(libs.androidx.camera.view)
-                implementation(libs.androidx.activity.compose)
+
+                // AI/RAG — on-device semantic search for notes
+                implementation(project(":Modules:AI:RAG"))
             }
         }
 
@@ -75,7 +89,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.cameraavanue"
+    namespace = "com.augmentalis.noteavanue"
     compileSdk = 34
     defaultConfig { minSdk = 29 }
     compileOptions {

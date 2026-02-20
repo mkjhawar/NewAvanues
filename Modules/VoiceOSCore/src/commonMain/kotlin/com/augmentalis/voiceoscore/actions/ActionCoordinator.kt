@@ -13,7 +13,7 @@ package com.augmentalis.voiceoscore
 
 import com.augmentalis.voiceoscore.Command
 import com.augmentalis.voiceoscore.CommandError
-import com.augmentalis.voiceoscore.CommandExecutionResult
+import com.augmentalis.voiceoscore.CommandResult
 import com.augmentalis.voiceoscore.CommandSource
 import com.augmentalis.voiceoscore.ErrorCode
 import com.augmentalis.voiceoscore.command.LocalizedVerbProvider
@@ -119,7 +119,6 @@ class ActionCoordinator(
             "notes" -> ActionCategory.NOTE
             "cockpit" -> ActionCategory.COCKPIT
             "camera" -> ActionCategory.CAMERA
-            "ai" -> ActionCategory.AI
             else -> ActionCategory.APP
         }
     }
@@ -203,16 +202,16 @@ class ActionCoordinator(
      *
      * @param source Source identifier to clear
      */
-    suspend fun clearDynamicCommandsBySource(source: String) {
-        commandRegistry.clearBySourceSuspend(source)
+    fun clearDynamicCommandsBySource(source: String) {
+        commandRegistry.clearBySource(source)
     }
 
     /**
      * Clear all dynamic commands.
      * Call when leaving an app or screen context is invalid.
      */
-    suspend fun clearDynamicCommands() {
-        commandRegistry.clearSuspend()
+    fun clearDynamicCommands() {
+        commandRegistry.clear()
     }
 
     /**
@@ -521,71 +520,6 @@ class ActionCoordinator(
             CommandActionType.ADD_WHITEBOARD -> "add whiteboard"
             CommandActionType.ADD_TERMINAL -> "add terminal"
 
-            // Annotation/Drawing actions (dispatched by AnnotationCommandHandler)
-            CommandActionType.ANNOTATION_PEN -> "select pen"
-            CommandActionType.ANNOTATION_HIGHLIGHTER -> "select highlighter"
-            CommandActionType.ANNOTATION_SHAPE_RECT -> "draw rectangle"
-            CommandActionType.ANNOTATION_SHAPE_CIRCLE -> "draw circle"
-            CommandActionType.ANNOTATION_SHAPE_ARROW -> "draw arrow"
-            CommandActionType.ANNOTATION_SHAPE_LINE -> "draw line"
-            CommandActionType.ANNOTATION_COLOR_PICKER -> "color picker"
-            CommandActionType.ANNOTATION_UNDO -> "undo annotation"
-            CommandActionType.ANNOTATION_REDO -> "redo annotation"
-            CommandActionType.ANNOTATION_CLEAR -> "clear annotations"
-            CommandActionType.ANNOTATION_SAVE -> "save annotation"
-            CommandActionType.ANNOTATION_SHARE -> "share annotation"
-            CommandActionType.ANNOTATION_ERASER -> "eraser"
-            CommandActionType.ANNOTATION_PEN_SIZE_UP -> "bigger pen"
-            CommandActionType.ANNOTATION_PEN_SIZE_DOWN -> "smaller pen"
-
-            // Image actions (dispatched by ImageCommandHandler)
-            CommandActionType.IMAGE_OPEN -> "open image"
-            CommandActionType.IMAGE_GALLERY -> "open gallery"
-            CommandActionType.IMAGE_FILTER_GRAYSCALE -> "grayscale filter"
-            CommandActionType.IMAGE_FILTER_SEPIA -> "sepia filter"
-            CommandActionType.IMAGE_FILTER_BLUR -> "blur filter"
-            CommandActionType.IMAGE_FILTER_SHARPEN -> "sharpen filter"
-            CommandActionType.IMAGE_FILTER_BRIGHTNESS -> "adjust brightness"
-            CommandActionType.IMAGE_FILTER_CONTRAST -> "adjust contrast"
-            CommandActionType.IMAGE_ROTATE_LEFT -> "rotate left"
-            CommandActionType.IMAGE_ROTATE_RIGHT -> "rotate right"
-            CommandActionType.IMAGE_FLIP_H -> "flip horizontal"
-            CommandActionType.IMAGE_FLIP_V -> "flip vertical"
-            CommandActionType.IMAGE_CROP -> "crop image"
-            CommandActionType.IMAGE_SHARE -> "share image"
-            CommandActionType.IMAGE_DELETE -> "delete image"
-            CommandActionType.IMAGE_INFO -> "image info"
-            CommandActionType.IMAGE_NEXT -> "next image"
-            CommandActionType.IMAGE_PREVIOUS -> "previous image"
-
-            // Video actions (dispatched by VideoCommandHandler)
-            CommandActionType.VIDEO_PLAY -> "play video"
-            CommandActionType.VIDEO_PAUSE -> "pause video"
-            CommandActionType.VIDEO_STOP -> "stop video"
-            CommandActionType.VIDEO_SEEK_FWD -> "skip forward"
-            CommandActionType.VIDEO_SEEK_BACK -> "skip backward"
-            CommandActionType.VIDEO_SPEED_UP -> "speed up"
-            CommandActionType.VIDEO_SPEED_DOWN -> "slow down"
-            CommandActionType.VIDEO_SPEED_NORMAL -> "normal speed"
-            CommandActionType.VIDEO_FULLSCREEN -> "fullscreen"
-            CommandActionType.VIDEO_MUTE -> "mute video"
-            CommandActionType.VIDEO_UNMUTE -> "unmute video"
-            CommandActionType.VIDEO_LOOP -> "loop video"
-
-            // RemoteCast actions (dispatched by CastCommandHandler)
-            CommandActionType.CAST_START -> "start casting"
-            CommandActionType.CAST_STOP -> "stop casting"
-            CommandActionType.CAST_CONNECT -> "connect cast"
-            CommandActionType.CAST_DISCONNECT -> "disconnect cast"
-            CommandActionType.CAST_QUALITY -> "cast quality"
-
-            // AI actions (dispatched by AICommandHandler)
-            CommandActionType.AI_SUMMARIZE -> "summarize"
-            CommandActionType.AI_CHAT -> "ai chat"
-            CommandActionType.AI_RAG_SEARCH -> "search knowledge"
-            CommandActionType.AI_TEACH -> "teach ai"
-            CommandActionType.AI_CLEAR_CONTEXT -> "clear ai context"
-
             // Default for custom/unknown
             CommandActionType.CUSTOM -> "tap $target"
             CommandActionType.MACRO -> "not implemented"
@@ -761,7 +695,7 @@ class ActionCoordinator(
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // Step 2: Try static handler lookup (single findHandler, no duplicate canHandle)
+        // Step 2: Try static handler lookup
         // ═══════════════════════════════════════════════════════════════════
         LoggingUtils.d("No dynamic match, trying static handlers", TAG)
         val directCommand = QuantizedCommand(
@@ -771,9 +705,9 @@ class ActionCoordinator(
             confidence = confidence
         )
 
-        val staticHandler = handlerRegistry.findHandler(directCommand)
-        LoggingUtils.d("handlerRegistry.findHandler('$normalizedText') = ${staticHandler?.let { it::class.simpleName } ?: "null"}", TAG)
-        if (staticHandler != null) {
+        val canHandle = handlerRegistry.canHandle(normalizedText)
+        LoggingUtils.d("handlerRegistry.canHandle('$normalizedText') = $canHandle", TAG)
+        if (canHandle) {
             return processCommand(directCommand)
         }
 
@@ -917,8 +851,8 @@ class ActionCoordinator(
 
         _results.emit(actionResult)
 
-        // Convert to CommandExecutionResult for metrics recording
-        val metricsResult = CommandExecutionResult(
+        // Convert to CommandResult for metrics recording
+        val metricsResult = CommandResult(
             success = result.isSuccess,
             command = Command(
                 id = command.avid,
@@ -966,7 +900,7 @@ class ActionCoordinator(
         try {
             handlerRegistry.disposeAll()
             handlerRegistry.clear()
-            commandRegistry.clearSuspend()
+            commandRegistry.clear()
             scope.cancel()
             _state.value = CoordinatorState.DISPOSED
         } catch (e: Exception) {

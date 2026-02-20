@@ -154,7 +154,7 @@ dependencies {
     implementation(project(":Modules:ImageAvanue"))
     implementation(project(":Modules:VideoAvanue"))
     implementation(project(":Modules:NoteAvanue"))
-    implementation(project(":Modules:PhotoAvanue"))
+    implementation(project(":Modules:CameraAvanue"))
     implementation(project(":Modules:RemoteCast"))
     implementation(project(":Modules:AnnotationAvanue"))
 
@@ -189,7 +189,7 @@ dependencies {
     // Jetpack Compose
     // =========================================================================
 
-    implementation(platform(libs.compose.bom.get()))
+    implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui.ui)
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
@@ -268,6 +268,6 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)
-    androidTestImplementation(platform(libs.compose.bom.get()))
+    androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
 }

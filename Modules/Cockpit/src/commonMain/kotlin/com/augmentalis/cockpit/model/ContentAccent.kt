@@ -49,14 +49,7 @@ enum class ContentAccent {
             "video" -> SECONDARY
             "note", "voice_note" -> SUCCESS
             "camera" -> WARNING
-            "screen_cast" -> ERROR          // Red = live/streaming indicator
-            "whiteboard", "signature" -> TERTIARY  // Creative/drawing = tertiary
-            "ai_summary" -> INFO              // AI = informational blue
-            "form" -> SUCCESS                 // Form = success green (completion)
-            "terminal" -> TERTIARY            // Terminal = neutral
-            "widget" -> PRIMARY               // Widget = primary accent
-            "voice" -> WARNING                // Audio = amber
-            "map" -> SUCCESS                  // Map = green (navigation)
+            "screen_cast" -> SECONDARY
             "external_app" -> INFO
             else -> TERTIARY
         }

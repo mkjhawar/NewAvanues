@@ -35,20 +35,15 @@ object StaticCommandRegistry {
     @Volatile
     private var _dbCommands: List<StaticCommand>? = null
 
-    /** O(1) phrase → command lookup index, rebuilt on initialize(). */
-    @Volatile
-    private var _phraseIndex: Map<String, StaticCommand> = emptyMap()
-
     /**
      * Initialize registry with commands loaded from the database.
      * Called from CommandManager after CommandLoader seeds the DB.
-     * Thread-safe via @Volatile. Builds O(1) phrase lookup index.
+     * Thread-safe via @Volatile.
      *
      * @param commands List of StaticCommand converted from DB entities
      */
     fun initialize(commands: List<StaticCommand>) {
         _dbCommands = commands
-        _phraseIndex = buildPhraseIndex(commands)
     }
 
     /**
@@ -61,18 +56,6 @@ object StaticCommandRegistry {
      */
     fun reset() {
         _dbCommands = null
-        _phraseIndex = emptyMap()
-    }
-
-    /** Build HashMap from lowercase phrase → StaticCommand for O(1) lookup. */
-    private fun buildPhraseIndex(commands: List<StaticCommand>): Map<String, StaticCommand> {
-        val index = HashMap<String, StaticCommand>(commands.size * 3)
-        for (cmd in commands) {
-            for (phrase in cmd.phrases) {
-                index[phrase.lowercase()] = cmd
-            }
-        }
-        return index
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -103,7 +86,9 @@ object StaticCommandRegistry {
      */
     fun findByPhrase(phrase: String): StaticCommand? {
         val normalized = phrase.lowercase().trim()
-        return _phraseIndex[normalized]
+        return all().find { cmd ->
+            cmd.phrases.any { it.lowercase() == normalized }
+        }
     }
 
     /**
@@ -117,12 +102,6 @@ object StaticCommandRegistry {
      */
     fun findByPhraseInDomains(phrase: String, activeDomains: Set<String>): StaticCommand? {
         val normalized = phrase.lowercase().trim()
-        // Fast path: O(1) index lookup, then domain check
-        val indexed = _phraseIndex[normalized]
-        if (indexed != null && indexed.domain in activeDomains) {
-            return indexed
-        }
-        // Slow path: phrase may map to multiple commands in different domains
         val matches = all().filter { cmd ->
             cmd.domain in activeDomains && cmd.phrases.any { it.lowercase() == normalized }
         }

@@ -124,14 +124,8 @@ enum class ActionCategory {
     CAST,
 
     /**
-     * AI actions (summarize, chat, RAG search, teach, clear context)
-     * Priority: 19
-     */
-    AI,
-
-    /**
      * Custom actions (user-defined, extensions, etc.)
-     * Priority: 20 (lowest)
+     * Priority: 19 (lowest)
      */
     CUSTOM;
 
@@ -159,7 +153,6 @@ enum class ActionCategory {
             IMAGE,
             VIDEO,
             CAST,
-            AI,
             CUSTOM
         )
     }

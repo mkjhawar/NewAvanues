@@ -55,17 +55,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cockpit.CockpitConstants
 import com.augmentalis.cockpit.model.CommandBarState
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.LayoutMode
-import kotlinx.coroutines.delay
 
 /**
  * Context-aware command bar docked at the bottom of CockpitScreen.
@@ -89,7 +83,6 @@ fun CommandBar(
     onFrameMinimize: () -> Unit,
     onFrameMaximize: () -> Unit,
     onFrameClose: () -> Unit,
-    onCommandDispatched: (String) -> Unit = {},
     availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
     modifier: Modifier = Modifier
 ) {
@@ -174,57 +167,50 @@ fun CommandBar(
                         CommandChip(Icons.Default.Close, "Close", false, onFrameClose)
                     }
 
+                    // TODO: Content-specific chips are scaffolded for layout only.
+                    // Wire to CockpitCommandHandler dispatch when voice-to-UI bridge is ready.
                     CommandBarState.WEB_ACTIONS -> {
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Back", false) { onCommandDispatched("cockpit.web.back") }
-                        CommandChip(Icons.Default.Language, "Forward", false) { onCommandDispatched("cockpit.web.forward") }
-                        CommandChip(Icons.Default.Language, "Refresh", false) { onCommandDispatched("cockpit.web.refresh") }
-                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) { onCommandDispatched("cockpit.web.zoom_in") }
-                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) { onCommandDispatched("cockpit.web.zoom_out") }
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Back", false) {}
+                        CommandChip(Icons.Default.Language, "Forward", false) {}
+                        CommandChip(Icons.Default.Language, "Refresh", false) {}
+                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {}
+                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {}
                     }
 
                     CommandBarState.PDF_ACTIONS -> {
-                        CommandChip(Icons.Default.ArrowUpward, "Prev Page", false) { onCommandDispatched("cockpit.pdf.prev_page") }
-                        CommandChip(Icons.Default.ArrowDownward, "Next Page", false) { onCommandDispatched("cockpit.pdf.next_page") }
-                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) { onCommandDispatched("cockpit.pdf.zoom_in") }
-                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) { onCommandDispatched("cockpit.pdf.zoom_out") }
+                        CommandChip(Icons.Default.ArrowUpward, "Prev Page", false) {}
+                        CommandChip(Icons.Default.ArrowDownward, "Next Page", false) {}
+                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {}
+                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {}
                     }
 
                     CommandBarState.IMAGE_ACTIONS -> {
-                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) { onCommandDispatched("cockpit.image.zoom_in") }
-                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) { onCommandDispatched("cockpit.image.zoom_out") }
-                        CommandChip(Icons.Default.SwapHoriz, "Rotate", false) { onCommandDispatched("cockpit.image.rotate") }
+                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {}
+                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {}
+                        CommandChip(Icons.Default.SwapHoriz, "Rotate", false) {}
                     }
 
                     CommandBarState.VIDEO_ACTIONS -> {
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Rewind", false) { onCommandDispatched("cockpit.video.rewind") }
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Play/Pause", false) { onCommandDispatched("cockpit.video.play_pause") }
-                        CommandChip(Icons.Default.Fullscreen, "Fullscreen", false) { onCommandDispatched("cockpit.video.fullscreen") }
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Rewind", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Play/Pause", false) {}
+                        CommandChip(Icons.Default.Fullscreen, "Fullscreen", false) {}
                     }
 
                     CommandBarState.NOTE_ACTIONS -> {
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Undo", false) { onCommandDispatched("cockpit.note.undo") }
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Redo", false) { onCommandDispatched("cockpit.note.redo") }
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Undo", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Redo", false) {}
                     }
 
                     CommandBarState.CAMERA_ACTIONS -> {
-                        CommandChip(Icons.Default.SwapHoriz, "Flip", false) { onCommandDispatched("cockpit.camera.flip") }
-                        CommandChip(Icons.Default.TouchApp, "Capture", false) { onCommandDispatched("cockpit.camera.capture") }
+                        CommandChip(Icons.Default.SwapHoriz, "Flip", false) {}
+                        CommandChip(Icons.Default.TouchApp, "Capture", false) {}
                     }
 
                     CommandBarState.SCROLL_COMMANDS,
                     CommandBarState.ZOOM_COMMANDS,
                     CommandBarState.SPATIAL_COMMANDS -> {
-                        // Auto-transition back to MAIN after brief display
-                        LaunchedEffect(currentState) {
-                            delay(1500)
-                            onStateChange(CommandBarState.MAIN)
-                        }
-                        Text(
-                            text = "Commands available via voice",
-                            color = colors.textSecondary,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 12.dp)
-                        )
+                        // Placeholder for future spatial/scroll/zoom commands
+                        CommandChip(Icons.Default.ScreenSearchDesktop, "Coming Soon", false) {}
                     }
                 }
             }
@@ -256,10 +242,6 @@ private fun CommandChip(
             .border(1.dp, borderColor, chipShape)
             .background(bgColor, chipShape)
             .clickable(onClick = onClick)
-            .semantics {
-                contentDescription = "Voice: click $label"
-                role = Role.Button
-            }
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)

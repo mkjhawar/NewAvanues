@@ -37,18 +37,14 @@ import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.NumbersOverlayMode
 import com.augmentalis.voiceoscore.OverlayNumberingExecutor
 import com.augmentalis.voiceoscore.OverlayStateManager
-import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.TARGET_APPS
-import com.augmentalis.foundation.util.NumberToWords
 import com.augmentalis.voiceavanue.MainActivity
 import com.augmentalis.avanueui.theme.AvanueModuleAccents
 import com.augmentalis.avanueui.theme.ModuleAccent
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.foundation.settings.models.DeveloperSettings
-import com.augmentalis.voiceoscore.commandmanager.CommandManager
-import com.augmentalis.devicemanager.deviceinfo.detection.DeviceDetector
-import com.augmentalis.devicemanager.imu.IMUManager
+import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
@@ -63,7 +59,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
@@ -100,7 +95,6 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var webCommandCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var cursorSettingsJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
-    private var imuManager: IMUManager? = null  // Lazy-init when cursor enabled
 
     override fun getActionCoordinator(): ActionCoordinator {
         // Prefer VoiceOSCore's coordinator — it has handlers registered
@@ -332,16 +326,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                 else -> NumbersOverlayMode.AUTO
                             }
                             OverlayStateManager.setNumbersOverlayMode(overlayMode)
-                            // Invalidate screen hash so processScreen() runs a full
-                            // re-scan on the next accessibility event. Without this,
-                            // switching OFF→ON would show an empty overlay until the
-                            // user triggers a screen change (items are empty because
-                            // processScreen() skipped generation while mode was OFF).
-                            dynamicCommandGenerator?.invalidateScreenHash()
-                            // Trigger immediate overlay refresh so badges appear
-                            // without waiting for the next accessibility event.
-                            serviceScope.launch { refreshOverlayBadges() }
-                            Log.i(TAG, "Numbers mode set to: $overlayMode (re-scan triggered)")
+                            Log.i(TAG, "Numbers mode set to: $overlayMode")
                             true
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to set numbers mode", e)
@@ -357,7 +342,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 // VoiceCommandDaoAdapter is created via CommandDatabase singleton,
                 // which requires VoiceOSDatabase — only available after DB init above.
                 try {
-                    val commandDatabase = com.augmentalis.voiceoscore.commandmanager.database.CommandDatabase
+                    val commandDatabase = com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
                         .getInstance(applicationContext)
                     val commandDao = commandDatabase.voiceCommandDao()
                     val vosRegistry = db.vosFileRegistry
@@ -406,30 +391,11 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                     val intent = Intent(applicationContext, CursorOverlayService::class.java)
                                     applicationContext.startForegroundService(intent)
                                     Log.i(TAG, "CursorOverlayService started via settings toggle")
-                                    // Wait for service onStartCommand() to set the singleton instance.
-                                    // startForegroundService() is async — without this wait, the IMU
-                                    // wiring block below would be skipped because getInstance() is still null.
-                                    var waitMs = 0
-                                    while (CursorOverlayService.getInstance() == null && waitMs < 2000) {
-                                        delay(100)
-                                        waitMs += 100
-                                    }
-                                    if (CursorOverlayService.getInstance() != null) {
-                                        Log.i(TAG, "CursorOverlayService ready after ${waitMs}ms")
-                                    } else {
-                                        Log.w(TAG, "CursorOverlayService not ready after ${waitMs}ms — IMU wiring will be skipped")
-                                    }
                                 } catch (e: Exception) {
                                     Log.e(TAG, "Failed to start CursorOverlayService", e)
                                 }
                             }
                         } else if (!settings.cursorEnabled) {
-                            // Stop IMU tracking before stopping cursor service
-                            imuManager?.let { imu ->
-                                CursorOverlayService.getInstance()?.stopIMUTracking()
-                                imu.stopIMUTracking("VoiceCursor")
-                                Log.i(TAG, "IMU head tracking stopped (cursor disabled)")
-                            }
                             CursorOverlayService.getInstance()?.let {
                                 applicationContext.stopService(Intent(applicationContext, CursorOverlayService::class.java))
                                 Log.i(TAG, "CursorOverlayService stopped via settings toggle")
@@ -470,36 +436,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                             dwellRingColor = accentArgb
                         )
 
-                        val cursorService = CursorOverlayService.getInstance()
-                        if (cursorService != null) {
+                        CursorOverlayService.getInstance()?.let { cursorService ->
                             cursorService.updateConfig(config)
                             // Ensure ClickDispatcher is set so "cursor click" voice command works
                             cursorService.setClickDispatcher(AccessibilityClickDispatcher())
-
-                            // Wire IMU head tracking to cursor (lazy-init IMUManager once)
-                            if (imuManager == null) {
-                                try {
-                                    val caps = DeviceDetector.getCapabilities(applicationContext)
-                                    Log.i(TAG, "DeviceDetector sensors: accel=${caps.sensors.hasAccelerometer}, gyro=${caps.sensors.hasGyroscope}, mag=${caps.sensors.hasMagnetometer}")
-                                    val imu = IMUManager.getInstance(applicationContext)
-                                    imu.injectCapabilities(caps)
-                                    imuManager = imu
-                                    Log.i(TAG, "IMUManager initialized with device capabilities")
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Failed to initialize IMUManager", e)
-                                }
-                            }
-                            imuManager?.let { imu ->
-                                val started = imu.startIMUTracking("VoiceCursor")
-                                if (started) {
-                                    cursorService.startIMUTracking(imu)
-                                    Log.i(TAG, "IMU head tracking connected to cursor — pipeline active")
-                                } else {
-                                    Log.w(TAG, "IMU tracking start failed — check DeviceDetector capabilities and sensor availability")
-                                }
-                            }
-                        } else {
-                            Log.w(TAG, "CursorOverlayService.getInstance() is null — IMU wiring skipped")
                         }
                     }
                 }
@@ -528,14 +468,6 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
      * - TYPE_VIEW_SCROLLED doesn't trigger handleScreenChange → onCommandsUpdated
      * - Even TYPE_WINDOW_CONTENT_CHANGED gates on KMP fingerprint which may not change
      */
-    override fun onAppSwitched(newPackageName: String) {
-        Log.d(TAG, "App switch to $newPackageName, clearing overlay immediately")
-        // Clear overlay badges synchronously so stale badges from the previous app
-        // don't persist during the async screen extraction gap.
-        overlayNumberingExecutor?.resetForNavigation()
-        dynamicCommandGenerator?.clearCache()
-    }
-
     override fun onInAppNavigation(packageName: String) {
         Log.d(TAG, "In-app navigation detected: $packageName, clearing overlay")
         // Reset numbering so new screen starts from 1
@@ -564,7 +496,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
      * Navigation detection is handled by structural-change-ratio in handleScreenContext(),
      * not by event source. This works for both Activity and Fragment transitions.
      */
-    private suspend fun refreshOverlayBadges() {
+    private fun refreshOverlayBadges() {
         try {
             val root = rootInActiveWindow ?: return
             val packageName = root.packageName?.toString() ?: return
@@ -578,84 +510,9 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             }
 
             dynamicCommandGenerator?.processScreen(root, packageName, isTargetApp)
-
-            // Generate voice commands matching overlay badge numbers.
-            // This ensures badge "3" always maps to voice command "3" for ALL apps,
-            // not just target apps with listIndex. The overlay items are the single
-            // source of truth for numbering.
-            registerOverlayCommands(packageName)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating overlay", e)
         }
-    }
-
-    /**
-     * Create QuantizedCommands for each numbered overlay badge and register them
-     * as "overlay_numbers" source. This aligns voice command numbers with visible
-     * badge numbers for all apps (target and non-target alike).
-     *
-     * Commands generated per badge:
-     * - Digit: "1", "2", "3" (direct number)
-     * - Word: "one", "two", "three" (spoken word form)
-     * - Ordinal: "first", "second", "third" (for first 10 items)
-     */
-    private suspend fun registerOverlayCommands(packageName: String) {
-        val overlayItems = OverlayStateManager.numberedOverlayItems.value
-        if (overlayItems.isEmpty()) {
-            voiceOSCore?.actionCoordinator?.clearDynamicCommandsBySource("overlay_numbers")
-            return
-        }
-
-        val ordinals = listOf(
-            "first", "second", "third", "fourth", "fifth",
-            "sixth", "seventh", "eighth", "ninth", "tenth"
-        )
-
-        val commands = mutableListOf<QuantizedCommand>()
-        for (item in overlayItems) {
-            val bounds = "${item.left},${item.top},${item.right},${item.bottom}"
-            val baseMetadata = mapOf(
-                "packageName" to packageName,
-                "bounds" to bounds,
-                "source" to "overlay_numbers",
-                "overlayNumber" to item.number.toString()
-            )
-
-            // Digit form: "1", "2", "3"
-            commands.add(QuantizedCommand(
-                phrase = item.number.toString(),
-                actionType = CommandActionType.CLICK,
-                targetAvid = item.avid,
-                confidence = 1.0f,
-                metadata = baseMetadata
-            ))
-
-            // Word form: "one", "two", "three"
-            val wordForm = NumberToWords.convert(item.number)
-            if (wordForm.isNotBlank()) {
-                commands.add(QuantizedCommand(
-                    phrase = wordForm,
-                    actionType = CommandActionType.CLICK,
-                    targetAvid = item.avid,
-                    confidence = 0.95f,
-                    metadata = baseMetadata
-                ))
-            }
-
-            // Ordinal form: "first", "second" (first 10 only)
-            if (item.number in 1..ordinals.size) {
-                commands.add(QuantizedCommand(
-                    phrase = ordinals[item.number - 1],
-                    actionType = CommandActionType.CLICK,
-                    targetAvid = item.avid,
-                    confidence = 0.95f,
-                    metadata = baseMetadata
-                ))
-            }
-        }
-
-        voiceOSCore?.actionCoordinator?.updateDynamicCommandsBySource("overlay_numbers", commands)
-        Log.d(TAG, "Registered ${commands.size} overlay-aligned commands for ${overlayItems.size} badges")
     }
 
     override fun onDestroy() {
@@ -676,14 +533,6 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         // Cancel cursor settings collection
         cursorSettingsJob?.cancel()
         cursorSettingsJob = null
-
-        // Stop IMU head tracking
-        imuManager?.let { imu ->
-            CursorOverlayService.getInstance()?.stopIMUTracking()
-            imu.stopIMUTracking("VoiceCursor")
-            Log.i(TAG, "IMU head tracking stopped (service destroy)")
-        }
-        imuManager = null
 
         // Stop overlay service
         try {
