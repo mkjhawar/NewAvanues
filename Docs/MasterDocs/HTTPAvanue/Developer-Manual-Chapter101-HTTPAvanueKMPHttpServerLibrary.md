@@ -238,14 +238,28 @@ server.use(myMiddleware)
 
 ## 6. HTTP/2 Support
 
-HTTPAvanue supports HTTP/2 via two mechanisms:
+HTTPAvanue supports HTTP/2 via two mechanisms, both **automatically handled** by `HttpServer.handleConnection()`:
+
+### Automatic Detection (Built-In)
+
+HTTP/2 auto-detection is **wired into HttpServer** as of v1.1. No application code needed:
+
+```kotlin
+val server = httpServer(ServerConfig(port = 8080, http2Enabled = true)) {
+    get("/hello") { HttpResponse.ok("Hello from HTTP/1.1 or HTTP/2!") }
+}
+// Transparently handles HTTP/1.1, HTTP/2 h2c upgrade, and HTTP/2 prior knowledge
+```
+
+Set `http2Enabled = false` in `ServerConfig` to disable HTTP/2 detection (saves a buffer peek per connection).
 
 ### h2c Upgrade (from HTTP/1.1)
 
-The server detects `Upgrade: h2c` headers and branches to HTTP/2:
+The server detects `Upgrade: h2c` headers in parsed HTTP/1.1 requests and branches to HTTP/2:
 
 ```kotlin
-// In custom connection handler:
+// Handled automatically inside HttpServer.handleConnection().
+// Manual use (for custom connection handlers):
 if (Http2ServerHandler.isH2cUpgradeRequest(request)) {
     Http2ServerHandler.handleH2cUpgrade(socket, request, settings) { req ->
         router.handle(req)
@@ -255,10 +269,11 @@ if (Http2ServerHandler.isH2cUpgradeRequest(request)) {
 
 ### Prior Knowledge (h2c direct)
 
-For clients that speak HTTP/2 directly (e.g., `curl --http2-prior-knowledge`):
+For clients that speak HTTP/2 directly (e.g., `curl --http2-prior-knowledge`), the server peeks at the first 24 bytes of the connection. If they match the HTTP/2 connection preface (`PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n`), the server consumes them and delegates to `Http2Connection`:
 
 ```kotlin
-// Detect HTTP/2 preface in first bytes:
+// Handled automatically inside HttpServer.handleConnection().
+// Manual use:
 if (Http2ServerHandler.isPriorKnowledgePreface(firstBytes)) {
     Http2ServerHandler.handlePriorKnowledge(socket, settings) { req ->
         router.handle(req)
@@ -438,7 +453,7 @@ HTTPAvanue pulls in transitively:
 ```
 HTTPAvanue (this module)
   ├── depends on: Modules/Logging (LoggerFactory)
-  ├── used by (future): RemoteCast (replace raw TCP with HTTP/WebSocket)
+  ├── used by: RemoteCast (CastWebSocketServer + CastWebSocketClient)
   ├── used by (future): ConnectionAvanue (higher-level device communication)
   └── used by (future): AI modules (local REST API for on-device inference)
 ```
@@ -448,7 +463,7 @@ HTTPAvanue is a **pure library module** — no UI, no Compose dependency, no And
 ---
 
 **Next Steps:**
-- HTTP/2 integration into HttpServer (auto-detect and branch)
+- ~~HTTP/2 integration into HttpServer (auto-detect and branch)~~ **DONE** (v1.1, 260220)
 - Huffman coding for HPACK
 - iOS TLS via Network.framework
 - ConnectionAvanue higher-level abstraction
