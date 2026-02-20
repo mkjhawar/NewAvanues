@@ -8,7 +8,8 @@
  * - commonMain: Shared API, models, and logic
  * - androidMain: Android-specific engines (Vosk, Vivoka, Google, Whisper)
  * - iosMain: iOS-specific engines (Apple Speech + Whisper via cinterop)
- * - desktopMain: Desktop-specific engines (placeholder)
+ * - macosMain: macOS-specific engines (Apple Speech via SFSpeechRecognizer)
+ * - desktopMain: Desktop-specific engines (Whisper via JNI)
  * - jsMain: Web-specific engines (placeholder)
  */
 
@@ -31,7 +32,7 @@ kotlin {
     }
 
     if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("macos", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
     ) {
         // iOS targets with whisper_bridge cinterop
         listOf(
@@ -60,6 +61,10 @@ kotlin {
                 }
             }
         }
+
+        // macOS targets — Apple Speech via SFSpeechRecognizer (macOS 10.15+)
+        macosX64()
+        macosArm64()
     }
     // Desktop target (JVM)
     jvm("desktop") {
@@ -167,7 +172,7 @@ kotlin {
         }
 
         if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("macos", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
         ) {
             val iosX64Main by getting
             val iosArm64Main by getting
@@ -180,6 +185,19 @@ kotlin {
                 dependencies {
                     implementation(libs.kotlinx.atomicfu)
                     // Compose runtime needed for kotlin.compose plugin on native targets
+                    implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+                }
+            }
+
+            // macOS source set — Apple Speech via SFSpeechRecognizer
+            val macosX64Main by getting
+            val macosArm64Main by getting
+            val macosMain by creating {
+                dependsOn(commonMain)
+                macosX64Main.dependsOn(this)
+                macosArm64Main.dependsOn(this)
+                dependencies {
+                    implementation(libs.kotlinx.atomicfu)
                     implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
                 }
             }
