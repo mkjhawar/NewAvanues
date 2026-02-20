@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-20 — Added iOS Whisper cinterop, macOS Apple Speech, platform coverage matrix
+**Updated**: 2026-02-21 — Added VLM encryption (Section 14), jvmMain shared source set, shared model storage
 
 ---
 
@@ -54,6 +54,10 @@ Modules/SpeechRecognition/src/
         WhisperVAD.kt             # Voice Activity Detection algorithm
         ModelDownloadState.kt     # Download state machine
         WhisperPerformance.kt     # Performance metrics tracker
+        vsm/VSMFormat.kt          # VSM file format constants + header
+
+    jvmMain/kotlin/.../whisper/    # Shared by androidMain + desktopMain
+        vsm/VSMCodec.kt           # AES-256-CTR encrypt/decrypt (javax.crypto)
 
     androidMain/kotlin/.../whisper/
         WhisperEngine.kt          # Android engine orchestrator
@@ -69,6 +73,7 @@ Modules/SpeechRecognition/src/
         IosWhisperAudio.kt        # AVAudioEngine 16kHz capture
         IosWhisperConfig.kt       # iOS configuration + auto-tune
         IosWhisperModelManager.kt # NSURLSession model downloads
+        vsm/IosVSMCodec.kt        # AES-256-CTR via CommonCrypto cinterop
     iosMain/kotlin/.../
         IosSpeechRecognitionService.kt  # Dual-engine: Apple Speech + Whisper
 
@@ -85,7 +90,8 @@ Modules/SpeechRecognition/src/
         DesktopWhisperModelManager.kt   # HttpURLConnection downloads
 
     nativeInterop/cinterop/
-        whisper.def               # K/N cinterop definition
+        whisper.def               # K/N cinterop definition for whisper_bridge
+        commoncrypto.def          # K/N cinterop definition for CommonCrypto (VSM)
         whisper_bridge.h          # C header for whisper.cpp bindings
         whisper_bridge.c          # C implementation wrapping whisper.cpp
 
@@ -255,11 +261,27 @@ val config = DesktopWhisperConfig.autoTuned(language = "en")
 
 ### 4.1 Model Storage
 
-| Platform | Location |
-|---|---|
-| Android | `/data/data/<pkg>/files/whisper/models/` |
-| iOS | `Documents/whisper/models/` (app sandbox) |
-| Desktop | `~/.avanues/whisper/models/` |
+Models are stored as encrypted `.vlm` (VoiceOS Language Model) files in a shared location that matches the AI/ALC model storage pattern. See **Section 14** for full encryption details.
+
+**On-device filenames**: `VoiceOS-{Size}-{Lang}.vlm` — no whisper/ggml traces. Size codes: Tin, Bas, Sml, Med. Language: EN (English-only) or MUL (multilingual, 99 languages).
+
+| Platform | Shared VLM Location (Primary) | Legacy Location (Auto-migrated) |
+|---|---|---|
+| Android | `/sdcard/ava-ai-models/vlm/` | `/data/data/<pkg>/files/whisper/models/` |
+| iOS | `Documents/ava-ai-models/vlm/` | `Documents/whisper/models/` |
+| Desktop | `~/.augmentalis/models/vlm/` | `~/.avanues/whisper/models/` |
+
+**Check order**: Shared VLM → Legacy .bin → Download from HuggingFace
+
+Legacy `.bin` files are automatically encrypted to `.vlm` and moved to shared storage on first access via `migrateExistingModels()`.
+
+**Example files on disk**:
+```
+ava-ai-models/vlm/
+  VoiceOS-Tin-EN.vlm     (75 MB, English only)
+  VoiceOS-Bas-MUL.vlm    (142 MB, 99 languages)
+  VoiceOS-Sml-EN.vlm     (466 MB, English only)
+```
 
 ### 4.2 Auto-Download
 
@@ -637,3 +659,130 @@ Speech recognition denied — check System Settings > Privacy > Speech Recogniti
 ```
 
 **Fix**: Open System Settings > Privacy & Security > Speech Recognition and enable the app. macOS also requires a separate Microphone permission.
+
+---
+
+## 14. VLM Encryption (VoiceOS Language Model)
+
+### 14.1 Overview
+
+Whisper model files (`.bin`, 75MB–1.5GB) are encrypted at rest using a custom `.vlm` container format. This prevents casual extraction of model weights from device storage, matching the same protection level as the AI/ALC module's `.amm`/`.amg`/`.amr` formats. On-device filenames use `VoiceOS-{Size}-{Lang}.vlm` — zero traces of whisper/ggml.
+
+**Extension**: `.vlm` (VoiceOS Language Model)
+**On-disk naming**: `VoiceOS-Tin-EN.vlm`, `VoiceOS-Bas-MUL.vlm`, etc.
+**Magic bytes**: `0x56534D31` ("VSM1" — internal format identifier)
+**Header**: 64 bytes
+**Crypto**: AES-256-CTR + XOR scramble (SHA-512 derived) + Fisher-Yates byte shuffle
+
+### 14.2 File Format
+
+```
+Offset  Size    Field
+0       4       Magic (0x56534D31 = "VSM1" — internal format ID)
+4       2       Version (0x0100 = v1.0)
+6       2       Flags (0x0001 = encrypted)
+8       8       Original file size (LE)
+16      8       Encoded file size (LE)
+24      4       Block size (65536 = 64KB)
+28      4       Block count
+32      16      File hash (truncated SHA-256)
+48      8       Timestamp (epoch millis, LE)
+56      4       Content type (0 = generic)
+60      4       Reserved
+--- 64 bytes header ---
+[optional metadata JSON length (4 bytes) + JSON string]
+[encrypted blocks...]
+```
+
+### 14.3 Encryption Pipeline (Per Block)
+
+```
+Raw 64KB block
+    |
+    v
+[XOR Scramble] — SHA-512 hash of (key + blockIndex) generates 64-byte XOR pattern, tiled across block
+    |
+    v
+[Fisher-Yates Shuffle] — deterministic byte permutation seeded from block key
+    |
+    v
+[AES-256-CTR] — per-block nonce = MD5(key + blockIndex), counter starts at 0
+    |
+    v
+Encrypted block written to .vsm file
+```
+
+Decryption reverses the pipeline: AES-CTR decrypt → Fisher-Yates unshuffle → XOR unscramble.
+
+### 14.4 Key Derivation
+
+```
+Master Seed: "VSM-SPEECH-1.0-VOICEOS-2026-IDL\0" (32 bytes, unique to VSM)
+Salt: "VSM-1.0-SALT-2026"
+Key Material: MASTER_SEED + fileHash[0:16] + timestamp(8 bytes LE)
+KDF: PBKDF2-HMAC-SHA256, 10000 iterations → 32-byte AES key
+```
+
+The file hash and timestamp come from the VSM header, making each file's key unique.
+
+### 14.5 On-Device File Naming
+
+| Model Size | English-Only | Multilingual |
+|---|---|---|
+| Tiny (75 MB) | `VoiceOS-Tin-EN.vlm` | `VoiceOS-Tin-MUL.vlm` |
+| Base (142 MB) | `VoiceOS-Bas-EN.vlm` | `VoiceOS-Bas-MUL.vlm` |
+| Small (466 MB) | `VoiceOS-Sml-EN.vlm` | `VoiceOS-Sml-MUL.vlm` |
+| Medium (1.5 GB) | `VoiceOS-Med-EN.vlm` | `VoiceOS-Med-MUL.vlm` |
+
+Zero traces of whisper, ggml, or any model source. The `ggmlFileName` field in `WhisperModelSize` is ONLY used for HuggingFace download URLs and is never stored on device.
+
+### 14.6 Platform Implementations
+
+| Platform | Codec Class | Crypto Library | Location |
+|---|---|---|---|
+| Android | `VSMCodec` (shared via jvmMain) | `javax.crypto` | `src/jvmMain/.../vsm/VSMCodec.kt` |
+| Desktop | `VSMCodec` (shared via jvmMain) | `javax.crypto` | Same file — zero duplication |
+| iOS | `IosVSMCodec` | CommonCrypto (cinterop) | `src/iosMain/.../vsm/IosVSMCodec.kt` |
+
+**Key design**: Android and Desktop share the exact same `VSMCodec.kt` via the `jvmMain` intermediate source set. Bug fixes automatically propagate to both platforms.
+
+**Cross-platform compatibility**: iOS `IosVSMCodec` includes a `JavaCompatRandom` class that reimplements `java.util.Random`'s LCG algorithm (multiplier `0x5DEECE66DL`, 48-bit mask) to produce byte-identical Fisher-Yates shuffles as the JVM implementation. This ensures `.vlm` files created on any platform can be read on any other.
+
+### 14.7 Data Flow
+
+```
+CHECK (before any download):
+  1. Shared location (ava-ai-models/vlm/*.vlm) → exists? USE IT
+  2. Legacy app-private (whisper/models/*.bin) → exists? MIGRATE to .vlm
+  3. Nothing found → DOWNLOAD
+
+DOWNLOAD:
+  HuggingFace (.bin) → download to temp → VSMCodec.encryptFile() → .vlm → delete temp
+
+LOAD:
+  .vlm → VSMCodec.decryptToTempFile() → temp file → initContext(tempPath) → delete temp
+```
+
+### 14.8 API
+
+```kotlin
+// JVM (Android + Desktop)
+val codec = VSMCodec()
+codec.encryptFile(inputPath, outputPath, metadata)  // Returns Boolean
+codec.decryptToTempFile(vlmPath, tempDir)            // Returns File?
+codec.readHeader(vlmPath)                            // Returns VSMHeader?
+codec.readMetadata(vlmPath)                          // Returns Map<String,String>
+
+// iOS
+val codec = IosVSMCodec()
+codec.encryptFile(inputPath, outputPath, metadata)   // Returns Boolean
+codec.decryptToTempFile(vlmPath, tempDir)             // Returns String? (path)
+```
+
+### 14.9 Migration
+
+Each `ModelManager` has a `migrateExistingModels()` method that:
+1. Scans the legacy models directory for `.bin` files
+2. Encrypts each to `.vlm` in the shared storage directory
+3. Deletes the original `.bin` on success
+4. Safe to call multiple times (skips already-migrated files)
