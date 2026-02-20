@@ -17,6 +17,7 @@ import com.augmentalis.voiceoscore.CommandResult
 import com.augmentalis.voiceoscore.CommandSource
 import com.augmentalis.voiceoscore.ErrorCode
 import com.augmentalis.voiceoscore.command.LocalizedVerbProvider
+import com.augmentalis.voiceoscore.command.StaticCommandRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -119,6 +120,10 @@ class ActionCoordinator(
             "notes" -> ActionCategory.NOTE
             "cockpit" -> ActionCategory.COCKPIT
             "camera" -> ActionCategory.CAMERA
+            "annotation" -> ActionCategory.ANNOTATION
+            "image" -> ActionCategory.IMAGE
+            "video" -> ActionCategory.VIDEO
+            "cast" -> ActionCategory.CAST
             else -> ActionCategory.APP
         }
     }
@@ -695,9 +700,19 @@ class ActionCoordinator(
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // Step 2: Try static handler lookup
+        // Step 2: Try static command registry + handler lookup
         // ═══════════════════════════════════════════════════════════════════
-        LoggingUtils.d("No dynamic match, trying static handlers", TAG)
+        // First try StaticCommandRegistry — it resolves the correct actionType
+        // from VOS files so module executors can route by specific action.
+        val staticMatch = StaticCommandRegistry.findByPhrase(normalizedText)
+        if (staticMatch != null) {
+            LoggingUtils.d("StaticCommandRegistry match: '${staticMatch.primaryPhrase}' actionType=${staticMatch.actionType}", TAG)
+            val quantized = staticMatch.toQuantizedCommand()
+            return processCommand(quantized)
+        }
+
+        // Fallback: try handler phrase matching with generic EXECUTE type
+        LoggingUtils.d("No static registry match, trying handler phrase match", TAG)
         val directCommand = QuantizedCommand(
             phrase = normalizedText,
             actionType = CommandActionType.EXECUTE,

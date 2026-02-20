@@ -498,7 +498,31 @@ enum class CommandCategory {
     BROWSER,
 
     /** Web gesture commands (pan, tilt, orbit, rotate, fling, pinch, scale, etc.) */
-    WEB_GESTURE
+    WEB_GESTURE,
+
+    /** Camera / PhotoAvanue commands */
+    CAMERA,
+
+    /** Cockpit multi-window commands */
+    COCKPIT,
+
+    /** NoteAvanue rich editor commands */
+    NOTE,
+
+    /** AnnotationAvanue drawing/markup commands */
+    ANNOTATION,
+
+    /** ImageAvanue viewer commands */
+    IMAGE,
+
+    /** VideoAvanue playback commands */
+    VIDEO,
+
+    /** RemoteCast screen casting commands */
+    CAST,
+
+    /** AI module commands */
+    AI
 }
 
 /**

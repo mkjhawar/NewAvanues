@@ -73,7 +73,7 @@ class CommandLoader(
 
             // 0. CHECK if database already loaded with correct version
             val existingVersion = versionDao.getVersion()
-            val requiredVersion = "3.1" // v3.1: domain activation system — domain column in commands_static
+            val requiredVersion = "3.2" // v3.2: added ann/img/vid/cast/ai categories + action mappings
 
             if (existingVersion != null && existingVersion.jsonVersion == requiredVersion) {
                 val commandCount = commandDao.getCommandCount(FALLBACK_LOCALE)

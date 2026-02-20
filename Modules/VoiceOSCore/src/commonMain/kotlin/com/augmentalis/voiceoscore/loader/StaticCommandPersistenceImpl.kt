@@ -38,7 +38,7 @@ class StaticCommandPersistenceImpl(
 ) : IStaticCommandPersistence {
 
     companion object {
-        private const val VERSION = "2.1"
+        private const val VERSION = "2.2"
         private const val COMMANDS_DIR = "localization/commands"
     }
 
