@@ -26,7 +26,7 @@ import android.util.Log
 import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.voicecursor.core.ClickDispatcher
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
-import com.augmentalis.voiceoscore.managers.commandmanager.actions.CursorActions
+import com.augmentalis.voiceoscore.commandmanager.actions.CursorActions
 
 private const val TAG = "AndroidCursorHandler"
 private const val WIRE_RETRY_DELAY_MS = 100L

@@ -15,7 +15,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,9 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.overlay.controller.Suggestion
 import com.augmentalis.overlay.theme.OverlayAnimations
-import com.augmentalis.overlay.theme.OceanGlassColors
 import com.augmentalis.overlay.theme.panelSolidEffect
 
 /**
@@ -90,7 +89,7 @@ fun GlassMorphicPanel(
                 text = "AVA Assistant",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = OceanGlassColors.TextPrimary,
+                color = AvanueTheme.colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -103,13 +102,13 @@ fun GlassMorphicPanel(
                         text = "You said:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = OceanGlassColors.TextSecondary
+                        color = AvanueTheme.colors.textSecondary
                     )
                     Text(
                         text = transcript,
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
-                        color = OceanGlassColors.TextPrimary
+                        color = AvanueTheme.colors.textPrimary
                     )
                 }
             }
@@ -123,13 +122,13 @@ fun GlassMorphicPanel(
                         text = "AVA:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = OceanGlassColors.CoralBlue
+                        color = AvanueTheme.colors.primary
                     )
                     Text(
                         text = response,
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
-                        color = OceanGlassColors.TextPrimary
+                        color = AvanueTheme.colors.textPrimary
                     )
                 }
             }
@@ -145,7 +144,7 @@ fun GlassMorphicPanel(
                         text = "Suggestions:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = OceanGlassColors.TextSecondary
+                        color = AvanueTheme.colors.textSecondary
                     )
                     SuggestionChips(
                         suggestions = suggestions,

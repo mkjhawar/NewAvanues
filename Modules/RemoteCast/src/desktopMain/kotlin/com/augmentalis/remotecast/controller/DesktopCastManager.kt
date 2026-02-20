@@ -3,10 +3,13 @@ package com.augmentalis.remotecast.controller
 import com.augmentalis.remotecast.model.CastDevice
 import com.augmentalis.remotecast.model.CastResolution
 import com.augmentalis.remotecast.model.CastState
+import com.augmentalis.remotecast.protocol.CastFrameData
+import com.augmentalis.remotecast.transport.CastWebSocketServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +29,7 @@ import java.io.ByteArrayOutputStream
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
-import javax.imageio.stream.MemoryImageOutputStream
+import javax.imageio.stream.MemoryCacheImageOutputStream
 
 /**
  * Desktop (JVM) implementation of [ICastManager].
@@ -68,10 +71,11 @@ class DesktopCastManager : ICastManager {
     val frameFlow = MutableStateFlow<CastFrameData?>(null)
 
     // -------------------------------------------------------------------------
-    // Coroutine scope
+    // Transport + Coroutine scope
     // -------------------------------------------------------------------------
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val server = CastWebSocketServer(port = DEFAULT_PORT, scope = scope)
     private var captureJob: Job? = null
 
     // -------------------------------------------------------------------------
@@ -128,6 +132,9 @@ class DesktopCastManager : ICastManager {
         }
         _state.update { it.copy(isStreaming = true, error = null) }
 
+        // Start WebSocket server for network transport
+        server.start()
+
         captureJob = scope.launch {
             val robot = runCatching { Robot() }.getOrElse { ex ->
                 _state.update { it.copy(isStreaming = false, error = "Robot init failed: ${ex.message}") }
@@ -137,7 +144,7 @@ class DesktopCastManager : ICastManager {
             val captureRect = Rectangle(screenSize)
             val targetFps = _state.value.frameRate.coerceIn(1, 60)
             val frameDelayMs = 1000L / targetFps
-            var frameIndex = 0L
+            var sequenceNumber = 0
 
             while (isActive) {
                 val captureStart = System.currentTimeMillis()
@@ -155,14 +162,15 @@ class DesktopCastManager : ICastManager {
                 val latencyMs = System.currentTimeMillis() - captureStart
                 _state.update { it.copy(latencyMs = latencyMs) }
 
-                frameFlow.value = CastFrameData(
-                    frameIndex = frameIndex++,
-                    timestampMs = System.currentTimeMillis(),
-                    jpegBytes = jpegBytes,
+                val frame = CastFrameData(
+                    frameBytes = jpegBytes,
+                    timestamp = System.currentTimeMillis(),
+                    sequenceNumber = sequenceNumber++,
                     width = scaledFrame.width,
-                    height = scaledFrame.height,
-                    resolution = resolution
+                    height = scaledFrame.height
                 )
+                frameFlow.value = frame
+                server.sendFrame(frame)
 
                 val elapsed = System.currentTimeMillis() - captureStart
                 val remaining = frameDelayMs - elapsed
@@ -176,6 +184,7 @@ class DesktopCastManager : ICastManager {
         captureJob?.cancelAndJoin()
         captureJob = null
         frameFlow.value = null
+        server.stop()
         _state.update { it.copy(isStreaming = false, latencyMs = 0) }
     }
 
@@ -194,9 +203,11 @@ class DesktopCastManager : ICastManager {
     // -------------------------------------------------------------------------
 
     override fun release() {
-        scope.launch { stopCasting() }
-        _state.value = CastState()
+        captureJob?.cancel()
+        captureJob = null
         frameFlow.value = null
+        _state.value = CastState()
+        scope.cancel()
     }
 
     // -------------------------------------------------------------------------
@@ -247,7 +258,7 @@ class DesktopCastManager : ICastManager {
             it.compressionQuality = quality.coerceIn(0.1f, 1.0f)
         }
         val out = ByteArrayOutputStream()
-        val memOut = MemoryImageOutputStream(out)
+        val memOut = MemoryCacheImageOutputStream(out)
         writer.output = memOut
         try {
             writer.write(null, IIOImage(image, null, null), param)
@@ -267,31 +278,8 @@ class DesktopCastManager : ICastManager {
         CastResolution.HD -> 0.78f
         CastResolution.FHD -> 0.88f
     }
-}
 
-/**
- * A single captured screen frame ready for transport or display.
- *
- * @param frameIndex Sequential frame counter since [startCasting].
- * @param timestampMs Wall-clock capture time in milliseconds.
- * @param jpegBytes JPEG-encoded frame data.
- * @param width Pixel width of the encoded frame (after resolution scaling).
- * @param height Pixel height of the encoded frame.
- * @param resolution The [CastResolution] target that was active for this frame.
- */
-data class CastFrameData(
-    val frameIndex: Long,
-    val timestampMs: Long,
-    val jpegBytes: ByteArray,
-    val width: Int,
-    val height: Int,
-    val resolution: CastResolution
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is CastFrameData) return false
-        return frameIndex == other.frameIndex && timestampMs == other.timestampMs
+    companion object {
+        const val DEFAULT_PORT = 54321
     }
-
-    override fun hashCode(): Int = 31 * frameIndex.hashCode() + timestampMs.hashCode()
 }

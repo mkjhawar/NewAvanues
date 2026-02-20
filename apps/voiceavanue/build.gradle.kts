@@ -170,7 +170,7 @@ dependencies {
     // Jetpack Compose
     // =========================================================================
 
-    implementation(platform(libs.compose.bom))
+    implementation(platform(libs.compose.bom.get()))
     implementation(libs.compose.ui.ui)
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
@@ -224,6 +224,6 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)
-    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(platform(libs.compose.bom.get()))
     androidTestImplementation(libs.compose.ui.test.junit4)
 }

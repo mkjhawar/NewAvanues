@@ -18,6 +18,7 @@ data class CastState(
     val error: String? = null
 )
 
+@Serializable
 enum class CastResolution(val width: Int, val height: Int) {
     SD(640, 480),
     HD(1280, 720),

@@ -2,11 +2,11 @@
  * AndroidCastManager.kt — Android implementation of ICastManager
  *
  * Orchestrates the full cast pipeline:
- *   Sender path:  ScreenCaptureHelper → CastFrameData → MjpegTcpServer → remote client
- *   Receiver path: MjpegTcpClient → CastReceiverView (via receivedFrames flow)
+ *   Sender path:  ScreenCaptureHelper → CastFrameData → CastWebSocketServer → remote client
+ *   Receiver path: CastWebSocketClient → CastReceiverView (via receivedFrames flow)
  *
- * The manager owns a [MjpegTcpServer] that starts on [startCasting] and a
- * [MjpegTcpClient] that connects on [connectToDevice].
+ * The manager owns a [CastWebSocketServer] that starts on [startCasting] and a
+ * [CastWebSocketClient] that connects on [connectToDevice].
  *
  * MediaProjection must be injected via [setMediaProjection] before calling
  * [startCasting] — Android requires the user to grant consent via system dialog,
@@ -22,8 +22,8 @@ import com.augmentalis.remotecast.model.CastResolution
 import com.augmentalis.remotecast.model.CastState
 import com.augmentalis.remotecast.protocol.CastFrameData
 import com.augmentalis.remotecast.service.ScreenCaptureHelper
-import com.augmentalis.remotecast.transport.MjpegTcpClient
-import com.augmentalis.remotecast.transport.MjpegTcpServer
+import com.augmentalis.remotecast.transport.CastWebSocketClient
+import com.augmentalis.remotecast.transport.CastWebSocketServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -54,8 +54,8 @@ class AndroidCastManager(
 
     // ── Transport components ──────────────────────────────────────────────────
 
-    private val server = MjpegTcpServer(port = DEFAULT_PORT, scope = scope)
-    private val client = MjpegTcpClient(scope = scope)
+    private val server = CastWebSocketServer(port = DEFAULT_PORT, scope = scope)
+    private val client = CastWebSocketClient(scope = scope)
 
     // ── Capture components ────────────────────────────────────────────────────
 
@@ -80,7 +80,7 @@ class AndroidCastManager(
 
     /**
      * Connects as a receiver to the given [device].
-     * Starts the [MjpegTcpClient] and updates [receivedFrames].
+     * Starts the [CastWebSocketClient] and updates [receivedFrames].
      */
     override suspend fun connectToDevice(device: CastDevice): Boolean {
         return try {
@@ -110,7 +110,7 @@ class AndroidCastManager(
      */
     override suspend fun disconnect() {
         client.disconnect()
-        _receivedFrames = emptyFlow()
+        _receivedFrames = emptyFlow<ByteArray>()
         _state.update {
             it.copy(
                 isConnected = false,
@@ -136,7 +136,7 @@ class AndroidCastManager(
         val resolution = _state.value.resolution
         val fps = _state.value.frameRate
 
-        // Start the TCP server first (idempotent)
+        // Start the WebSocket server first (idempotent)
         server.start()
 
         val helper = ScreenCaptureHelper(
@@ -174,7 +174,7 @@ class AndroidCastManager(
         captureJob = null
         captureHelper?.stopCapture()
         captureHelper = null
-        server.stop()
+        server.stop()  // suspends to cleanly close WebSocket connections
         _state.update { it.copy(isStreaming = false) }
     }
 
@@ -193,8 +193,10 @@ class AndroidCastManager(
     override fun release() {
         captureJob?.cancel()
         captureHelper?.stopCapture()
-        server.stop()
-        client.disconnect()
+        scope.launch {
+            server.stop()
+            client.disconnect()
+        }
         mediaProjection?.stop()
         mediaProjection = null
         captureHelper = null
@@ -222,17 +224,15 @@ class AndroidCastManager(
     }
 
     /**
-     * Starts the TCP server independently (e.g., from a foreground service before
+     * Starts the WebSocket server independently (e.g., from a foreground service before
      * the user connects a receiver device).
      */
-    suspend fun startServer() {
+    fun startServer() {
         server.start()
         _state.update { it.copy(error = null) }
     }
 
-    /**
-     * Exposes the server's current client-connected state for UI observation.
-     */
+    /** Exposes the server's current client-connected state for UI observation. */
     val isClientConnected: StateFlow<Boolean> = server.clientConnected
 
     companion object {

@@ -58,6 +58,13 @@ class CommandRegistry {
 
     private val mutex = Mutex() // Protects ALL concurrent writes
 
+    /** Monotonically increasing counter — incremented on every write for cache invalidation */
+    @Volatile
+    private var _generation: Long = 0
+
+    /** Current generation (snapshot version). Used by CommandMatcher for cache invalidation. */
+    fun generation(): Long = _generation
+
     /**
      * Update registry with new commands, replacing all existing.
      * Commands with null targetAvid are ignored (cannot be executed).
@@ -82,6 +89,11 @@ class CommandRegistry {
      *
      * @param newCommands List of commands from current scan
      */
+    @Deprecated(
+        message = "Use the suspend update() instead. runBlocking risks blocking the calling thread " +
+            "for up to 5 seconds under mutex contention.",
+        replaceWith = ReplaceWith("update(newCommands)")
+    )
     fun updateSync(newCommands: List<QuantizedCommand>) {
         runBlocking {
             withTimeout(5000L) {
@@ -111,6 +123,11 @@ class CommandRegistry {
      * @param source Source identifier (e.g., "accessibility", "web", "plugin")
      * @param newCommands Commands from this source
      */
+    @Deprecated(
+        message = "Use the suspend updateBySourceSuspend() instead. runBlocking risks blocking the " +
+            "calling thread for up to 5 seconds under mutex contention.",
+        replaceWith = ReplaceWith("updateBySourceSuspend(source, newCommands)")
+    )
     fun updateBySource(source: String, newCommands: List<QuantizedCommand>) {
         runBlocking {
             withTimeout(5000L) {
@@ -183,6 +200,7 @@ class CommandRegistry {
 
         // Single atomic write
         snapshot = CommandSnapshot(updatedCommands, newLabelCache, updatedSourceKeys)
+        _generation++
     }
 
     /**
@@ -193,6 +211,11 @@ class CommandRegistry {
      *
      * @param source Source identifier to clear
      */
+    @Deprecated(
+        message = "Use the suspend clearBySourceSuspend() instead. runBlocking risks blocking the " +
+            "calling thread for up to 5 seconds under mutex contention.",
+        replaceWith = ReplaceWith("clearBySourceSuspend(source)")
+    )
     fun clearBySource(source: String) {
         runBlocking {
             withTimeout(5000L) {
@@ -200,6 +223,17 @@ class CommandRegistry {
                     updateBySourceInternal(source, emptyList())
                 }
             }
+        }
+    }
+
+    /**
+     * Suspend variant of [clearBySource] for coroutine contexts.
+     *
+     * @param source Source identifier to clear
+     */
+    suspend fun clearBySourceSuspend(source: String) {
+        mutex.withLock {
+            updateBySourceInternal(source, emptyList())
         }
     }
 
@@ -230,6 +264,7 @@ class CommandRegistry {
 
         // Single atomic write ensures consistent reads
         snapshot = CommandSnapshot(newCommands, newLabelCache)
+        _generation++
     }
 
     /**
@@ -321,36 +356,57 @@ class CommandRegistry {
      *
      * @param commands List of commands to add
      */
+    @Deprecated(
+        message = "Use the suspend addAllSuspend() instead. runBlocking risks blocking the calling " +
+            "thread for up to 5 seconds under mutex contention.",
+        replaceWith = ReplaceWith("addAllSuspend(commands)")
+    )
     fun addAll(commands: List<QuantizedCommand>) {
         if (commands.isEmpty()) return
 
         runBlocking {
             withTimeout(5000L) {
                 mutex.withLock {
-                    val toAdd = commands
-                        .filter { it.targetAvid != null && it.phrase.isNotBlank() }
-
-                    if (toAdd.isEmpty()) return@withLock
-
-                    val snap = snapshot // Single atomic read
-                    val newCommands = snap.commands.toMutableMap()
-                    val newLabelCache = snap.labelCache.toMutableMap()
-
-                    for (cmd in toAdd) {
-                        val key = cmd.phrase.lowercase()
-                        newCommands[key] = cmd
-                        val label = cmd.phrase.substringAfter(" ").lowercase()
-                        if (label.length > 1) {
-                            newLabelCache[key] = label
-                        }
-                    }
-
-                    LoggingUtils.d("addAll: adding ${toAdd.size} commands: ${toAdd.take(5).map { it.phrase }}", TAG)
-                    // Single atomic write ensures consistent reads — preserve sourceKeys
-                    snapshot = CommandSnapshot(newCommands, newLabelCache, snap.sourceKeys)
+                    addAllInternal(commands)
                 }
             }
         }
+    }
+
+    /**
+     * Suspend variant of [addAll] for coroutine contexts.
+     *
+     * @param commands List of commands to add
+     */
+    suspend fun addAllSuspend(commands: List<QuantizedCommand>) {
+        if (commands.isEmpty()) return
+        mutex.withLock {
+            addAllInternal(commands)
+        }
+    }
+
+    /** Internal add-all logic — must be called while holding the mutex. */
+    private fun addAllInternal(commands: List<QuantizedCommand>) {
+        val toAdd = commands.filter { it.targetAvid != null && it.phrase.isNotBlank() }
+        if (toAdd.isEmpty()) return
+
+        val snap = snapshot
+        val newCommands = snap.commands.toMutableMap()
+        val newLabelCache = snap.labelCache.toMutableMap()
+
+        for (cmd in toAdd) {
+            val key = cmd.phrase.lowercase()
+            newCommands[key] = cmd
+            val label = cmd.phrase.substringAfter(" ").lowercase()
+            if (label.length > 1) {
+                newLabelCache[key] = label
+            }
+        }
+
+        LoggingUtils.d("addAll: adding ${toAdd.size} commands: ${toAdd.take(5).map { it.phrase }}", TAG)
+        // Single atomic write ensures consistent reads — preserve sourceKeys
+        snapshot = CommandSnapshot(newCommands, newLabelCache, snap.sourceKeys)
+        _generation++
     }
 
     /**
@@ -360,13 +416,29 @@ class CommandRegistry {
      * This avoids spinlock issues that could cause command execution to stop
      * after repeated app switches.
      */
+    @Deprecated(
+        message = "Use the suspend clearSuspend() instead. runBlocking risks blocking the calling " +
+            "thread for up to 5 seconds under mutex contention.",
+        replaceWith = ReplaceWith("clearSuspend()")
+    )
     fun clear() {
         runBlocking {
             withTimeout(5000L) {
                 mutex.withLock {
                     snapshot = CommandSnapshot(emptyMap(), emptyMap())
+                    _generation++
                 }
             }
+        }
+    }
+
+    /**
+     * Suspend variant of [clear] for coroutine contexts.
+     */
+    suspend fun clearSuspend() {
+        mutex.withLock {
+            snapshot = CommandSnapshot(emptyMap(), emptyMap())
+            _generation++
         }
     }
 

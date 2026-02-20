@@ -18,6 +18,9 @@ import com.augmentalis.voiceoscore.loader.StaticCommandPersistenceImpl
 
 private const val TAG = "VoiceOSFactory"
 
+/** AccessibilityService.GLOBAL_ACTION_ALL_APPS — added in API 30 (Android 11). */
+private const val GLOBAL_ACTION_ALL_APPS = 14
+
 /**
  * Create a VoiceOSCore instance configured for Android.
  *
@@ -171,7 +174,7 @@ internal class AndroidSystemExecutor(
         Log.d(TAG, "Executing openAppDrawer")
         return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             // GLOBAL_ACTION_ALL_APPS available on API 30+ (Android 11)
-            service.performGlobalAction(14) // AccessibilityService.GLOBAL_ACTION_ALL_APPS = 14
+            service.performGlobalAction(GLOBAL_ACTION_ALL_APPS)
         } else {
             // Fallback: open home first, which many launchers follow with app drawer swipe
             service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
@@ -245,6 +248,11 @@ internal class AndroidGestureHandler(
                     return if (success) HandlerResult.success("Scrolled left")
                            else HandlerResult.failure("Failed to scroll left")
                 }
+                // NOTE: "swipe left" maps to scroll("right") intentionally.
+                // A left swipe gesture moves the finger leftward, which causes the
+                // viewport content to shift rightward — the same direction the
+                // accessibility scroll action must fire. The gesture direction and
+                // the content-movement direction are opposite by design.
                 phrase.startsWith("scroll right") || phrase.startsWith("swipe left") -> {
                     val success = dispatcher.scroll("right")
                     return if (success) HandlerResult.success("Scrolled right")

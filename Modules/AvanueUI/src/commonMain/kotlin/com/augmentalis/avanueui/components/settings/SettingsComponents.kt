@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -456,7 +454,6 @@ val defaultAccentPresets: List<Color> = listOf(
  * @param onUseTheme Called when user selects "Use Theme Color"
  * @param presetColors Available preset colors to choose from
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsColorRow(
     title: String,
@@ -538,27 +535,28 @@ fun SettingsColorRow(
                         )
                     }
 
-                    // Preset colors grid
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        presetColors.forEach { preset ->
-                            val isSelected = !useThemeColor && color == preset
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(preset)
-                                    .then(
-                                        if (isSelected) Modifier.border(3.dp, AvanueTheme.colors.textPrimary, CircleShape)
-                                        else Modifier.border(1.dp, AvanueTheme.colors.borderSubtle, CircleShape)
+                    // Preset colors grid (5 per row)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        presetColors.chunked(5).forEach { rowColors ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                rowColors.forEach { preset ->
+                                    val isSelected = !useThemeColor && color == preset
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(preset)
+                                            .then(
+                                                if (isSelected) Modifier.border(3.dp, AvanueTheme.colors.textPrimary, CircleShape)
+                                                else Modifier.border(1.dp, AvanueTheme.colors.borderSubtle, CircleShape)
+                                            )
+                                            .clickable {
+                                                onColorSelected(preset)
+                                                showDialog = false
+                                            }
                                     )
-                                    .clickable {
-                                        onColorSelected(preset)
-                                        showDialog = false
-                                    }
-                            )
+                                }
+                            }
                         }
                     }
                 }

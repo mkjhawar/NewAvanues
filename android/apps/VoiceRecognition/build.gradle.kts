@@ -92,19 +92,18 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     
-    // Compose with explicit versions (aligned with BOM 2024.06.00)
-    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    // Compose BOM — version managed via catalog
+    val composeBom = platform(libs.compose.bom.get())
     implementation(composeBom)
-    
-    // Explicitly declare versions to avoid resolution warnings
-    implementation("androidx.compose.ui:ui:1.6.8")
-    implementation("androidx.compose.ui:ui-graphics:1.6.8")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.6.8")
-    implementation("androidx.compose.ui:ui-text:1.6.8")  // Explicit for ui-text
-    implementation("androidx.compose.ui:ui-util:1.6.8")  // Explicit for ui-util
-    implementation("androidx.compose.material3:material3:1.2.1")
-    implementation("androidx.compose.material:material-icons-extended:1.6.8")
-    implementation("androidx.compose.runtime:runtime:1.6.8")
+
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.ui:ui-text")
+    implementation("androidx.compose.ui:ui-util")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.runtime:runtime")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
     
     // Permissions

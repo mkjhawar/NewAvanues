@@ -48,14 +48,20 @@ internal class DesktopSpeechEngineFactory : ISpeechEngineFactory {
     }
 
     override fun isEngineAvailable(engine: SpeechEngine): Boolean {
+        // No speech engines are currently implemented for Desktop.
+        // Setup requirements per engine:
+        //   VOSK:         Requires vosk-api JNI library + language model download
+        //   WHISPER:      Requires whisper.cpp JNI bindings + model download (~230MB)
+        //   GOOGLE_CLOUD: Requires google-cloud-speech SDK + API key in credentials
+        //   AZURE:        Requires azure-cognitiveservices-speech SDK + subscription key
         return when (engine) {
-            SpeechEngine.VOSK -> true // JNI bindings available
-            SpeechEngine.WHISPER -> true // Requires model download
-            SpeechEngine.GOOGLE_CLOUD -> true // Requires API key
-            SpeechEngine.AZURE -> true // Requires subscription
-            SpeechEngine.ANDROID_STT -> false // Android only
-            SpeechEngine.APPLE_SPEECH -> false // iOS/macOS only
-            SpeechEngine.VIVOKA -> false // Android only
+            SpeechEngine.VOSK -> false
+            SpeechEngine.WHISPER -> false
+            SpeechEngine.GOOGLE_CLOUD -> false
+            SpeechEngine.AZURE -> false
+            SpeechEngine.ANDROID_STT -> false
+            SpeechEngine.APPLE_SPEECH -> false
+            SpeechEngine.VIVOKA -> false
         }
     }
 

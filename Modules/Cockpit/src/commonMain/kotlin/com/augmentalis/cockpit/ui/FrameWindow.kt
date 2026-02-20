@@ -62,6 +62,10 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -287,21 +291,21 @@ private fun TrafficLights(
         TrafficDot(
             dotColor = colors.error,
             icon = Icons.Default.Close,
-            contentDescription = "Close",
+            contentDescription = "Voice: click Close",
             onClick = onClose
         )
         // Yellow = Minimize
         TrafficDot(
             dotColor = colors.warning,
             icon = Icons.Default.Minimize,
-            contentDescription = "Minimize",
+            contentDescription = "Voice: click Minimize",
             onClick = onMinimize
         )
         // Green = Maximize/Restore
         TrafficDot(
             dotColor = colors.success,
             icon = if (isMaximized) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-            contentDescription = if (isMaximized) "Restore" else "Maximize",
+            contentDescription = if (isMaximized) "Voice: click Restore" else "Voice: click Maximize",
             onClick = onMaximize
         )
     }
@@ -339,6 +343,10 @@ private fun TrafficDot(
                 indication = null,
                 onClick = onClick
             )
+            .semantics {
+                this.contentDescription = contentDescription
+                role = Role.Button
+            }
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {

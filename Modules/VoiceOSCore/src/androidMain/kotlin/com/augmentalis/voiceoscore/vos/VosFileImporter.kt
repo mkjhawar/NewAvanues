@@ -20,8 +20,8 @@ import com.augmentalis.database.repositories.IVosFileRegistryRepository
 import com.augmentalis.voiceoscore.loader.VosParsedCommand
 import com.augmentalis.voiceoscore.loader.VosParseResult
 import com.augmentalis.voiceoscore.loader.VosParser
-import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
-import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity
+import com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
+import com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandEntity
 import java.io.File
 import java.security.MessageDigest
 

@@ -438,7 +438,7 @@ class VoiceOSCore private constructor(
      * Clear all dynamic commands.
      * Call when leaving an app or screen context is invalid.
      */
-    fun clearDynamicCommands() {
+    suspend fun clearDynamicCommands() {
         coordinator.clearDynamicCommands()
     }
 

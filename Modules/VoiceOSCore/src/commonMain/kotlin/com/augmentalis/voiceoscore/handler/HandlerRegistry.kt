@@ -37,6 +37,19 @@ class HandlerRegistry : IHandlerRegistry {
     private val mutex = Mutex()
 
     /**
+     * Flattened snapshot of all registered handlers, rebuilt on every mutation.
+     * Eliminates repeated allocations from handlers.values.flatten() in hot paths
+     * (canHandle + findHandler are called 2x per voice command).
+     * Must only be read/written while holding [mutex].
+     */
+    private var cachedHandlerList: List<IHandler> = emptyList()
+
+    /** Rebuilds the flat cache from the current [handlers] map. Must be called under [mutex]. */
+    private fun rebuildCache() {
+        cachedHandlerList = handlers.values.flatten()
+    }
+
+    /**
      * Register a handler.
      * Handlers are added to their category's list, allowing multiple handlers per category.
      *
@@ -45,6 +58,7 @@ class HandlerRegistry : IHandlerRegistry {
     override suspend fun register(handler: IHandler) {
         mutex.withLock {
             handlers.getOrPut(handler.category) { mutableListOf() }.add(handler)
+            rebuildCache()
         }
     }
 
@@ -58,6 +72,7 @@ class HandlerRegistry : IHandlerRegistry {
     override suspend fun register(category: ActionCategory, handler: IHandler) {
         mutex.withLock {
             handlers.getOrPut(category) { mutableListOf() }.add(handler)
+            rebuildCache()
         }
     }
 
@@ -75,6 +90,7 @@ class HandlerRegistry : IHandlerRegistry {
                     removed = true
                 }
             }
+            if (removed) rebuildCache()
             return removed
         }
     }
@@ -88,6 +104,7 @@ class HandlerRegistry : IHandlerRegistry {
     override suspend fun unregisterCategory(category: ActionCategory): Int {
         mutex.withLock {
             val handlerList = handlers.remove(category)
+            if (handlerList != null) rebuildCache()
             return handlerList?.size ?: 0
         }
     }
@@ -113,7 +130,7 @@ class HandlerRegistry : IHandlerRegistry {
             }
 
             // If no prioritized handler found, check all remaining categories
-            return handlers.values.flatten().find { it.canHandle(action) }
+            return cachedHandlerList.find { it.canHandle(action) }
         }
     }
 
@@ -142,7 +159,7 @@ class HandlerRegistry : IHandlerRegistry {
             }
 
             // If no prioritized handler found, check all remaining categories
-            return handlers.values.flatten().find { it.canHandle(command) }
+            return cachedHandlerList.find { it.canHandle(command) }
         }
     }
 
@@ -168,7 +185,7 @@ class HandlerRegistry : IHandlerRegistry {
      */
     override suspend fun getAllHandlers(): List<IHandler> {
         mutex.withLock {
-            return handlers.values.flatten().toList()
+            return cachedHandlerList.toList()
         }
     }
 
@@ -180,7 +197,7 @@ class HandlerRegistry : IHandlerRegistry {
      */
     override suspend fun canHandle(action: String): Boolean {
         mutex.withLock {
-            return handlers.values.flatten().any { it.canHandle(action) }
+            return cachedHandlerList.any { it.canHandle(action) }
         }
     }
 
@@ -237,6 +254,7 @@ class HandlerRegistry : IHandlerRegistry {
     override suspend fun clear() {
         mutex.withLock {
             handlers.clear()
+            cachedHandlerList = emptyList()
         }
     }
 
@@ -249,7 +267,7 @@ class HandlerRegistry : IHandlerRegistry {
      * @return Number of handlers successfully initialized
      */
     override suspend fun initializeAll(): Int {
-        val allHandlers = mutex.withLock { handlers.values.flatten().toList() }
+        val allHandlers = mutex.withLock { cachedHandlerList.toList() }
         var successCount = 0
         val failedCritical = mutableListOf<String>()
 
@@ -287,7 +305,7 @@ class HandlerRegistry : IHandlerRegistry {
      * @return Number of handlers successfully disposed
      */
     override suspend fun disposeAll(): Int {
-        val allHandlers = mutex.withLock { handlers.values.flatten().toList() }
+        val allHandlers = mutex.withLock { cachedHandlerList.toList() }
         var successCount = 0
 
         allHandlers.forEach { handler ->

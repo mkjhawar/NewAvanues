@@ -1,6 +1,6 @@
 // filename: features/nlu/src/commonMain/kotlin/com/augmentalis/ava/features/nlu/IntentClassifier.kt
 // created: 2025-11-02
-// author: Claude Code
+// author: Manoj Jhawar
 // © Augmentalis Inc, Intelligent Devices LLC
 // TCR: Phase 1 - KMP Migration
 

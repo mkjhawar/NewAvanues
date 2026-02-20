@@ -69,21 +69,97 @@ class RAGCoordinatorDesktop : IRAGCoordinator {
             )
         }
 
-        // TODO: Implement actual RAG retrieval
-        // This would:
-        // 1. Embed the query using the NLU module
-        // 2. Search vector store for similar chunks
-        // 3. Return top-k relevant chunks
+        println("[RAGCoordinatorDesktop] RAG retrieval for: $query")
 
-        // For now, return empty result
-        println("[RAGCoordinatorDesktop] RAG retrieval requested for: $query")
-        println("[RAGCoordinatorDesktop] Selected documents: ${_selectedDocumentIds.value}")
+        // Keyword-based retrieval: tokenize query → score documents by term frequency → top-3
+        val queryTerms = tokenize(query)
+        if (queryTerms.isEmpty()) {
+            return IRAGCoordinator.RAGResult(
+                context = null,
+                citations = emptyList(),
+                retrievalTimeMs = System.currentTimeMillis() - startTime
+            )
+        }
+
+        val selectedDocs = _selectedDocumentIds.value.toSet()
+        val scoredChunks = documentStore
+            .filter { it.key in selectedDocs }
+            .flatMap { (_, doc) -> chunkDocument(doc).map { chunk -> chunk to doc } }
+            .map { (chunk, doc) ->
+                val chunkTerms = tokenize(chunk)
+                val score = queryTerms.sumOf { term ->
+                    chunkTerms.count { it == term }
+                }.toFloat() / chunkTerms.size.coerceAtLeast(1)
+                Triple(chunk, doc, score)
+            }
+            .filter { it.third > 0f }
+            .sortedByDescending { it.third }
+            .take(3)
+
+        if (scoredChunks.isEmpty()) {
+            return IRAGCoordinator.RAGResult(
+                context = null,
+                citations = emptyList(),
+                retrievalTimeMs = System.currentTimeMillis() - startTime
+            )
+        }
+
+        val context = scoredChunks.joinToString("\n\n---\n\n") { (chunk, doc, _) ->
+            "[Source: ${doc.title}]\n$chunk"
+        }
+
+        val citations = scoredChunks.map { (_, doc, score) ->
+            SourceCitation(
+                documentId = doc.id,
+                title = doc.title,
+                relevanceScore = score,
+                snippet = doc.content.take(200)
+            )
+        }
+
+        _recentSourceCitations.value = citations
 
         return IRAGCoordinator.RAGResult(
-            context = null,
-            citations = emptyList(),
+            context = context,
+            citations = citations,
             retrievalTimeMs = System.currentTimeMillis() - startTime
         )
+    }
+
+    /**
+     * Tokenize text into lowercase terms, filtering stopwords and short tokens.
+     */
+    private fun tokenize(text: String): List<String> {
+        val stopwords = setOf("the", "a", "an", "is", "are", "was", "were", "be", "been",
+            "being", "have", "has", "had", "do", "does", "did", "will", "would", "could",
+            "should", "may", "might", "can", "shall", "to", "of", "in", "for", "on", "with",
+            "at", "by", "from", "as", "into", "about", "like", "through", "after", "over",
+            "between", "out", "up", "down", "it", "its", "this", "that", "and", "or", "but",
+            "not", "no", "if", "then", "so", "than", "too", "very", "just", "i", "me", "my",
+            "we", "our", "you", "your", "he", "she", "they", "them", "what", "which", "who")
+        return text.lowercase()
+            .replace(Regex("[^a-z0-9\\s]"), " ")
+            .split(Regex("\\s+"))
+            .filter { it.length > 2 && it !in stopwords }
+    }
+
+    /**
+     * Split a document into overlapping chunks of ~500 characters for retrieval.
+     */
+    private fun chunkDocument(doc: DocumentInfo): List<String> {
+        val content = doc.content
+        if (content.length <= 600) return listOf(content)
+
+        val chunks = mutableListOf<String>()
+        var start = 0
+        val chunkSize = 500
+        val overlap = 100
+        while (start < content.length) {
+            val end = (start + chunkSize).coerceAtMost(content.length)
+            chunks.add(content.substring(start, end))
+            start += chunkSize - overlap
+        }
+        return chunks
     }
 
     override fun buildPromptWithContext(userMessage: String, ragContext: String): String {

@@ -144,6 +144,7 @@ include(":Modules:VideoAvanue")             // KMP video player (Media3 + AVPlay
 include(":Modules:NoteAvanue")              // KMP rich notes with attachments + voice transcription
 include(":Modules:PhotoAvanue")              // KMP camera + video capture (CameraX + AVCaptureSession)
 include(":Modules:RemoteCast")              // KMP screen casting/sharing (MediaProjection + ReplayKit)
+include(":Modules:HTTPAvanue")             // KMP HTTP/1.1 + HTTP/2 server, WebSocket, middleware (NanoHTTPD-inspired)
 include(":Modules:AnnotationAvanue")        // KMP whiteboard/signature/drawing canvas
 
 // Rpc - Cross-platform RPC module

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.devicemanager.accessibility.FeedbackManager
 import com.augmentalis.devicemanager.accessibility.FeedbackManager.*
 import kotlinx.coroutines.launch
@@ -200,9 +201,9 @@ fun HapticSettingsTab(
                         Text(
                             if (hapticState.isAvailable) "Hardware available" else "Hardware not available",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (hapticState.isAvailable) 
-                                MaterialTheme.colorScheme.primary else 
-                                MaterialTheme.colorScheme.error
+                            color = if (hapticState.isAvailable)
+                                AvanueTheme.colors.primary else
+                                AvanueTheme.colors.error
                         )
                     }
                     Switch(
@@ -330,9 +331,9 @@ fun AudioSettingsTab(
                         Text(
                             if (audioState.isAvailable) "Audio system available" else "Audio system not available",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (audioState.isAvailable) 
-                                MaterialTheme.colorScheme.primary else 
-                                MaterialTheme.colorScheme.error
+                            color = if (audioState.isAvailable)
+                                AvanueTheme.colors.primary else
+                                AvanueTheme.colors.error
                         )
                     }
                     Switch(
@@ -563,7 +564,7 @@ fun FeedbackPresetsTab(
             Text(
                 "Choose from pre-configured settings or test different feedback types.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
         
@@ -735,7 +736,7 @@ fun FeedbackTestTypeCard(
                 Text(
                     "Test ${type.name.lowercase()} feedback",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
             
@@ -843,10 +844,10 @@ fun FeedbackCard(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = if (enabled) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (enabled)
+                        AvanueTheme.colors.primary
+                    else
+                        AvanueTheme.colors.textSecondary
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
@@ -858,7 +859,7 @@ fun FeedbackCard(
                 if (!enabled) {
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.errorContainer
+                        color = AvanueTheme.colors.error.copy(alpha = 0.15f)
                     ) {
                         Icon(
                             Icons.Default.Close,
@@ -866,7 +867,7 @@ fun FeedbackCard(
                             modifier = Modifier
                                 .size(16.dp)
                                 .padding(2.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer
+                            tint = AvanueTheme.colors.error
                         )
                     }
                 }
@@ -884,10 +885,10 @@ fun StatusChip(name: String, enabled: Boolean, icon: ImageVector) {
             .height(56.dp)
             .width(80.dp),
         shape = RoundedCornerShape(8.dp),
-        color = if (enabled) 
-            MaterialTheme.colorScheme.primaryContainer 
-        else 
-            MaterialTheme.colorScheme.surfaceVariant
+        color = if (enabled)
+            AvanueTheme.colors.surfaceVariant
+        else
+            AvanueTheme.colors.surface
     ) {
         Column(
             modifier = Modifier
@@ -901,9 +902,9 @@ fun StatusChip(name: String, enabled: Boolean, icon: ImageVector) {
                 contentDescription = name,
                 modifier = Modifier.size(20.dp),
                 tint = if (enabled)
-                    MaterialTheme.colorScheme.primary
+                    AvanueTheme.colors.primary
                 else
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    AvanueTheme.colors.textSecondary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(

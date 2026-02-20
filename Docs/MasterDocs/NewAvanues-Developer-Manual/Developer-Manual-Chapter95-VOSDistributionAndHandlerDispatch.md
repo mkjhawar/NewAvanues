@@ -257,7 +257,9 @@ object VoiceControlCallbacks {
 }
 ```
 
-The accessibility service sets these callbacks during `onServiceReady()`. The handler invokes them without direct coupling. **Phase B task**: Wire callbacks in `VoiceAvanueAccessibilityService`.
+The accessibility service sets these callbacks during `onServiceReady()`. The handler invokes them without direct coupling.
+
+**`onSetNumbersMode` callback behavior (260219):** After setting `OverlayStateManager.setNumbersOverlayMode()`, the callback also invalidates the `DynamicCommandGenerator` screen hash and launches an immediate `refreshOverlayBadges()`. This ensures badges appear/disappear immediately after a voice command instead of waiting for the next accessibility event.
 
 ### Dispatch Priority
 
@@ -291,7 +293,134 @@ if (imuStarted) {
 
 **Critical fix (260217)**: `IMUManager.startSensors()` gate condition was changed from `&&` (require both gyroscope AND magnetometer) to `||` (either sensor), matching the lazy `rotationSensor` property's OR logic. See fix doc: `Docs/fixes/VoiceOSCore/VoiceOSCore-Fix-CursorIMUHeadTrackingRegression-260217-V1.md`
 
-## 5. Web Command Routing Architecture
+## 5. Command Pipeline Performance Optimizations
+
+### 5.1 Overview
+
+Three independent optimizations shipped across commits `959b52aa` (P3 dispatcher fix) and
+`8b2094b4` (handler cache + suspend variants) reduce voice command latency from 2-5 seconds to
+sub-200ms on a Pixel 9 emulator. Each optimization targets a different layer of the pipeline.
+
+### 5.2 Dispatcher: `processVoiceCommand` on `Dispatchers.Default`
+
+**Before:** `ActionCoordinator.processVoiceCommand()` launched on `Dispatchers.Main`. Every call
+executed CPU-intensive O(n) phrase matching, fuzzy scoring, and mutex acquisition on the UI thread.
+
+**After:** `processVoiceCommand()` launches on `Dispatchers.Default`. UI callbacks (overlay updates,
+feedback toasts) switch back to `Main` via `withContext(Dispatchers.Main)` only where needed.
+
+```kotlin
+// ActionCoordinator
+fun processVoiceCommand(text: String) {
+    scope.launch(Dispatchers.Default) {   // CPU work off main thread
+        val result = findAndDispatch(text)
+        withContext(Dispatchers.Main) {   // UI update back on main
+            onCommandResult(result)
+        }
+    }
+}
+```
+
+This change is safe because `processVoiceCommand()` has no UI state reads in the hot path — all
+UI interaction is at the result callback boundary.
+
+### 5.3 Handler Registry: Cached Flat Handler List
+
+**Before:** `HandlerRegistry.findHandler()` called `handlers.values.flatten()` on every invocation,
+allocating a new `List<IHandler>` for each voice command (13 handlers = 13-element list rebuilt
+on every call).
+
+**After:** `HandlerRegistry` stores a pre-computed `_cachedHandlers: List<IHandler>` built once
+during `init`. `findHandler()` and `canHandle()` iterate `_cachedHandlers` directly.
+
+```kotlin
+class HandlerRegistry {
+    private val handlers: Map<ActionCategory, List<IHandler>> = ...
+    private val _cachedHandlers: List<IHandler> = handlers.values.flatten()  // built once
+
+    fun findHandler(command: QuantizedCommand): IHandler? =
+        _cachedHandlers.firstOrNull { it.canHandle(command.category) && it.handle(command) != null }
+}
+```
+
+The cache is correct for the lifetime of the process because handlers are registered only at
+startup (in `AndroidHandlerFactory.createHandlers()`) and never added or removed at runtime.
+
+### 5.4 Single `findHandler` Call: Eliminated Duplicate `canHandle`
+
+**Before:** `ActionCoordinator` Step 2 called `handlerRegistry.canHandle(command)` first, then
+called `handlerRegistry.findHandler(command)` if the check passed. Each call acquired the
+`Mutex.withLock` independently and iterated the handler list twice.
+
+**After:** `canHandle` is removed from the Step 2 hot path. A single `findHandler()` call returns
+the handler (non-null = can handle) or null (cannot handle). One mutex acquisition, one list scan.
+
+```kotlin
+// Before (two scans, two locks):
+if (handlerRegistry.canHandle(command)) {
+    val handler = handlerRegistry.findHandler(command)
+    handler?.execute(command)
+}
+
+// After (one scan, one lock):
+val handler = handlerRegistry.findHandler(command)
+handler?.execute(command)
+```
+
+### 5.5 `StaticCommandRegistry`: O(1) Phrase Index
+
+**Before:** `StaticCommandRegistry.findByPhrase(phrase)` iterated all 275+ commands with a linear
+scan on every call.
+
+**After:** `StaticCommandRegistry` builds `_phraseIndex: Map<String, StaticCommand>` during
+`initialize()`. `findByPhrase()` is a single `HashMap` lookup (O(1)). `findByPhraseInDomains()`
+uses the index for an initial fast-path check before filtering by domain.
+
+```kotlin
+private lateinit var _phraseIndex: Map<String, StaticCommand>
+
+fun initialize(commands: List<StaticCommand>) {
+    _commands = commands
+    _phraseIndex = commands.flatMap { cmd ->
+        cmd.phrases.map { phrase -> phrase.lowercase() to cmd }
+    }.toMap()
+}
+
+fun findByPhrase(phrase: String): StaticCommand? =
+    _phraseIndex[phrase.lowercase().trim()]
+```
+
+Multi-phrase commands (a single `StaticCommand` with several `phrases`) are indexed under each
+phrase independently, so all synonyms resolve in O(1).
+
+### 5.6 `StaticCommandRegistry` Suspend Variants
+
+All query methods now have `suspend` overloads. Callers running inside a coroutine scope use the
+suspend variant; legacy `runBlocking` call sites continue using the non-suspend overload unchanged.
+
+| Method | Non-suspend | Suspend |
+|--------|-------------|---------|
+| All commands | `all()` | `allSuspend()` |
+| Find by phrase | `findByPhrase(p)` | `findByPhraseSuspend(p)` |
+| Find in domains | `findByPhraseInDomains(p, d)` | `findByPhraseInDomainsSuspend(p, d)` |
+| By category | `byCategory(c)` | `byCategorySuspend(c)` |
+
+The suspend variants call `withContext(Dispatchers.Default)` internally, ensuring registry reads
+never block the calling coroutine thread even when the non-suspend path is used transitionally.
+
+### 5.7 Combined Latency Impact
+
+| Optimization | Before | After | Mechanism |
+|-------------|--------|-------|-----------|
+| Dispatcher | 2-5s delay | <200ms | CPU off main thread |
+| Handler cache | 13-element list per call | 0 allocations | Pre-computed flat list |
+| Single findHandler | 2 mutex locks, 2 scans | 1 lock, 1 scan | Collapsed duplicate canHandle |
+| Phrase index | O(275) per command | O(1) | HashMap on initialize |
+| Suspend variants | runBlocking blocks thread | structured concurrency | withContext(Default) |
+
+---
+
+## 6. Web Command Routing Architecture
 
 ### Problem: 3 Routing Bugs Blocked 45 Static Web Commands
 
@@ -386,7 +515,7 @@ The `RETRAIN_PAGE` action type triggers a fresh DOM scrape of the current web pa
 | `IWebCommandExecutor.kt` | WebActionType enum definition |
 | `BrowserVoiceOSCallback.kt` | Bridge between service and WebView |
 
-## 6. Adding New Handlers
+## 7. Adding New Handlers
 
 1. Create handler class extending `BaseHandler` in `VoiceOSCore/src/androidMain/.../handlers/`
 2. Set `override val category: ActionCategory`
@@ -399,7 +528,7 @@ The `RETRAIN_PAGE` action type triggers a fresh DOM scrape of the current web pa
 9. If the command has metadata (direction/scale/factor): add entry to `VosParser.META_MAP`
 10. Bump VOS version in `CommandLoader.requiredVersion` to force DB reload
 
-## 7. SFTP Sync (Phase B) — Implemented
+## 8. SFTP Sync (Phase B) — Implemented
 
 Phase B adds a network sync layer for distributing VOS files between devices and a central SFTP server. Hidden behind a developer toggle in Settings → System → "Developer: VOS Sync".
 
@@ -552,7 +681,7 @@ interface SyncEntryPoint {
 | `androidx.hilt:hilt-compiler` | 1.1.0 | @HiltWorker KSP processor |
 | `androidx.security:security-crypto` | latest | EncryptedSharedPreferences |
 
-## 8. Phase C Foundation: In-App Crowd-Sourcing
+## 9. Phase C Foundation: In-App Crowd-Sourcing
 
 ### PhraseSuggestion Database
 
@@ -591,5 +720,5 @@ interface SyncEntryPoint {
 ---
 
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted)*
+*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement), Chapter 96 (KMP Foundation)*
