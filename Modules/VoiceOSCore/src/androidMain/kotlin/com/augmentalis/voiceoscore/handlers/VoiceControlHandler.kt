@@ -39,8 +39,11 @@ object VoiceControlCallbacks {
     /** Stop dictation mode. Returns true if successfully stopped. */
     @Volatile var onStopDictation: (() -> Boolean)? = null
 
-    /** Show voice commands help overlay. Returns true if shown. */
+    /** Show numbered badges on interactive elements ("help"). Returns true if shown. */
     @Volatile var onShowCommands: (() -> Boolean)? = null
+
+    /** List available voice command categories ("list commands"). Returns true if shown. */
+    @Volatile var onListCommands: (() -> Boolean)? = null
 
     // Numbers overlay is handled by NumbersOverlayHandler (ACCESSIBILITY category)
     // via NumbersOverlayExecutor, NOT via callbacks. This avoids duplicate handlers
@@ -53,6 +56,7 @@ object VoiceControlCallbacks {
         onStartDictation = null
         onStopDictation = null
         onShowCommands = null
+        onListCommands = null
     }
 }
 
@@ -69,8 +73,10 @@ class VoiceControlHandler(
         // Dictation
         "start dictation", "dictation", "type mode",
         "stop dictation", "end dictation", "command mode",
-        // Help
-        "show voice commands", "what can i say", "help"
+        // Help — shows numbered badges on interactive elements
+        "help",
+        // List commands — shows available voice command categories
+        "what can i say", "list commands", "show all commands"
         // Numbers overlay: handled by NumbersOverlayHandler (ACCESSIBILITY category)
         // which has the NumbersOverlayExecutor with proper assignment clearing
     )
@@ -97,9 +103,13 @@ class VoiceControlHandler(
             phrase in listOf("stop dictation", "end dictation", "command mode") ->
                 invokeCallback(VoiceControlCallbacks.onStopDictation, "Dictation stopped", "Cannot stop dictation")
 
-            // Help
-            phrase in listOf("show voice commands", "what can i say", "help") ->
-                invokeCallback(VoiceControlCallbacks.onShowCommands, "Showing commands", "Cannot show commands")
+            // Help — shows numbered badges on interactive elements
+            phrase == "help" ->
+                invokeCallback(VoiceControlCallbacks.onShowCommands, "Showing numbers", "Cannot show numbers")
+
+            // List commands — shows available voice command categories
+            phrase in listOf("what can i say", "list commands", "show all commands") ->
+                invokeCallback(VoiceControlCallbacks.onListCommands, "Listing commands", "Cannot list commands")
 
             // Numbers overlay: delegated to NumbersOverlayHandler (ACCESSIBILITY category)
             // which owns NumbersOverlayExecutor with proper assignment clearing.

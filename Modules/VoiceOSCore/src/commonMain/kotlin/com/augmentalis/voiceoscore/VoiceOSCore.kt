@@ -97,6 +97,16 @@ class VoiceOSCore private constructor(
     var onSystemAction: ((String) -> Unit)? = null
 
     /**
+     * Current speech configuration (set during init, updated during mode switch).
+     * Used by setSpeechMode() to build new config without losing existing settings.
+     */
+    @Volatile
+    private var currentSpeechConfig: SpeechConfig = SpeechConfig(
+        language = configuration.voiceLanguage,
+        confidenceThreshold = configuration.confidenceThreshold
+    )
+
+    /**
      * Installed app phrases list
      */
     private val appHandlerPhrases = mutableListOf<String>()
@@ -337,6 +347,67 @@ class VoiceOSCore private constructor(
                 handlerCount = coordinator.getAllSupportedActions().size
             )
         )
+    }
+
+    /**
+     * Switch the speech recognition mode at runtime.
+     *
+     * Used for dictation mode transitions:
+     * - COMBINED_COMMAND → DICTATION: Stops recognition, reconfigures for open grammar
+     *   with optional exit commands, then restarts.
+     * - DICTATION → COMBINED_COMMAND: Stops recognition, reloads full command grammar,
+     *   then restarts.
+     *
+     * The recognizer must be restarted because Android's SpeechRecognizer uses different
+     * LANGUAGE_MODEL intents for command vs dictation modes. There is a brief ~500ms gap
+     * during the restart — the feedback overlay provides visual confirmation.
+     *
+     * @param mode Target speech mode
+     * @param exitCommands Optional commands to keep active during dictation (e.g., "stop dictation")
+     */
+    suspend fun setSpeechMode(mode: SpeechMode, exitCommands: List<String> = emptyList()) {
+        val engine = speechEngine ?: return
+
+        // Stop current recognition
+        engine.stopListening()
+
+        // Reconfigure the engine for the new mode
+        val newConfig = currentSpeechConfig.withMode(mode)
+        currentSpeechConfig = newConfig
+        engine.updateConfiguration(newConfig)
+
+        if (mode == SpeechMode.DICTATION && exitCommands.isNotEmpty()) {
+            // In dictation mode, only register exit commands so the user
+            // can say "stop dictation" to return to command mode
+            engine.updateCommands(exitCommands)
+        } else if (mode.usesCommandMatching()) {
+            // Restore full command grammar
+            val staticPhrases = staticCommandPersistence?.getAllPhrases()
+                ?: StaticCommandRegistry.allPhrases()
+            val dynamicPhrases = coordinator.getDynamicCommands().map { it.phrase }
+            val fullGrammar = buildSet {
+                addAll(staticPhrases)
+                addAll(appHandlerPhrases)
+                addAll(dynamicPhrases)
+                addAll(webCommandPhrases)
+            }
+            engine.updateCommands(fullGrammar.toList())
+            allRegisteredCommands.clear()
+            allRegisteredCommands.addAll(fullGrammar)
+        }
+
+        // Restart recognition with new configuration
+        val result = engine.startListening()
+        if (result.isSuccess) {
+            stateManager.transition(
+                ServiceState.Listening(
+                    speechEngine = configuration.speechEngine,
+                    wakeWordEnabled = configuration.enableWakeWord
+                )
+            )
+        }
+
+        println("[VoiceOSCore] Speech mode switched to $mode (exit commands: ${exitCommands.size})")
     }
 
     /**

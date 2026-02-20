@@ -43,6 +43,9 @@ object OverlayStateManager {
     private val _badgeTheme = MutableStateFlow(BadgeTheme.GREEN)
     val badgeTheme: StateFlow<BadgeTheme> = _badgeTheme.asStateFlow()
 
+    private val _feedbackMessage = MutableStateFlow<String?>(null)
+    val feedbackMessage: StateFlow<String?> = _feedbackMessage.asStateFlow()
+
     private val _showAppDetectionDialog = MutableStateFlow<String?>(null)
     val showAppDetectionDialog: StateFlow<String?> = _showAppDetectionDialog.asStateFlow()
 
@@ -105,6 +108,24 @@ object OverlayStateManager {
     fun setInstructionBarMode(mode: InstructionBarMode) {
         _instructionBarMode.value = mode
         LoggingUtils.d("Instruction bar mode: $mode", TAG)
+    }
+
+    // ===== Feedback Toast =====
+
+    /**
+     * Show a transient feedback message to the user.
+     *
+     * Used by VoiceControlCallbacks to confirm voice control actions
+     * (e.g., "Voice muted", "Dictation started"). The overlay service
+     * auto-dismisses after a brief delay.
+     */
+    fun showFeedback(message: String) {
+        _feedbackMessage.value = message
+        LoggingUtils.d("Feedback: $message", TAG)
+    }
+
+    fun clearFeedback() {
+        _feedbackMessage.value = null
     }
 
     // ===== Badge Theme =====
