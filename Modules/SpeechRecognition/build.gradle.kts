@@ -6,6 +6,7 @@
  *
  * Structure:
  * - commonMain: Shared API, models, and logic
+ * - jvmMain: Shared JVM code for Android + Desktop (VSM encryption via javax.crypto)
  * - androidMain: Android-specific engines (Vosk, Vivoka, Google, Whisper)
  * - iosMain: iOS-specific engines (Apple Speech + Whisper via cinterop)
  * - macosMain: macOS-specific engines (Apple Speech via SFSpeechRecognizer)
@@ -51,12 +52,17 @@ kotlin {
                 //   libs/ios-sim-arm64/libwhisper_bridge.a (simulator arm64)
             }
 
-            // Generate Kotlin bindings from whisper_bridge.h via cinterop
+            // Generate Kotlin bindings via cinterop
             it.compilations.getByName("main") {
                 cinterops {
+                    // whisper.cpp bridge for offline speech recognition
                     val whisper by creating {
                         defFile("src/nativeInterop/cinterop/whisper.def")
                         includeDirs("src/nativeInterop/cinterop")
+                    }
+                    // CommonCrypto for VSM model file encryption/decryption
+                    val commoncrypto by creating {
+                        defFile("src/nativeInterop/cinterop/commoncrypto.def")
                     }
                 }
             }
@@ -100,7 +106,14 @@ kotlin {
             }
         }
 
+        // Shared JVM source set for Android + Desktop
+        // Contains: VSM encryption/decryption (javax.crypto), shared JVM utilities
+        val jvmMain by creating {
+            dependsOn(commonMain)
+        }
+
         val androidMain by getting {
+            dependsOn(jvmMain)
             dependencies {
                 // Android Core
                 implementation(libs.androidx.core.ktx)
@@ -203,6 +216,7 @@ kotlin {
             }
         }
         val desktopMain by getting {
+            dependsOn(jvmMain)
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
             }
