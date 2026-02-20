@@ -9,56 +9,10 @@
  */
 package com.augmentalis.speechrecognition.whisper
 
+import android.app.ActivityManager
 import android.content.Context
-import android.os.Build
 import android.util.Log
 import java.io.File
-
-/**
- * Whisper model size tiers, ordered by quality vs speed tradeoff.
- */
-enum class WhisperModelSize(
-    val displayName: String,
-    val ggmlFileName: String,
-    val approxSizeMB: Int,
-    val minRamMB: Int,
-    val relativSpeed: Float // 1.0 = tiny baseline
-) {
-    TINY("Tiny", "ggml-tiny.bin", 75, 256, 1.0f),
-    TINY_EN("Tiny (English)", "ggml-tiny.en.bin", 75, 256, 1.0f),
-    BASE("Base", "ggml-base.bin", 142, 512, 2.0f),
-    BASE_EN("Base (English)", "ggml-base.en.bin", 142, 512, 2.0f),
-    SMALL("Small", "ggml-small.bin", 466, 1024, 6.0f),
-    SMALL_EN("Small (English)", "ggml-small.en.bin", 466, 1024, 6.0f),
-    MEDIUM("Medium", "ggml-medium.bin", 1500, 2048, 20.0f),
-    MEDIUM_EN("Medium (English)", "ggml-medium.en.bin", 1500, 2048, 20.0f);
-
-    val isEnglishOnly: Boolean get() = name.endsWith("_EN")
-
-    companion object {
-        /**
-         * Auto-select best model for this device based on available RAM.
-         */
-        fun autoSelect(context: Context, languageCode: String): WhisperModelSize {
-            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE)
-                    as android.app.ActivityManager
-            val memInfo = android.app.ActivityManager.MemoryInfo()
-            activityManager.getMemoryInfo(memInfo)
-            val totalRamMB = (memInfo.totalMem / (1024 * 1024)).toInt()
-
-            val isEnglish = languageCode.startsWith("en")
-
-            return when {
-                totalRamMB >= 4096 && isEnglish -> SMALL_EN
-                totalRamMB >= 4096 -> SMALL
-                totalRamMB >= 2048 && isEnglish -> BASE_EN
-                totalRamMB >= 2048 -> BASE
-                isEnglish -> TINY_EN
-                else -> TINY
-            }
-        }
-    }
-}
 
 /**
  * Complete configuration for the Whisper engine.
@@ -166,9 +120,18 @@ data class WhisperConfig(
 
         /**
          * Create a config auto-tuned for the current device.
+         * Uses ActivityManager to determine available RAM and selects the best model.
          */
         fun autoTuned(context: Context, language: String = "en"): WhisperConfig {
-            val modelSize = WhisperModelSize.autoSelect(context, language)
+            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE)
+                    as ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memInfo)
+            val totalRamMB = (memInfo.totalMem / (1024 * 1024)).toInt()
+
+            val isEnglish = language.startsWith("en")
+            val modelSize = WhisperModelSize.forAvailableRAM(totalRamMB, isEnglish)
+
             return WhisperConfig(
                 modelSize = modelSize,
                 language = language

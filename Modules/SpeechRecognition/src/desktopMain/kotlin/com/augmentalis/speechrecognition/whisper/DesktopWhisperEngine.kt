@@ -1,25 +1,26 @@
 /**
- * WhisperEngine.kt - Whisper speech recognition engine orchestrator
+ * DesktopWhisperEngine.kt - Desktop Whisper speech recognition engine
  *
  * Copyright (C) Augmentalis Inc, Intelligent Devices LLC
  * Author: Manoj Jhawar
  * Created: 2026-02-20
  *
- * Orchestrates the Whisper speech recognition pipeline:
- * WhisperAudio (capture) → WhisperVAD (chunking) → WhisperNative (transcription)
+ * Desktop equivalent of Android's WhisperEngine. Orchestrates:
+ * DesktopWhisperAudio (javax.sound capture) → WhisperVAD (commonMain chunking) →
+ * DesktopWhisperNative (JNI transcription)
  *
  * Lifecycle: UNINITIALIZED → LOADING_MODEL → READY → LISTENING → PROCESSING → READY → ...
- * Supports: offline recognition, multi-language, auto language detection, translation.
  */
 package com.augmentalis.speechrecognition.whisper
 
-import android.content.Context
-import android.util.Log
 import com.augmentalis.speechrecognition.CommandCache
 import com.augmentalis.speechrecognition.RecognitionResult
 import com.augmentalis.speechrecognition.SpeechError
 import com.augmentalis.speechrecognition.SpeechMode
-import com.augmentalis.speechrecognition.VoiceStateManager
+import com.augmentalis.speechrecognition.logDebug
+import com.augmentalis.speechrecognition.logError
+import com.augmentalis.speechrecognition.logInfo
+import com.augmentalis.speechrecognition.logWarn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,22 +37,19 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Main Whisper speech recognition engine.
+ * Desktop Whisper speech recognition engine.
  *
- * Integrates audio capture, VAD-based chunking, and native whisper.cpp
- * transcription into a unified engine that matches the VivokaEngine pattern.
+ * Uses javax.sound.sampled for audio capture and whisper.cpp JNI for transcription.
+ * Shares the same VAD algorithm (commonMain) as the Android engine.
  */
-class WhisperEngine(
-    private val context: Context
-) {
+class DesktopWhisperEngine {
+
     companion object {
-        private const val TAG = "WhisperEngine"
+        private const val TAG = "DesktopWhisperEngine"
         private const val ENGINE_NAME = "Whisper"
         private const val ENGINE_VERSION = "1.0.0"
         private const val MAX_INIT_RETRIES = 2
         private const val INIT_RETRY_DELAY_MS = 1000L
-
-        /** Polling interval for checking audio buffer during listening */
         private const val LISTEN_POLL_MS = 100L
     }
 
@@ -60,18 +58,17 @@ class WhisperEngine(
     val state: WhisperEngineState get() = engineState.get()
 
     // Configuration
-    private var config = WhisperConfig()
+    private var config = DesktopWhisperConfig()
     private var speechMode: SpeechMode = SpeechMode.DYNAMIC_COMMAND
 
-    // Native context pointer (0 = not loaded)
+    // Native context pointer
     @Volatile
     private var contextPtr: Long = 0L
 
     // Components
-    private val audio = WhisperAudio()
+    private val audio = DesktopWhisperAudio()
     private var vad: WhisperVAD? = null
     private val commandCache = CommandCache()
-    private var voiceStateManager: VoiceStateManager? = null
 
     // Coroutine management
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -91,18 +88,15 @@ class WhisperEngine(
 
     /**
      * Initialize the engine: load native library and model.
-     *
-     * @param whisperConfig Whisper-specific configuration
-     * @return true if initialization succeeded
      */
-    suspend fun initialize(whisperConfig: WhisperConfig = WhisperConfig.autoTuned(context)): Boolean {
+    suspend fun initialize(whisperConfig: DesktopWhisperConfig = DesktopWhisperConfig.autoTuned()): Boolean {
         if (engineState.get() == WhisperEngineState.READY) {
-            Log.w(TAG, "Already initialized")
+            logWarn(TAG, "Already initialized")
             return true
         }
 
         whisperConfig.validate().getOrElse { e ->
-            Log.e(TAG, "Invalid config: ${e.message}")
+            logError(TAG, "Invalid config: ${e.message}")
             return false
         }
 
@@ -117,7 +111,7 @@ class WhisperEngine(
                     val success = performInitialization()
                     if (success) {
                         engineState.set(WhisperEngineState.READY)
-                        Log.i(TAG, "Engine initialized: model=${config.modelSize}, " +
+                        logInfo(TAG, "Engine initialized: model=${config.modelSize}, " +
                                 "threads=${config.effectiveThreadCount()}, lang=${config.language}")
                         return@withContext true
                     }
@@ -125,7 +119,7 @@ class WhisperEngine(
                     throw e
                 } catch (e: Exception) {
                     lastError = e
-                    Log.w(TAG, "Init attempt $attempt failed: ${e.message}")
+                    logWarn(TAG, "Init attempt $attempt failed: ${e.message}")
                     if (attempt < MAX_INIT_RETRIES) {
                         delay(INIT_RETRY_DELAY_MS * attempt)
                     }
@@ -133,7 +127,7 @@ class WhisperEngine(
             }
 
             engineState.set(WhisperEngineState.ERROR)
-            Log.e(TAG, "Initialization failed after $MAX_INIT_RETRIES attempts", lastError)
+            logError(TAG, "Initialization failed after $MAX_INIT_RETRIES attempts", lastError)
             scope.launch {
                 _errorFlow.emit(SpeechError(
                     code = SpeechError.ERROR_MODEL,
@@ -148,12 +142,11 @@ class WhisperEngine(
 
     /**
      * Start listening for speech.
-     * Audio capture begins, and transcription runs when speech chunks are detected.
      */
     fun startListening(mode: SpeechMode = speechMode): Boolean {
         val currentState = engineState.get()
         if (currentState != WhisperEngineState.READY && currentState != WhisperEngineState.PAUSED) {
-            Log.w(TAG, "Cannot start listening from state: $currentState")
+            logWarn(TAG, "Cannot start listening from state: $currentState")
             return false
         }
 
@@ -161,33 +154,32 @@ class WhisperEngine(
 
         if (!audio.isRecording()) {
             if (!audio.start()) {
-                Log.e(TAG, "Failed to start audio capture")
+                logError(TAG, "Failed to start audio capture")
                 return false
             }
         }
 
         engineState.set(WhisperEngineState.LISTENING)
 
-        // Launch the listen loop that monitors audio and triggers transcription
         listenJob?.cancel()
         listenJob = scope.launch {
             listenLoop()
         }
 
-        Log.i(TAG, "Listening started, mode=$mode")
+        logInfo(TAG, "Listening started, mode=$mode")
         return true
     }
 
     /**
-     * Stop listening. Audio capture stops and any pending transcription completes.
+     * Stop listening.
      */
     fun stopListening() {
         listenJob?.cancel()
         listenJob = null
 
-        // Transcribe whatever remains in the buffer
+        // Transcribe remaining buffer
         val remainingAudio = audio.drainBuffer()
-        if (remainingAudio.size > config.minSpeechDurationMs * WhisperAudio.SAMPLE_RATE / 1000) {
+        if (remainingAudio.size > config.minSpeechDurationMs * DesktopWhisperAudio.SAMPLE_RATE / 1000) {
             scope.launch {
                 transcribeChunk(remainingAudio)
             }
@@ -200,7 +192,7 @@ class WhisperEngine(
             engineState.set(WhisperEngineState.READY)
         }
 
-        Log.i(TAG, "Listening stopped")
+        logInfo(TAG, "Listening stopped")
     }
 
     /**
@@ -212,7 +204,7 @@ class WhisperEngine(
             listenJob = null
             audio.stop()
             engineState.set(WhisperEngineState.PAUSED)
-            Log.i(TAG, "Paused")
+            logInfo(TAG, "Paused")
         }
     }
 
@@ -224,71 +216,35 @@ class WhisperEngine(
         return startListening(speechMode)
     }
 
-    /**
-     * Set commands for command-mode recognition.
-     */
     fun setCommands(staticCommands: List<String>, dynamicCommands: List<String> = emptyList()) {
         commandCache.setStaticCommands(staticCommands)
         commandCache.setDynamicCommands(dynamicCommands)
-        Log.d(TAG, "Commands updated: ${staticCommands.size} static, ${dynamicCommands.size} dynamic")
+        logDebug(TAG, "Commands updated: ${staticCommands.size} static, ${dynamicCommands.size} dynamic")
     }
 
-    /**
-     * Set the speech recognition mode.
-     */
     fun setMode(mode: SpeechMode) {
         speechMode = mode
-        Log.d(TAG, "Mode set to: $mode")
+        logDebug(TAG, "Mode set to: $mode")
     }
 
-    /**
-     * Set language. May require model reload if switching to/from English-only model.
-     */
     fun setLanguage(language: String) {
         if (config.language == language) return
         config = config.copy(language = language)
-        Log.i(TAG, "Language set to: $language")
+        logInfo(TAG, "Language set to: $language")
     }
 
-    /**
-     * Attach a VoiceStateManager for mute/sleep/dictation state integration.
-     */
-    fun setVoiceStateManager(manager: VoiceStateManager) {
-        voiceStateManager = manager
-    }
-
-    /**
-     * Check if currently listening.
-     */
     fun isListening(): Boolean = engineState.get() == WhisperEngineState.LISTENING
-
-    /**
-     * Check if engine is ready (model loaded, can start listening).
-     */
     fun isReady(): Boolean = engineState.get() == WhisperEngineState.READY
-
-    /**
-     * Get engine info.
-     */
     fun getEngineName(): String = ENGINE_NAME
     fun getEngineVersion(): String = ENGINE_VERSION
     fun requiresNetwork(): Boolean = false
     fun getMemoryUsageMB(): Int = config.modelSize.approxSizeMB
 
-    fun getPerformanceMetrics(): Map<String, Any> = mapOf(
-        "engineVersion" to ENGINE_VERSION,
-        "modelSize" to config.modelSize.name,
-        "totalTranscriptions" to totalTranscriptions,
-        "averageLatencyMs" to averageLatencyMs,
-        "threads" to config.effectiveThreadCount(),
-        "language" to config.language
-    )
-
     /**
      * Destroy the engine and release all resources.
      */
     fun destroy() {
-        Log.d(TAG, "Destroying WhisperEngine")
+        logDebug(TAG, "Destroying DesktopWhisperEngine")
 
         listenJob?.cancel()
         listenJob = null
@@ -296,7 +252,7 @@ class WhisperEngine(
         audio.release()
 
         if (contextPtr != 0L) {
-            WhisperNative.freeContext(contextPtr)
+            DesktopWhisperNative.freeContext(contextPtr)
             contextPtr = 0L
         }
 
@@ -304,23 +260,20 @@ class WhisperEngine(
         engineState.set(WhisperEngineState.DESTROYED)
         scope.cancel()
 
-        Log.d(TAG, "WhisperEngine destroyed")
+        logDebug(TAG, "DesktopWhisperEngine destroyed")
     }
 
     // --- Private implementation ---
 
-    /**
-     * Perform the actual initialization: load native lib + model.
-     */
     private suspend fun performInitialization(): Boolean {
         // Step 1: Load native library
-        if (!WhisperNative.ensureLoaded()) {
-            throw IllegalStateException("Failed to load whisper-jni native library")
+        if (!DesktopWhisperNative.ensureLoaded()) {
+            throw IllegalStateException("Failed to load whisper-jni native library on desktop")
         }
 
         // Step 2: Initialize audio
         if (!audio.initialize()) {
-            throw IllegalStateException("Failed to initialize audio capture")
+            throw IllegalStateException("Failed to initialize desktop audio capture")
         }
 
         audio.onError = { error ->
@@ -329,49 +282,47 @@ class WhisperEngine(
             }
         }
 
-        // Step 2b: Initialize VAD
+        // Step 3: Initialize VAD (from commonMain)
         vad = WhisperVAD(
-            speechThreshold = 0f, // auto-calibrate from noise floor
+            speechThreshold = 0f, // auto-calibrate
             silenceTimeoutMs = config.silenceThresholdMs,
             minSpeechDurationMs = config.minSpeechDurationMs,
             maxSpeechDurationMs = config.maxChunkDurationMs,
-            paddingMs = 150
+            hangoverFrames = 5,
+            paddingMs = 150,
+            sampleRate = DesktopWhisperAudio.SAMPLE_RATE
         )
 
-        // Step 3: Load model
-        val modelPath = config.resolveModelPath(context)
+        // Step 4: Load model
+        val modelPath = config.resolveModelPath()
             ?: throw IllegalStateException(
                 "Whisper model not found: ${config.modelSize.ggmlFileName}. " +
-                "Download the model first using WhisperModelManager."
+                "Download to: ${config.getModelDirectory().absolutePath}"
             )
 
-        Log.i(TAG, "Loading model: $modelPath")
-        val ptr = WhisperNative.initContext(modelPath)
+        logInfo(TAG, "Loading model: $modelPath")
+        val ptr = DesktopWhisperNative.initContext(modelPath)
         if (ptr == 0L) {
             throw IllegalStateException("Failed to load whisper model: $modelPath")
         }
 
         contextPtr = ptr
-        Log.i(TAG, "Model loaded successfully, system info: ${WhisperNative.getSystemInfo()}")
+        logInfo(TAG, "Model loaded, system info: ${DesktopWhisperNative.getSystemInfo()}")
         return true
     }
 
     /**
-     * Main listen loop — feeds audio through VAD, which emits speech chunks
-     * for transcription. This replaces the simple energy-based approach with
-     * proper voice activity detection including adaptive threshold, hangover,
-     * and padding.
+     * Main listen loop — feeds audio through VAD, which emits speech chunks.
      */
     private suspend fun listenLoop() {
-        Log.d(TAG, "Listen loop started (VAD-driven)")
+        logDebug(TAG, "Listen loop started (VAD-driven)")
 
         val activeVad = vad ?: run {
-            Log.e(TAG, "VAD not initialized")
+            logError(TAG, "VAD not initialized")
             return
         }
 
-        // Wire VAD chunk callback to transcription
-        activeVad.onSpeechChunkReady = OnSpeechChunkReady { audioData, durationMs ->
+        activeVad.onSpeechChunkReady = OnSpeechChunkReady { audioData, _ ->
             scope.launch {
                 engineState.set(WhisperEngineState.PROCESSING)
                 transcribeChunk(audioData)
@@ -387,13 +338,11 @@ class WhisperEngine(
         while (scope.isActive && engineState.get() == WhisperEngineState.LISTENING) {
             delay(LISTEN_POLL_MS)
 
-            // Drain the audio buffer and feed through VAD
             val samples = audio.drainBuffer()
             if (samples.isNotEmpty()) {
                 val nowMs = System.currentTimeMillis()
                 activeVad.processAudio(samples, nowMs)
 
-                // Emit "listening" partial indicator when VAD detects speech
                 if (activeVad.getState() == VADState.SPEECH && nowMs - lastPartialEmitMs > 500) {
                     lastPartialEmitMs = nowMs
                     _resultFlow.emit(RecognitionResult(
@@ -408,9 +357,8 @@ class WhisperEngine(
             }
         }
 
-        // Flush any remaining speech when stopping
         activeVad.flush()
-        Log.d(TAG, "Listen loop ended")
+        logDebug(TAG, "Listen loop ended")
     }
 
     /**
@@ -419,15 +367,15 @@ class WhisperEngine(
     private suspend fun transcribeChunk(audioData: FloatArray) {
         val ptr = contextPtr
         if (ptr == 0L) {
-            Log.w(TAG, "Cannot transcribe — model not loaded")
+            logWarn(TAG, "Cannot transcribe — model not loaded")
             return
         }
 
         try {
-            val audioDurationMs = (audioData.size * 1000L) / WhisperAudio.SAMPLE_RATE
+            val audioDurationMs = (audioData.size * 1000L) / DesktopWhisperAudio.SAMPLE_RATE
 
             val result = withContext(Dispatchers.Default) {
-                WhisperNative.transcribeToText(
+                DesktopWhisperNative.transcribeToText(
                     contextPtr = ptr,
                     numThreads = config.effectiveThreadCount(),
                     audioData = audioData
@@ -435,11 +383,10 @@ class WhisperEngine(
             }
 
             if (result.text.isBlank()) {
-                Log.d(TAG, "Empty transcription result (${audioDurationMs}ms audio, ${result.processingTimeMs}ms processing)")
+                logDebug(TAG, "Empty transcription (${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc)")
                 return
             }
 
-            // Update performance stats
             totalTranscriptions++
             latencySum += result.processingTimeMs
             averageLatencyMs = latencySum / totalTranscriptions
@@ -448,24 +395,22 @@ class WhisperEngine(
                 result.processingTimeMs.toFloat() / audioDurationMs
             } else 0f
 
-            Log.i(TAG, "Transcribed: '${result.text}' " +
+            logInfo(TAG, "Transcribed: '${result.text}' " +
                     "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, RTF=${"%.2f".format(realTimeFactor)})")
 
-            // Build word timestamps from segments
             val wordTimestamps = result.segments.map { seg ->
                 com.augmentalis.speechrecognition.WordTimestamp(
                     word = seg.text,
                     startTime = seg.startTimeMs / 1000f,
                     endTime = seg.endTimeMs / 1000f,
-                    confidence = 0.85f // whisper doesn't expose per-segment confidence yet
+                    confidence = 0.85f
                 )
             }
 
-            // Emit recognition result
             val recognitionResult = RecognitionResult(
                 text = result.text,
                 originalText = result.text,
-                confidence = 0.85f, // Default confidence for whisper — refined in Phase E
+                confidence = 0.85f,
                 isPartial = false,
                 isFinal = true,
                 engine = ENGINE_NAME,
@@ -476,19 +421,17 @@ class WhisperEngine(
                     "audioDurationMs" to audioDurationMs,
                     "realTimeFactor" to realTimeFactor,
                     "segmentCount" to result.segments.size,
-                    "modelSize" to config.modelSize.name
+                    "modelSize" to config.modelSize.name,
+                    "platform" to "desktop"
                 )
             )
 
             _resultFlow.emit(recognitionResult)
 
-            // Update voice state
-            voiceStateManager?.updateCommandExecutionTime()
-
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Transcription error", e)
+            logError(TAG, "Transcription error", e)
             _errorFlow.emit(SpeechError(
                 code = SpeechError.ERROR_UNKNOWN,
                 message = "Transcription failed: ${e.message}",

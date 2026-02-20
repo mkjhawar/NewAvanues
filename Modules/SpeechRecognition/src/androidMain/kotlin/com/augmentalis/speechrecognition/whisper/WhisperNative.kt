@@ -149,17 +149,3 @@ object WhisperNative {
         }
     }
 }
-
-/** Result of a transcription operation. */
-data class TranscriptionResult(
-    val text: String,
-    val segments: List<TranscriptionSegment>,
-    val processingTimeMs: Long
-)
-
-/** A single timed segment from transcription. */
-data class TranscriptionSegment(
-    val text: String,
-    val startTimeMs: Long,
-    val endTimeMs: Long
-)

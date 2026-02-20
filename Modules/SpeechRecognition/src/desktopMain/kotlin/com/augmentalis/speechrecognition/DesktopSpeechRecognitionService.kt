@@ -6,19 +6,30 @@
  * Created: 2026-01-18
  *
  * Desktop-specific implementation of SpeechRecognitionService.
- * Delegates to Vosk or Whisper for offline recognition.
+ * Delegates to DesktopWhisperEngine for offline recognition via whisper.cpp JNI.
+ * Future: VOSK, Vivoka Desktop, Google Cloud STT, macOS Apple Speech.
  */
 package com.augmentalis.speechrecognition
 
 import com.augmentalis.nlu.matching.CommandMatchingService
+import com.augmentalis.speechrecognition.whisper.DesktopWhisperConfig
+import com.augmentalis.speechrecognition.whisper.DesktopWhisperEngine
+import com.augmentalis.speechrecognition.whisper.WhisperEngineState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 
 /**
  * Desktop implementation of SpeechRecognitionService.
  *
- * Uses Vosk or Whisper for speech recognition on desktop platforms.
+ * Routes to the appropriate engine based on [SpeechConfig.engine]:
+ * - WHISPER: DesktopWhisperEngine (offline, whisper.cpp via JNI)
+ * - Others: not yet implemented, falls back to Whisper
  */
 class DesktopSpeechRecognitionService : SpeechRecognitionService {
 
@@ -38,6 +49,12 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
     private val resultProcessor = ResultProcessor(commandMatcher = commandMatcher)
     private val commandCache = CommandCache()
 
+    // Engine
+    private var whisperEngine: DesktopWhisperEngine? = null
+
+    // Coroutine scope for flow collection
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     // Flows
     private val _resultFlow = MutableSharedFlow<RecognitionResult>(replay = 1)
     override val resultFlow: SharedFlow<RecognitionResult> = _resultFlow.asSharedFlow()
@@ -50,7 +67,7 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
 
     /**
      * Initialize with configuration.
-     * Sets up Vosk or Whisper based on config.
+     * Creates and initializes the engine specified in [config].
      */
     override suspend fun initialize(config: SpeechConfig): Result<Unit> {
         return try {
@@ -64,8 +81,14 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
             resultProcessor.setConfidenceThreshold(config.confidenceThreshold)
             resultProcessor.setFuzzyMatchingEnabled(config.enableFuzzyMatching)
 
-            // TODO: Initialize Vosk JNI or Whisper
-            // VoskModel / WhisperCpp setup
+            when (config.engine) {
+                SpeechEngine.WHISPER -> initializeWhisper()
+                // Future engines: VOSK, VIVOKA, GOOGLE_CLOUD, APPLE_SPEECH
+                else -> {
+                    logWarn(TAG, "Engine ${config.engine} not yet available on Desktop, falling back to Whisper")
+                    initializeWhisper()
+                }
+            }
 
             logInfo(TAG, "Initialized with engine: ${config.engine}")
             updateState(ServiceState.READY)
@@ -85,15 +108,25 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
                 return Result.failure(IllegalStateException("Cannot start from state: $state"))
             }
 
-            // Desktop audio recognition not yet implemented — stay READY, don't lie about LISTENING
-            logWarn(TAG, "Desktop speech recognition engine not yet wired — no audio capture active")
-            _errorFlow.emit(SpeechError(
-                code = SpeechError.ERROR_NOT_AVAILABLE,
-                message = "Desktop speech engine not yet implemented. Recognition requires Vosk or Whisper integration.",
-                isRecoverable = false,
-                suggestedAction = SpeechError.Action.LOG_AND_REPORT
-            ))
-            Result.failure(UnsupportedOperationException("Desktop speech recognition not yet implemented"))
+            val engine = whisperEngine
+            if (engine == null) {
+                _errorFlow.emit(SpeechError(
+                    code = SpeechError.ERROR_NOT_AVAILABLE,
+                    message = "No speech engine initialized",
+                    isRecoverable = true,
+                    suggestedAction = SpeechError.Action.RETRY
+                ))
+                return Result.failure(IllegalStateException("No speech engine initialized"))
+            }
+
+            val started = engine.startListening(config.mode.toSpeechMode())
+            if (started) {
+                updateState(ServiceState.LISTENING)
+                Result.success(Unit)
+            } else {
+                _errorFlow.emit(SpeechError.audioError("Failed to start audio capture"))
+                Result.failure(IllegalStateException("Engine failed to start listening"))
+            }
         } catch (e: Exception) {
             logError(TAG, "Failed to start listening", e)
             _errorFlow.emit(SpeechError.audioError(e.message))
@@ -103,10 +136,9 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
 
     override suspend fun stopListening(): Result<Unit> {
         return try {
+            whisperEngine?.stopListening()
             updateState(ServiceState.STOPPED)
             logInfo(TAG, "Stopped listening")
-
-            // TODO: Stop recognition
             Result.success(Unit)
         } catch (e: Exception) {
             logError(TAG, "Failed to stop listening", e)
@@ -117,6 +149,7 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun pause(): Result<Unit> {
         return try {
             if (state == ServiceState.LISTENING) {
+                whisperEngine?.pause()
                 updateState(ServiceState.PAUSED)
                 logInfo(TAG, "Paused")
             }
@@ -129,8 +162,11 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun resume(): Result<Unit> {
         return try {
             if (state == ServiceState.PAUSED) {
-                updateState(ServiceState.LISTENING)
-                logInfo(TAG, "Resumed")
+                val resumed = whisperEngine?.resume() ?: false
+                if (resumed) {
+                    updateState(ServiceState.LISTENING)
+                    logInfo(TAG, "Resumed")
+                }
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -142,8 +178,12 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
         commandCache.setStaticCommands(staticCommands)
         commandCache.setDynamicCommands(dynamicCommands)
 
+        // Update result processor for command matching
         commandMatcher.registerCommands(commandCache.getAllCommands())
         resultProcessor.syncCommandsToMatcher()
+
+        // Also inform the engine for any engine-level command matching
+        whisperEngine?.setCommands(staticCommands, dynamicCommands)
 
         logDebug(TAG, "Updated commands: ${staticCommands.size} static, ${dynamicCommands.size} dynamic")
     }
@@ -151,29 +191,39 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
     override fun setMode(mode: SpeechMode) {
         config = config.withMode(mode)
         resultProcessor.setMode(mode)
+        whisperEngine?.setMode(mode)
         logInfo(TAG, "Mode set to: $mode")
     }
 
     override fun setLanguage(language: String) {
+        if (config.language == language) return
+        val oldLanguage = config.language
         config = config.withLanguage(language)
-        logInfo(TAG, "Language set to: $language")
-        // TODO: Load appropriate Vosk/Whisper model for language
+        whisperEngine?.setLanguage(language)
+        logInfo(TAG, "Language changed: $oldLanguage → $language")
     }
 
-    override fun isListening(): Boolean = state == ServiceState.LISTENING
+    override fun isListening(): Boolean {
+        return whisperEngine?.isListening() ?: false
+    }
 
-    override fun isReady(): Boolean = state.isOperational()
+    override fun isReady(): Boolean {
+        return whisperEngine?.isReady() ?: false
+    }
 
     override fun getConfig(): SpeechConfig = config
 
     override suspend fun release() {
         try {
             updateState(ServiceState.DESTROYING)
+
+            whisperEngine?.destroy()
+            whisperEngine = null
+
             resultProcessor.clear()
             commandCache.clear()
             commandMatcher.clear()
-
-            // TODO: Release Vosk/Whisper resources
+            serviceScope.cancel()
 
             updateState(ServiceState.UNINITIALIZED)
             logInfo(TAG, "Released")
@@ -182,37 +232,62 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
         }
     }
 
-    /**
-     * Process recognition result from Vosk/Whisper.
-     */
-    internal suspend fun onRecognitionResult(
-        text: String,
-        confidence: Float,
-        isPartial: Boolean = false,
-        alternatives: List<String> = emptyList()
-    ) {
-        val result = resultProcessor.processResult(
-            text = text,
-            confidence = confidence,
-            engine = config.engine,
-            isPartial = isPartial,
-            alternatives = alternatives
-        )
+    // --- Private implementation ---
 
-        result?.let {
-            _resultFlow.emit(it)
+    /**
+     * Initialize the Whisper engine and wire up its result/error flows.
+     */
+    private suspend fun initializeWhisper() {
+        val engine = DesktopWhisperEngine()
+
+        val whisperConfig = DesktopWhisperConfig.autoTuned(config.language)
+        val success = engine.initialize(whisperConfig)
+
+        if (!success) {
+            throw IllegalStateException(
+                "Whisper engine initialization failed. " +
+                "Ensure the model is downloaded to: ${whisperConfig.getModelDirectory().absolutePath}"
+            )
         }
+
+        // Collect result flow from engine → process through ResultProcessor → emit
+        serviceScope.launch {
+            engine.resultFlow.collect { result ->
+                if (result.isFinal && result.text.isNotBlank()) {
+                    // Process through ResultProcessor for command matching
+                    val processed = resultProcessor.processResult(
+                        text = result.text,
+                        confidence = result.confidence,
+                        engine = result.engine,
+                        isPartial = false,
+                        alternatives = emptyList()
+                    )
+                    processed?.let { _resultFlow.emit(it) }
+                } else {
+                    // Partial results pass through directly
+                    _resultFlow.emit(result)
+                }
+            }
+        }
+
+        // Collect error flow from engine → forward
+        serviceScope.launch {
+            engine.errorFlow.collect { error ->
+                _errorFlow.emit(error)
+                if (!error.isRecoverable) {
+                    updateState(ServiceState.ERROR)
+                }
+            }
+        }
+
+        whisperEngine = engine
+        logInfo(TAG, "Whisper engine initialized")
     }
 
     /**
-     * Handle error from Vosk/Whisper.
+     * Map SpeechMode config value to the engine's SpeechMode.
      */
-    internal suspend fun onError(error: SpeechError) {
-        _errorFlow.emit(error)
-        if (!error.isRecoverable) {
-            updateState(ServiceState.ERROR)
-        }
-    }
+    private fun SpeechMode.toSpeechMode(): SpeechMode = this
 
     private suspend fun updateState(newState: ServiceState) {
         _state = newState

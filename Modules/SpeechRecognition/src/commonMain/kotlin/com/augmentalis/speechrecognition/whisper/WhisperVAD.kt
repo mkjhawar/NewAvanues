@@ -10,32 +10,13 @@
  * filtering to produce clean speech boundaries for batch transcription.
  *
  * This is lightweight by design — no neural network, no external dependencies.
- * For apps that need higher accuracy VAD, the VoiceIsolation module provides
- * a more sophisticated pipeline with noise suppression and echo cancellation.
+ * Platform-agnostic: lives in commonMain so Android, iOS, and Desktop share
+ * the same VAD algorithm.
  */
 package com.augmentalis.speechrecognition.whisper
 
-import android.util.Log
+import com.augmentalis.speechrecognition.logDebug
 import kotlin.math.sqrt
-
-/**
- * VAD state machine states.
- */
-enum class VADState {
-    /** No speech detected, waiting for speech onset */
-    SILENCE,
-    /** Speech detected, accumulating audio */
-    SPEECH,
-    /** Speech ended, in hangover period (may resume) */
-    HANGOVER
-}
-
-/**
- * Callback when a complete speech chunk is ready for transcription.
- */
-fun interface OnSpeechChunkReady {
-    fun onChunkReady(audioData: FloatArray, durationMs: Long)
-}
 
 /**
  * Energy-based Voice Activity Detection for segmenting audio into speech chunks.
@@ -47,25 +28,23 @@ fun interface OnSpeechChunkReady {
  * 4. Emit complete chunks when silence exceeds hangover threshold
  *
  * Thread safety: All methods must be called from the same thread (the audio capture thread).
+ *
+ * @param speechThreshold RMS energy threshold (0.0-1.0). Auto-calibrates if 0.
+ * @param silenceTimeoutMs Duration (ms) of silence before a speech chunk is finalized
+ * @param minSpeechDurationMs Minimum speech duration (ms) to consider valid
+ * @param maxSpeechDurationMs Maximum speech duration (ms) before forced emission
+ * @param hangoverFrames Number of silence frames tolerated within speech
+ * @param paddingMs Padding (ms) to add before and after speech boundaries
+ * @param sampleRate Audio sample rate (default 16000 Hz for Whisper)
  */
 class WhisperVAD(
-    /** RMS energy threshold for speech detection (0.0-1.0 normalized). Auto-calibrates if 0. */
     private var speechThreshold: Float = 0f,
-
-    /** Duration (ms) of silence before a speech chunk is finalized */
     private val silenceTimeoutMs: Long = 700,
-
-    /** Minimum speech duration (ms) to consider as valid utterance */
     private val minSpeechDurationMs: Long = 300,
-
-    /** Maximum speech duration (ms) before forced chunk emission */
     private val maxSpeechDurationMs: Long = 30_000,
-
-    /** Hangover frames: number of silence frames to tolerate within speech */
     private val hangoverFrames: Int = 5,
-
-    /** Padding (ms) to add before and after speech boundaries */
-    private val paddingMs: Long = 150
+    private val paddingMs: Long = 150,
+    private val sampleRate: Int = 16000
 ) {
     companion object {
         private const val TAG = "WhisperVAD"
@@ -88,8 +67,8 @@ class WhisperVAD(
     private var hangoverCount = 0
 
     // Audio accumulation
-    private val speechBuffer = ArrayList<Float>(WhisperAudio.SAMPLE_RATE * 5) // pre-alloc 5s
-    private val paddingBuffer = ArrayList<Float>(paddingMs.toInt() * WhisperAudio.SAMPLE_RATE / 1000)
+    private val speechBuffer = ArrayList<Float>(sampleRate * 5) // pre-alloc 5s
+    private val paddingBuffer = ArrayList<Float>(paddingMs.toInt() * sampleRate / 1000)
     private var speechStartTimeMs = 0L
     private var lastSpeechTimeMs = 0L
 
@@ -103,9 +82,8 @@ class WhisperVAD(
 
     /**
      * Process a block of audio samples through the VAD.
-     * Call this with each block of Float32 PCM audio from WhisperAudio.
      *
-     * @param samples Float32 PCM audio samples at 16kHz
+     * @param samples Float32 PCM audio samples at configured sample rate
      * @param timestampMs Current timestamp in milliseconds
      */
     fun processAudio(samples: FloatArray, timestampMs: Long) {
@@ -188,7 +166,7 @@ class WhisperVAD(
                     speechBuffer.addAll(paddingBuffer)
                     appendSamples(samples, offset, length)
 
-                    Log.d(TAG, "Speech onset detected at ${timestampMs}ms")
+                    logDebug(TAG, "Speech onset detected at ${timestampMs}ms")
                 } else {
                     // Maintain rolling padding buffer
                     appendToPaddingBuffer(samples, offset, length)
@@ -211,7 +189,7 @@ class WhisperVAD(
                 // Force emit if max duration exceeded
                 val speechDuration = timestampMs - speechStartTimeMs
                 if (speechDuration >= maxSpeechDurationMs) {
-                    Log.d(TAG, "Max duration reached, forcing chunk emission")
+                    logDebug(TAG, "Max duration reached, forcing chunk emission")
                     emitChunk()
                 }
             }
@@ -239,15 +217,15 @@ class WhisperVAD(
         val durationMs = if (speechStartTimeMs > 0L) {
             lastSpeechTimeMs - speechStartTimeMs + (paddingMs)
         } else {
-            (speechBuffer.size * 1000L) / WhisperAudio.SAMPLE_RATE
+            (speechBuffer.size * 1000L) / sampleRate
         }
 
         if (durationMs >= minSpeechDurationMs && speechBuffer.isNotEmpty()) {
             val audioData = speechBuffer.toFloatArray()
-            Log.d(TAG, "Emitting speech chunk: ${audioData.size} samples, ~${durationMs}ms")
+            logDebug(TAG, "Emitting speech chunk: ${audioData.size} samples, ~${durationMs}ms")
             onSpeechChunkReady?.onChunkReady(audioData, durationMs)
         } else {
-            Log.d(TAG, "Discarding short chunk: ${durationMs}ms (min: ${minSpeechDurationMs}ms)")
+            logDebug(TAG, "Discarding short chunk: ${durationMs}ms (min: ${minSpeechDurationMs}ms)")
         }
 
         // Reset for next utterance
@@ -266,7 +244,7 @@ class WhisperVAD(
     }
 
     private fun appendToPaddingBuffer(samples: FloatArray, offset: Int, length: Int) {
-        val maxPaddingSamples = (paddingMs * WhisperAudio.SAMPLE_RATE / 1000).toInt()
+        val maxPaddingSamples = (paddingMs * sampleRate / 1000).toInt()
 
         for (i in offset until offset + length) {
             paddingBuffer.add(samples[i])
