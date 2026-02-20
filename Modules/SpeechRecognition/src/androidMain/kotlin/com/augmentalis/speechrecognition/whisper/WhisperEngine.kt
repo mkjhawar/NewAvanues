@@ -29,6 +29,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -72,6 +73,7 @@ class WhisperEngine(
     private var vad: WhisperVAD? = null
     private val commandCache = CommandCache()
     private var voiceStateManager: VoiceStateManager? = null
+    private val modelManager = WhisperModelManager(context)
 
     // Coroutine management
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -275,6 +277,12 @@ class WhisperEngine(
     fun requiresNetwork(): Boolean = false
     fun getMemoryUsageMB(): Int = config.modelSize.approxSizeMB
 
+    /** Observe model download state for UI integration. */
+    val modelDownloadState: StateFlow<ModelDownloadState> get() = modelManager.downloadState
+
+    /** Access the model manager for download/delete operations. */
+    fun getModelManager(): WhisperModelManager = modelManager
+
     fun getPerformanceMetrics(): Map<String, Any> = mapOf(
         "engineVersion" to ENGINE_VERSION,
         "modelSize" to config.modelSize.name,
@@ -338,12 +346,23 @@ class WhisperEngine(
             paddingMs = 150
         )
 
-        // Step 3: Load model
-        val modelPath = config.resolveModelPath(context)
-            ?: throw IllegalStateException(
-                "Whisper model not found: ${config.modelSize.ggmlFileName}. " +
-                "Download the model first using WhisperModelManager."
-            )
+        // Step 3: Load model (auto-download if missing)
+        var modelPath = config.resolveModelPath(context)
+
+        if (modelPath == null) {
+            Log.i(TAG, "Model ${config.modelSize.displayName} not found, auto-downloading...")
+            val downloaded = modelManager.downloadModel(config.modelSize)
+            if (!downloaded) {
+                throw IllegalStateException(
+                    "Failed to download Whisper model: ${config.modelSize.displayName}. " +
+                    "Check network connection and storage space."
+                )
+            }
+            modelPath = config.resolveModelPath(context)
+                ?: throw IllegalStateException(
+                    "Model file not found after download: ${config.modelSize.ggmlFileName}"
+                )
+        }
 
         Log.i(TAG, "Loading model: $modelPath")
         val ptr = WhisperNative.initContext(modelPath)
