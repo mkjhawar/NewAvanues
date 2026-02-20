@@ -456,7 +456,8 @@ class AndroidSTTEngine(private val context: Context) {
     }
 
     /**
-     * Destroy the engine
+     * Destroy the engine.
+     * Recognizer must be destroyed on the main thread before cancelling the coroutine scope.
      */
     fun destroy() {
         Log.d(TAG, "Destroying $ENGINE_NAME")
@@ -464,10 +465,10 @@ class AndroidSTTEngine(private val context: Context) {
         timeoutJob?.cancel()
         mainHandler.removeCallbacks(silenceCheckRunnable)
 
-        scope.launch {
-            if (::recognizer.isInitialized) {
-                recognizer.destroy()
-            }
+        // Destroy recognizer on main thread BEFORE cancelling scope.
+        // SpeechRecognizer.destroy() must run on the same Looper it was created on.
+        if (::recognizer.isInitialized) {
+            mainHandler.post { recognizer.destroy() }
         }
 
         errorRecoveryManager.destroy()

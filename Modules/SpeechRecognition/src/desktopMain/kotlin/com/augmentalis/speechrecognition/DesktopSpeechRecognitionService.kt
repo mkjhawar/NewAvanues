@@ -2,7 +2,7 @@
  * DesktopSpeechRecognitionService.kt - Desktop speech recognition service implementation
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Claude (AI Assistant)
+ * Author: Manoj Jhawar
  * Created: 2026-01-18
  *
  * Desktop-specific implementation of SpeechRecognitionService.
@@ -85,11 +85,15 @@ class DesktopSpeechRecognitionService : SpeechRecognitionService {
                 return Result.failure(IllegalStateException("Cannot start from state: $state"))
             }
 
-            updateState(ServiceState.LISTENING)
-            logInfo(TAG, "Started listening")
-
-            // TODO: Start Vosk/Whisper recognition with microphone input
-            Result.success(Unit)
+            // Desktop audio recognition not yet implemented — stay READY, don't lie about LISTENING
+            logWarn(TAG, "Desktop speech recognition engine not yet wired — no audio capture active")
+            _errorFlow.emit(SpeechError(
+                code = SpeechError.ERROR_NOT_AVAILABLE,
+                message = "Desktop speech engine not yet implemented. Recognition requires Vosk or Whisper integration.",
+                isRecoverable = false,
+                suggestedAction = SpeechError.Action.LOG_AND_REPORT
+            ))
+            Result.failure(UnsupportedOperationException("Desktop speech recognition not yet implemented"))
         } catch (e: Exception) {
             logError(TAG, "Failed to start listening", e)
             _errorFlow.emit(SpeechError.audioError(e.message))

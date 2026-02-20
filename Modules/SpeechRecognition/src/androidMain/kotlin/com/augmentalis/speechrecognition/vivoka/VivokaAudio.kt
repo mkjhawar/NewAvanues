@@ -201,28 +201,47 @@ class VivokaAudio(
         }
     }
 
+    // Tracks when silence was first detected (0 = speech active)
+    @Volatile
+    private var silenceStartedAt: Long = 0L
+
     /**
-     * Start silence detection for dictation mode
+     * Start silence detection for dictation mode.
+     * The callback fires ONCE when silence exceeds timeoutMs, not every check interval.
      */
     fun startSilenceDetection(timeoutMs: Long, onTimeoutCallback: () -> Unit) {
         Log.d(TAG, "Starting silence detection with timeout: ${timeoutMs}ms")
 
-        // Stop any existing silence detection
         stopSilenceDetection()
 
         silenceDetectionCallback = onTimeoutCallback
+        silenceStartedAt = System.currentTimeMillis()
 
-        // Create new runnable for silence checking
         val runnable = object : Runnable {
             override fun run() {
-                silenceDetectionCallback?.invoke()
+                val silenceStart = silenceStartedAt
+                if (silenceStart > 0L) {
+                    val elapsed = System.currentTimeMillis() - silenceStart
+                    if (elapsed >= timeoutMs) {
+                        Log.d(TAG, "Silence timeout reached after ${elapsed}ms")
+                        silenceDetectionCallback?.invoke()
+                        // Stop after firing — caller must restart if needed
+                        return
+                    }
+                }
                 silenceCheckHandler.postDelayed(this, SILENCE_CHECK_INTERVAL)
             }
         }
         silenceCheckRunnable = runnable
 
-        // Start silence detection
         silenceCheckHandler.post(runnable)
+    }
+
+    /**
+     * Call when speech activity is detected to reset the silence timer.
+     */
+    fun onSpeechDetected() {
+        silenceStartedAt = System.currentTimeMillis()
     }
 
     /**

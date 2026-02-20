@@ -28,26 +28,36 @@ class FileZipManager {
                     toDir.mkdirs()
                 }
 
+                val canonicalDestDir = toDir.canonicalPath
+
                 ZipFile(zipFile).use { zf ->
                     val entries = zf.entries()
-                    var extractedCount = 0 // To track extraction count
+                    var extractedCount = 0
 
                     while (entries.hasMoreElements()) {
                         val entry = entries.nextElement() as ZipEntry
                         val unzipFile = File(toDir, entry.name)
 
+                        // Security: prevent zip path traversal (Zip Slip)
+                        val canonicalEntryPath = unzipFile.canonicalPath
+                        if (!canonicalEntryPath.startsWith(canonicalDestDir + File.separator) &&
+                            canonicalEntryPath != canonicalDestDir) {
+                            Log.e(TAG, "Zip entry outside target dir: ${entry.name}")
+                            continue
+                        }
+
                         Log.d(TAG, "Unzipping: ${entry.name}")
 
                         if (entry.isDirectory) {
-                            // Create directories if they don't exist
                             if (!unzipFile.isDirectory) {
-                                unzipFile.mkdirs()
-                            } else {
-                                unzipFile.delete()
                                 unzipFile.mkdirs()
                             }
                         } else {
-                            // Extract file
+                            // Ensure parent directories exist
+                            unzipFile.parentFile?.let { parent ->
+                                if (!parent.isDirectory) parent.mkdirs()
+                            }
+
                             zf.getInputStream(entry).use { inputStream ->
                                 FileOutputStream(unzipFile, false).use { outputStream ->
                                     val buffer = ByteArray(BUFFER_SIZE)

@@ -115,7 +115,7 @@ class VoiceStateManager(
      * Initialize the voice system
      */
     fun initialize(): Boolean {
-        return stateLock.write {
+        val changed = stateLock.write {
             if (_isInitialized.get()) {
                 Log.w(TAG, "[$engineName] Already initialized")
                 return@write false
@@ -127,6 +127,9 @@ class VoiceStateManager(
             Log.i(TAG, "[$engineName] Voice system initialized")
             true
         }
+
+        if (changed) notifyStateChange()
+        return changed
     }
 
     /**
@@ -158,10 +161,11 @@ class VoiceStateManager(
     }
 
     /**
-     * Enter voice sleep mode
+     * Enter voice sleep mode.
+     * Callback is invoked OUTSIDE the lock to prevent deadlock.
      */
     fun enterSleepMode(): Boolean {
-        return stateLock.write {
+        val shouldCallback = stateLock.write {
             if (!_isVoiceEnabled.get() || _isVoiceSleeping.get()) {
                 Log.w(TAG, "[$engineName] Cannot enter sleep mode: enabled=${_isVoiceEnabled.get()}, sleeping=${_isVoiceSleeping.get()}")
                 return@write false
@@ -169,22 +173,25 @@ class VoiceStateManager(
 
             _isVoiceSleeping.set(true)
             cancelVoiceTimeout()
-
             updateStateFlow()
-
-            // Trigger callback
-            onVoiceSleepCallback?.invoke()
 
             Log.i(TAG, "[$engineName] Entered voice sleep mode")
             true
         }
+
+        if (shouldCallback) {
+            notifyStateChange()
+            onVoiceSleepCallback?.invoke()
+        }
+        return shouldCallback
     }
 
     /**
-     * Exit voice sleep mode
+     * Exit voice sleep mode.
+     * Callback is invoked OUTSIDE the lock to prevent deadlock.
      */
     fun exitSleepMode(): Boolean {
-        return stateLock.write {
+        val shouldCallback = stateLock.write {
             if (!_isVoiceSleeping.get()) {
                 Log.w(TAG, "[$engineName] Not currently sleeping")
                 return@write false
@@ -193,26 +200,29 @@ class VoiceStateManager(
             _isVoiceSleeping.set(false)
             _lastExecutedCommandTime.set(System.currentTimeMillis())
 
-            // Restart timeout if voice is enabled
             if (_isVoiceEnabled.get()) {
                 resetVoiceTimeout()
             }
 
             updateStateFlow()
 
-            // Trigger callback
-            onVoiceWakeCallback?.invoke()
-
             Log.i(TAG, "[$engineName] Exited voice sleep mode")
             true
         }
+
+        if (shouldCallback) {
+            notifyStateChange()
+            onVoiceWakeCallback?.invoke()
+        }
+        return shouldCallback
     }
 
     /**
-     * Enter dictation mode
+     * Enter dictation mode.
+     * Callback is invoked OUTSIDE the lock to prevent deadlock.
      */
     fun enterDictationMode(): Boolean {
-        return stateLock.write {
+        val shouldCallback = stateLock.write {
             if (!_isInitialized.get() || !_isVoiceEnabled.get() || _isVoiceSleeping.get()) {
                 Log.w(TAG, "[$engineName] Cannot enter dictation mode: initialized=${_isInitialized.get()}, enabled=${_isVoiceEnabled.get()}, sleeping=${_isVoiceSleeping.get()}")
                 return@write false
@@ -225,22 +235,25 @@ class VoiceStateManager(
 
             _isDictationActive.set(true)
             startDictationTimeout()
-
             updateStateFlow()
-
-            // Trigger callback
-            onDictationStartCallback?.invoke()
 
             Log.i(TAG, "[$engineName] Entered dictation mode")
             true
         }
+
+        if (shouldCallback) {
+            notifyStateChange()
+            onDictationStartCallback?.invoke()
+        }
+        return shouldCallback
     }
 
     /**
-     * Exit dictation mode
+     * Exit dictation mode.
+     * Callback is invoked OUTSIDE the lock to prevent deadlock.
      */
     fun exitDictationMode(): Boolean {
-        return stateLock.write {
+        val shouldCallback = stateLock.write {
             if (!_isDictationActive.get()) {
                 Log.w(TAG, "[$engineName] Not currently in dictation mode")
                 return@write false
@@ -248,22 +261,24 @@ class VoiceStateManager(
 
             _isDictationActive.set(false)
             cancelDictationTimeout()
-
             updateStateFlow()
-
-            // Trigger callback
-            onDictationEndCallback?.invoke()
 
             Log.i(TAG, "[$engineName] Exited dictation mode")
             true
         }
+
+        if (shouldCallback) {
+            notifyStateChange()
+            onDictationEndCallback?.invoke()
+        }
+        return shouldCallback
     }
 
     /**
      * Set voice enabled/disabled state
      */
     fun setVoiceEnabled(enabled: Boolean): Boolean {
-        return stateLock.write {
+        val changed = stateLock.write {
             if (_isVoiceEnabled.get() == enabled) {
                 Log.d(TAG, "[$engineName] Voice already ${if (enabled) "enabled" else "disabled"}")
                 return@write false
@@ -272,13 +287,11 @@ class VoiceStateManager(
             _isVoiceEnabled.set(enabled)
 
             if (!enabled) {
-                // Disable voice system
                 _isVoiceSleeping.set(false)
                 _isDictationActive.set(false)
                 cancelVoiceTimeout()
                 cancelDictationTimeout()
             } else {
-                // Enable voice system
                 _lastExecutedCommandTime.set(System.currentTimeMillis())
                 resetVoiceTimeout()
             }
@@ -288,6 +301,9 @@ class VoiceStateManager(
             Log.i(TAG, "[$engineName] Voice ${if (enabled) "enabled" else "disabled"}")
             true
         }
+
+        if (changed) notifyStateChange()
+        return changed
     }
 
     fun downloadingModels(isDownloading: Boolean): Boolean {
@@ -415,7 +431,10 @@ class VoiceStateManager(
     // Private helper methods
 
     /**
-     * Update the StateFlow with current state (debounced)
+     * Update the StateFlow with current state (debounced).
+     * NOTE: This can be called from within a write lock, so it must NOT invoke
+     * external callbacks directly. StateFlow.value assignment is safe (non-blocking).
+     * The onStateChangeCallback is invoked by callers OUTSIDE the lock.
      */
     private fun updateStateFlow() {
         val currentTime = System.currentTimeMillis()
@@ -438,7 +457,15 @@ class VoiceStateManager(
         )
 
         _voiceState.value = newState
-        onStateChangeCallback?.invoke(newState)
+        // onStateChangeCallback NOT invoked here — caller invokes outside the lock
+    }
+
+    /**
+     * Notify state change callback outside any lock scope.
+     * Must be called AFTER releasing the write lock.
+     */
+    private fun notifyStateChange() {
+        onStateChangeCallback?.invoke(_voiceState.value)
     }
 
     /**

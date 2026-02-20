@@ -83,8 +83,12 @@ class ConfidenceScorer {
         const val THRESHOLD_MEDIUM = 0.70f
         const val THRESHOLD_LOW = 0.50f
 
-        // VOSK acoustic score normalization parameters
-        private const val VOSK_ACOUSTIC_SCALE = 1.0f
+        // VOSK acoustic score normalization:
+        // VOSK final results include a 0.0-1.0 confidence field in JSON.
+        // Raw acoustic log-likelihoods (negative, range ~-300 to 0) only appear
+        // in partial/internal results. Scale 0.05 maps the useful -20..0 range
+        // to sigmoid values 0.27..0.50, while the 0-1 path handles final results.
+        private const val VOSK_ACOUSTIC_SCALE = 0.05f
 
         // Vivoka SDK returns confidence in 0-10000 range, NOT 0-100
         private const val VIVOKA_MAX_SCORE = 10000f
@@ -105,10 +109,16 @@ class ConfidenceScorer {
             }
 
             RecognitionEngine.VOSK -> {
-                // VOSK returns acoustic log-likelihood (negative values)
-                // Convert using sigmoid function: 1 / (1 + e^(-x))
-                val normalized = 1f / (1f + exp(-rawScore * VOSK_ACOUSTIC_SCALE))
-                normalized.coerceIn(0f, 1f)
+                // VOSK final results typically provide 0.0-1.0 confidence in JSON.
+                // Raw acoustic log-likelihoods are negative. Detect which we have:
+                if (rawScore in 0f..1f) {
+                    // Already normalized confidence from VOSK JSON result
+                    rawScore
+                } else {
+                    // Raw acoustic log-likelihood (negative) — use scaled sigmoid
+                    val normalized = 1f / (1f + exp(-rawScore * VOSK_ACOUSTIC_SCALE))
+                    normalized.coerceIn(0f, 1f)
+                }
             }
 
             RecognitionEngine.GOOGLE,

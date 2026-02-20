@@ -193,6 +193,20 @@ android {
 
         buildConfigField("String", "MODULE_VERSION", "\"3.0.0\"")
         buildConfigField("String", "MODULE_NAME", "\"SpeechRecognition-KMP\"")
+
+        // Vivoka download credentials — injected from local.properties or CI environment
+        // NEVER hardcode credentials in source files
+        val localProps = rootProject.file("local.properties")
+        val vivokaUser = if (localProps.exists()) {
+            java.util.Properties().apply { load(localProps.inputStream()) }
+                .getProperty("vivoka.download.username", "")
+        } else System.getenv("VIVOKA_DOWNLOAD_USERNAME") ?: ""
+        val vivokaPwd = if (localProps.exists()) {
+            java.util.Properties().apply { load(localProps.inputStream()) }
+                .getProperty("vivoka.download.password", "")
+        } else System.getenv("VIVOKA_DOWNLOAD_PASSWORD") ?: ""
+        buildConfigField("String", "VIVOKA_DOWNLOAD_USERNAME", "\"$vivokaUser\"")
+        buildConfigField("String", "VIVOKA_DOWNLOAD_PASSWORD", "\"$vivokaPwd\"")
     }
 
     // Include legacy Android-only source set for Vivoka and other engines
