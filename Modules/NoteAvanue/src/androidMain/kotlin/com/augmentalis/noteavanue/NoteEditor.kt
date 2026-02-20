@@ -312,12 +312,12 @@ private fun executeNoteCommand(
 
         // ── Editing ───────────────────────────────────────────────────
         CommandActionType.NOTE_UNDO -> {
-            richTextState.undoLastAction()
-            HandlerResult.success("Undo")
+            // compose-rich-editor RC13 does not expose undo API
+            HandlerResult.failure("Undo not available in current editor version", recoverable = true)
         }
         CommandActionType.NOTE_REDO -> {
-            richTextState.redoLastAction()
-            HandlerResult.success("Redo")
+            // compose-rich-editor RC13 does not expose redo API
+            HandlerResult.failure("Redo not available in current editor version", recoverable = true)
         }
         CommandActionType.CLEAR_FORMATTING -> {
             richTextState.removeSpanStyle(richTextState.currentSpanStyle)
