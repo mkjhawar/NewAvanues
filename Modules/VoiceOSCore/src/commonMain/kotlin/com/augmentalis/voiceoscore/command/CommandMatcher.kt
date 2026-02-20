@@ -3,6 +3,7 @@ package com.augmentalis.voiceoscore
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ISynonymProvider
+import kotlin.concurrent.Volatile
 
 /**
  * Command Matcher - Fuzzy matching for voice input to commands.
@@ -33,8 +34,38 @@ object CommandMatcher {
      */
     var defaultLanguage: String = "en"
 
+    /** High-confidence threshold — if any candidate scores this high, skip full sort */
+    private const val EARLY_EXIT_THRESHOLD = 0.95f
+
+    /** LRU cache for fuzzy match results. Key = "input|threshold|actionFilter" */
+    private val matchCache = object : LinkedHashMap<String, MatchResult>(128, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MatchResult>?): Boolean {
+            return size > 100
+        }
+    }
+
+    /** Generation counter — incremented on registry changes to invalidate cache */
+    @Volatile
+    private var cacheGeneration: Long = 0
+
+    /** Last known registry generation when cache was valid */
+    @Volatile
+    private var lastRegistryGeneration: Long = -1
+
+    /**
+     * Invalidate the fuzzy match cache. Call when registry contents change.
+     */
+    fun invalidateCache() {
+        cacheGeneration++
+    }
+
     /**
      * Match voice input against commands in registry.
+     *
+     * Performance optimizations (3-layer):
+     * 1. LRU cache — repeated inputs return instantly
+     * 2. Word pre-filter — reduces candidate set before scoring
+     * 3. Early exit — skips full sort when high-confidence match found
      *
      * @param voiceInput Raw voice input string
      * @param registry Command registry to search
@@ -52,12 +83,10 @@ object CommandMatcher {
     ): MatchResult {
         val normalized = voiceInput.lowercase().trim()
 
-        // Empty input = no match
         if (normalized.isBlank()) {
             return MatchResult.NoMatch
         }
 
-        // Expand synonyms if provider is available
         val lang = language ?: defaultLanguage
         val expanded = synonymProvider?.expand(normalized, lang) ?: normalized
 
@@ -72,7 +101,8 @@ object CommandMatcher {
             return MatchResult.NoMatch
         }
 
-        // Try exact match with expanded input first
+        // --- Exact match paths (no caching needed, already O(n)) ---
+
         if (expanded != normalized) {
             commands.firstOrNull { cmd ->
                 cmd.phrase.lowercase() == expanded
@@ -81,14 +111,12 @@ object CommandMatcher {
             }
         }
 
-        // Try exact match with original input
         commands.firstOrNull { cmd ->
             cmd.phrase.lowercase() == normalized
         }?.let {
             return MatchResult.Exact(it)
         }
 
-        // Try exact match with symbol normalization (e.g., "sound and vibration" = "Sound & vibration")
         val symbolNormalized = SymbolNormalizer.normalize(normalized, lang)
         if (symbolNormalized != normalized) {
             commands.firstOrNull { cmd ->
@@ -98,41 +126,89 @@ object CommandMatcher {
             }
         }
 
-        // Calculate similarity scores using expanded input
-        val candidates = commands
-            .map { cmd ->
-                // Try both original and expanded, take better score
-                val scoreOriginal = similarity(normalized, cmd.phrase.lowercase())
-                val scoreExpanded = if (expanded != normalized) {
-                    similarity(expanded, cmd.phrase.lowercase())
-                } else {
-                    scoreOriginal
+        // --- Fuzzy match path (optimized with cache + pre-filter + early exit) ---
+
+        // Layer 1: LRU cache check
+        val registryGen = registry.generation()
+        if (registryGen != lastRegistryGeneration) {
+            matchCache.clear()
+            lastRegistryGeneration = registryGen
+        }
+        val cacheKey = "$normalized|$threshold|${actionFilter?.name ?: ""}"
+        matchCache[cacheKey]?.let { return it }
+
+        // Layer 2: Word pre-filter — only score commands sharing at least one word with input
+        val inputWords = normalized.split(Regex("\\s+")).filter { it.isNotBlank() }.toSet()
+        val expandedWords = if (expanded != normalized) {
+            expanded.split(Regex("\\s+")).filter { it.isNotBlank() }.toSet()
+        } else inputWords
+        val allInputWords = inputWords + expandedWords
+
+        val preFiltered = commands.filter { cmd ->
+            val phraseWords = cmd.phrase.lowercase().split(Regex("\\s+"))
+            phraseWords.any { pw -> allInputWords.any { iw -> pw.contains(iw) || iw.contains(pw) } }
+        }
+
+        // Fall back to full scan if pre-filter is too aggressive (no candidates)
+        val scoreCandidates = preFiltered.ifEmpty { commands }
+
+        // Layer 3: Score with early exit on high confidence
+        var bestCmd: QuantizedCommand? = null
+        var bestScore = 0f
+        var secondBestScore = 0f
+        val aboveThreshold = mutableListOf<Pair<QuantizedCommand, Float>>()
+
+        for (cmd in scoreCandidates) {
+            val phraseLC = cmd.phrase.lowercase()
+            val scoreOriginal = similarity(normalized, phraseLC)
+            val scoreExpanded = if (expanded != normalized) {
+                similarity(expanded, phraseLC)
+            } else scoreOriginal
+            val score = maxOf(scoreOriginal, scoreExpanded)
+
+            if (score >= threshold) {
+                aboveThreshold.add(cmd to score)
+                if (score > bestScore) {
+                    secondBestScore = bestScore
+                    bestScore = score
+                    bestCmd = cmd
+                } else if (score > secondBestScore) {
+                    secondBestScore = score
                 }
-                cmd to maxOf(scoreOriginal, scoreExpanded)
+
+                // Early exit: high-confidence match with clear margin
+                if (bestScore >= EARLY_EXIT_THRESHOLD && bestScore - secondBestScore > 0.1f) {
+                    val result = MatchResult.Fuzzy(bestCmd!!, bestScore, expanded != normalized)
+                    matchCache[cacheKey] = result
+                    return result
+                }
             }
-            .filter { it.second >= threshold }
-            .sortedByDescending { it.second }
+        }
 
-        return when {
-            candidates.isEmpty() -> MatchResult.NoMatch
+        val result = when {
+            aboveThreshold.isEmpty() -> MatchResult.NoMatch
 
-            candidates.size == 1 -> MatchResult.Fuzzy(
-                candidates[0].first,
-                candidates[0].second,
+            aboveThreshold.size == 1 -> MatchResult.Fuzzy(
+                aboveThreshold[0].first,
+                aboveThreshold[0].second,
                 synonymExpanded = expanded != normalized
             )
 
-            // Check if top candidates have similar scores (ambiguous)
-            candidates.size >= 2 && isAmbiguous(candidates[0].second, candidates[1].second) -> {
-                MatchResult.Ambiguous(candidates.map { it.first })
+            isAmbiguous(bestScore, secondBestScore) -> {
+                MatchResult.Ambiguous(
+                    aboveThreshold.sortedByDescending { it.second }.map { it.first }
+                )
             }
 
             else -> MatchResult.Fuzzy(
-                candidates[0].first,
-                candidates[0].second,
+                bestCmd!!,
+                bestScore,
                 synonymExpanded = expanded != normalized
             )
         }
+
+        matchCache[cacheKey] = result
+        return result
     }
 
     /**

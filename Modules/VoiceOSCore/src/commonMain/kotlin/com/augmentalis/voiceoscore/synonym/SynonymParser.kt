@@ -9,6 +9,10 @@
  */
 package com.augmentalis.voiceoscore
 
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+
 /**
  * Parser for .syn synonym file format.
  *
@@ -253,8 +257,10 @@ object SynonymParser {
      * Get current timestamp for file generation.
      */
     private fun currentTimestamp(): String {
-        // Simple timestamp without external dependencies
-        return "2026-01-08" // TODO: Use kotlinx-datetime if needed
+        return Clock.System.now()
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+            .date
+            .toString()
     }
 }
 

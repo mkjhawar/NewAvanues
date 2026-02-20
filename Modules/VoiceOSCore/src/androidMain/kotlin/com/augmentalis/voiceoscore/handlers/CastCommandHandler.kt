@@ -36,17 +36,22 @@ class CastCommandHandler(
         Log.d(TAG, "execute: '${command.phrase}', actionType=${command.actionType}")
 
         return when (command.actionType) {
-            CommandActionType.CAST_START -> success("Casting started")
-            CommandActionType.CAST_STOP -> success("Casting stopped")
-            CommandActionType.CAST_CONNECT -> success("Connecting to device")
-            CommandActionType.CAST_DISCONNECT -> success("Disconnected")
-            CommandActionType.CAST_QUALITY -> success("Quality changed")
+            CommandActionType.CAST_START ->
+                failure("Start casting requires an active RemoteCast session", recoverable = true)
+            CommandActionType.CAST_STOP ->
+                failure("No active cast session to stop", recoverable = false)
+            CommandActionType.CAST_CONNECT ->
+                failure("Cast connect requires RemoteCast module configuration", recoverable = true)
+            CommandActionType.CAST_DISCONNECT ->
+                failure("No active cast connection to disconnect", recoverable = false)
+            CommandActionType.CAST_QUALITY ->
+                failure("Cast quality change requires an active cast session", recoverable = true)
             else -> HandlerResult.notHandled()
         }
     }
 
-    private fun success(message: String): HandlerResult {
-        Log.d(TAG, message)
-        return HandlerResult.success(message)
+    private fun failure(message: String, recoverable: Boolean): HandlerResult {
+        Log.w(TAG, message)
+        return HandlerResult.failure(message, recoverable = recoverable)
     }
 }

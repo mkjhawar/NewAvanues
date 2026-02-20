@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.devicemanager.DeviceManager
 import com.augmentalis.devicemanager.security.BiometricManager
 import kotlinx.coroutines.launch
@@ -462,10 +463,10 @@ fun CapabilityChip(capability: CapabilityItem) {
             .fillMaxWidth()
             .height(56.dp),
         shape = RoundedCornerShape(8.dp),
-        color = if (capability.available) 
-            MaterialTheme.colorScheme.primaryContainer 
-        else 
-            MaterialTheme.colorScheme.surfaceVariant
+        color = if (capability.available)
+            AvanueTheme.colors.surfaceVariant
+        else
+            AvanueTheme.colors.surface
     ) {
         Column(
             modifier = Modifier
@@ -479,9 +480,9 @@ fun CapabilityChip(capability: CapabilityItem) {
                 contentDescription = capability.name,
                 modifier = Modifier.size(20.dp),
                 tint = if (capability.available)
-                    MaterialTheme.colorScheme.primary
+                    AvanueTheme.colors.primary
                 else
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    AvanueTheme.colors.textSecondary
             )
             Text(
                 text = capability.name,
@@ -561,10 +562,10 @@ fun DeviceCard(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = if (enabled) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (enabled)
+                        AvanueTheme.colors.primary
+                    else
+                        AvanueTheme.colors.textSecondary
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
@@ -576,7 +577,7 @@ fun DeviceCard(
                 if (!enabled) {
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.errorContainer
+                        color = AvanueTheme.colors.error.copy(alpha = 0.15f)
                     ) {
                         Icon(
                             Icons.Default.Close,
@@ -584,7 +585,7 @@ fun DeviceCard(
                             modifier = Modifier
                                 .size(16.dp)
                                 .padding(2.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer
+                            tint = AvanueTheme.colors.error
                         )
                     }
                 }
@@ -606,7 +607,7 @@ fun InfoRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Text(
             text = value,
@@ -628,7 +629,7 @@ fun ConnectionRow(icon: ImageVector, label: String, count: Int) {
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = AvanueTheme.colors.primary
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
@@ -668,14 +669,14 @@ fun BiometricTypeCard(type: BiometricManager.BiometricType) {
             Text(
                 text = "Security: ${type.securityLevel}",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
         Spacer(modifier = Modifier.weight(1f))
         if (type.isEnrolled) {
             Surface(
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
+                color = AvanueTheme.colors.surfaceVariant
             ) {
                 Icon(
                     Icons.Default.Check,
@@ -683,7 +684,7 @@ fun BiometricTypeCard(type: BiometricManager.BiometricType) {
                     modifier = Modifier
                         .size(16.dp)
                         .padding(2.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = AvanueTheme.colors.primary
                 )
             }
         }

@@ -58,6 +58,8 @@ kotlin {
                 implementation(libs.media3.exoplayer)
                 implementation(libs.media3.ui)
                 implementation(libs.media3.session)
+                implementation(libs.coil.compose)
+                implementation("io.coil-kt:coil-video:2.6.0")
             }
         }
 

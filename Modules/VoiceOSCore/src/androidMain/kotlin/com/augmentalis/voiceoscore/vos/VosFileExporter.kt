@@ -19,7 +19,7 @@ import android.os.Environment
 import android.util.Log
 import com.augmentalis.database.dto.VosFileRegistryDTO
 import com.augmentalis.database.repositories.IVosFileRegistryRepository
-import com.augmentalis.voiceoscore.managers.commandmanager.database.sqldelight.VoiceCommandEntity
+import com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandEntity
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File

@@ -42,6 +42,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.theme.AvanueThemeProvider
+import com.augmentalis.avanueui.theme.HydraColors
+import com.augmentalis.avanueui.theme.HydraGlass
+import com.augmentalis.avanueui.theme.HydraWater
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -58,12 +63,15 @@ class DeviceManagerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme()
+            AvanueThemeProvider(
+                colors = HydraColors,
+                glass = HydraGlass,
+                water = HydraWater,
+                isDark = true
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF0A0E27)
+                    color = AvanueTheme.colors.background
                 ) {
                     DeviceManagerContent(viewModel)
                 }
@@ -119,7 +127,7 @@ fun DeviceManagerContent(viewModel: DeviceViewModel) {
                             Text(
                                 text = "${hardwareInfo?.model ?: "Loading..."}",
                                 fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                color = AvanueTheme.colors.textPrimary.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -129,7 +137,7 @@ fun DeviceManagerContent(viewModel: DeviceViewModel) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = "Refresh",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = AvanueTheme.colors.textPrimary
                         )
                     }
                 },
@@ -149,7 +157,7 @@ fun DeviceManagerContent(viewModel: DeviceViewModel) {
                 selectedTabIndex = selectedTab,
                 modifier = Modifier.fillMaxWidth(),
                 containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.onSurface
+                contentColor = AvanueTheme.colors.textPrimary
             ) {
                 Tab(
                     selected = selectedTab == 0,

@@ -33,6 +33,7 @@ class VoiceOSCoreDesktop : PlatformProvider {
     override val platformName: String = "Desktop"
 
     override suspend fun initialize() {
+        println("[VoiceOSCoreDesktop] initialize() called — desktop VoiceOSCore is a stub. Android accessibility features not available.")
         // TODO: Initialize Desktop-specific components:
         // - JVM speech recognition (Vosk JNI, etc.)
         // - Desktop accessibility features (Java Access Bridge)
