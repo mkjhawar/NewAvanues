@@ -1,8 +1,8 @@
 /**
  * VoiceControlHandler.kt - IHandler for VoiceOS service control commands
  *
- * Handles: mute/wake voice, dictation start/stop, show commands/help,
- * numbers on/off/auto
+ * Handles: mute/wake voice, dictation start/stop, show commands/help.
+ * Numbers on/off/auto delegated to NumbersOverlayHandler (ACCESSIBILITY).
  *
  * Uses a static callback registry for service-level actions that require
  * direct access to the VoiceOS service internals (speech engine, overlays).
@@ -42,8 +42,9 @@ object VoiceControlCallbacks {
     /** Show voice commands help overlay. Returns true if shown. */
     @Volatile var onShowCommands: (() -> Boolean)? = null
 
-    /** Set numbers overlay mode: "on", "off", "auto". Returns true if set. */
-    @Volatile var onSetNumbersMode: ((String) -> Boolean)? = null
+    // Numbers overlay is handled by NumbersOverlayHandler (ACCESSIBILITY category)
+    // via NumbersOverlayExecutor, NOT via callbacks. This avoids duplicate handlers
+    // and ensures proper assignment clearing on "numbers off".
 
     /** Clear all callbacks (call on service destroy). */
     fun clear() {
@@ -52,7 +53,6 @@ object VoiceControlCallbacks {
         onStartDictation = null
         onStopDictation = null
         onShowCommands = null
-        onSetNumbersMode = null
     }
 }
 
@@ -70,11 +70,9 @@ class VoiceControlHandler(
         "start dictation", "dictation", "type mode",
         "stop dictation", "end dictation", "command mode",
         // Help
-        "show voice commands", "what can i say", "help",
-        // Numbers overlay
-        "numbers on", "show numbers", "numbers always",
-        "numbers off", "hide numbers", "no numbers",
-        "numbers auto", "numbers automatic", "auto numbers"
+        "show voice commands", "what can i say", "help"
+        // Numbers overlay: handled by NumbersOverlayHandler (ACCESSIBILITY category)
+        // which has the NumbersOverlayExecutor with proper assignment clearing
     )
 
     override suspend fun execute(
@@ -103,15 +101,8 @@ class VoiceControlHandler(
             phrase in listOf("show voice commands", "what can i say", "help") ->
                 invokeCallback(VoiceControlCallbacks.onShowCommands, "Showing commands", "Cannot show commands")
 
-            // Numbers overlay
-            phrase in listOf("numbers on", "show numbers", "numbers always") ->
-                invokeNumbersMode("on", "Numbers always on")
-
-            phrase in listOf("numbers off", "hide numbers", "no numbers") ->
-                invokeNumbersMode("off", "Numbers off")
-
-            phrase in listOf("numbers auto", "numbers automatic", "auto numbers") ->
-                invokeNumbersMode("auto", "Numbers auto mode")
+            // Numbers overlay: delegated to NumbersOverlayHandler (ACCESSIBILITY category)
+            // which owns NumbersOverlayExecutor with proper assignment clearing.
 
             else -> HandlerResult.notHandled()
         }
@@ -131,20 +122,6 @@ class VoiceControlHandler(
         } catch (e: Exception) {
             Log.e(TAG, "Callback failed: $failMsg", e)
             HandlerResult.failure("$failMsg: ${e.message}")
-        }
-    }
-
-    private fun invokeNumbersMode(mode: String, label: String): HandlerResult {
-        val callback = VoiceControlCallbacks.onSetNumbersMode
-        if (callback == null) {
-            Log.w(TAG, "Numbers mode callback not registered")
-            return HandlerResult.failure("Numbers mode not available — service callback not registered", recoverable = true)
-        }
-        return try {
-            if (callback(mode)) HandlerResult.success(label)
-            else HandlerResult.failure("Failed to set numbers mode: $mode")
-        } catch (e: Exception) {
-            HandlerResult.failure("Numbers mode error: ${e.message}")
         }
     }
 }

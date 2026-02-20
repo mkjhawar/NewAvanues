@@ -96,6 +96,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var speechCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var webCommandCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var cursorSettingsJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
+    private var numbersOverlayModeJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
 
     override fun getActionCoordinator(): ActionCoordinator {
         // Prefer VoiceOSCore's coordinator — it has handlers registered
@@ -265,50 +266,61 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
                 // Wire VoiceControlCallbacks for VoiceControlHandler
                 // Enables: mute/wake voice, dictation toggle, show commands, numbers overlay
+                //
+                // IMPORTANT: Callbacks are invoked from the speech collector coroutine
+                // running on Dispatchers.Main. Using runBlocking inside these lambdas
+                // would deadlock the Main thread if the speech engine's stop/start
+                // methods dispatch to Main (which Android's SpeechRecognizer requires).
+                // Instead, we launch coroutines via serviceScope for async operations.
                 try {
                     val core = voiceOSCore
                     VoiceControlCallbacks.onMuteVoice = {
-                        try {
-                            runBlocking { core?.stopListening() }
-                            Log.i(TAG, "Voice muted via callback")
-                            true
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to mute voice", e)
-                            false
+                        serviceScope.launch {
+                            try {
+                                core?.stopListening()
+                                Log.i(TAG, "Voice muted via callback")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to mute voice", e)
+                            }
                         }
+                        true // Return immediately; action executes async
                     }
                     VoiceControlCallbacks.onWakeVoice = {
-                        try {
-                            val result = runBlocking { core?.startListening() }
-                            val success = result?.isSuccess == true
-                            Log.i(TAG, "Voice wake via callback: success=$success")
-                            success
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to wake voice", e)
-                            false
+                        serviceScope.launch {
+                            try {
+                                val result = core?.startListening()
+                                Log.i(TAG, "Voice wake via callback: success=${result?.isSuccess}")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to wake voice", e)
+                            }
                         }
+                        true
                     }
                     VoiceControlCallbacks.onStartDictation = {
-                        // Stop command recognition to avoid conflicts with keyboard dictation
-                        try {
-                            runBlocking { core?.stopListening() }
-                            Log.i(TAG, "Dictation mode: command recognition paused")
-                            true
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to start dictation", e)
-                            false
+                        // Stop command recognition to avoid conflicts with keyboard dictation.
+                        // NOTE: Once stopped, "stop dictation" cannot be recognized via voice.
+                        // User must use the physical mic toggle or UI button to resume.
+                        serviceScope.launch {
+                            try {
+                                core?.stopListening()
+                                Log.i(TAG, "Dictation mode: command recognition paused")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to start dictation", e)
+                            }
                         }
+                        true
                     }
                     VoiceControlCallbacks.onStopDictation = {
                         // Resume command recognition after dictation
-                        try {
-                            runBlocking { core?.startListening() }
-                            Log.i(TAG, "Command mode: recognition resumed")
-                            true
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to stop dictation", e)
-                            false
+                        serviceScope.launch {
+                            try {
+                                val result = core?.startListening()
+                                Log.i(TAG, "Command mode: recognition resumed (success=${result?.isSuccess})")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to stop dictation", e)
+                            }
                         }
+                        true
                     }
                     VoiceControlCallbacks.onShowCommands = {
                         // Show numbered badges on all interactive elements
@@ -318,25 +330,29 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         Log.i(TAG, "Showing commands: numbers overlay set to ON")
                         true
                     }
-                    VoiceControlCallbacks.onSetNumbersMode = { mode ->
-                        try {
-                            val overlayMode = when (mode.lowercase()) {
-                                "on" -> NumbersOverlayMode.ON
-                                "off" -> NumbersOverlayMode.OFF
-                                "auto" -> NumbersOverlayMode.AUTO
-                                else -> NumbersOverlayMode.AUTO
-                            }
-                            OverlayStateManager.setNumbersOverlayMode(overlayMode)
-                            Log.i(TAG, "Numbers mode set to: $overlayMode")
-                            true
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to set numbers mode", e)
-                            false
-                        }
-                    }
+                    // Numbers overlay: handled by NumbersOverlayHandler registered below,
+                    // using NumbersOverlayExecutor with proper assignment clearing.
                     Log.i(TAG, "VoiceControlCallbacks wired successfully")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to wire VoiceControlCallbacks", e)
+                }
+
+                // Observe numbers overlay mode changes to trigger re-scan.
+                // When mode changes (via NumbersOverlayHandler, VoiceControlCallbacks,
+                // or UI settings), we must invalidate the screen hash and refresh
+                // badges immediately — otherwise the user sees "no action" because
+                // badges only appear after the next accessibility event.
+                numbersOverlayModeJob?.cancel()
+                numbersOverlayModeJob = serviceScope.launch {
+                    var previousMode: NumbersOverlayMode? = null
+                    OverlayStateManager.numbersOverlayMode.collect { mode ->
+                        if (previousMode != null && previousMode != mode) {
+                            Log.d(TAG, "Numbers overlay mode changed: $previousMode → $mode")
+                            dynamicCommandGenerator?.invalidateScreenHash()
+                            refreshOverlayBadges()
+                        }
+                        previousMode = mode
+                    }
                 }
 
                 // Wire VosFileImporter into VosSyncManager (late-binding).
@@ -535,6 +551,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         // Cancel cursor settings collection
         cursorSettingsJob?.cancel()
         cursorSettingsJob = null
+
+        // Cancel numbers overlay mode observer
+        numbersOverlayModeJob?.cancel()
+        numbersOverlayModeJob = null
 
         // Stop overlay service
         try {
