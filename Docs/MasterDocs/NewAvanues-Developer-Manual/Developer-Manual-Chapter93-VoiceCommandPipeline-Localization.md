@@ -82,7 +82,7 @@ Maps voice PHRASES to CommandActionTypes. Loaded from `commands_static` DB table
 - `NAVIGATION` (8) -- back, home, scroll, app drawer
 - `MEDIA` (7) -- play, pause, volume, track skip
 - `SYSTEM` (12) -- settings, notifications, screenshot, flashlight, brightness, wifi, bluetooth
-- `VOICE_CONTROL` (11) -- mute, wake, dictation, numbers, cursor
+- `VOICE_CONTROL` (10) -- mute, wake, dictation, help, list-commands, cursor (numbers → ACCESSIBILITY)
 - `APP_LAUNCH` (8) -- open browser/camera/gallery/calculator/etc.
 - `APP_CONTROL` (1) -- close app
 - `ACCESSIBILITY` (6) -- click, long press, zoom, read screen
@@ -111,7 +111,7 @@ Routes QuantizedCommands to the appropriate handler based on:
 - **InputHandler** -> show/hide keyboard via SoftKeyboardController (since v2.1)
 - **AppControlHandler** -> close/exit app via GLOBAL_ACTION_BACK + HOME (since v2.1)
 - **ReadingHandler** -> TTS screen reader via TextToSpeech + accessibility tree (since v2.1)
-- **VoiceControlHandler** -> mute/wake/dictation/help/numbers via VoiceControlCallbacks (since v2.1)
+- **VoiceControlHandler** -> mute/wake/dictation/help/list-commands via VoiceControlCallbacks + visual feedback (since v2.1, numbers removed v2.4)
 
 ### Layer 5: Execution
 - **Web:** JavaScript injection via DOMScraperBridge -> WebView evaluateJavascript
