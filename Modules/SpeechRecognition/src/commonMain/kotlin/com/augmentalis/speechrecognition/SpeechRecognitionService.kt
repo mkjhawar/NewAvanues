@@ -2,7 +2,7 @@
  * SpeechRecognitionService.kt - Common interface for speech recognition
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Claude (AI Assistant)
+ * Author: Manoj Jhawar
  * Created: 2026-01-18
  *
  * Defines the common interface for speech recognition across all platforms.

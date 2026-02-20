@@ -525,9 +525,12 @@ class ActionCoordinator(
             CommandActionType.ADD_WHITEBOARD -> "add whiteboard"
             CommandActionType.ADD_TERMINAL -> "add terminal"
 
-            // Default for custom/unknown
+            // Default for custom/unknown and module-specific actions
+            // (annotation, image, video, cast, AI commands are dispatched
+            // directly by their handlers — not routed through this phrase map)
             CommandActionType.CUSTOM -> "tap $target"
             CommandActionType.MACRO -> "not implemented"
+            else -> actionType.name.lowercase().replace('_', ' ')
         }
     }
 

@@ -128,10 +128,6 @@ fun ContentRenderer(
             )
 
             is FrameContent.Whiteboard -> AnnotationCanvas(
-                onStrokesChanged = { _ ->
-                    // Stroke data is managed internally by AnnotationCanvas.
-                    // Whiteboard content tracks pen/color config, not stroke data.
-                },
                 modifier = Modifier.fillMaxSize()
             )
 
