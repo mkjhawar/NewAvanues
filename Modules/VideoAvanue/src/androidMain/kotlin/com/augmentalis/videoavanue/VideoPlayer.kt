@@ -44,7 +44,12 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun VideoPlayer(
@@ -61,6 +66,8 @@ fun VideoPlayer(
     var duration by remember { mutableLongStateOf(0L) }
     var isMuted by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
+    var playbackSpeed by remember { mutableStateOf(1f) }
+    var isLooping by remember { mutableStateOf(false) }
 
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -88,6 +95,23 @@ fun VideoPlayer(
     }
 
     DisposableEffect(Unit) { onDispose { exoPlayer.release() } }
+
+    // Wire voice command executor for video playback control
+    DisposableEffect(exoPlayer) {
+        ModuleCommandCallbacks.videoExecutor = { actionType, _ ->
+            withContext(Dispatchers.Main) {
+                executeVideoCommand(exoPlayer, actionType,
+                    getSpeed = { playbackSpeed },
+                    setSpeed = { playbackSpeed = it },
+                    getMuted = { isMuted },
+                    setMuted = { isMuted = it },
+                    getLooping = { isLooping },
+                    setLooping = { isLooping = it }
+                )
+            }
+        }
+        onDispose { ModuleCommandCallbacks.videoExecutor = null }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -128,4 +152,80 @@ fun VideoPlayer(
 private fun formatTime(ms: Long): String {
     val s = ms / 1000; val h = s / 3600; val m = (s % 3600) / 60; val sec = s % 60
     return if (h > 0) String.format("%d:%02d:%02d", h, m, sec) else String.format("%d:%02d", m, sec)
+}
+
+/**
+ * Maps video voice commands to ExoPlayer operations.
+ * Must be called on [Dispatchers.Main] — ExoPlayer methods are main-thread only.
+ */
+private fun executeVideoCommand(
+    player: ExoPlayer,
+    actionType: CommandActionType,
+    getSpeed: () -> Float,
+    setSpeed: (Float) -> Unit,
+    getMuted: () -> Boolean,
+    setMuted: (Boolean) -> Unit,
+    getLooping: () -> Boolean,
+    setLooping: (Boolean) -> Unit,
+): HandlerResult {
+    return when (actionType) {
+        CommandActionType.VIDEO_PLAY -> {
+            player.play()
+            HandlerResult.success("Playing")
+        }
+        CommandActionType.VIDEO_PAUSE -> {
+            player.pause()
+            HandlerResult.success("Paused")
+        }
+        CommandActionType.VIDEO_STOP -> {
+            player.stop()
+            HandlerResult.success("Stopped")
+        }
+        CommandActionType.VIDEO_SEEK_FWD -> {
+            player.seekForward()
+            HandlerResult.success("Skipped forward")
+        }
+        CommandActionType.VIDEO_SEEK_BACK -> {
+            player.seekBack()
+            HandlerResult.success("Skipped backward")
+        }
+        CommandActionType.VIDEO_SPEED_UP -> {
+            val newSpeed = (getSpeed() + 0.25f).coerceAtMost(2.0f)
+            player.setPlaybackSpeed(newSpeed)
+            setSpeed(newSpeed)
+            HandlerResult.success("Speed: ${newSpeed}x")
+        }
+        CommandActionType.VIDEO_SPEED_DOWN -> {
+            val newSpeed = (getSpeed() - 0.25f).coerceAtLeast(0.25f)
+            player.setPlaybackSpeed(newSpeed)
+            setSpeed(newSpeed)
+            HandlerResult.success("Speed: ${newSpeed}x")
+        }
+        CommandActionType.VIDEO_SPEED_NORMAL -> {
+            player.setPlaybackSpeed(1f)
+            setSpeed(1f)
+            HandlerResult.success("Speed: 1.0x")
+        }
+        CommandActionType.VIDEO_MUTE -> {
+            player.volume = 0f
+            setMuted(true)
+            HandlerResult.success("Muted")
+        }
+        CommandActionType.VIDEO_UNMUTE -> {
+            player.volume = 1f
+            setMuted(false)
+            HandlerResult.success("Unmuted")
+        }
+        CommandActionType.VIDEO_LOOP -> {
+            val newLooping = !getLooping()
+            player.repeatMode = if (newLooping) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+            setLooping(newLooping)
+            HandlerResult.success(if (newLooping) "Loop on" else "Loop off")
+        }
+        CommandActionType.VIDEO_FULLSCREEN -> {
+            // Fullscreen is a Cockpit frame operation — handled by CockpitCommandHandler
+            HandlerResult.failure("Fullscreen is a frame command — say 'maximize frame'", recoverable = true)
+        }
+        else -> HandlerResult.failure("Unsupported video action: $actionType", recoverable = true)
+    }
 }

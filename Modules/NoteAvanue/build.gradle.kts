@@ -71,6 +71,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(libs.androidx.core.ktx)
+                implementation(project(":Modules:VoiceOSCore"))
 
                 // AI/RAG — on-device semantic search for notes
                 implementation(project(":Modules:AI:RAG"))

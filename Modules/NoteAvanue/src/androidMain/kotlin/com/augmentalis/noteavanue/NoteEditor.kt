@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,10 +43,14 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.noteavanue.model.NoteAttachment
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 import com.mohamedrejeb.richeditor.model.rememberRichTextState
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditor
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditorDefaults
@@ -86,6 +91,20 @@ fun NoteEditor(
     if (!hasLoaded && initialContent.isNotBlank()) {
         richTextState.setMarkdown(initialContent)
         hasLoaded = true
+    }
+
+    // Wire voice command executor for note formatting/editing
+    DisposableEffect(richTextState) {
+        ModuleCommandCallbacks.noteExecutor = { actionType, metadata ->
+            executeNoteCommand(richTextState, actionType, metadata,
+                getTitle = { titleField },
+                doSave = { onSave(titleField, richTextState.toMarkdown()) },
+                doAttachFile = onAttachFile,
+                doTakePhoto = onTakePhoto,
+                doStartDictation = onStartDictation
+            )
+        }
+        onDispose { ModuleCommandCallbacks.noteExecutor = null }
     }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -236,5 +255,107 @@ fun NoteEditor(
             Text("$wc words", color = colors.textPrimary.copy(alpha = 0.5f), fontSize = 12.sp)
             Text("${markdown.length} chars", color = colors.textPrimary.copy(alpha = 0.5f), fontSize = 12.sp)
         }
+    }
+}
+
+/**
+ * Maps note voice commands to RichTextState formatting operations.
+ *
+ * Uses compose-rich-editor's toggleSpanStyle for bold/italic/underline/strikethrough.
+ * Save triggers the parent onSave callback with current markdown.
+ */
+@Suppress("CyclomaticComplexMethod")
+private fun executeNoteCommand(
+    richTextState: com.mohamedrejeb.richeditor.model.RichTextState,
+    actionType: CommandActionType,
+    metadata: Map<String, String>,
+    getTitle: () -> String,
+    doSave: () -> Unit,
+    doAttachFile: () -> Unit,
+    doTakePhoto: () -> Unit,
+    doStartDictation: () -> Unit,
+): HandlerResult {
+    return when (actionType) {
+        // ── Formatting ────────────────────────────────────────────────
+        CommandActionType.FORMAT_BOLD -> {
+            richTextState.toggleSpanStyle(SpanStyle(fontWeight = FontWeight.Bold))
+            HandlerResult.success("Bold toggled")
+        }
+        CommandActionType.FORMAT_ITALIC -> {
+            richTextState.toggleSpanStyle(SpanStyle(fontStyle = FontStyle.Italic))
+            HandlerResult.success("Italic toggled")
+        }
+        CommandActionType.FORMAT_UNDERLINE -> {
+            richTextState.toggleSpanStyle(SpanStyle(textDecoration = TextDecoration.Underline))
+            HandlerResult.success("Underline toggled")
+        }
+        CommandActionType.FORMAT_STRIKETHROUGH -> {
+            richTextState.toggleSpanStyle(SpanStyle(textDecoration = TextDecoration.LineThrough))
+            HandlerResult.success("Strikethrough toggled")
+        }
+        CommandActionType.HEADING_1 -> {
+            richTextState.toggleSpanStyle(SpanStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold))
+            HandlerResult.success("Heading 1")
+        }
+        CommandActionType.HEADING_2 -> {
+            richTextState.toggleSpanStyle(SpanStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold))
+            HandlerResult.success("Heading 2")
+        }
+        CommandActionType.HEADING_3 -> {
+            richTextState.toggleSpanStyle(SpanStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold))
+            HandlerResult.success("Heading 3")
+        }
+        CommandActionType.CODE_BLOCK -> {
+            richTextState.toggleCodeSpan()
+            HandlerResult.success("Code block toggled")
+        }
+
+        // ── Editing ───────────────────────────────────────────────────
+        CommandActionType.NOTE_UNDO -> {
+            richTextState.undoLastAction()
+            HandlerResult.success("Undo")
+        }
+        CommandActionType.NOTE_REDO -> {
+            richTextState.redoLastAction()
+            HandlerResult.success("Redo")
+        }
+        CommandActionType.CLEAR_FORMATTING -> {
+            richTextState.removeSpanStyle(richTextState.currentSpanStyle)
+            HandlerResult.success("Formatting cleared")
+        }
+
+        // ── Lifecycle ─────────────────────────────────────────────────
+        CommandActionType.SAVE_NOTE -> {
+            doSave()
+            HandlerResult.success("Note saved")
+        }
+        CommandActionType.ATTACH_FILE -> {
+            doAttachFile()
+            HandlerResult.success("File picker opened")
+        }
+        CommandActionType.ATTACH_AUDIO -> {
+            doStartDictation()
+            HandlerResult.success("Dictation started")
+        }
+
+        // ── Word count ────────────────────────────────────────────────
+        CommandActionType.WORD_COUNT -> {
+            val md = richTextState.toMarkdown()
+            val words = md.split("\\s+".toRegex()).filter { it.isNotBlank() }.size
+            HandlerResult.success("$words words, ${md.length} characters")
+        }
+
+        // ── Insert text from metadata (dictation pipeline) ────────────
+        CommandActionType.INSERT_TEXT -> {
+            val text = metadata["text"] ?: ""
+            if (text.isNotBlank()) {
+                richTextState.setMarkdown(richTextState.toMarkdown() + text)
+                HandlerResult.success("Text inserted")
+            } else {
+                HandlerResult.failure("No text to insert", recoverable = true)
+            }
+        }
+
+        else -> HandlerResult.failure("Unsupported note action: $actionType", recoverable = true)
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -41,6 +42,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import com.augmentalis.imageavanue.model.ImageFilter
 import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 
 /**
  * Full-featured image viewer with pan/zoom/rotate gestures,
@@ -76,6 +80,30 @@ fun ImageViewer(
     val currentUri = imageList.getOrElse(currentIndex) { uri }
 
     val colorFilter = remember(filter) { buildColorFilter(filter) }
+
+    // Wire voice command executor for image viewing controls
+    DisposableEffect(Unit) {
+        ModuleCommandCallbacks.imageExecutor = { actionType, _ ->
+            executeImageCommand(
+                actionType,
+                getIndex = { currentIndex },
+                setIndex = { currentIndex = it },
+                imageListSize = imageList.size,
+                getZoom = { zoom },
+                setZoom = { zoom = it },
+                setOffset = { x, y -> offsetX = x; offsetY = y },
+                getRotation = { rotation },
+                setRotation = { rotation = it },
+                getFlipH = { flipH },
+                setFlipH = { flipH = it },
+                getShowMetadata = { showMetadata },
+                setShowMetadata = { showMetadata = it },
+                onImageChanged = onImageChanged,
+                onFilterChanged = onFilterChanged
+            )
+        }
+        onDispose { ModuleCommandCallbacks.imageExecutor = null }
+    }
 
     Box(
         modifier = modifier
@@ -274,5 +302,127 @@ private fun buildColorFilter(filter: ImageFilter): ColorFilter? {
 
         // BLUR/SHARPEN need RenderEffect — handled at Bitmap level, not ColorFilter
         ImageFilter.BLUR, ImageFilter.SHARPEN -> null
+    }
+}
+
+/**
+ * Maps image voice commands to internal viewer state mutations.
+ * Gallery navigation, zoom, rotation, flip, filter, and metadata toggle.
+ */
+@Suppress("LongParameterList")
+private fun executeImageCommand(
+    actionType: CommandActionType,
+    getIndex: () -> Int,
+    setIndex: (Int) -> Unit,
+    imageListSize: Int,
+    getZoom: () -> Float,
+    setZoom: (Float) -> Unit,
+    setOffset: (Float, Float) -> Unit,
+    getRotation: () -> Float,
+    setRotation: (Float) -> Unit,
+    getFlipH: () -> Boolean,
+    setFlipH: (Boolean) -> Unit,
+    getShowMetadata: () -> Boolean,
+    setShowMetadata: (Boolean) -> Unit,
+    onImageChanged: (Int) -> Unit,
+    onFilterChanged: (ImageFilter) -> Unit,
+): HandlerResult {
+    return when (actionType) {
+        // ── Gallery Navigation ────────────────────────────────────────
+        CommandActionType.IMAGE_NEXT -> {
+            val idx = getIndex()
+            if (idx < imageListSize - 1) {
+                val newIdx = idx + 1
+                setIndex(newIdx); setZoom(1f); setOffset(0f, 0f); setRotation(0f)
+                onImageChanged(newIdx)
+                HandlerResult.success("Image ${newIdx + 1} of $imageListSize")
+            } else {
+                HandlerResult.failure("Last image in gallery", recoverable = true)
+            }
+        }
+        CommandActionType.IMAGE_PREVIOUS -> {
+            val idx = getIndex()
+            if (idx > 0) {
+                val newIdx = idx - 1
+                setIndex(newIdx); setZoom(1f); setOffset(0f, 0f); setRotation(0f)
+                onImageChanged(newIdx)
+                HandlerResult.success("Image ${newIdx + 1} of $imageListSize")
+            } else {
+                HandlerResult.failure("First image in gallery", recoverable = true)
+            }
+        }
+
+        // ── Transform ─────────────────────────────────────────────────
+        CommandActionType.IMAGE_ROTATE_RIGHT -> {
+            setRotation(getRotation() + 90f)
+            HandlerResult.success("Rotated right")
+        }
+        CommandActionType.IMAGE_ROTATE_LEFT -> {
+            setRotation(getRotation() - 90f)
+            HandlerResult.success("Rotated left")
+        }
+        CommandActionType.IMAGE_FLIP_H -> {
+            setFlipH(!getFlipH())
+            HandlerResult.success(if (getFlipH()) "Flipped" else "Flip reset")
+        }
+        CommandActionType.IMAGE_FLIP_V -> {
+            // Vertical flip emulated via 180° rotation + horizontal flip
+            setRotation(getRotation() + 180f)
+            setFlipH(!getFlipH())
+            HandlerResult.success("Flipped vertically")
+        }
+
+        // ── Zoom ──────────────────────────────────────────────────────
+        CommandActionType.ZOOM_IN -> {
+            setZoom((getZoom() * 1.5f).coerceAtMost(8f))
+            HandlerResult.success("Zoomed in")
+        }
+        CommandActionType.ZOOM_OUT -> {
+            val newZoom = (getZoom() / 1.5f).coerceAtLeast(0.5f)
+            setZoom(newZoom)
+            if (newZoom <= 1f) setOffset(0f, 0f)
+            HandlerResult.success("Zoomed out")
+        }
+
+        // ── Filters ───────────────────────────────────────────────────
+        CommandActionType.IMAGE_FILTER_GRAYSCALE -> {
+            onFilterChanged(ImageFilter.GRAYSCALE)
+            HandlerResult.success("Grayscale filter applied")
+        }
+        CommandActionType.IMAGE_FILTER_SEPIA -> {
+            onFilterChanged(ImageFilter.SEPIA)
+            HandlerResult.success("Sepia filter applied")
+        }
+        CommandActionType.IMAGE_FILTER_BLUR -> {
+            onFilterChanged(ImageFilter.BLUR)
+            HandlerResult.success("Blur filter applied")
+        }
+        CommandActionType.IMAGE_FILTER_SHARPEN -> {
+            onFilterChanged(ImageFilter.SHARPEN)
+            HandlerResult.success("Sharpen filter applied")
+        }
+        CommandActionType.IMAGE_FILTER_BRIGHTNESS -> {
+            onFilterChanged(ImageFilter.BRIGHTNESS_UP)
+            HandlerResult.success("Brightness increased")
+        }
+        CommandActionType.IMAGE_FILTER_CONTRAST -> {
+            onFilterChanged(ImageFilter.HIGH_CONTRAST)
+            HandlerResult.success("High contrast applied")
+        }
+
+        // ── Metadata ──────────────────────────────────────────────────
+        CommandActionType.IMAGE_INFO -> {
+            setShowMetadata(!getShowMetadata())
+            HandlerResult.success(if (getShowMetadata()) "Info shown" else "Info hidden")
+        }
+
+        // ── Reset ─────────────────────────────────────────────────────
+        CommandActionType.IMAGE_OPEN -> {
+            setZoom(1f); setOffset(0f, 0f); setRotation(0f)
+            onFilterChanged(ImageFilter.NONE)
+            HandlerResult.success("View reset")
+        }
+
+        else -> HandlerResult.failure("Unsupported image action: $actionType", recoverable = true)
     }
 }

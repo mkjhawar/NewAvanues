@@ -11,11 +11,19 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import android.util.Log
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cockpit.content.ContentRenderer
+import com.augmentalis.cockpit.model.FrameContent
+import com.augmentalis.cockpit.model.LayoutMode
 import com.augmentalis.cockpit.spatial.AndroidSpatialOrientationSource
 import com.augmentalis.cockpit.spatial.SpatialViewportController
 import com.augmentalis.cockpit.viewmodel.CockpitViewModel
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
+
+private const val TAG = "CockpitScreen"
 
 /**
  * Android entry point for the Cockpit screen.
@@ -66,6 +74,18 @@ fun CockpitScreen(
         }
     }
 
+    // Wire voice command executor for Cockpit handlers.
+    // Read selectedFrameId from viewModel.value at dispatch time (not from
+    // compose state) to avoid stale closure capture.
+    DisposableEffect(viewModel) {
+        ModuleCommandCallbacks.cockpitExecutor = { actionType, _ ->
+            executeCockpitCommand(viewModel, actionType)
+        }
+        onDispose {
+            ModuleCommandCallbacks.cockpitExecutor = null
+        }
+    }
+
     CockpitScreenContent(
         sessionName = session?.name ?: "Cockpit",
         frames = frames,
@@ -92,4 +112,124 @@ fun CockpitScreen(
         availableLayoutModes = availableModes,
         modifier = modifier
     )
+}
+
+/**
+ * Maps Cockpit voice commands to CockpitViewModel operations.
+ *
+ * Handles three command groups:
+ * 1. Frame management: add/minimize/maximize/close
+ * 2. Layout switching: grid/split/freeform/fullscreen/workflow
+ * 3. Content insertion: web/camera/note/pdf/image/video/whiteboard/terminal
+ *
+ * Reads selectedFrameId from viewModel.selectedFrameId.value at execution time
+ * to avoid stale Compose state closure capture.
+ */
+private fun executeCockpitCommand(
+    viewModel: CockpitViewModel,
+    actionType: CommandActionType,
+): HandlerResult {
+    val selected = viewModel.selectedFrameId.value
+    Log.d(TAG, "executeCockpitCommand: $actionType, selectedFrame=$selected")
+
+    return when (actionType) {
+        // ── Frame Management ──────────────────────────────────────────
+        CommandActionType.ADD_FRAME -> {
+            viewModel.addFrame(FrameContent.Web(), "New Frame")
+            HandlerResult.success("Frame added")
+        }
+        CommandActionType.MINIMIZE_FRAME -> {
+            selected ?: return HandlerResult.failure(
+                "No frame selected — select a frame first", recoverable = true
+            )
+            viewModel.toggleMinimize(selected)
+            HandlerResult.success("Frame minimized")
+        }
+        CommandActionType.MAXIMIZE_FRAME -> {
+            selected ?: return HandlerResult.failure(
+                "No frame selected — select a frame first", recoverable = true
+            )
+            viewModel.toggleMaximize(selected)
+            HandlerResult.success("Frame maximized")
+        }
+        CommandActionType.CLOSE_FRAME -> {
+            selected ?: return HandlerResult.failure(
+                "No frame selected — select a frame first", recoverable = true
+            )
+            viewModel.removeFrame(selected)
+            HandlerResult.success("Frame closed")
+        }
+
+        // ── Layout Switching ──────────────────────────────────────────
+        CommandActionType.LAYOUT_GRID -> {
+            viewModel.setLayoutMode(LayoutMode.GRID)
+            HandlerResult.success("Switched to grid layout")
+        }
+        CommandActionType.LAYOUT_SPLIT -> {
+            viewModel.setLayoutMode(LayoutMode.SPLIT_LEFT)
+            HandlerResult.success("Switched to split layout")
+        }
+        CommandActionType.LAYOUT_FREEFORM -> {
+            viewModel.setLayoutMode(LayoutMode.FREEFORM)
+            HandlerResult.success("Switched to freeform layout")
+        }
+        CommandActionType.LAYOUT_FULLSCREEN -> {
+            viewModel.setLayoutMode(LayoutMode.FULLSCREEN)
+            HandlerResult.success("Switched to fullscreen")
+        }
+        CommandActionType.LAYOUT_WORKFLOW -> {
+            viewModel.setLayoutMode(LayoutMode.WORKFLOW)
+            HandlerResult.success("Switched to workflow layout")
+        }
+        CommandActionType.LAYOUT_PICKER -> {
+            // Cycle through available layout modes
+            val modes = LayoutMode.entries
+            val currentIndex = modes.indexOf(viewModel.layoutMode.value)
+            val nextMode = modes[(currentIndex + 1) % modes.size]
+            viewModel.setLayoutMode(nextMode)
+            HandlerResult.success("Layout: ${nextMode.name.lowercase()}")
+        }
+
+        // ── Content Insertion ─────────────────────────────────────────
+        CommandActionType.ADD_WEB -> {
+            viewModel.addFrame(FrameContent.Web(), "Web")
+            HandlerResult.success("Web frame added")
+        }
+        CommandActionType.ADD_CAMERA -> {
+            viewModel.addFrame(FrameContent.Camera(), "Camera")
+            HandlerResult.success("Camera frame added")
+        }
+        CommandActionType.ADD_NOTE -> {
+            viewModel.addFrame(FrameContent.Note(), "Note")
+            HandlerResult.success("Note frame added")
+        }
+        CommandActionType.ADD_PDF -> {
+            viewModel.addFrame(FrameContent.Pdf(), "PDF")
+            HandlerResult.success("PDF frame added")
+        }
+        CommandActionType.ADD_IMAGE -> {
+            viewModel.addFrame(FrameContent.Image(), "Image")
+            HandlerResult.success("Image frame added")
+        }
+        CommandActionType.ADD_VIDEO -> {
+            viewModel.addFrame(FrameContent.Video(), "Video")
+            HandlerResult.success("Video frame added")
+        }
+        CommandActionType.ADD_WHITEBOARD -> {
+            viewModel.addFrame(FrameContent.Whiteboard(), "Whiteboard")
+            HandlerResult.success("Whiteboard frame added")
+        }
+        CommandActionType.ADD_TERMINAL -> {
+            viewModel.addFrame(FrameContent.Terminal(), "Terminal")
+            HandlerResult.success("Terminal frame added")
+        }
+
+        else -> {
+            Log.w(TAG, "Unhandled cockpit action: $actionType")
+            HandlerResult.failure(
+                "Cockpit action $actionType not handled",
+                recoverable = true
+            )
+        }
+    }
 }
