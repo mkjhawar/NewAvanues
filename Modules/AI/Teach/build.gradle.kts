@@ -44,7 +44,7 @@ kotlin {
                 implementation(libs.hilt.android)
 
                 // Compose
-                implementation(platform(libs.compose.bom.get()))
+                implementation(project.dependencies.platform(libs.compose.bom))
                 implementation("androidx.compose.runtime:runtime")
                 implementation("androidx.compose.foundation:foundation")
                 implementation("androidx.compose.material3:material3")
