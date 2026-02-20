@@ -37,6 +37,7 @@ import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.NumbersOverlayMode
 import com.augmentalis.voiceoscore.OverlayNumberingExecutor
 import com.augmentalis.voiceoscore.OverlayStateManager
+import com.augmentalis.voiceoscore.SpeechMode
 import com.augmentalis.voiceoscore.TARGET_APPS
 import com.augmentalis.voiceavanue.MainActivity
 import com.augmentalis.avanueui.theme.AvanueModuleAccents
@@ -275,6 +276,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 try {
                     val core = voiceOSCore
                     VoiceControlCallbacks.onMuteVoice = {
+                        OverlayStateManager.showFeedback("Voice Muted")
                         serviceScope.launch {
                             try {
                                 core?.stopListening()
@@ -286,6 +288,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         true // Return immediately; action executes async
                     }
                     VoiceControlCallbacks.onWakeVoice = {
+                        OverlayStateManager.showFeedback("Voice Activated")
                         serviceScope.launch {
                             try {
                                 val result = core?.startListening()
@@ -297,13 +300,18 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         true
                     }
                     VoiceControlCallbacks.onStartDictation = {
-                        // Stop command recognition to avoid conflicts with keyboard dictation.
-                        // NOTE: Once stopped, "stop dictation" cannot be recognized via voice.
-                        // User must use the physical mic toggle or UI button to resume.
+                        // Switch to dictation mode with minimal exit grammar.
+                        // The speech engine stays active but only recognizes exit commands
+                        // ("stop dictation", "end dictation", "command mode") so the user
+                        // can return to command mode via voice instead of needing a button.
+                        OverlayStateManager.showFeedback("Dictation Mode")
                         serviceScope.launch {
                             try {
-                                core?.stopListening()
-                                Log.i(TAG, "Dictation mode: command recognition paused")
+                                core?.setSpeechMode(
+                                    SpeechMode.DICTATION,
+                                    exitCommands = listOf("stop dictation", "end dictation", "command mode")
+                                )
+                                Log.i(TAG, "Dictation mode: switched to DICTATION with exit grammar")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to start dictation", e)
                             }
@@ -311,11 +319,12 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         true
                     }
                     VoiceControlCallbacks.onStopDictation = {
-                        // Resume command recognition after dictation
+                        // Resume full command recognition
+                        OverlayStateManager.showFeedback("Command Mode")
                         serviceScope.launch {
                             try {
-                                val result = core?.startListening()
-                                Log.i(TAG, "Command mode: recognition resumed (success=${result?.isSuccess})")
+                                core?.setSpeechMode(SpeechMode.COMBINED_COMMAND)
+                                Log.i(TAG, "Command mode: switched back to COMBINED_COMMAND")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to stop dictation", e)
                             }
@@ -327,7 +336,18 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         OverlayStateManager.setNumbersOverlayMode(
                             NumbersOverlayMode.ON
                         )
+                        OverlayStateManager.showFeedback("Showing Numbers")
                         Log.i(TAG, "Showing commands: numbers overlay set to ON")
+                        true
+                    }
+                    VoiceControlCallbacks.onListCommands = {
+                        // Show available voice command categories via feedback
+                        // A full VoiceCommandsPanel composable would be the ideal long-term
+                        // solution, but for now show a summary of available command categories.
+                        val categories = core?.actionCoordinator?.getHandlerCategories()
+                            ?.joinToString(", ") ?: "commands"
+                        OverlayStateManager.showFeedback("Commands: $categories")
+                        Log.i(TAG, "List commands: showing category summary")
                         true
                     }
                     // Numbers overlay: handled by NumbersOverlayHandler registered below,

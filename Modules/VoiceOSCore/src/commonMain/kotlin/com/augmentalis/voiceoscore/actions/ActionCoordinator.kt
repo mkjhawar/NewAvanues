@@ -774,6 +774,17 @@ class ActionCoordinator(
         return staticActions + dynamicActions
     }
 
+    /**
+     * Get human-readable handler category names.
+     *
+     * Used by "list commands" / "what can I say" to show available
+     * command categories (e.g., "Media, Screen, Text, Navigation").
+     */
+    fun getHandlerCategories(): List<String> {
+        return handlerRegistry.getRegisteredCategories()
+            .map { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // NLU/LLM Integration - Unified Command Access
     // ═══════════════════════════════════════════════════════════════════════════

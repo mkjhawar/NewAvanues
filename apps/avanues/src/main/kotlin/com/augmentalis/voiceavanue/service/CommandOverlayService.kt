@@ -255,25 +255,34 @@ private fun NumbersOverlayContent() {
     val showOverlay by OverlayStateManager.showNumbersOverlayComputed.collectAsState()
     val items by OverlayStateManager.numberedOverlayItems.collectAsState()
     val mode by OverlayStateManager.numbersOverlayMode.collectAsState()
-
-    if (!showOverlay) return
-    if (mode == NumbersOverlayMode.AUTO && items.isEmpty()) return
+    val feedbackMessage by OverlayStateManager.feedbackMessage.collectAsState()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Transparent)
     ) {
-        items.forEach { item ->
-            key(item.avid) {
-                NumberBadge(item)
+        // Numbered badges layer
+        if (showOverlay && !(mode == NumbersOverlayMode.AUTO && items.isEmpty())) {
+            items.forEach { item ->
+                key(item.avid) {
+                    NumberBadge(item)
+                }
+            }
+
+            if (items.isNotEmpty()) {
+                NumbersInstructionPanel(
+                    itemCount = items.size,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
         }
 
-        if (items.isNotEmpty()) {
-            NumbersInstructionPanel(
-                itemCount = items.size,
-                modifier = Modifier.align(Alignment.BottomCenter)
+        // Feedback toast layer — always rendered independently of badges
+        feedbackMessage?.let { message ->
+            FeedbackToast(
+                message = message,
+                modifier = Modifier.align(Alignment.TopCenter)
             )
         }
     }
@@ -387,6 +396,65 @@ private fun NumbersInstructionPanel(
                     fontSize = 11.sp
                 )
             }
+        }
+    }
+}
+
+/**
+ * Transient feedback toast for voice control confirmations.
+ *
+ * Appears at the top of the screen, auto-dismisses after 2 seconds.
+ * Independent of the numbered badge system — shows even when badges are off.
+ */
+@Composable
+private fun FeedbackToast(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    var visible by remember { mutableStateOf(true) }
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 400),
+        label = "feedback_fade"
+    )
+
+    LaunchedEffect(message) {
+        visible = true
+        kotlinx.coroutines.delay(2000)
+        visible = false
+        kotlinx.coroutines.delay(400) // Wait for fade-out animation
+        OverlayStateManager.clearFeedback()
+    }
+
+    if (alpha <= 0f) return
+
+    Card(
+        modifier = modifier
+            .padding(top = 48.dp)
+            .graphicsLayer { this.alpha = alpha },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xEE1B5E20)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = null,
+                tint = Color(0xFF81C784),
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = message,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
