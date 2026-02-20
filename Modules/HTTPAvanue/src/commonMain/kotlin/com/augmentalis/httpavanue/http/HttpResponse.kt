@@ -1,11 +1,10 @@
 package com.augmentalis.httpavanue.http
 
-import kotlinx.serialization.Serializable
-
 /**
- * Immutable HTTP response representation
+ * Immutable HTTP response representation.
+ * Not serializable — this is a server-internal pipeline type.
+ * For client-side serializable request/response types, see ClientModels.kt.
  */
-@Serializable
 data class HttpResponse(
     val status: Int,
     val statusMessage: String,
@@ -61,7 +60,7 @@ data class HttpResponse(
         other !is HttpResponse -> false
         else -> status == other.status && statusMessage == other.statusMessage &&
             version == other.version && headers == other.headers &&
-            body?.contentEquals(other.body) == true
+            body?.contentEquals(other.body) != false
     }
 
     override fun hashCode(): Int {

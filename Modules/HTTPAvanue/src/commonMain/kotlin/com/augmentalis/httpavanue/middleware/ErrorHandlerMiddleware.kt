@@ -16,8 +16,8 @@ class ErrorHandlerMiddleware(
     override suspend fun handle(request: HttpRequest, next: suspend (HttpRequest) -> HttpResponse) = try {
         next(request)
     } catch (e: HttpException) {
-        logger.w { "HTTP error: ${e.message}" }
-        createErrorResponse(HttpStatus.BAD_REQUEST, e.message ?: "Bad request", request.uri)
+        logger.w { "HTTP error (${e.statusCode}): ${e.message}" }
+        createErrorResponse(HttpStatus.from(e.statusCode), e.message ?: "Bad request", request.uri)
     } catch (e: IllegalArgumentException) {
         logger.w { "Invalid argument: ${e.message}" }
         createErrorResponse(HttpStatus.BAD_REQUEST, e.message ?: "Invalid argument", request.uri)

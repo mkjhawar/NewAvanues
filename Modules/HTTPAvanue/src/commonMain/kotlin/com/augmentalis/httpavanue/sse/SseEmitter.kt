@@ -1,8 +1,6 @@
 package com.augmentalis.httpavanue.sse
 
-import com.augmentalis.httpavanue.http.HttpRequest
 import com.augmentalis.httpavanue.http.HttpResponse
-import com.augmentalis.httpavanue.platform.Socket
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow

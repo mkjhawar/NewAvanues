@@ -1,11 +1,10 @@
 package com.augmentalis.httpavanue.http
 
-import kotlinx.serialization.Serializable
-
 /**
- * Immutable HTTP request representation
+ * Immutable HTTP request representation.
+ * Not serializable — this is a server-internal pipeline type (middleware → router → handler).
+ * For client-side serializable request/response types, see ClientModels.kt.
  */
-@Serializable
 data class HttpRequest(
     val method: HttpMethod,
     val uri: String,
@@ -31,7 +30,7 @@ data class HttpRequest(
         this === other -> true
         other !is HttpRequest -> false
         else -> method == other.method && uri == other.uri && version == other.version &&
-            headers == other.headers && body?.contentEquals(other.body) == true &&
+            headers == other.headers && body?.contentEquals(other.body) != false &&
             queryParams == other.queryParams && pathParams == other.pathParams && context == other.context
     }
 

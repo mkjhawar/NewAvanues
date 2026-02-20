@@ -106,6 +106,7 @@ internal object HttpParser {
         val buffer = Buffer()
         var length = 0L
         while (length < maxLength) {
+            if (!request(1)) return if (length > 0) buffer.readUtf8() else null
             val b = readByte()
             length++
             if (b == CR) {
