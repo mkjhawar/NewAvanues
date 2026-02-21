@@ -50,6 +50,7 @@ import androidx.compose.ui.window.Dialog
 import java.text.SimpleDateFormat
 import java.util.*
 import com.augmentalis.avanueui.components.glass.glassMorphism
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 class AvidManagerActivity : ComponentActivity() {
     
@@ -101,7 +102,7 @@ fun AvidManagerScreen(viewModel: AvidViewModel = androidx.lifecycle.viewmodel.co
                         Text(
                             "Universal Unique Identifier System",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 },
@@ -364,7 +365,7 @@ fun StatItem(label: String, value: Int, color: Color) {
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -620,7 +621,7 @@ fun DetailRow(label: String, value: String) {
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Text(
             value,
@@ -666,7 +667,7 @@ fun CommandResultCard(result: CommandResultInfo) {
                 Text(
                     "Execution: ${result.executionTime}ms",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -803,7 +804,7 @@ fun ElementCard(
                     Text(
                         element.avid.take(8),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     if (element.isEnabled) {
@@ -875,13 +876,13 @@ fun CommandHistoryCard(item: CommandHistoryItem) {
                     Text(
                         dateFormat.format(Date(item.timestamp)),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                     if (item.targetName != null) {
                         Text(
                             " • ${item.targetName}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -890,7 +891,7 @@ fun CommandHistoryCard(item: CommandHistoryItem) {
             Text(
                 "${item.executionTime}ms",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }
@@ -1072,7 +1073,7 @@ fun CommandExample(command: String) {
         Text(
             command,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.augmentalis.ava.core.domain.model.Conversation
+import com.augmentalis.avanueui.theme.AvanueTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -92,8 +93,8 @@ fun ConversationListScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = AvanueTheme.colors.primaryContainer,
+                    titleContentColor = AvanueTheme.colors.onPrimaryContainer
                 )
             )
         }
@@ -127,7 +128,7 @@ fun ConversationListScreen(
                             imageVector = Icons.AutoMirrored.Filled.Chat,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            tint = AvanueTheme.colors.textSecondary.copy(alpha = 0.6f)
                         )
                         Text(
                             text = if (searchQuery.isBlank()) {
@@ -136,7 +137,7 @@ fun ConversationListScreen(
                                 "No conversations match \"$searchQuery\""
                             },
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            color = AvanueTheme.colors.textSecondary.copy(alpha = 0.6f)
                         )
                         if (searchQuery.isBlank()) {
                             Button(onClick = onNewConversation) {
@@ -206,7 +207,7 @@ fun ConversationListScreen(
                         selectedConversationId = null
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
+                        contentColor = AvanueTheme.colors.error
                     )
                 ) {
                     Text("Delete")
@@ -253,8 +254,8 @@ private fun SearchBar(
         },
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            focusedBorderColor = AvanueTheme.colors.primary,
+            unfocusedBorderColor = AvanueTheme.colors.border
         )
     )
 }
@@ -284,9 +285,9 @@ private fun ConversationListItem(
             ),
         colors = CardDefaults.cardColors(
             containerColor = if (isActive) {
-                MaterialTheme.colorScheme.primaryContainer
+                AvanueTheme.colors.primaryContainer
             } else {
-                MaterialTheme.colorScheme.surface
+                AvanueTheme.colors.surface
             }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -303,9 +304,9 @@ private fun ConversationListItem(
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
                 tint = if (isActive) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
+                    AvanueTheme.colors.onPrimaryContainer
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    AvanueTheme.colors.textSecondary
                 }
             )
 
@@ -321,9 +322,9 @@ private fun ConversationListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = if (isActive) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
+                        AvanueTheme.colors.onPrimaryContainer
                     } else {
-                        MaterialTheme.colorScheme.onSurface
+                        AvanueTheme.colors.textPrimary
                     }
                 )
 
@@ -338,9 +339,9 @@ private fun ConversationListItem(
                         text = "${conversation.messageCount} messages",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.7f)
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            AvanueTheme.colors.textSecondary
                         }
                     )
 
@@ -351,9 +352,9 @@ private fun ConversationListItem(
                         text = formatRelativeTime(conversation.updatedAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.7f)
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            AvanueTheme.colors.textSecondary
                         }
                     )
                 }
@@ -366,9 +367,9 @@ private fun ConversationListItem(
                         imageVector = Icons.Filled.MoreVert,
                         contentDescription = "More options",
                         tint = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
+                            AvanueTheme.colors.onPrimaryContainer
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            AvanueTheme.colors.textSecondary
                         }
                     )
                 }
@@ -401,11 +402,11 @@ private fun ConversationListItem(
                             Icon(
                                 imageVector = Icons.Filled.Delete,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
+                                tint = AvanueTheme.colors.error
                             )
                         },
                         colors = MenuDefaults.itemColors(
-                            textColor = MaterialTheme.colorScheme.error
+                            textColor = AvanueTheme.colors.error
                         )
                     )
                 }

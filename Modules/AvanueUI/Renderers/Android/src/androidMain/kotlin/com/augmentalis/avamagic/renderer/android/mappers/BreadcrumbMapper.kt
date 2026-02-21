@@ -15,6 +15,7 @@ import com.augmentalis.avamagic.ui.core.navigation.BreadcrumbItem
 import com.augmentalis.avamagic.renderer.android.ComponentMapper
 import com.augmentalis.avamagic.renderer.android.ComposeRenderer
 import com.augmentalis.avamagic.renderer.android.ModifierConverter
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * BreadcrumbMapper - Maps BreadcrumbComponent to Compose UI
@@ -54,11 +55,11 @@ class BreadcrumbMapper : ComponentMapper<BreadcrumbComponent> {
             text = item.label,
             style = if (isLast) {
                 MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = AvanueTheme.colors.textPrimary
                 )
             } else {
                 MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.primary
+                    color = AvanueTheme.colors.primary
                 )
             },
             maxLines = 1,
@@ -78,7 +79,7 @@ class BreadcrumbMapper : ComponentMapper<BreadcrumbComponent> {
             Text(
                 text = separator,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
         }

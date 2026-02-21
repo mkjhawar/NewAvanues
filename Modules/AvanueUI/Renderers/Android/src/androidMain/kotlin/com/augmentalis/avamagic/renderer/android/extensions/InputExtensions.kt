@@ -21,6 +21,7 @@ import com.augmentalis.avamagic.components.core.Orientation
 import com.augmentalis.avamagic.ui.core.form.*
 import com.augmentalis.avamagic.renderer.android.ComposeRenderer
 import com.augmentalis.avamagic.renderer.android.ModifierConverter
+import com.augmentalis.avanueui.theme.AvanueTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -376,7 +377,7 @@ fun ComposeRenderer.RenderFileUpload(component: FileUploadComponent) {
                 .height(120.dp)
                 .border(
                     width = 2.dp,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = AvanueTheme.colors.border,
                     shape = RoundedCornerShape(8.dp)
                 )
                 .clickable(enabled = component.enabled) {
@@ -393,19 +394,19 @@ fun ComposeRenderer.RenderFileUpload(component: FileUploadComponent) {
                     imageVector = Icons.Default.CloudUpload,
                     contentDescription = "Upload",
                     modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = AvanueTheme.colors.primary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = component.label,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = AvanueTheme.colors.primary
                 )
                 if (component.accept.isNotEmpty()) {
                     Text(
                         text = component.accept.joinToString(", "),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AvanueTheme.colors.textSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -414,7 +415,7 @@ fun ComposeRenderer.RenderFileUpload(component: FileUploadComponent) {
                     Text(
                         text = "Max size: ${maxSizeMB}MB",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -437,7 +438,7 @@ fun ComposeRenderer.RenderFileUpload(component: FileUploadComponent) {
                     Text(
                         text = file.formattedSize,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -494,9 +495,9 @@ fun ComposeRenderer.RenderRating(component: RatingComponent) {
                 imageVector = icon,
                 contentDescription = "Star $i",
                 tint = if (i <= component.value) {
-                    MaterialTheme.colorScheme.primary
+                    AvanueTheme.colors.primary
                 } else {
-                    MaterialTheme.colorScheme.outline
+                    AvanueTheme.colors.border
                 },
                 modifier = Modifier
                     .size(24.dp)

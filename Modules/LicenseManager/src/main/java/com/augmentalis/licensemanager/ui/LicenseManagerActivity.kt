@@ -76,6 +76,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.licensemanager.LicensingModule
 import com.augmentalis.licensemanager.SubscriptionState
 import kotlinx.coroutines.launch
@@ -762,7 +763,7 @@ internal fun LicenseActivationDialog(
                 Text(
                     text = "Enter your license key to activate premium features:",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -783,7 +784,7 @@ internal fun LicenseActivationDialog(
 • PREMIUM-XXXX-XXXX-XXXX
 • ENTERPRISE-XXXX-XXXX-XXXX""",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         },

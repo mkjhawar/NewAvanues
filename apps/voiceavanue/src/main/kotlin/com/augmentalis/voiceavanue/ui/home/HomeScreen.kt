@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 
 @Composable
@@ -191,9 +192,9 @@ fun StatusCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isEnabled)
-                MaterialTheme.colorScheme.primaryContainer
+                AvanueTheme.colors.primaryContainer
             else
-                MaterialTheme.colorScheme.errorContainer
+                AvanueTheme.colors.errorContainer
         )
     ) {
         Row(
@@ -207,9 +208,9 @@ fun StatusCard(
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
                 tint = if (isEnabled)
-                    MaterialTheme.colorScheme.primary
+                    AvanueTheme.colors.primary
                 else
-                    MaterialTheme.colorScheme.error
+                    AvanueTheme.colors.error
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -223,9 +224,9 @@ fun StatusCard(
                     text = if (isEnabled) "Enabled" else "Disabled",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isEnabled)
-                        MaterialTheme.colorScheme.primary
+                        AvanueTheme.colors.primary
                     else
-                        MaterialTheme.colorScheme.error
+                        AvanueTheme.colors.error
                 )
             }
 
@@ -237,7 +238,7 @@ fun StatusCard(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = "Enabled",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = AvanueTheme.colors.primary
                 )
             }
         }
@@ -265,7 +266,7 @@ fun QuickActionCard(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = AvanueTheme.colors.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -297,7 +298,7 @@ fun ModuleInfoCard(
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
 
@@ -310,9 +311,9 @@ fun ModuleInfoCard(
                     modifier = Modifier.fillMaxSize(),
                     shape = MaterialTheme.shapes.small,
                     color = if (isActive)
-                        MaterialTheme.colorScheme.primary
+                        AvanueTheme.colors.primary
                     else
-                        MaterialTheme.colorScheme.outline
+                        AvanueTheme.colors.border
                 ) {}
             }
         }

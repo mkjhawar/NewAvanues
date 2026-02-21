@@ -43,6 +43,9 @@ kotlin {
 
         androidMain {
             dependencies {
+                // AvanueUI theming
+                implementation(project(":Modules:AvanueUI"))
+
                 // Hilt Dependency Injection
                 implementation(libs.hilt.android)
 

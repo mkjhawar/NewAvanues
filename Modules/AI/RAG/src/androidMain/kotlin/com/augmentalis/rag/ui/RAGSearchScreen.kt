@@ -5,6 +5,7 @@
 
 package com.augmentalis.rag.ui
 
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -125,7 +126,7 @@ fun RAGSearchScreen(
                         .fillMaxWidth()
                         .padding(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
+                        containerColor = AvanueTheme.colors.errorContainer
                     )
                 ) {
                     Row(
@@ -135,13 +136,13 @@ fun RAGSearchScreen(
                         Icon(
                             Icons.Default.Warning,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
+                            tint = AvanueTheme.colors.error
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = errorMessage,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
+                            color = AvanueTheme.colors.error,
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { viewModel.clearError() }) {
@@ -179,19 +180,19 @@ private fun EmptySearchState() {
             imageVector = Icons.Default.Search,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Search Your Documents",
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Find specific information quickly without AI generation",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -209,25 +210,25 @@ private fun NoResultsState(query: String) {
             imageVector = Icons.Default.SearchOff,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "No Results Found",
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "No documents match \"$query\"",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Try different keywords or check your document library",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -242,7 +243,7 @@ private fun SearchResults(
         Text(
             text = "${results.size} result${if (results.size != 1) "s" else ""}",
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = AvanueTheme.colors.textSecondary,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
@@ -287,7 +288,7 @@ private fun SearchResultCard(
                         Icons.Default.Description,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = AvanueTheme.colors.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -301,13 +302,13 @@ private fun SearchResultCard(
 
                 // Similarity badge
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    color = AvanueTheme.colors.primaryContainer,
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
                         text = "${(result.similarity * 100).toInt()}%",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = AvanueTheme.colors.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -317,7 +318,7 @@ private fun SearchResultCard(
             Text(
                 text = "Page ${result.chunk.metadata.pageNumber ?: "?"} • ${result.chunk.content.length} characters",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.padding(top = 4.dp, start = 28.dp)
             )
 

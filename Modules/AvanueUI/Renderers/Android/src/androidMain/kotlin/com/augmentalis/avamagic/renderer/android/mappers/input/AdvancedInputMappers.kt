@@ -21,6 +21,7 @@ import com.augmentalis.avamagic.renderer.android.ComposeRenderer
 import com.augmentalis.avamagic.renderer.android.IconResolver
 import com.augmentalis.avamagic.renderer.android.ModifierConverter
 import com.augmentalis.avamagic.renderer.android.toComposeColor
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 class SegmentedButtonMapper : ComponentMapper<SegmentedButtonComponent> {
     private val modifierConverter = ModifierConverter()
@@ -135,9 +136,9 @@ class FilledButtonMapper : ComponentMapper<FilledButtonComponent> {
                 enabled = component.enabled,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = component.containerColor?.toComposeColor()
-                        ?: MaterialTheme.colorScheme.primary,
+                        ?: AvanueTheme.colors.primary,
                     contentColor = component.contentColor?.toComposeColor()
-                        ?: MaterialTheme.colorScheme.onPrimary
+                        ?: AvanueTheme.colors.onPrimary
                 )
             ) {
                 if (component.icon != null && component.iconPosition == IconPosition.Start) {
@@ -566,7 +567,7 @@ class TagInputMapper : ComponentMapper<TagInputComponent> {
                     Text(
                         text = "${component.tags.size}/$max tags",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AvanueTheme.colors.textSecondary,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
@@ -596,7 +597,7 @@ class ToggleMapper : ComponentMapper<ToggleComponent> {
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -828,9 +829,9 @@ class IconPickerMapper : ComponentMapper<IconPickerComponent> {
                                                 },
                                             shape = RoundedCornerShape(8.dp),
                                             color = if (icon.name == component.value) {
-                                                MaterialTheme.colorScheme.primaryContainer
+                                                AvanueTheme.colors.primaryContainer
                                             } else {
-                                                MaterialTheme.colorScheme.surface
+                                                AvanueTheme.colors.surface
                                             }
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {

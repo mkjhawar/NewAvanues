@@ -11,6 +11,7 @@ import com.augmentalis.avamagic.ui.core.feedback.*
 import com.augmentalis.avamagic.renderer.android.ComponentMapper
 import com.augmentalis.avamagic.renderer.android.ComposeRenderer
 import com.augmentalis.avamagic.renderer.android.ModifierConverter
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 class BottomSheetMapper : ComponentMapper<BottomSheetComponent> {
     private val modifierConverter = ModifierConverter()
@@ -57,7 +58,7 @@ class LoadingDialogMapper : ComponentMapper<LoadingDialogComponent> {
                     modifier = modifierConverter.convert(component.modifiers)
                         .padding(16.dp),
                     shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surface,
+                    color = AvanueTheme.colors.surface,
                     tonalElevation = 6.dp
                 ) {
                     Column(

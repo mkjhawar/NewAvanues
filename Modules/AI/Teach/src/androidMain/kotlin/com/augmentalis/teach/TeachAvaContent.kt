@@ -1,4 +1,5 @@
 package com.augmentalis.teach
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -65,7 +66,7 @@ private fun LoadingView(
             Text(
                 text = "Loading training examples...",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }
@@ -86,7 +87,7 @@ private fun EmptyStateView(
             Text(
                 text = "No training examples yet",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -94,7 +95,7 @@ private fun EmptyStateView(
             Text(
                 text = "Tap the + button to add your first example and start teaching AVA",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }
@@ -135,7 +136,7 @@ private fun SuccessView(
             Text(
                 text = "${examples.size} training example${if (examples.size != 1) "s" else ""}",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = AvanueTheme.colors.textPrimary
             )
 
             FilledTonalButton(
@@ -195,7 +196,7 @@ private fun ErrorView(
             Text(
                 text = "Error",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.error
+                color = AvanueTheme.colors.error
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -203,7 +204,7 @@ private fun ErrorView(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
 
             Spacer(modifier = Modifier.height(16.dp))

@@ -1,4 +1,5 @@
 package com.augmentalis.teach
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,7 +43,7 @@ fun EditExampleDialog(
                 .fillMaxWidth()
                 .padding(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = AvanueTheme.colors.surface
             )
         ) {
             Column(
@@ -52,7 +53,7 @@ fun EditExampleDialog(
                 Text(
                     text = "Edit Training Example",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = AvanueTheme.colors.textPrimary
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -132,7 +133,7 @@ fun EditExampleDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = AvanueTheme.colors.surfaceVariant,
                     shape = MaterialTheme.shapes.small
                 ) {
                     Column(
@@ -143,7 +144,7 @@ fun EditExampleDialog(
                         Text(
                             text = "Usage Statistics",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
@@ -155,12 +156,12 @@ fun EditExampleDialog(
                             Text(
                                 text = "Times used:",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = AvanueTheme.colors.textSecondary
                             )
                             Text(
                                 text = "${example.usageCount}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = AvanueTheme.colors.textPrimary
                             )
                         }
 
@@ -172,12 +173,12 @@ fun EditExampleDialog(
                                 Text(
                                     text = "Last used:",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = AvanueTheme.colors.textSecondary
                                 )
                                 Text(
                                     text = formatRelativeTime(lastUsedTime),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = AvanueTheme.colors.textPrimary
                                 )
                             }
                         }
@@ -188,7 +189,7 @@ fun EditExampleDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = errorMessage,
-                        color = MaterialTheme.colorScheme.error,
+                        color = AvanueTheme.colors.error,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

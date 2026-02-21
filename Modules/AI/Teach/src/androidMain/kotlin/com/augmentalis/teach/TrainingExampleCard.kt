@@ -1,4 +1,5 @@
 package com.augmentalis.teach
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -40,7 +41,7 @@ fun TrainingExampleCard(
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Column(
@@ -55,14 +56,14 @@ fun TrainingExampleCard(
             ) {
                 // Intent badge
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    color = AvanueTheme.colors.primaryContainer,
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
                         text = example.intent,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = AvanueTheme.colors.onPrimaryContainer,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -76,7 +77,7 @@ fun TrainingExampleCard(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit example",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = AvanueTheme.colors.textSecondary
                         )
                     }
 
@@ -87,7 +88,7 @@ fun TrainingExampleCard(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete example",
-                            tint = MaterialTheme.colorScheme.error
+                            tint = AvanueTheme.colors.error
                         )
                     }
                 }
@@ -99,7 +100,7 @@ fun TrainingExampleCard(
             Text(
                 text = example.utterance,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = AvanueTheme.colors.textPrimary
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -114,12 +115,12 @@ fun TrainingExampleCard(
                     Text(
                         text = "Locale: ",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                     Text(
                         text = example.locale,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = AvanueTheme.colors.textPrimary,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -130,12 +131,12 @@ fun TrainingExampleCard(
                         Text(
                             text = "Used: ",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                         Text(
                             text = "${example.usageCount}x",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = AvanueTheme.colors.textPrimary,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -152,13 +153,13 @@ fun TrainingExampleCard(
                 Text(
                     text = "Source: ${example.source.name.lowercase().replace('_', ' ')}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
 
                 Text(
                     text = formatDate(example.createdAt),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -180,7 +181,7 @@ private fun DeleteConfirmationDialog(
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
+                    containerColor = AvanueTheme.colors.error
                 )
             ) {
                 Text("Delete")

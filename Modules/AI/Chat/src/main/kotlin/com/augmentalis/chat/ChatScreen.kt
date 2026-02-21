@@ -179,9 +179,9 @@ fun ChatScreen(
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    actionColor = MaterialTheme.colorScheme.error
+                    containerColor = AvanueTheme.colors.errorContainer,
+                    contentColor = AvanueTheme.colors.onErrorContainer,
+                    actionColor = AvanueTheme.colors.error
                 )
             }
         }

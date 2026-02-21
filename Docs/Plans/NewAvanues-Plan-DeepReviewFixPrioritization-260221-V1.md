@@ -304,11 +304,11 @@ Pervasive Rule 3 violations. **30+ files** across:
 | 4 | P2 | Non-Functional Modules | 16 | Decision needed | Pending |
 | 5 | P2 | KMP Compilation | 22 | 1 | **DONE** (260221, `32bc44d5`) — K18 fixed in Batch 3 |
 | 6 | P2 | Threading / Concurrency | 20 | 3 | **DONE** (260221, `c24ba00f` + `47bbdb26`) — T1 skipped (IPC non-functional) |
-| 7 | P3 | Theme Violations | 30+ | 2-3 | Pending |
+| 7 | P3 | Theme Violations | 30+ | 2-3 | **42/69 DONE** (`f8fba223`) — Modules + active apps fixed; legacy apps + AvanueUI ThemeBuilder remaining |
 | 8 | P3 | AI Attribution | 53 | 0.5 | **DONE** (260221, `2b6cd3c8` + `0bb87e3f`) |
 | 9 | P3 | Resource Leaks | 12 | 2 | **DONE** (260221, `e241919c` + `3190442d`) — all 12 fixed |
-| 10 | P3 | Hardcoded Stubs | 19 | 3 | Partial — 2/19 fixed in `e241919c` (ContentRenderer stub, CommandBar icons) |
-| | | **TOTAL** | **~185** | **~25** | **7/10 done** |
+| 10 | P3 | Hardcoded Stubs | 19 | 3 | **16/19 DONE** (`e241919c` + `66f85a43`) — F4 calibration math, F9 BT scan, F10 WiFi scan deferred (need hardware APIs) |
+| | | **TOTAL** | **~185** | **~25** | **8.5/10 done (Batch 4 pending decision, Batch 7 partially done)** |
 
 ---
 

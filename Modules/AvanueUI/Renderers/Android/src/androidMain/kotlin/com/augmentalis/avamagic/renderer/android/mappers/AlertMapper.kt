@@ -16,6 +16,7 @@ import com.augmentalis.avamagic.ui.core.feedback.AlertSeverity
 import com.augmentalis.avamagic.ui.core.feedback.AlertVariant
 import com.augmentalis.avamagic.renderer.android.ComponentMapper
 import com.augmentalis.avamagic.renderer.android.ComposeRenderer
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * AlertMapper - Maps Alert component to Material3 Card with alert styling
@@ -135,28 +136,28 @@ class AlertMapper : ComponentMapper<Alert> {
     private fun getSeverityColors(severity: AlertSeverity): AlertColors {
         return when (severity) {
             AlertSeverity.Info -> AlertColors(
-                container = MaterialTheme.colorScheme.primaryContainer,
-                border = MaterialTheme.colorScheme.primary,
-                icon = MaterialTheme.colorScheme.primary,
-                text = MaterialTheme.colorScheme.onPrimaryContainer
+                container = AvanueTheme.colors.primaryContainer,
+                border = AvanueTheme.colors.primary,
+                icon = AvanueTheme.colors.primary,
+                text = AvanueTheme.colors.onPrimaryContainer
             )
             AlertSeverity.Success -> AlertColors(
                 container = Color(0xFF4CAF50).copy(alpha = 0.1f),
                 border = Color(0xFF4CAF50),
                 icon = Color(0xFF4CAF50),
-                text = MaterialTheme.colorScheme.onSurface
+                text = AvanueTheme.colors.textPrimary
             )
             AlertSeverity.Warning -> AlertColors(
                 container = Color(0xFFFF9800).copy(alpha = 0.1f),
                 border = Color(0xFFFF9800),
                 icon = Color(0xFFFF9800),
-                text = MaterialTheme.colorScheme.onSurface
+                text = AvanueTheme.colors.textPrimary
             )
             AlertSeverity.Error -> AlertColors(
-                container = MaterialTheme.colorScheme.errorContainer,
-                border = MaterialTheme.colorScheme.error,
-                icon = MaterialTheme.colorScheme.error,
-                text = MaterialTheme.colorScheme.onErrorContainer
+                container = AvanueTheme.colors.errorContainer,
+                border = AvanueTheme.colors.error,
+                icon = AvanueTheme.colors.error,
+                text = AvanueTheme.colors.onErrorContainer
             )
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import net.ideahq.avamagic.components.foundation.*
 import net.ideahq.avamagic.components.core.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * ComposeUIImplementation - Actual Jetpack Compose implementations
@@ -126,7 +127,7 @@ fun MagicCardCompose(
 
     val colors = when (variant) {
         CardVariant.OUTLINED -> CardDefaults.outlinedCardColors()
-        CardVariant.FILLED -> CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        CardVariant.FILLED -> CardDefaults.cardColors(containerColor = AvanueTheme.colors.surfaceVariant)
         else -> CardDefaults.cardColors()
     }
 
@@ -263,7 +264,7 @@ fun MagicDividerCompose(
     inset: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val dividerColor = color?.let { parseColor(it) } ?: MaterialTheme.colorScheme.outlineVariant
+    val dividerColor = color?.let { parseColor(it) } ?: AvanueTheme.colors.borderSubtle
     val insetModifier = if (inset) Modifier.padding(horizontal = 16.dp) else Modifier
 
     when (orientation) {
@@ -469,7 +470,7 @@ fun MagicColorPickerCompose(
                         .background(parseColor(colorHex), RoundedCornerShape(8.dp))
                         .border(
                             width = if (colorHex == selectedColor) 3.dp else 1.dp,
-                            color = if (colorHex == selectedColor) MaterialTheme.colorScheme.primary else Color.Gray,
+                            color = if (colorHex == selectedColor) AvanueTheme.colors.primary else Color.Gray,
                             shape = RoundedCornerShape(8.dp)
                         )
                         .clickable { onColorChange(colorHex) }
@@ -526,7 +527,7 @@ fun MagicIconPickerCompose(
                         .size(48.dp)
                         .border(
                             width = if (iconName == selectedIcon) 2.dp else 1.dp,
-                            color = if (iconName == selectedIcon) MaterialTheme.colorScheme.primary else Color.Gray,
+                            color = if (iconName == selectedIcon) AvanueTheme.colors.primary else Color.Gray,
                             shape = RoundedCornerShape(4.dp)
                         )
                         .clickable { onIconChange(iconName) },

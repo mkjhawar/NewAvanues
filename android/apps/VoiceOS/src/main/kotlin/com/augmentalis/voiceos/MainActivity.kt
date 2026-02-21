@@ -44,6 +44,7 @@ import com.augmentalis.voiceos.ui.ScanningCallbacks
 import com.augmentalis.voiceos.service.OverlayService
 import com.augmentalis.voiceos.service.VoiceOSAccessibilityService
 import com.augmentalis.voiceos.ui.theme.VoiceOSTheme
+import com.augmentalis.avanueui.theme.AvanueTheme
 import kotlinx.coroutines.launch
 
 /**
@@ -265,7 +266,7 @@ fun MainScreen() {
                         Spacer(modifier = Modifier.width(8.dp))
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = AvanueTheme.colors.primaryContainer
                     )
                 )
             },
@@ -319,7 +320,7 @@ private fun DrawerContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .background(AvanueTheme.colors.primaryContainer)
                 .padding(24.dp)
         ) {
             Column {
@@ -327,13 +328,13 @@ private fun DrawerContent(
                     "VoiceOSCoreNG",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = AvanueTheme.colors.onPrimaryContainer
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     "v${BuildConfig.VERSION_NAME} • ${LearnAppDevToggle.getCurrentTier().name} Mode",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
         }
@@ -448,7 +449,7 @@ private fun DrawerContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = AvanueTheme.colors.surfaceVariant
                 )
             ) {
                 Text(
@@ -473,7 +474,7 @@ private fun DrawerSection(
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            color = AvanueTheme.colors.primary,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         content()
@@ -495,7 +496,7 @@ private fun DrawerActionItem(
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         },
@@ -526,7 +527,7 @@ private fun DrawerToggleItem(
                     Text(
                         subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
                 Switch(
@@ -555,7 +556,7 @@ private fun StatusCard(configSummary: String) {
                 Icon(
                     Icons.Default.Info,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = AvanueTheme.colors.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -669,7 +670,7 @@ private fun ScannerControlCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = AvanueTheme.colors.primaryContainer
         )
     ) {
         Column(
@@ -681,7 +682,7 @@ private fun ScannerControlCard() {
                 Icon(
                     VoiceOSIcons.scanner(),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = AvanueTheme.colors.onPrimaryContainer
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -718,7 +719,7 @@ private fun ScannerControlCard() {
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
+                        containerColor = AvanueTheme.colors.error
                     )
                 ) {
                     Icon(VoiceOSIcons.accessibility(), contentDescription = null)
@@ -743,7 +744,7 @@ private fun ScannerControlCard() {
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
+                        containerColor = AvanueTheme.colors.error
                     )
                 ) {
                     Icon(VoiceOSIcons.layers(), contentDescription = null)
@@ -758,7 +759,7 @@ private fun ScannerControlCard() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        containerColor = AvanueTheme.colors.tertiaryContainer
                     )
                 ) {
                     Row(
@@ -768,13 +769,13 @@ private fun ScannerControlCard() {
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary
+                            tint = AvanueTheme.colors.tertiary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "VoiceOS Active - Debug FAB visible on all apps",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                            color = AvanueTheme.colors.onTertiaryContainer
                         )
                     }
                 }
@@ -792,7 +793,7 @@ private fun ScannerControlCard() {
                     "VoiceOS is active! Navigate to any app - the debug FAB will show detected elements and voice commands."
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                color = AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.8f)
             )
         }
     }
@@ -807,7 +808,7 @@ private fun StatusChip(label: String, enabled: Boolean) {
             Icon(
                 if (enabled) Icons.Default.CheckCircle else VoiceOSIcons.error(),
                 contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                tint = if (enabled) AvanueTheme.colors.primary else AvanueTheme.colors.error,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -819,7 +820,7 @@ private fun InstructionsCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = AvanueTheme.colors.secondaryContainer
         )
     ) {
         Column(
@@ -831,7 +832,7 @@ private fun InstructionsCard() {
                 Icon(
                     VoiceOSIcons.help(),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    tint = AvanueTheme.colors.onSecondaryContainer
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -874,7 +875,7 @@ private fun FeatureStatusCard() {
                 Icon(
                     VoiceOSIcons.checklist(),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = AvanueTheme.colors.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -912,9 +913,9 @@ private fun FeatureStatusCard() {
                         if (enabled) Icons.Default.CheckCircle else VoiceOSIcons.cancel(),
                         contentDescription = if (enabled) "Enabled" else "Disabled",
                         tint = if (enabled)
-                            MaterialTheme.colorScheme.primary
+                            AvanueTheme.colors.primary
                         else
-                            MaterialTheme.colorScheme.outline
+                            AvanueTheme.colors.border
                     )
                 }
             }

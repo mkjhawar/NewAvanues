@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ripple
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -171,7 +172,7 @@ private fun HistoryPanel(
             .fillMaxHeight()
             .widthIn(max = 300.dp) // Max 300dp on desktop
             .fillMaxWidth(0.8f), // 80% width on narrow devices
-        color = MaterialTheme.colorScheme.surface,
+        color = AvanueTheme.colors.surface,
         tonalElevation = 8.dp,
         shadowElevation = 8.dp
     ) {
@@ -186,7 +187,7 @@ private fun HistoryPanel(
                 onNewConversation = onNewConversation
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(color = AvanueTheme.colors.borderSubtle)
 
             // Conversation list or empty state
             if (conversations.isEmpty()) {
@@ -238,7 +239,7 @@ private fun HistoryHeader(
             Icon(
                 imageVector = Icons.Filled.Close,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface
+                tint = AvanueTheme.colors.textPrimary
             )
         }
 
@@ -247,7 +248,7 @@ private fun HistoryHeader(
             text = "History",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = AvanueTheme.colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
 
@@ -261,7 +262,7 @@ private fun HistoryHeader(
             Icon(
                 imageVector = Icons.Filled.Add,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = AvanueTheme.colors.primary
             )
         }
     }
@@ -289,7 +290,7 @@ private fun EmptyHistoryState(
             imageVector = Icons.Filled.Add,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            tint = AvanueTheme.colors.textSecondary.copy(alpha = 0.4f)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -297,7 +298,7 @@ private fun EmptyHistoryState(
         Text(
             text = "No conversations yet",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = AvanueTheme.colors.textSecondary,
             fontWeight = FontWeight.SemiBold
         )
 
@@ -306,7 +307,7 @@ private fun EmptyHistoryState(
         Text(
             text = "Start chatting with AVA to\ncreate your first conversation",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            color = AvanueTheme.colors.textSecondary.copy(alpha = 0.7f),
             modifier = Modifier.padding(horizontal = 32.dp)
         )
     }
@@ -368,7 +369,7 @@ private fun ConversationItem(
     onClick: () -> Unit
 ) {
     val backgroundColor = if (isCurrentConversation) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        AvanueTheme.colors.primaryContainer.copy(alpha = 0.5f)
     } else {
         Color.Transparent
     }
@@ -415,7 +416,7 @@ private fun ConversationItem(
                     text = displayTitle,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = if (isCurrentConversation) FontWeight.SemiBold else FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = AvanueTheme.colors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -429,25 +430,25 @@ private fun ConversationItem(
                     Text(
                         text = relativeTime,
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        color = AvanueTheme.colors.textSecondary.copy(alpha = 0.7f)
                     )
 
                     // Separator dot
                     Text(
                         text = "•",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        color = AvanueTheme.colors.textSecondary.copy(alpha = 0.5f)
                     )
 
                     // Message count badge
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                        color = AvanueTheme.colors.secondaryContainer.copy(alpha = 0.6f)
                     ) {
                         Text(
                             text = "${conversation.messageCount} msg${if (conversation.messageCount != 1) "s" else ""}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            color = AvanueTheme.colors.onSecondaryContainer,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -459,7 +460,7 @@ private fun ConversationItem(
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = "Currently selected conversation",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = AvanueTheme.colors.primary,
                     modifier = Modifier
                         .size(24.dp)
                         .padding(start = 8.dp)
@@ -470,7 +471,7 @@ private fun ConversationItem(
 
     // Divider between items
     HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        color = AvanueTheme.colors.borderSubtle.copy(alpha = 0.5f),
         modifier = Modifier.padding(horizontal = 16.dp)
     )
 }

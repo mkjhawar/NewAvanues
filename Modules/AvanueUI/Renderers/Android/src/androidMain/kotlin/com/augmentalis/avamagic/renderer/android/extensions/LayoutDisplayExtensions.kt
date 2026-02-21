@@ -31,6 +31,7 @@ import com.augmentalis.avamagic.ui.core.data.*
 import com.augmentalis.avamagic.ui.core.display.*
 import com.augmentalis.avamagic.ui.core.layout.*
 import com.augmentalis.avamagic.ui.core.navigation.TabsComponent
+import com.augmentalis.avanueui.theme.AvanueTheme
 import kotlinx.coroutines.launch
 
 /**
@@ -251,8 +252,8 @@ fun SurfaceComponent.Render(renderer: ComposeRenderer) {
             Shape.RoundedLarge -> RoundedCornerShape(16.dp)
             Shape.Circle -> CircleShape
         },
-        color = color?.toComposeColor() ?: MaterialTheme.colorScheme.surface,
-        contentColor = contentColor?.toComposeColor() ?: MaterialTheme.colorScheme.onSurface,
+        color = color?.toComposeColor() ?: AvanueTheme.colors.surface,
+        contentColor = contentColor?.toComposeColor() ?: AvanueTheme.colors.textPrimary,
         tonalElevation = tonalElevation.dp,
         shadowElevation = shadowElevation.dp
     ) {
@@ -314,13 +315,13 @@ fun DividerComponent.Render(renderer: ComposeRenderer) {
             modifier = modifierConverter.convert(modifiers)
                 .then(if (thickness != null) Modifier.width(thickness!!.dp) else Modifier),
             thickness = (thickness ?: 1f).dp,
-            color = color?.toComposeColor() ?: MaterialTheme.colorScheme.outlineVariant
+            color = color?.toComposeColor() ?: AvanueTheme.colors.borderSubtle
         )
     } else {
         HorizontalDivider(
             modifier = modifierConverter.convert(modifiers),
             thickness = (thickness ?: 1f).dp,
-            color = color?.toComposeColor() ?: MaterialTheme.colorScheme.outlineVariant
+            color = color?.toComposeColor() ?: AvanueTheme.colors.borderSubtle
         )
     }
 }
@@ -468,13 +469,13 @@ fun CircularProgressComponent.Render(renderer: ComposeRenderer) {
         CircularProgressIndicator(
             progress = { progress!! },
             modifier = modifierConverter.convert(modifiers).size(size.dp),
-            color = color?.toComposeColor() ?: MaterialTheme.colorScheme.primary,
+            color = color?.toComposeColor() ?: AvanueTheme.colors.primary,
             strokeWidth = strokeWidth.dp
         )
     } else {
         CircularProgressIndicator(
             modifier = modifierConverter.convert(modifiers).size(size.dp),
-            color = color?.toComposeColor() ?: MaterialTheme.colorScheme.primary,
+            color = color?.toComposeColor() ?: AvanueTheme.colors.primary,
             strokeWidth = strokeWidth.dp
         )
     }
@@ -561,7 +562,7 @@ fun SpinnerComponent.Render(renderer: ComposeRenderer) {
 
     CircularProgressIndicator(
         modifier = modifierConverter.convert(modifiers).size(size.dp),
-        color = color?.toComposeColor() ?: MaterialTheme.colorScheme.primary,
+        color = color?.toComposeColor() ?: AvanueTheme.colors.primary,
         strokeWidth = (size / 10).dp
     )
 }
@@ -649,8 +650,8 @@ fun PaginationComponent.Render(renderer: ComposeRenderer) {
                 onClick = { onPageChange?.invoke(page) },
                 colors = if (isSelected) {
                     ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = AvanueTheme.colors.primary,
+                        contentColor = AvanueTheme.colors.onPrimary
                     )
                 } else {
                     ButtonDefaults.filledTonalButtonColors()
@@ -698,14 +699,14 @@ fun StatCardComponent.Render(renderer: ComposeRenderer) {
                         imageVector = IconResolver.resolve(iconName),
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = AvanueTheme.colors.primary
                     )
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
 
@@ -750,7 +751,7 @@ fun StatCardComponent.Render(renderer: ComposeRenderer) {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -815,7 +816,7 @@ fun StickyHeaderComponent.Render(renderer: ComposeRenderer) {
     Surface(
         modifier = modifierConverter.convert(modifiers),
         shadowElevation = 4.dp,
-        color = MaterialTheme.colorScheme.surface
+        color = AvanueTheme.colors.surface
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -1014,7 +1015,7 @@ fun TableComponent.Render(renderer: ComposeRenderer) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .background(AvanueTheme.colors.surfaceVariant)
                 .padding(12.dp)
         ) {
             headers.forEach { header ->
@@ -1037,7 +1038,7 @@ fun TableComponent.Render(renderer: ComposeRenderer) {
                     .fillMaxWidth()
                     .then(
                         if (striped && index % 2 == 1) {
-                            Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            Modifier.background(AvanueTheme.colors.surfaceVariant.copy(alpha = 0.5f))
                         } else Modifier
                     )
                     .padding(12.dp)
@@ -1174,9 +1175,9 @@ fun CarouselComponent.Render(renderer: ComposeRenderer) {
                             .clip(CircleShape)
                             .background(
                                 if (pagerState.currentPage == index)
-                                    MaterialTheme.colorScheme.primary
+                                    AvanueTheme.colors.primary
                                 else
-                                    MaterialTheme.colorScheme.surfaceVariant
+                                    AvanueTheme.colors.surfaceVariant
                             )
                     )
                 }
@@ -1213,9 +1214,9 @@ fun TimelineComponent.Render(renderer: ComposeRenderer) {
                             .clip(CircleShape)
                             .background(
                                 if (item.completed)
-                                    MaterialTheme.colorScheme.primary
+                                    AvanueTheme.colors.primary
                                 else
-                                    MaterialTheme.colorScheme.surfaceVariant
+                                    AvanueTheme.colors.surfaceVariant
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1225,9 +1226,9 @@ fun TimelineComponent.Render(renderer: ComposeRenderer) {
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                                 tint = if (item.completed)
-                                    MaterialTheme.colorScheme.onPrimary
+                                    AvanueTheme.colors.onPrimary
                                 else
-                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                    AvanueTheme.colors.textSecondary
                             )
                         }
                     }
@@ -1238,7 +1239,7 @@ fun TimelineComponent.Render(renderer: ComposeRenderer) {
                             modifier = Modifier
                                 .width(2.dp)
                                 .height(40.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(AvanueTheme.colors.surfaceVariant)
                         )
                     }
                 }
@@ -1258,14 +1259,14 @@ fun TimelineComponent.Render(renderer: ComposeRenderer) {
                         Text(
                             text = desc,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                     item.timestamp?.let { timestamp ->
                         Text(
                             text = timestamp,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -1286,7 +1287,7 @@ fun DataGridComponent.Render(renderer: ComposeRenderer) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .background(AvanueTheme.colors.surfaceVariant)
                 .horizontalScroll(androidx.compose.foundation.rememberScrollState())
         ) {
             columns.forEach { column ->
@@ -1331,7 +1332,7 @@ fun DataGridComponent.Render(renderer: ComposeRenderer) {
                         .fillMaxWidth()
                         .background(
                             if (isSelected)
-                                MaterialTheme.colorScheme.primaryContainer
+                                AvanueTheme.colors.primaryContainer
                             else
                                 Color.Transparent
                         )
@@ -1401,7 +1402,7 @@ fun DataTableComponent.Render(renderer: ComposeRenderer) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .background(AvanueTheme.colors.surfaceVariant)
                 .horizontalScroll(androidx.compose.foundation.rememberScrollState())
         ) {
             headers.forEach { header ->
@@ -1430,7 +1431,7 @@ fun DataTableComponent.Render(renderer: ComposeRenderer) {
                         .fillMaxWidth()
                         .background(
                             if (isSelected)
-                                MaterialTheme.colorScheme.primaryContainer
+                                AvanueTheme.colors.primaryContainer
                             else
                                 Color.Transparent
                         )
@@ -1480,7 +1481,7 @@ fun ListComponent.Render(renderer: ComposeRenderer) {
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .background(AvanueTheme.colors.primaryContainer)
                             )
                         }
                     }
@@ -1504,7 +1505,7 @@ fun ListComponent.Render(renderer: ComposeRenderer) {
                     .fillMaxWidth()
                     .background(
                         if (isSelected)
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            AvanueTheme.colors.primaryContainer.copy(alpha = 0.5f)
                         else
                             Color.Transparent
                     )
@@ -1737,7 +1738,7 @@ fun EmptyStateComponent.Render(renderer: ComposeRenderer) {
                 modifier = Modifier
                     .size(64.dp)
                     .padding(bottom = 16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = AvanueTheme.colors.textSecondary
             )
         }
 
@@ -1745,7 +1746,7 @@ fun EmptyStateComponent.Render(renderer: ComposeRenderer) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = AvanueTheme.colors.textPrimary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -1754,7 +1755,7 @@ fun EmptyStateComponent.Render(renderer: ComposeRenderer) {
             Text(
                 text = desc,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }

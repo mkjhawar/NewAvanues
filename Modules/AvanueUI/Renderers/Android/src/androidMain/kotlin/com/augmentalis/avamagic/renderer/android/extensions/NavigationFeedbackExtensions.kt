@@ -18,6 +18,7 @@ import com.augmentalis.avamagic.components.core.Position
 import com.augmentalis.avamagic.components.core.Severity
 import com.augmentalis.avamagic.ui.core.feedback.*
 import com.augmentalis.avamagic.ui.core.navigation.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Navigation & Feedback Component Extensions
@@ -176,11 +177,11 @@ fun NavigationDrawerComponent.Render(renderer: ComposeRenderer) {
 @Composable
 fun ToastComponent.Render(renderer: ComposeRenderer) {
     val (backgroundColor, contentColor) = when (severity) {
-        Severity.INFO -> MaterialTheme.colorScheme.inverseSurface to MaterialTheme.colorScheme.inverseOnSurface
-        Severity.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-        Severity.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-        Severity.ERROR -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-        else -> MaterialTheme.colorScheme.inverseSurface to MaterialTheme.colorScheme.inverseOnSurface
+        Severity.INFO -> AvanueTheme.colors.inverseSurface to AvanueTheme.colors.inverseOnSurface
+        Severity.SUCCESS -> AvanueTheme.colors.primaryContainer to AvanueTheme.colors.onPrimaryContainer
+        Severity.WARNING -> AvanueTheme.colors.tertiaryContainer to AvanueTheme.colors.onTertiaryContainer
+        Severity.ERROR -> AvanueTheme.colors.errorContainer to AvanueTheme.colors.onErrorContainer
+        else -> AvanueTheme.colors.inverseSurface to AvanueTheme.colors.inverseOnSurface
     }
 
     val icon = when (severity) {
@@ -370,10 +371,10 @@ fun Modal.Render(renderer: ComposeRenderer) {
 @Composable
 fun Confirm.Render(renderer: ComposeRenderer) {
     val (containerColor, contentColor) = when (severity) {
-        ConfirmSeverity.INFO -> MaterialTheme.colorScheme.surface to MaterialTheme.colorScheme.onSurface
-        ConfirmSeverity.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-        ConfirmSeverity.ERROR -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-        ConfirmSeverity.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        ConfirmSeverity.INFO -> AvanueTheme.colors.surface to AvanueTheme.colors.textPrimary
+        ConfirmSeverity.WARNING -> AvanueTheme.colors.tertiaryContainer to AvanueTheme.colors.onTertiaryContainer
+        ConfirmSeverity.ERROR -> AvanueTheme.colors.errorContainer to AvanueTheme.colors.onErrorContainer
+        ConfirmSeverity.SUCCESS -> AvanueTheme.colors.primaryContainer to AvanueTheme.colors.onPrimaryContainer
     }
 
     AlertDialog(
@@ -395,8 +396,8 @@ fun Confirm.Render(renderer: ComposeRenderer) {
                 onClick = { onConfirm?.invoke() },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = when (severity) {
-                        ConfirmSeverity.ERROR -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.primary
+                        ConfirmSeverity.ERROR -> AvanueTheme.colors.error
+                        else -> AvanueTheme.colors.primary
                     }
                 )
             ) {
