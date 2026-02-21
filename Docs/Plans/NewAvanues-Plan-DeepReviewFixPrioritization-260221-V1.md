@@ -307,8 +307,8 @@ Pervasive Rule 3 violations. **30+ files** across:
 | 7 | P3 | Theme Violations | 30+ | 2-3 | Pending |
 | 8 | P3 | AI Attribution | 53 | 0.5 | **DONE** (260221, `2b6cd3c8` + `0bb87e3f`) |
 | 9 | P3 | Resource Leaks | 12 | 2 | **DONE** (260221, `e241919c` + `3190442d`) — all 12 fixed |
-| 10 | P3 | Hardcoded Stubs | 19 | 3 | Partial — 2/19 fixed in `e241919c` (ContentRenderer stub, CommandBar icons) |
-| | | **TOTAL** | **~185** | **~25** | **7/10 done** |
+| 10 | P3 | Hardcoded Stubs | 19 | 3 | **13/19 DONE** (`e241919c` + `66f85a43`) — F9-F11 DeviceMgr fake data, F7 autoResolve, F15 min/max deferred |
+| | | **TOTAL** | **~185** | **~25** | **8/10 done (Batch 4+7 remaining)** |
 
 ---
 
