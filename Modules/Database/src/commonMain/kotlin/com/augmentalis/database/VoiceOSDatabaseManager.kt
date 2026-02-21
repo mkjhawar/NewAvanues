@@ -328,10 +328,12 @@ class VoiceOSDatabaseManager private constructor(
 
     /**
      * Execute a transaction across multiple repositories.
+     * Block is non-suspend because SQLDelight transactions are synchronous.
+     * Caller should wrap in withContext(Dispatchers.IO) if needed.
      */
-    suspend fun <T> transaction(block: suspend () -> T): T {
+    fun <T> transaction(block: () -> T): T {
         return _database.transactionWithResult {
-            kotlinx.coroutines.runBlocking { block() }
+            block()
         }
     }
 
