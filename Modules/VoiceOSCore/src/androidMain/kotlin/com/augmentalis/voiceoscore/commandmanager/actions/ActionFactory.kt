@@ -884,15 +884,10 @@ class DynamicBrowserAction(
     ): CommandExecutionResult {
         return when (action) {
             "forward" -> {
-                // Browser forward — use Intent.ACTION_VIEW for generic browser nav
-                if (performGlobalAction(accessibilityService, AccessibilityService.GLOBAL_ACTION_BACK)) {
-                    // Note: Android has no built-in "forward" global action.
-                    // GLOBAL_ACTION_BACK is the closest; forward requires browser-specific keypresses.
-                    createErrorResult(command, ErrorCode.NOT_SUPPORTED,
-                        "Browser forward is not supported via accessibility. Use the browser's forward button.")
-                } else {
-                    createErrorResult(command, ErrorCode.EXECUTION_FAILED, "Accessibility service unavailable")
-                }
+                // Android has no GLOBAL_ACTION_FORWARD in accessibility API.
+                // Do NOT call GLOBAL_ACTION_BACK — that navigates backward.
+                createErrorResult(command, ErrorCode.NOT_SUPPORTED,
+                    "Browser forward is not supported via accessibility. Use the browser's forward button.")
             }
             "refresh", "reload" -> {
                 // Open the current URL again via ACTION_VIEW — most browsers treat this as refresh

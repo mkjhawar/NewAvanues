@@ -27,11 +27,13 @@ actual class DatabaseDriverFactory {
             dbDir.mkdirs()
         }
 
-        val dbPath = File(dbDir, "voiceos.db").absolutePath
-        val driver: SqlDriver = JdbcSqliteDriver("jdbc:sqlite:$dbPath")
+        val dbFile = File(dbDir, "voiceos.db")
+        val isNewDb = !dbFile.exists()
+        val driver: SqlDriver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}")
 
-        // Create schema if needed
-        VoiceOSDatabase.Schema.create(driver)
+        if (isNewDb) {
+            VoiceOSDatabase.Schema.create(driver)
+        }
 
         // Configure SQLite pragmas for better performance and concurrency
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)

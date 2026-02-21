@@ -44,10 +44,12 @@ class ViewModelState<T>(initialValue: T) {
         set(value) { _state.value = value }
 
     /**
-     * Atomic update using transform function
+     * Atomic update using transform function.
+     * Uses MutableStateFlow.update() which internally uses CAS (compare-and-set)
+     * to prevent lost updates from concurrent modifications.
      */
     inline fun update(transform: (T) -> T) {
-        _state.value = transform(_state.value)
+        _state.update(transform)
     }
 
     /**

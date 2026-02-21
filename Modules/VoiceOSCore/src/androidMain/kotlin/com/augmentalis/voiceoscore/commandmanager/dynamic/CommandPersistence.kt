@@ -188,17 +188,10 @@ class CommandStorage(
      * Note: Current schema doesn't track namespace, so this deletes all custom commands
      */
     suspend fun deleteNamespace(namespace: String): Result<Int> {
-        return try {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val deviceLocale = java.util.Locale.getDefault().toLanguageTag()
-                // For now, we can't filter by namespace, so we'll just count commands
-                val count = dao.getCommandCount(deviceLocale)
-                Result.success(count)
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("CommandStorage", "Failed to delete namespace: $namespace", e)
-            Result.failure(e)
-        }
+        // Schema does not have a namespace column — namespace-scoped deletion not possible.
+        // Return failure so callers know the operation did not execute.
+        android.util.Log.w("CommandStorage", "deleteNamespace('$namespace') not supported — schema lacks namespace column")
+        return Result.failure(UnsupportedOperationException("Namespace-scoped deletion not supported by current schema"))
     }
 
     /**

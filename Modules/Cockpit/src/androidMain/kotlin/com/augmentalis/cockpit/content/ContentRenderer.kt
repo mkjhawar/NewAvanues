@@ -122,7 +122,10 @@ fun ContentRenderer(
 
             is FrameContent.Signature -> SignatureCapture(
                 onComplete = { strokes ->
-                    onContentStateChanged(frame.id, content.copy(isSigned = strokes.isNotEmpty()))
+                    onContentStateChanged(frame.id, content.copy(
+                        isSigned = strokes.isNotEmpty(),
+                        signatureData = strokes.toString()
+                    ))
                 },
                 modifier = Modifier.fillMaxSize()
             )

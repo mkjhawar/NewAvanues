@@ -221,9 +221,14 @@ object DatabaseMigrations {
             return
         }
 
-        // Migration is handled by SQLDelight's migration file: migrations/3.sqm
-        // The .sqm file contains all the table recreation logic with foreign keys
-        // This function is a placeholder for manual migration if needed
+        // FK constraints cannot be added to existing SQLite tables without recreation.
+        // New installs get correct FKs from SQLDelight's generated schema.
+        // Existing installs: enable FK enforcement so future inserts/updates are validated.
+        try {
+            driver.execute(null, "PRAGMA foreign_keys = ON", 0)
+        } catch (_: Exception) {
+            // PRAGMA not supported on all drivers — safe to skip
+        }
     }
 
     /**
