@@ -104,6 +104,7 @@ open class AvaGrpcClient(
     private val channelMutex = Mutex()
     private var channel: ManagedChannel? = null
     private var reconnectJob: Job? = null
+    private var udsEventLoopGroup: EpollEventLoopGroup? = null
     private val retryCounter = AtomicInteger(0)
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -259,7 +260,10 @@ open class AvaGrpcClient(
     }
 
     private fun createUdsChannel(): ManagedChannel {
+        // Shut down any previous group before creating a new one
+        udsEventLoopGroup?.shutdownGracefully()
         val eventLoopGroup = EpollEventLoopGroup()
+        udsEventLoopGroup = eventLoopGroup
 
         return NettyChannelBuilder
             .forAddress(DomainSocketAddress(config.socketPath))

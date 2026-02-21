@@ -116,6 +116,7 @@ class PluginServiceGrpcClient(
     private val channelMutex = Mutex()
     private var channel: ManagedChannel? = null
     private var reconnectJob: Job? = null
+    private var udsEventLoopGroup: EpollEventLoopGroup? = null
 
     private val _connectionState = MutableStateFlow<PluginConnectionState>(PluginConnectionState.Disconnected)
     val connectionState: StateFlow<PluginConnectionState> = _connectionState.asStateFlow()
@@ -172,6 +173,9 @@ class PluginServiceGrpcClient(
             channel = null
             _connectionState.value = PluginConnectionState.Disconnected
             _isConnected.value = false
+
+            udsEventLoopGroup?.shutdownGracefully()
+            udsEventLoopGroup = null
         }
     }
 
@@ -482,7 +486,10 @@ class PluginServiceGrpcClient(
     }
 
     private fun createUdsChannel(): ManagedChannel {
+        // Shut down any previous group before creating a new one
+        udsEventLoopGroup?.shutdownGracefully()
         val eventLoopGroup = EpollEventLoopGroup()
+        udsEventLoopGroup = eventLoopGroup
 
         return NettyChannelBuilder
             .forAddress(DomainSocketAddress(config.socketPath))

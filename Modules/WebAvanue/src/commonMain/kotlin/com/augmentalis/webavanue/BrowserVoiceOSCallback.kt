@@ -82,6 +82,7 @@ class BrowserVoiceOSCallback(
 
     // Voice command generator for matching spoken phrases to elements
     private val commandGenerator = VoiceCommandGenerator()
+    private val commandGeneratorLock = Any()
 
     // JavaScript executor for web command execution (set by platform layer)
     @Volatile
@@ -145,10 +146,14 @@ class BrowserVoiceOSCallback(
         _currentScrapeResult.value = result
 
         // Clear previous commands and add new elements
-        commandGenerator.clear()
-        commandGenerator.addElements(result.elements)
-
-        val count = commandGenerator.getCommandCount()
+        val count: Int
+        val phrases: List<String>
+        synchronized(commandGeneratorLock) {
+            commandGenerator.clear()
+            commandGenerator.addElements(result.elements)
+            count = commandGenerator.getCommandCount()
+            phrases = commandGenerator.getAllCommands().map { it.fullText }
+        }
         _commandCount.value = count
 
         // Update scraping state to complete
@@ -168,7 +173,6 @@ class BrowserVoiceOSCallback(
 
         // Emit phrases to static flow for speech engine grammar integration.
         // The accessibility service collects this and routes to VoiceOSCore.updateWebCommands().
-        val phrases = commandGenerator.getAllCommands().map { it.fullText }
         _activeWebPhrases.value = phrases
 
         // Update session cache — next visit to this URL will restore instantly.
@@ -224,9 +228,11 @@ class BrowserVoiceOSCallback(
 
         if (cached != null) {
             // Session cache HIT: restore commands immediately
-            commandGenerator.clear()
-            commandGenerator.addElements(cached.elements)
-            val count = commandGenerator.getCommandCount()
+            val count = synchronized(commandGeneratorLock) {
+                commandGenerator.clear()
+                commandGenerator.addElements(cached.elements)
+                commandGenerator.getCommandCount()
+            }
             _commandCount.value = count
             _activeWebPhrases.value = cached.phrases
 

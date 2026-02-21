@@ -37,8 +37,8 @@ class JavaPreferencesSettingsStore<T>(
 
     init {
         prefs.addPreferenceChangeListener {
-            if (!isUpdating) {
-                synchronized(this) {
+            synchronized(this) {
+                if (!isUpdating) {
                     _settings.value = loadSettings()
                 }
             }

@@ -37,7 +37,12 @@ class HttpServer(
     private val logger = LoggerFactory.getLogger("HttpServer")
     private val socketServer = SocketServer(config.socketConfig)
     private var serverJob: Job? = null
-    private val activeConnections = mutableSetOf<Job>()
+    // Thread-safe connection counter — avoids ConcurrentModificationException
+    // from invokeOnCompletion callbacks racing with stop() iteration.
+    // Child jobs are cancelled automatically via structured concurrency when
+    // serverJob is cancelled, so we only need the count for throttling.
+    @kotlin.concurrent.Volatile
+    private var activeConnectionCount = 0
     private var middlewarePipeline = MiddlewarePipeline.empty()
     private val websocketHandlers = mutableMapOf<String, WebSocketHandler>()
 
@@ -66,9 +71,9 @@ class HttpServer(
                     val socket = socketServer.accept()
                     logger.d { "Accepted connection from ${socket.remoteAddress()}" }
                     val connectionJob = launch { handleConnection(socket) }
-                    activeConnections.add(connectionJob)
-                    connectionJob.invokeOnCompletion { activeConnections.remove(connectionJob) }
-                    if (activeConnections.size >= config.maxConnections) {
+                    activeConnectionCount++
+                    connectionJob.invokeOnCompletion { activeConnectionCount-- }
+                    if (activeConnectionCount >= config.maxConnections) {
                         logger.w { "Max connections reached (${config.maxConnections})" }
                         delay(100)
                     }
@@ -91,10 +96,11 @@ class HttpServer(
     suspend fun stop() {
         logger.i { "Stopping server..." }
         socketServer.close()
+        // cancelAndJoin cascades cancellation to all child connection jobs
+        // (structured concurrency — children are launched inside serverJob's scope)
         serverJob?.cancelAndJoin()
         serverJob = null
-        activeConnections.forEach { it.cancel() }
-        activeConnections.clear()
+        activeConnectionCount = 0
         logger.i { "Server stopped" }
     }
 

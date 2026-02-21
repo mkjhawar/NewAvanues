@@ -17,9 +17,10 @@ import android.util.LruCache
 import com.augmentalis.voiceoscore.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.Command
 import com.augmentalis.voiceoscore.CommandSource
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -42,6 +43,9 @@ class CommandCache(private val context: Context) {
         private const val TIER_1_SIZE = 20
         private const val TIER_2_SIZE = 50
     }
+
+    // Lifecycle-scoped coroutine scope — cancels all child jobs on destroy()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // Tier 1: Preloaded top 20 commands (~10KB, instant access)
     private val tier1Cache: MutableMap<String, Command> = mutableMapOf()
@@ -128,33 +132,27 @@ class CommandCache(private val context: Context) {
      * Replaces fallback commands with database entries
      */
     private fun loadGlobalCommandsFromDatabase() {
-        try {
-            // Launch coroutine to load from database
-        @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) {
-                try {
-                    val deviceLocale = Locale.getDefault().toLanguageTag()
-                    val entities = database.getGlobalCommands(deviceLocale)
+        scope.launch {
+            try {
+                val deviceLocale = Locale.getDefault().toLanguageTag()
+                val entities = database.getGlobalCommands(deviceLocale)
 
-                    // Convert entities to Command objects and add to tier1Cache
-                    entities.take(TIER_1_SIZE).forEach { entity ->
-                        val command = Command(
-                            id = entity.id,
-                            text = entity.primaryText,
-                            source = CommandSource.VOICE,
-                            confidence = 1.0f,
-                            timestamp = System.currentTimeMillis()
-                        )
-                        tier1Cache[command.text.lowercase()] = command
-                    }
-
-                    Log.i(TAG, "Tier 1 cache updated with ${entities.size} commands from database")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load global commands from database", e)
+                // Convert entities to Command objects and add to tier1Cache
+                entities.take(TIER_1_SIZE).forEach { entity ->
+                    val command = Command(
+                        id = entity.id,
+                        text = entity.primaryText,
+                        source = CommandSource.VOICE,
+                        confidence = 1.0f,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    tier1Cache[command.text.lowercase()] = command
                 }
+
+                Log.i(TAG, "Tier 1 cache updated with ${entities.size} commands from database")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load global commands from database", e)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to launch database load coroutine", e)
         }
     }
 
@@ -368,11 +366,10 @@ class CommandCache(private val context: Context) {
      * Q3 Enhancement 2: Cache Warming
      * Warm cache on service start with user's frequent commands
      */
-    @OptIn(DelicateCoroutinesApi::class)
     fun warmCache() {
         Log.d(TAG, "Warming cache with frequent commands")
 
-        GlobalScope.launch(Dispatchers.IO) {
+        scope.launch {
             try {
                 val deviceLocale = Locale.getDefault().toLanguageTag()
 
@@ -521,6 +518,16 @@ class CommandCache(private val context: Context) {
      * Get current memory level
      */
     fun getMemoryLevel(): MemoryLevel = currentMemoryLevel
+
+    /**
+     * Destroy cache and cancel all background coroutines.
+     * Must be called when the cache is no longer needed to prevent leaks.
+     */
+    fun destroy() {
+        scope.cancel()
+        clearAll()
+        Log.i(TAG, "CommandCache destroyed — all coroutines cancelled")
+    }
 }
 
 /**
