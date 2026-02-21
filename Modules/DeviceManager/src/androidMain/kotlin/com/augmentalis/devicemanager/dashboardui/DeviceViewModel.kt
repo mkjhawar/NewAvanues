@@ -35,7 +35,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Device hardware info
@@ -461,19 +464,40 @@ class DeviceViewModel(private val context: Context) : ViewModel() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                // TODO: Add public methods to BluetoothManager
-                // bluetoothManager.initialize()
-                // bluetoothManager.startScanning()
-                delay(5000) // Scan for 5 seconds
-                // bluetoothManager.stopScanning()
-                
-                // Get scanned devices (simulated)
-                _bluetoothDevices.value = listOf(
-                    "Headphones - 00:11:22:33:44:55",
-                    "Smartwatch - AA:BB:CC:DD:EE:FF",
-                    "Speaker - 11:22:33:44:55:66"
-                )
-                _successMessage.value = "Bluetooth scan completed"
+
+                if (!bluetoothManager.isBluetoothSupported()) {
+                    _errorMessage.value = "Bluetooth is not supported on this device"
+                    return@launch
+                }
+
+                if (!bluetoothManager.isBluetoothEnabled()) {
+                    _errorMessage.value = "Bluetooth is not enabled"
+                    return@launch
+                }
+
+                val scanDuration = 10_000L
+
+                // Start real Bluetooth discovery (classic + BLE)
+                bluetoothManager.startDiscovery(duration = scanDuration)
+
+                // Wait for discovery to complete (duration + margin for callback processing)
+                delay(scanDuration + 1_500)
+
+                // Read discovered devices from the real StateFlow
+                val devices = bluetoothManager.discoveredDevices.value
+                _bluetoothDevices.value = devices.map { device ->
+                    buildString {
+                        append(device.name ?: "Unknown Device")
+                        append(" - ")
+                        append(device.address)
+                        device.rssi?.let { append(" (${it}dBm)") }
+                    }
+                }
+
+                val count = devices.size
+                _successMessage.value = "Bluetooth scan completed: $count device${if (count != 1) "s" else ""} found"
+            } catch (e: SecurityException) {
+                _errorMessage.value = "Bluetooth scan requires BLUETOOTH_SCAN permission"
             } catch (e: Exception) {
                 _errorMessage.value = "Bluetooth scan failed: ${e.message}"
             } finally {
@@ -489,19 +513,40 @@ class DeviceViewModel(private val context: Context) : ViewModel() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                // TODO: Add public methods to WiFiManager
-                // wifiManager.initialize()
-                // wifiManager.startScanning()
-                delay(3000) // Scan for 3 seconds
-                
-                // Get scanned networks (simulated)
-                _wifiNetworks.value = listOf(
-                    "HomeNetwork - 5GHz",
-                    "OfficeWiFi - 2.4GHz",
-                    "Guest_Network - 2.4GHz",
-                    "PublicHotspot - Open"
-                )
-                _successMessage.value = "WiFi scan completed"
+
+                if (!wifiManager.isWifiEnabled()) {
+                    _errorMessage.value = "WiFi is not enabled"
+                    return@launch
+                }
+
+                // Start real system WiFi scan
+                wifiManager.startScan()
+
+                // Wait for fresh results from BroadcastReceiver (drop current, wait for next emission)
+                val networks = withTimeoutOrNull(10_000L) {
+                    wifiManager.scanResults.drop(1).first()
+                } ?: wifiManager.scanResults.value // Fallback to current results on timeout
+
+                _wifiNetworks.value = networks.map { network ->
+                    buildString {
+                        append(network.ssid.ifEmpty { "(Hidden)" })
+                        append(" - ")
+                        append(when {
+                            network.isWiFi7 -> "WiFi 7"
+                            network.isWiFi6E -> "WiFi 6E"
+                            network.standard == WiFiManager.WiFiStandard.WIFI_6 -> "WiFi 6"
+                            network.standard == WiFiManager.WiFiStandard.WIFI_5 -> "WiFi 5"
+                            else -> if (network.frequency > 5000) "5GHz" else "2.4GHz"
+                        })
+                        append(" (${network.level}dBm)")
+                        if (network.securityType == WiFiManager.SecurityType.OPEN) append(" [Open]")
+                    }
+                }
+
+                val count = networks.size
+                _successMessage.value = "WiFi scan completed: $count network${if (count != 1) "s" else ""} found"
+            } catch (e: SecurityException) {
+                _errorMessage.value = "WiFi scan requires location permission"
             } catch (e: Exception) {
                 _errorMessage.value = "WiFi scan failed: ${e.message}"
             } finally {
