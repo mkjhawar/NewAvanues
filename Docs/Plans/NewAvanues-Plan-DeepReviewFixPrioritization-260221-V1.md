@@ -302,13 +302,13 @@ Pervasive Rule 3 violations. **30+ files** across:
 | 2 | P0 | Data Corruption / Loss | 12 | 1 | **DONE** (260221, `91a6ce18`) — D2 false positive |
 | 3 | P1 | Crashes & Deadlocks | 22 | 1 | **DONE** (260221, `db6c1a52`) — C1-C2 deferred (HTTP/2) |
 | 4 | P2 | Non-Functional Modules | 16 | Decision needed | Pending |
-| 5 | P2 | KMP Compilation | 23 | 2 | Pending |
+| 5 | P2 | KMP Compilation | 22 | 1 | **DONE** (260221, `32bc44d5`) — K18 fixed in Batch 3 |
 | 6 | P2 | Threading / Concurrency | 20 | 3 | Pending |
 | 7 | P3 | Theme Violations | 30+ | 2-3 | Pending |
 | 8 | P3 | AI Attribution | 53 | 0.5 | **DONE** (260221, `2b6cd3c8` + `0bb87e3f`) |
 | 9 | P3 | Resource Leaks | 12 | 2 | Pending |
 | 10 | P3 | Hardcoded Stubs | 19 | 3 | Pending |
-| | | **TOTAL** | **~185** | **~25** | **4/10 done** |
+| | | **TOTAL** | **~185** | **~25** | **5/10 done** |
 
 ---
 
