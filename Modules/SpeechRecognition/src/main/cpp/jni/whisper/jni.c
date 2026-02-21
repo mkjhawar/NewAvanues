@@ -240,6 +240,47 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_getSystemInfo(
     return string;
 }
 
+/**
+ * Get the number of tokens in a segment.
+ * Used for computing per-segment confidence from token probabilities.
+ */
+JNIEXPORT jint JNICALL
+Java_com_whispercpp_whisper_WhisperLib_00024Companion_getTextSegmentTokenCount(
+        JNIEnv *env, jobject thiz, jlong context_ptr, jint segment_index) {
+    UNUSED(env);
+    UNUSED(thiz);
+    struct whisper_context *context = (struct whisper_context *) context_ptr;
+    return whisper_full_n_tokens(context, segment_index);
+}
+
+/**
+ * Get the probability of a specific token within a segment.
+ * Returns a float in [0, 1] representing the model's confidence in this token.
+ */
+JNIEXPORT jfloat JNICALL
+Java_com_whispercpp_whisper_WhisperLib_00024Companion_getTextSegmentTokenProb(
+        JNIEnv *env, jobject thiz, jlong context_ptr, jint segment_index, jint token_index) {
+    UNUSED(env);
+    UNUSED(thiz);
+    struct whisper_context *context = (struct whisper_context *) context_ptr;
+    return whisper_full_get_token_p(context, segment_index, token_index);
+}
+
+/**
+ * Get the detected language after transcription.
+ * Returns a language code string (e.g., "en", "es", "fr").
+ * Only meaningful when language auto-detection is enabled.
+ */
+JNIEXPORT jstring JNICALL
+Java_com_whispercpp_whisper_WhisperLib_00024Companion_getDetectedLanguage(
+        JNIEnv *env, jobject thiz, jlong context_ptr) {
+    UNUSED(thiz);
+    struct whisper_context *context = (struct whisper_context *) context_ptr;
+    int lang_id = whisper_full_lang_id(context);
+    const char *lang_str = whisper_lang_str(lang_id);
+    return (*env)->NewStringUTF(env, lang_str ? lang_str : "unknown");
+}
+
 JNIEXPORT jstring JNICALL
 Java_com_whispercpp_whisper_WhisperLib_00024Companion_benchMemcpy(JNIEnv *env, jobject thiz,
                                                                       jint n_threads) {

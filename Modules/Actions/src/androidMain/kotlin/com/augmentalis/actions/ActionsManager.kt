@@ -53,7 +53,6 @@ import javax.inject.Singleton
  *
  * @param context Application context (injected by Hilt, safely scoped)
  *
- * @author AVA AI Team
  * @since 1.0.0-alpha01
  * @see ActionsInitializer
  * @see IntentActionHandlerRegistry

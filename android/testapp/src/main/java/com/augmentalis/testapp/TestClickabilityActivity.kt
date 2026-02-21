@@ -12,7 +12,6 @@
  *
  * Expected: 5/7 VUIDs created (cases 1,2,3,6,7)
  *
- * Author: Claude Code (IDEACODE v10.3)
  * Date: 2025-12-08
  */
 

@@ -43,7 +43,7 @@ class GoogleAIProvider(config: ProviderConfig) : BaseCloudProvider(config) {
             val endpoint = if (options.stream) "streamGenerateContent" else "generateContent"
             val response = client.post("$baseUrl/models/${config.model}:$endpoint") {
                 contentType(ContentType.Application.Json)
-                parameter("key", config.apiKey)
+                header("x-goog-api-key", config.apiKey ?: "")
                 setBody(request)
             }.body<GeminiResponse>()
 

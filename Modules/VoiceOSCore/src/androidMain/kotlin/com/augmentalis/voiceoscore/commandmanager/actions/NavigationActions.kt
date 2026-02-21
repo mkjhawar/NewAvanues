@@ -1,11 +1,10 @@
 /**
  * NavigationActions.kt - Navigation command actions
  * Path: modules/commands/src/main/java/com/augmentalis/voiceos/commands/actions/NavigationActions.kt
- * 
+ *
  * Created: 2025-08-19
- * Author: Claude Code
  * Module: Commands
- * 
+ *
  * Purpose: Navigation-related voice command actions
  */
 

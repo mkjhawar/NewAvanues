@@ -14,6 +14,7 @@ data class HttpRequest(
     val queryParams: Map<String, List<String>> = emptyMap(),
     val pathParams: Map<String, String> = emptyMap(),
     val context: Map<String, String> = emptyMap(),
+    val remoteAddress: String? = null,
 ) {
     val path: String by lazy { uri.substringBefore('?').substringBefore('#') }
     val contentLength: Long by lazy { headers["Content-Length"]?.toLongOrNull() ?: body?.size?.toLong() ?: 0L }

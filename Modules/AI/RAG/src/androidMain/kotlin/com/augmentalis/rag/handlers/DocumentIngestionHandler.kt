@@ -40,7 +40,7 @@ import com.augmentalis.ava.core.data.util.AvidHelper
  * @param embeddingProvider Embedding provider for vector generation
  * @param chunkingConfig Configuration for text chunking
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-17
  */
 class DocumentIngestionHandler(

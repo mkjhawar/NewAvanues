@@ -229,6 +229,12 @@ class ALMExtractor(
                 while (entry != null) {
                     val outputFile = File(destDir, entry.name)
 
+                    val canonicalDest = destDir.canonicalPath
+                    val canonicalOutput = outputFile.canonicalPath
+                    if (!canonicalOutput.startsWith(canonicalDest + File.separator) && canonicalOutput != canonicalDest) {
+                        throw SecurityException("TAR entry path traversal detected: ${entry.name}")
+                    }
+
                     if (entry.isDirectory) {
                         outputFile.mkdirs()
                     } else {

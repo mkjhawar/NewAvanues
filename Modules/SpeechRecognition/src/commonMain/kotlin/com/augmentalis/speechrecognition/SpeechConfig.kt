@@ -73,6 +73,10 @@ data class SpeechConfig(
     val modelPath: String? = null,
     val azureRegion: String? = null,
 
+    // Google Cloud STT v2 configuration
+    val gcpProjectId: String? = null,
+    val gcpRecognizerMode: String? = null,  // "batch" or "streaming"
+
     // TTS (Text-to-Speech) configuration
     val enableTTS: Boolean = false,
     val ttsRate: Float = 1.0f,
@@ -102,9 +106,16 @@ data class SpeechConfig(
             language = language
         )
 
-        fun googleCloud(apiKey: String, language: String = LanguageCodes.ENGLISH_US) = SpeechConfig(
+        fun googleCloud(
+            apiKey: String? = null,
+            projectId: String,
+            language: String = LanguageCodes.ENGLISH_US,
+            streaming: Boolean = false
+        ) = SpeechConfig(
             engine = SpeechEngine.GOOGLE_CLOUD,
             cloudApiKey = apiKey,
+            gcpProjectId = projectId,
+            gcpRecognizerMode = if (streaming) "streaming" else "batch",
             language = language
         )
 
@@ -132,6 +143,8 @@ data class SpeechConfig(
     fun withMaxRecording(ms: Long) = copy(maxRecordingDuration = ms)
     fun withApiKey(key: String) = copy(cloudApiKey = key)
     fun withModelPath(path: String) = copy(modelPath = path)
+    fun withProjectId(projectId: String) = copy(gcpProjectId = projectId)
+    fun withStreamingMode(streaming: Boolean = true) = copy(gcpRecognizerMode = if (streaming) "streaming" else "batch")
     fun withStaticCommandsPath(path: String) = copy(staticCommandsPath = path)
     fun withFuzzyMatching(enabled: Boolean) = copy(enableFuzzyMatching = enabled)
     fun withSemanticMatching(enabled: Boolean) = copy(enableSemanticMatching = enabled)
@@ -152,7 +165,7 @@ data class SpeechConfig(
         return when {
             language.isBlank() -> Result.failure(IllegalArgumentException("Language cannot be blank"))
             confidenceThreshold !in 0f..1f -> Result.failure(IllegalArgumentException("Confidence threshold must be between 0 and 1"))
-            engine == SpeechEngine.GOOGLE_CLOUD && cloudApiKey.isNullOrBlank() -> Result.failure(IllegalArgumentException("Google Cloud requires API key"))
+            engine == SpeechEngine.GOOGLE_CLOUD && gcpProjectId.isNullOrBlank() -> Result.failure(IllegalArgumentException("Google Cloud requires project ID"))
             engine == SpeechEngine.AZURE && cloudApiKey.isNullOrBlank() -> Result.failure(IllegalArgumentException("Azure requires API key"))
             engine == SpeechEngine.AZURE && azureRegion.isNullOrBlank() -> Result.failure(IllegalArgumentException("Azure requires region"))
             timeoutDuration < 1000 -> Result.failure(IllegalArgumentException("Timeout must be at least 1000ms"))

@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * @see ConversationManager for Android implementation
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-01-15
  */
 interface IConversationManager {

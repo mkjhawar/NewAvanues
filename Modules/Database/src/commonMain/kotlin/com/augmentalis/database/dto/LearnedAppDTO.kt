@@ -4,7 +4,6 @@
  * DTOs for transferring LearnApp data between SQLDelight queries and entities.
  * Part of LearnApp module migration from Room to SQLDelight.
  *
- * Author: Agent 1 (LearnApp Migration Specialist)
  * Date: 2025-11-27
  */
 

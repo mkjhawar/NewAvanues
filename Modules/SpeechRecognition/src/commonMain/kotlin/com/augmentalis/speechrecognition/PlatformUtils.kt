@@ -2,7 +2,7 @@
  * PlatformUtils.kt - Platform-specific utilities (expect declarations)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: Claude (AI Assistant)
+ * Author: Manoj Jhawar
  * Created: 2026-01-18
  *
  * Provides expect declarations for platform-specific functionality.

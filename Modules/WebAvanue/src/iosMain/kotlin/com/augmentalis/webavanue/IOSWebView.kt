@@ -5,6 +5,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.interop.UIKitView
+import com.augmentalis.webavanue.util.JsStringEscaper
 import kotlinx.cinterop.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -222,10 +223,9 @@ class IOSWebView(
     }
 
     override fun findInPage(text: String) {
-        // iOS doesn't have built-in find in page for WKWebView
-        // Would need to implement with JavaScript
+        val safeText = JsStringEscaper.escape(text)
         val script = """
-            window.find('$text', false, false, true, false, true, false);
+            window.find('$safeText', false, false, true, false, true, false);
         """
         webView.evaluateJavaScript(script, null)
     }

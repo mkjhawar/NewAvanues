@@ -18,8 +18,10 @@ import kotlinx.serialization.json.Json
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
+import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.security.SecureRandom
 
 private const val TAG = "WebAvanueJsonRpc"
 
@@ -35,8 +37,10 @@ class WebAvanueJsonRpcServer(
     private val config: WebAvanueServerConfig = WebAvanueServerConfig()
 ) {
     private var serverSocket: ServerSocket? = null
-    private var isRunning = false
+    @Volatile private var isRunning = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Per-session auth token — clients must include this in requests */
+    val authToken: String = generateToken()
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -54,9 +58,9 @@ class WebAvanueJsonRpcServer(
 
         scope.launch {
             try {
-                serverSocket = ServerSocket(config.port)
+                serverSocket = ServerSocket(config.port, 50, InetAddress.getLoopbackAddress())
                 isRunning = true
-                Log.i(TAG, "WebAvanue JSON-RPC server started on port ${config.port}")
+                Log.i(TAG, "WebAvanue JSON-RPC server started on localhost:${config.port}")
 
                 while (isRunning) {
                     try {
@@ -124,6 +128,17 @@ class WebAvanueJsonRpcServer(
     private suspend fun processRequest(requestJson: String): String {
         return try {
             val request = json.decodeFromString<JsonRpcRequest>(requestJson)
+
+            // Verify auth token — reject unauthenticated requests
+            if (request.auth_token != authToken) {
+                return json.encodeToString(
+                    JsonRpcResponse(
+                        id = request.id,
+                        error = JsonRpcError(-32000, "Authentication required")
+                    )
+                )
+            }
+
             val result = when (request.method) {
                 "getTabs" -> handleGetTabs(request)
                 "createTab" -> handleCreateTab(request)
@@ -284,6 +299,14 @@ class WebAvanueJsonRpcServer(
             result = json.encodeToString(response)
         )
     }
+
+    private companion object {
+        fun generateToken(): String {
+            val bytes = ByteArray(32)
+            SecureRandom().nextBytes(bytes)
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
+    }
 }
 
 /**
@@ -294,7 +317,8 @@ data class JsonRpcRequest(
     val jsonrpc: String = "2.0",
     val method: String,
     val params: String? = null,
-    val id: String
+    val id: String,
+    val auth_token: String? = null
 )
 
 /**

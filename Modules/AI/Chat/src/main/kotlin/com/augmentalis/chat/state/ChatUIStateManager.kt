@@ -30,7 +30,7 @@ import javax.inject.Singleton
  *
  * Thread-safe: Uses StateFlow for all mutable state.
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-17
  */
 @Singleton

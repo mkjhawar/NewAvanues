@@ -7,7 +7,6 @@ package com.augmentalis.llm
  * classification confidence is low or when dealing with complex commands.
  *
  * Created: 2026-01-19
- * Author: Claude (VoiceOSCore AI Integration Phase 2)
  */
 sealed class CommandInterpretationResult {
     /**

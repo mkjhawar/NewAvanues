@@ -1,0 +1,236 @@
+/**
+ * WhisperNative.kt - Thread-safe JNI caller for whisper.cpp
+ *
+ * Copyright (C) Augmentalis Inc, Intelligent Devices LLC
+ * Author: Manoj Jhawar
+ * Created: 2026-02-20
+ *
+ * Provides thread-safe, null-guarded access to the raw JNI methods in
+ * com.whispercpp.whisper.WhisperLib. whisper.cpp contexts are NOT thread-safe,
+ * so all native calls are serialized through a single synchronized lock.
+ *
+ * Overhead: ~50ns per uncontended lock + ~5us JNI crossing. This is <0.001%
+ * of whisper inference time (200-2000ms). The cost prevents SIGSEGV crashes
+ * from concurrent native access.
+ */
+package com.augmentalis.speechrecognition.whisper
+
+import android.content.res.AssetManager
+import android.util.Log
+import com.whispercpp.whisper.WhisperLib
+
+/**
+ * Thread-safe wrapper for whisper.cpp JNI calls.
+ *
+ * Why this exists:
+ * 1. Thread safety — whisper.cpp contexts corrupt on concurrent access
+ * 2. Null-pointer guards — calling native with ptr=0 causes SIGSEGV
+ * 3. Library loading — idempotent System.loadLibrary management
+ */
+object WhisperNative {
+
+    private const val TAG = "WhisperNative"
+
+    @Volatile
+    private var isLibraryLoaded = false
+
+    /**
+     * Load the native whisper-jni library. Safe to call multiple times.
+     */
+    fun ensureLoaded(): Boolean {
+        if (isLibraryLoaded) return true
+        return synchronized(this) {
+            if (isLibraryLoaded) return@synchronized true
+            try {
+                System.loadLibrary("whisper-jni")
+                isLibraryLoaded = true
+                Log.i(TAG, "whisper-jni loaded")
+                true
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to load whisper-jni", e)
+                false
+            }
+        }
+    }
+
+    fun initContext(modelPath: String): Long {
+        if (!ensureLoaded()) return 0L
+        return synchronized(this) {
+            try {
+                WhisperLib.initContext(modelPath)
+            } catch (e: Exception) {
+                Log.e(TAG, "initContext failed: $modelPath", e)
+                0L
+            }
+        }
+    }
+
+    fun initContextFromAsset(assetManager: AssetManager, assetPath: String): Long {
+        if (!ensureLoaded()) return 0L
+        return synchronized(this) {
+            try {
+                WhisperLib.initContextFromAsset(assetManager, assetPath)
+            } catch (e: Exception) {
+                Log.e(TAG, "initContextFromAsset failed: $assetPath", e)
+                0L
+            }
+        }
+    }
+
+    fun fullTranscribe(contextPtr: Long, numThreads: Int, audioData: FloatArray) {
+        if (contextPtr == 0L) return
+        synchronized(this) {
+            WhisperLib.fullTranscribe(contextPtr, numThreads, audioData)
+        }
+    }
+
+    fun getTextSegmentCount(contextPtr: Long): Int {
+        if (contextPtr == 0L) return 0
+        return synchronized(this) { WhisperLib.getTextSegmentCount(contextPtr) }
+    }
+
+    fun getTextSegment(contextPtr: Long, index: Int): String {
+        if (contextPtr == 0L) return ""
+        return synchronized(this) { WhisperLib.getTextSegment(contextPtr, index) }
+    }
+
+    fun getSegmentStartTime(contextPtr: Long, index: Int): Long {
+        if (contextPtr == 0L) return 0L
+        return synchronized(this) { WhisperLib.getTextSegmentT0(contextPtr, index) }
+    }
+
+    fun getSegmentEndTime(contextPtr: Long, index: Int): Long {
+        if (contextPtr == 0L) return 0L
+        return synchronized(this) { WhisperLib.getTextSegmentT1(contextPtr, index) }
+    }
+
+    fun freeContext(contextPtr: Long) {
+        if (contextPtr == 0L) return
+        synchronized(this) {
+            try {
+                WhisperLib.freeContext(contextPtr)
+            } catch (e: Exception) {
+                Log.e(TAG, "freeContext failed", e)
+            }
+        }
+    }
+
+    fun getSystemInfo(): String {
+        if (!ensureLoaded()) return "library not loaded"
+        return synchronized(this) { WhisperLib.getSystemInfo() }
+    }
+
+    /**
+     * Get the average token probability for a segment as confidence [0,1].
+     * Falls back to DEFAULT_CONFIDENCE if the native method isn't linked.
+     */
+    fun getSegmentConfidence(contextPtr: Long, segmentIndex: Int): Float {
+        if (contextPtr == 0L) return DEFAULT_CONFIDENCE
+        return try {
+            synchronized(this) {
+                val tokenCount = WhisperLib.getTextSegmentTokenCount(contextPtr, segmentIndex)
+                if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+                var probSum = 0f
+                for (t in 0 until tokenCount) {
+                    probSum += WhisperLib.getTextSegmentTokenProb(contextPtr, segmentIndex, t)
+                }
+                probSum / tokenCount
+            }
+        } catch (e: UnsatisfiedLinkError) {
+            // Native method not yet compiled — fall back
+            Log.d(TAG, "getSegmentConfidence: native method not available, using default")
+            DEFAULT_CONFIDENCE
+        }
+    }
+
+    /**
+     * Get the detected language code after transcription.
+     * Falls back to null if the native method isn't linked.
+     */
+    fun getDetectedLanguage(contextPtr: Long): String? {
+        if (contextPtr == 0L) return null
+        return try {
+            synchronized(this) { WhisperLib.getDetectedLanguage(contextPtr) }
+        } catch (e: UnsatisfiedLinkError) {
+            Log.d(TAG, "getDetectedLanguage: native method not available")
+            null
+        }
+    }
+
+    /**
+     * Run transcription and collect all segments into a single result.
+     * This is the primary entry point — one synchronized block for the
+     * entire transcribe+read cycle to prevent interleaving.
+     *
+     * Now includes per-segment confidence from token probabilities and
+     * language detection when available.
+     */
+    fun transcribeToText(contextPtr: Long, numThreads: Int, audioData: FloatArray): TranscriptionResult {
+        if (contextPtr == 0L) return TranscriptionResult("", emptyList(), 0L)
+
+        val startNs = System.nanoTime()
+
+        return synchronized(this) {
+            WhisperLib.fullTranscribe(contextPtr, numThreads, audioData)
+
+            val segCount = WhisperLib.getTextSegmentCount(contextPtr)
+            val segments = ArrayList<TranscriptionSegment>(segCount)
+            val text = StringBuilder()
+            var totalConfidence = 0f
+
+            for (i in 0 until segCount) {
+                val segText = WhisperLib.getTextSegment(contextPtr, i)
+                val t0 = WhisperLib.getTextSegmentT0(contextPtr, i)
+                val t1 = WhisperLib.getTextSegmentT1(contextPtr, i)
+
+                // Per-segment confidence from token probabilities
+                val segConfidence = getSegmentConfidenceUnsafe(contextPtr, i)
+
+                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10, segConfidence))
+                text.append(segText)
+                totalConfidence += segConfidence
+            }
+
+            val avgConfidence = if (segCount > 0) totalConfidence / segCount else 0f
+            val detectedLang = getDetectedLanguageUnsafe(contextPtr)
+
+            TranscriptionResult(
+                text = text.toString().trim(),
+                segments = segments,
+                processingTimeMs = (System.nanoTime() - startNs) / 1_000_000,
+                confidence = avgConfidence,
+                detectedLanguage = detectedLang
+            )
+        }
+    }
+
+    /**
+     * Get segment confidence WITHOUT acquiring the lock (called from within synchronized block).
+     */
+    private fun getSegmentConfidenceUnsafe(contextPtr: Long, segmentIndex: Int): Float {
+        return try {
+            val tokenCount = WhisperLib.getTextSegmentTokenCount(contextPtr, segmentIndex)
+            if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+            var probSum = 0f
+            for (t in 0 until tokenCount) {
+                probSum += WhisperLib.getTextSegmentTokenProb(contextPtr, segmentIndex, t)
+            }
+            probSum / tokenCount
+        } catch (e: UnsatisfiedLinkError) {
+            DEFAULT_CONFIDENCE
+        }
+    }
+
+    /**
+     * Get detected language WITHOUT acquiring the lock (called from within synchronized block).
+     */
+    private fun getDetectedLanguageUnsafe(contextPtr: Long): String? {
+        return try {
+            WhisperLib.getDetectedLanguage(contextPtr)
+        } catch (e: UnsatisfiedLinkError) {
+            null
+        }
+    }
+
+    private const val DEFAULT_CONFIDENCE = 0.85f
+}

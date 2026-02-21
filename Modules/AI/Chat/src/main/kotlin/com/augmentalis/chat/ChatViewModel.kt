@@ -60,7 +60,7 @@ import javax.inject.Inject
  * - Expose UI state from coordinators
  * - Handle user input and dispatch to appropriate coordinator
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-01-15 (SOLID refactoring)
  */
 @HiltViewModel

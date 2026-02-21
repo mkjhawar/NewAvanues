@@ -1,11 +1,10 @@
 /**
  * AppActions.kt - Application control command actions
  * Path: modules/commands/src/main/java/com/augmentalis/voiceos/commands/actions/AppActions.kt
- * 
+ *
  * Created: 2025-08-19
- * Author: Claude Code
  * Module: Commands
- * 
+ *
  * Purpose: Application control and management-related voice command actions
  */
 

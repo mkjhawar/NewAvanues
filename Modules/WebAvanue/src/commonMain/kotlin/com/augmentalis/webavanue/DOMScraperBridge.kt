@@ -1,5 +1,7 @@
 package com.augmentalis.webavanue
 
+import com.augmentalis.webavanue.util.JsStringEscaper
+
 /**
  * JavaScript bridge for DOM scraping in WebAvanue.
  *
@@ -516,9 +518,11 @@ object DOMScraperBridge {
     /**
      * JavaScript for clicking an element by VoiceOS ID.
      */
-    fun clickElementScript(vosId: String): String = """
+    fun clickElementScript(vosId: String): String {
+        val safeId = JsStringEscaper.escape(vosId)
+        return """
 (function() {
-    const elements = document.querySelectorAll('[data-vos-id="$vosId"]');
+    const elements = document.querySelectorAll('[data-vos-id="$safeId"]');
     if (elements.length > 0) {
         elements[0].click();
         return JSON.stringify({ success: true });
@@ -526,13 +530,16 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, error: 'Element not found' });
 })();
 """
+    }
 
     /**
      * JavaScript for focusing an element.
      */
-    fun focusElementScript(selector: String): String = """
+    fun focusElementScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         el.focus();
         return JSON.stringify({ success: true });
@@ -540,17 +547,19 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, error: 'Element not found' });
 })();
 """
+    }
 
     /**
      * JavaScript for inputting text.
      */
     fun inputTextScript(selector: String, text: String): String {
-        val escapedText = text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        val safeSelector = JsStringEscaper.escapeSelector(selector)
+        val safeText = JsStringEscaper.escape(text)
         return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safeSelector');
     if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-        el.value = '$escapedText';
+        el.value = '$safeText';
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
         return JSON.stringify({ success: true });
@@ -563,9 +572,11 @@ object DOMScraperBridge {
     /**
      * JavaScript for scrolling to element.
      */
-    fun scrollToElementScript(selector: String): String = """
+    fun scrollToElementScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return JSON.stringify({ success: true });
@@ -573,13 +584,16 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, error: 'Element not found' });
 })();
 """
+    }
 
     /**
      * JavaScript to highlight an element (for debugging/testing).
      */
-    fun highlightElementScript(selector: String): String = """
+    fun highlightElementScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         const originalOutline = el.style.outline;
         el.style.outline = '3px solid #FF0000';
@@ -589,26 +603,32 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, error: 'Element not found' });
 })();
 """
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // Selector-based action scripts (Phase 2)
     // ═══════════════════════════════════════════════════════════════════
 
-    fun clickBySelectorScript(selector: String): String = """
+    fun clickBySelectorScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         setTimeout(() => el.click(), 100);
         return JSON.stringify({ success: true, message: 'Clicked element' });
     }
-    return JSON.stringify({ success: false, message: 'Element not found: $selector' });
+    return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
-    fun focusBySelectorScript(selector: String): String = """
+    fun focusBySelectorScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el && el.focus) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.focus();
@@ -617,18 +637,20 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found or not focusable' });
 })();
 """
+    }
 
     fun inputTextBySelectorScript(selector: String, text: String): String {
-        val escaped = text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        val safeSelector = JsStringEscaper.escapeSelector(selector)
+        val safeText = JsStringEscaper.escape(text)
         return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safeSelector');
     if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) {
         el.focus();
         if (el.isContentEditable) {
-            el.textContent = '$escaped';
+            el.textContent = '$safeText';
         } else {
-            el.value = '$escaped';
+            el.value = '$safeText';
         }
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -639,9 +661,11 @@ object DOMScraperBridge {
 """
     }
 
-    fun scrollToBySelectorScript(selector: String): String = """
+    fun scrollToBySelectorScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return JSON.stringify({ success: true, message: 'Scrolled to element' });
@@ -649,10 +673,13 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
-    fun toggleCheckboxScript(selector: String): String = """
+    fun toggleCheckboxScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         if (el.type === 'checkbox' || el.type === 'radio') {
             el.checked = !el.checked;
@@ -666,12 +693,14 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
     fun selectDropdownScript(selector: String, optionText: String): String {
-        val escaped = optionText.replace("\\", "\\\\").replace("'", "\\'")
+        val safeSelector = JsStringEscaper.escapeSelector(selector)
+        val escaped = JsStringEscaper.escape(optionText)
         return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safeSelector');
     if (el && el.tagName === 'SELECT') {
         const options = Array.from(el.options);
         const match = options.find(o => o.text.toLowerCase().includes('$escaped'.toLowerCase()));
@@ -687,9 +716,11 @@ object DOMScraperBridge {
 """
     }
 
-    fun longPressScript(selector: String): String = """
+    fun longPressScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         const rect = el.getBoundingClientRect();
@@ -707,10 +738,13 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
-    fun doubleClickScript(selector: String): String = """
+    fun doubleClickScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
@@ -719,10 +753,13 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
-    fun hoverScript(selector: String): String = """
+    fun hoverScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
@@ -732,24 +769,28 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // Page Navigation Scripts
     // ═══════════════════════════════════════════════════════════════════
 
-    fun scrollPageScript(direction: String): String = """
+    fun scrollPageScript(direction: String): String {
+        val safeDir = JsStringEscaper.escape(direction)
+        return """
 (function() {
     const vAmount = window.innerHeight * 0.85;
     const hAmount = window.innerWidth * 0.85;
     let dx = 0, dy = 0;
-    if ('$direction' === 'up') dy = -vAmount;
-    else if ('$direction' === 'down') dy = vAmount;
-    else if ('$direction' === 'left') dx = -hAmount;
-    else if ('$direction' === 'right') dx = hAmount;
+    if ('$safeDir' === 'up') dy = -vAmount;
+    else if ('$safeDir' === 'down') dy = vAmount;
+    else if ('$safeDir' === 'left') dx = -hAmount;
+    else if ('$safeDir' === 'right') dx = hAmount;
     window.scrollBy({ top: dy, left: dx, behavior: 'smooth' });
-    return JSON.stringify({ success: true, message: 'Scrolled $direction' });
+    return JSON.stringify({ success: true, message: 'Scrolled $safeDir' });
 })();
 """
+    }
 
     fun scrollToTopScript(): String = """
 (function() {
@@ -824,11 +865,13 @@ object DOMScraperBridge {
 })();
 """
 
-    fun submitFormScript(selector: String): String = """
+    fun submitFormScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     let form = null;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         form = el ? el.closest('form') : null;
     }
     if (!form) form = document.activeElement ? document.activeElement.closest('form') : null;
@@ -845,16 +888,20 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'No form found' });
 })();
 """
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // Gesture Scripts (touch simulation)
     // ═══════════════════════════════════════════════════════════════════
 
-    fun swipeScript(selector: String, direction: String): String = """
+    fun swipeScript(selector: String, direction: String): String {
+        val safeSelector = JsStringEscaper.escapeSelector(selector)
+        val safeDir = JsStringEscaper.escape(direction)
+        return """
 (function() {
     let x, y;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safeSelector') {
+        const el = document.querySelector('$safeSelector');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -869,10 +916,10 @@ object DOMScraperBridge {
     }
     const dist = 200;
     let endX = x, endY = y;
-    if ('$direction' === 'left') endX = x - dist;
-    else if ('$direction' === 'right') endX = x + dist;
-    else if ('$direction' === 'up') endY = y - dist;
-    else if ('$direction' === 'down') endY = y + dist;
+    if ('$safeDir' === 'left') endX = x - dist;
+    else if ('$safeDir' === 'right') endX = x + dist;
+    else if ('$safeDir' === 'up') endY = y - dist;
+    else if ('$safeDir' === 'down') endY = y + dist;
 
     const target = document.elementFromPoint(x, y) || document.body;
     target.dispatchEvent(new TouchEvent('touchstart', {
@@ -884,13 +931,16 @@ object DOMScraperBridge {
         }));
         target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, changedTouches: [new Touch({ identifier: 1, target: target, clientX: endX, clientY: endY })] }));
     }, 200);
-    return JSON.stringify({ success: true, message: 'Swiped $direction' });
+    return JSON.stringify({ success: true, message: 'Swiped $safeDir' });
 })();
 """
+    }
 
-    fun grabScript(selector: String): String = """
+    fun grabScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         const rect = el.getBoundingClientRect();
         const x = rect.left + rect.width / 2;
@@ -904,6 +954,7 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
     fun releaseScript(): String = """
 (function() {
@@ -922,13 +973,17 @@ object DOMScraperBridge {
 })();
 """
 
-    fun rotateScript(selector: String, direction: String, angle: String): String = """
+    fun rotateScript(selector: String, direction: String, angle: String): String {
+        val safeSelector = JsStringEscaper.escapeSelector(selector)
+        val safeDir = JsStringEscaper.escape(direction)
+        val safeAngle = JsStringEscaper.escape(angle)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safeSelector');
     if (el) {
         const current = el.style.transform || '';
-        const sign = '$direction' === 'left' ? -1 : 1;
-        const deg = sign * parseInt('$angle', 10);
+        const sign = '$safeDir' === 'left' ? -1 : 1;
+        const deg = sign * parseInt('$safeAngle', 10);
         const match = current.match(/rotate\((-?\d+)deg\)/);
         const currentDeg = match ? parseInt(match[1], 10) : 0;
         el.style.transform = current.replace(/rotate\(-?\d+deg\)/, '') + ' rotate(' + (currentDeg + deg) + 'deg)';
@@ -938,10 +993,13 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
-    fun dragScript(selector: String, endX: String, endY: String): String = """
+    fun dragScript(selector: String, endX: String, endY: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
-    const el = document.querySelector('$selector');
+    const el = document.querySelector('$safe');
     if (el) {
         const rect = el.getBoundingClientRect();
         const startX = rect.left + rect.width / 2;
@@ -954,20 +1012,25 @@ object DOMScraperBridge {
     return JSON.stringify({ success: false, message: 'Element not found' });
 })();
 """
+    }
 
-    fun zoomScript(selector: String, direction: String): String = """
+    fun zoomScript(selector: String, direction: String): String {
+        val safeSelector = JsStringEscaper.escapeSelector(selector)
+        val safeDir = JsStringEscaper.escape(direction)
+        return """
 (function() {
     let el;
-    if ('$selector') {
-        el = document.querySelector('$selector');
+    if ('$safeSelector') {
+        el = document.querySelector('$safeSelector');
     }
     if (!el) el = document.body;
     const current = parseFloat(el.style.zoom || '1');
-    const factor = '$direction' === 'in' ? 1.25 : 0.8;
+    const factor = '$safeDir' === 'in' ? 1.25 : 0.8;
     el.style.zoom = (current * factor).toFixed(2);
-    return JSON.stringify({ success: true, message: 'Zoomed $direction' });
+    return JSON.stringify({ success: true, message: 'Zoomed $safeDir' });
 })();
 """
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // Text/Clipboard Scripts
@@ -1000,7 +1063,7 @@ object DOMScraperBridge {
 """
 
     fun pasteScript(text: String): String {
-        val escaped = text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        val escaped = JsStringEscaper.escape(text)
         return """
 (function() {
     const active = document.activeElement;
@@ -1033,14 +1096,16 @@ object DOMScraperBridge {
 })();
 """
 
-    fun tiltScript(selector: String, angle: String): String = """
+    fun tiltScript(selector: String, angle: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1051,15 +1116,18 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
-    fun orbitScript(selector: String, deltaX: String, deltaY: String): String = """
+    fun orbitScript(selector: String, deltaX: String, deltaY: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1070,15 +1138,18 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
-    fun rotateXScript(selector: String, angle: String): String = """
+    fun rotateXScript(selector: String, angle: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1089,15 +1160,18 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
-    fun rotateYScript(selector: String, angle: String): String = """
+    fun rotateYScript(selector: String, angle: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1108,15 +1182,18 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
-    fun rotateZScript(selector: String, angle: String): String = """
+    fun rotateZScript(selector: String, angle: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1127,15 +1204,18 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
-    fun pinchScript(selector: String, scale: String): String = """
+    fun pinchScript(selector: String, scale: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             cx = rect.left + rect.width / 2;
@@ -1147,16 +1227,20 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
-    fun flingScript(direction: String, velocity: String): String = """
+    fun flingScript(direction: String, velocity: String): String {
+        val safeDir = JsStringEscaper.escape(direction)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
-    const result = window.AvanuesGestures.fling($velocity, '$direction');
+    const result = window.AvanuesGestures.fling($velocity, '$safeDir');
     return JSON.stringify(result);
 })();
 """
+    }
 
     fun throwScript(velocityX: String, velocityY: String): String = """
 (function() {
@@ -1168,14 +1252,16 @@ object DOMScraperBridge {
 })();
 """
 
-    fun scaleScript(selector: String, factor: String): String = """
+    fun scaleScript(selector: String, factor: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1186,6 +1272,7 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
     fun resetZoomScript(): String = """
 (function() {
@@ -1197,14 +1284,16 @@ object DOMScraperBridge {
 })();
 """
 
-    fun selectWordScript(selector: String): String = """
+    fun selectWordScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1215,6 +1304,7 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
     fun clearSelectionScript(): String = """
 (function() {
@@ -1226,14 +1316,16 @@ object DOMScraperBridge {
 })();
 """
 
-    fun hoverOutScript(selector: String): String = """
+    fun hoverOutScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1244,46 +1336,54 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // Directional Drag Script
     // ═══════════════════════════════════════════════════════════════════
 
-    fun dragDirectionScript(selector: String, direction: String, distance: String = "100"): String = """
+    fun dragDirectionScript(selector: String, direction: String, distance: String = "100"): String {
+        val safeSelector = JsStringEscaper.escapeSelector(selector)
+        val safeDir = JsStringEscaper.escape(direction)
+        val safeDist = JsStringEscaper.escape(distance)
+        return """
 (function() {
-    const el = '$selector' ? document.querySelector('$selector')
+    const el = '$safeSelector' ? document.querySelector('$safeSelector')
         : (window._avanuesGrabbed ? window._avanuesGrabbed.element : null);
     if (el) {
         const rect = el.getBoundingClientRect();
         const startX = rect.left + rect.width / 2;
         const startY = rect.top + rect.height / 2;
-        const dist = parseInt('$distance', 10);
+        const dist = parseInt('$safeDist', 10);
         let endX = startX, endY = startY;
-        if ('$direction' === 'left') endX -= dist;
-        else if ('$direction' === 'right') endX += dist;
-        else if ('$direction' === 'up') endY -= dist;
-        else if ('$direction' === 'down') endY += dist;
+        if ('$safeDir' === 'left') endX -= dist;
+        else if ('$safeDir' === 'right') endX += dist;
+        else if ('$safeDir' === 'up') endY -= dist;
+        else if ('$safeDir' === 'down') endY += dist;
         el.dispatchEvent(new DragEvent('dragstart', { clientX: startX, clientY: startY, bubbles: true }));
         el.dispatchEvent(new DragEvent('drag', { clientX: endX, clientY: endY, bubbles: true }));
         el.dispatchEvent(new DragEvent('dragend', { clientX: endX, clientY: endY, bubbles: true }));
-        return JSON.stringify({ success: true, message: 'Dragged $direction ' + dist + 'px' });
+        return JSON.stringify({ success: true, message: 'Dragged $safeDir ' + dist + 'px' });
     }
     return JSON.stringify({ success: false, message: 'No element to drag — use grab first or target a selector' });
 })();
 """
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // Drawing/Annotation Scripts (delegates to AvanuesGestures)
     // ═══════════════════════════════════════════════════════════════════
 
-    fun strokeStartScript(selector: String): String = """
+    fun strokeStartScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1294,6 +1394,7 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 
     fun strokeEndScript(): String = """
 (function() {
@@ -1305,14 +1406,16 @@ object DOMScraperBridge {
 })();
 """
 
-    fun eraseScript(selector: String): String = """
+    fun eraseScript(selector: String): String {
+        val safe = JsStringEscaper.escapeSelector(selector)
+        return """
 (function() {
     if (typeof window.AvanuesGestures === 'undefined') {
         return JSON.stringify({ success: false, message: 'Gestures library not loaded' });
     }
     let x = window.innerWidth / 2, y = window.innerHeight / 2;
-    if ('$selector') {
-        const el = document.querySelector('$selector');
+    if ('$safe') {
+        const el = document.querySelector('$safe');
         if (el) {
             const rect = el.getBoundingClientRect();
             x = rect.left + rect.width / 2;
@@ -1323,4 +1426,5 @@ object DOMScraperBridge {
     return JSON.stringify(result);
 })();
 """
+    }
 }

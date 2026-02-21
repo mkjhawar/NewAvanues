@@ -6,11 +6,15 @@
  *
  * Structure:
  * - commonMain: Shared API, models, and logic
+ * - jvmMain: Shared JVM code for Android + Desktop (VSM encryption via javax.crypto)
  * - androidMain: Android-specific engines (Vosk, Vivoka, Google, Whisper)
- * - iosMain: iOS-specific engines (placeholder)
- * - desktopMain: Desktop-specific engines (placeholder)
+ * - iosMain: iOS-specific engines (Apple Speech + Whisper via cinterop)
+ * - macosMain: macOS-specific engines (Apple Speech via SFSpeechRecognizer)
+ * - desktopMain: Desktop-specific engines (Whisper via JNI)
  * - jsMain: Web-specific engines (placeholder)
  */
+
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -31,9 +35,9 @@ kotlin {
     }
 
     if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("macos", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
     ) {
-        // iOS targets
+        // iOS targets with whisper_bridge cinterop
         listOf(
             iosX64(),
             iosArm64(),
@@ -42,8 +46,33 @@ kotlin {
             it.binaries.framework {
                 baseName = "SpeechRecognition"
                 isStatic = true
+                // Link against whisper_bridge static library when available
+                // Build: cd Modules/Whisper && ./build-xcframework.sh
+                // The library must be placed at:
+                //   libs/ios-arm64/libwhisper_bridge.a (device)
+                //   libs/ios-x64/libwhisper_bridge.a (simulator x64)
+                //   libs/ios-sim-arm64/libwhisper_bridge.a (simulator arm64)
+            }
+
+            // Generate Kotlin bindings via cinterop
+            it.compilations.getByName("main") {
+                cinterops {
+                    // whisper.cpp bridge for offline speech recognition
+                    val whisper by creating {
+                        defFile("src/nativeInterop/cinterop/whisper.def")
+                        includeDirs("src/nativeInterop/cinterop")
+                    }
+                    // CommonCrypto for VSM model file encryption/decryption
+                    val commoncrypto by creating {
+                        defFile("src/nativeInterop/cinterop/commoncrypto.def")
+                    }
+                }
             }
         }
+
+        // macOS targets — Apple Speech via SFSpeechRecognizer (macOS 10.15+)
+        macosX64()
+        macosArm64()
     }
     // Desktop target (JVM)
     jvm("desktop") {
@@ -79,7 +108,14 @@ kotlin {
             }
         }
 
+        // Shared JVM source set for Android + Desktop
+        // Contains: VSM encryption/decryption (javax.crypto), shared JVM utilities
+        val jvmMain by creating {
+            dependsOn(commonMain)
+        }
+
         val androidMain by getting {
+            dependsOn(jvmMain)
             dependencies {
                 // Android Core
                 implementation(libs.androidx.core.ktx)
@@ -95,6 +131,9 @@ kotlin {
                 implementation("androidx.compose.ui:ui:1.5.4")
                 implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
                 implementation("androidx.compose.material3:material3:1.1.2")
+
+                // AvanueUI Design System (for WhisperModelDownloadScreen theme)
+                implementation(project(":Modules:AvanueUI"))
                 // Using material-icons-core + vector drawables to reduce APK size
                 implementation("androidx.compose.material:material-icons-core:1.5.4")
                 implementation("androidx.activity:activity-compose:1.8.2")
@@ -134,6 +173,7 @@ kotlin {
                 // Firebase
                 implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
                 implementation("com.google.firebase:firebase-config")
+                implementation("com.google.firebase:firebase-auth")
 
                 // Hilt
                 implementation(libs.hilt.android)
@@ -151,7 +191,7 @@ kotlin {
         }
 
         if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
+            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("macos", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
         ) {
             val iosX64Main by getting
             val iosArm64Main by getting
@@ -167,10 +207,27 @@ kotlin {
                     implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
                 }
             }
+
+            // macOS source set — Apple Speech via SFSpeechRecognizer
+            val macosX64Main by getting
+            val macosArm64Main by getting
+            val macosMain by creating {
+                dependsOn(commonMain)
+                macosX64Main.dependsOn(this)
+                macosArm64Main.dependsOn(this)
+                dependencies {
+                    implementation(libs.kotlinx.atomicfu)
+                    implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+                }
+            }
         }
         val desktopMain by getting {
+            dependsOn(jvmMain)
             dependencies {
                 implementation(libs.kotlinx.coroutines.swing)
+                // Compose runtime needed for kotlin.compose plugin on JVM target
+                // (same as iosMain/macosMain — compiler plugin applied to all targets)
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
             }
         }
 
@@ -193,6 +250,25 @@ android {
 
         buildConfigField("String", "MODULE_VERSION", "\"3.0.0\"")
         buildConfigField("String", "MODULE_NAME", "\"SpeechRecognition-KMP\"")
+
+        // Vivoka download credentials — injected from local.properties or CI environment
+        // NEVER hardcode credentials in source files
+        val localProps = rootProject.file("local.properties")
+        val props = Properties()
+        if (localProps.exists()) {
+            localProps.inputStream().use { props.load(it) }
+        }
+        val vivokaUser = props.getProperty("vivoka.download.username")
+            ?: System.getenv("VIVOKA_DOWNLOAD_USERNAME") ?: ""
+        val vivokaPwd = props.getProperty("vivoka.download.password")
+            ?: System.getenv("VIVOKA_DOWNLOAD_PASSWORD") ?: ""
+        buildConfigField("String", "VIVOKA_DOWNLOAD_USERNAME", "\"$vivokaUser\"")
+        buildConfigField("String", "VIVOKA_DOWNLOAD_PASSWORD", "\"$vivokaPwd\"")
+
+        // Google Cloud Speech-to-Text v2
+        val gcpProjectId = props.getProperty("gcp.speech.project_id")
+            ?: System.getenv("GCP_SPEECH_PROJECT_ID") ?: ""
+        buildConfigField("String", "GCP_SPEECH_PROJECT_ID", "\"$gcpProjectId\"")
     }
 
     // Include legacy Android-only source set for Vivoka and other engines
@@ -243,4 +319,21 @@ android {
 dependencies {
     // KSP for Hilt
     add("kspAndroid", libs.hilt.compiler)
+}
+
+// VLM Tool — CLI for encrypting/decrypting Whisper model files
+// Usage: ./gradlew :Modules:SpeechRecognition:runVlmTool --args="batch-encode VLMFiles/"
+afterEvaluate {
+    if (kotlin.targets.findByName("desktop") != null) {
+        tasks.register<JavaExec>("runVlmTool") {
+            group = "application"
+            description = "Run the VLM Encryption Tool (encrypt/decrypt Whisper models)"
+            mainClass.set("com.augmentalis.speechrecognition.cli.VLMToolKt")
+            val desktopTarget = kotlin.targets.getByName<org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget>("desktop")
+            classpath = desktopTarget.compilations.getByName("main").runtimeDependencyFiles +
+                files(desktopTarget.compilations.getByName("main").output.allOutputs)
+            // Resolve paths relative to project root (not module dir)
+            workingDir = rootProject.projectDir
+        }
+    }
 }

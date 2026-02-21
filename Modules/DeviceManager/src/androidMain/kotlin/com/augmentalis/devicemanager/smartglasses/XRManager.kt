@@ -1,15 +1,14 @@
 /**
  * XRManager.kt
  * Path: /libraries/DeviceManager/src/main/java/com/augmentalis/devicemanager/smartglasses/XRManager.kt
- * 
+ *
  * Created: 2025-01-23
  * Last Modified: 2025-01-23
- * Author: Claude Code Assistant
  * Version: 1.0.0
- * 
+ *
  * Purpose: Extended Reality (XR) Manager for AR/VR functionality
  * Module: DeviceManager
- * 
+ *
  * Changelog:
  * - v1.0.0 (2025-01-23): Initial stub implementation
  */

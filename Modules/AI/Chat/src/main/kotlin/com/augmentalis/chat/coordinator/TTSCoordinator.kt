@@ -36,7 +36,7 @@ import javax.inject.Singleton
  * @param ttsManager Text-to-speech engine manager
  * @param ttsPreferences TTS user preferences
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-17
  */
 @Singleton

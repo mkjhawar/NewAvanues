@@ -52,7 +52,7 @@ class VosSyncManager(
         port: Int,
         username: String,
         authMode: SftpAuthMode,
-        hostKeyChecking: String = "no"
+        hostKeyChecking: String = "accept-new"
     ): SftpResult<Unit> {
         _syncStatus.value = _syncStatus.value.copy(error = null)
 
@@ -87,7 +87,7 @@ class VosSyncManager(
         username: String,
         authMode: SftpAuthMode,
         remotePath: String,
-        hostKeyChecking: String = "no"
+        hostKeyChecking: String = "accept-new"
     ): SftpResult<Int> {
         // Connect
         val connectResult = sftpClient.connect(host, port, username, authMode, hostKeyChecking)
@@ -214,7 +214,7 @@ class VosSyncManager(
         authMode: SftpAuthMode,
         remotePath: String,
         downloadDir: String,
-        hostKeyChecking: String = "no"
+        hostKeyChecking: String = "accept-new"
     ): SftpResult<Int> {
         val connectResult = sftpClient.connect(host, port, username, authMode, hostKeyChecking)
         if (connectResult is SftpResult.Error) {
@@ -356,7 +356,7 @@ class VosSyncManager(
         authMode: SftpAuthMode,
         remotePath: String,
         downloadDir: String,
-        hostKeyChecking: String = "no"
+        hostKeyChecking: String = "accept-new"
     ): SftpResult<SyncResult> {
         val errors = mutableListOf<String>()
 

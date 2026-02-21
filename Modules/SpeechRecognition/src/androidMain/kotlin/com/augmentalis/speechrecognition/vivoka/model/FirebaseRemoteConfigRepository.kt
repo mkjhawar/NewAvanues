@@ -32,6 +32,10 @@ class FirebaseRemoteConfigRepository(private val context: Context) {
 
     private val isDebug = BuildConfig.DEBUG
     private val client = OkHttpClient()
+
+    // Credentials injected via BuildConfig — NEVER hardcode in source
+    private val downloadUsername: String get() = BuildConfig.VIVOKA_DOWNLOAD_USERNAME
+    private val downloadPassword: String get() = BuildConfig.VIVOKA_DOWNLOAD_PASSWORD
     suspend fun init() {
         withContext(Dispatchers.IO) {
             val configSettings = remoteConfigSettings {
@@ -121,7 +125,7 @@ class FirebaseRemoteConfigRepository(private val context: Context) {
             try {
                 android.util.Log.i(TAG, "downloadResource: ${pair.second}")
                 // Encode credentials in Base64
-                val credentials: String = Credentials.basic(USERNAME, PASSWORD)
+                val credentials: String = Credentials.basic(downloadUsername, downloadPassword)
                 val request = Request.Builder()
                     .addHeader(HEADER_AUTHORIZATION, credentials)
                     .url(pair.second)
@@ -184,7 +188,7 @@ class FirebaseRemoteConfigRepository(private val context: Context) {
         return withContext(Dispatchers.IO) {
             try {
                 android.util.Log.i(TAG, "downloadConfigFile: ${pair.second}")
-                val credentials: String = Credentials.basic(USERNAME, PASSWORD)
+                val credentials: String = Credentials.basic(downloadUsername, downloadPassword)
                 val request = Request.Builder()
                     .addHeader(HEADER_AUTHORIZATION, credentials)
                     .url(pair.second)
@@ -260,25 +264,21 @@ class FirebaseRemoteConfigRepository(private val context: Context) {
         private var instance: FirebaseRemoteConfigRepository? = null
 
         @JvmStatic
-        fun getInstance(context: Context): FirebaseRemoteConfigRepository? {
-            if (instance == null) {
-                instance = FirebaseRemoteConfigRepository(context)
-                return instance
-            } else {
-                return instance
+        fun getInstance(context: Context): FirebaseRemoteConfigRepository {
+            return instance ?: synchronized(this) {
+                instance ?: FirebaseRemoteConfigRepository(context.applicationContext).also {
+                    instance = it
+                }
             }
         }
-        // Augmentalis server https://www.augmentalis.com/
+
         private const val VOICE_RESOURCE_SUFFIX = "_voice_resource"
         private const val VOICE_CONFIG_FILE_SUFFIX = "_json"
 
-        // Drish server http://fs.dilonline.in/
         private const val VOICE_RESOURCE_SUFFIX_DEBUG = "_voice_resource_debug"
         private const val VOICE_CONFIG_FILE_SUFFIX_DEBUG = "_json_debug"
         const val VOICE_TEMP = "voice_temp"
         private const val HEADER_AUTHORIZATION = "Authorization"
-        private const val USERNAME = "avanuevoiceos"
-        private const val PASSWORD = "!AvA\$Avanue123#"
 
         private const val TAG = "FirebaseRemoteConfigRep"
     }

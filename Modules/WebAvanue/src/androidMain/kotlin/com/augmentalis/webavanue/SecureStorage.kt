@@ -46,26 +46,24 @@ class SecureStorage(context: Context) : SecureStorageProvider {
     // Check if encryption is enabled from bootstrap preferences
     private val useEncryption: Boolean = run {
         val bootstrapPrefs = context.applicationContext.getSharedPreferences(BOOTSTRAP_PREFS, Context.MODE_PRIVATE)
-        bootstrapPrefs.getBoolean("secure_storage_encryption", false) // Default: unencrypted
+        bootstrapPrefs.getBoolean("secure_storage_encryption", true) // Default: encrypted
     }
 
     // SharedPreferences (encrypted or plain based on setting)
+    // Uses separate file names to avoid EncryptedSharedPreferences crashing on plain prefs files
     private val prefs: SharedPreferences = if (useEncryption) {
-        // Master key for encryption (stored in Android Keystore)
         val masterKey = MasterKey.Builder(context.applicationContext)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
 
-        // Encrypted SharedPreferences
         EncryptedSharedPreferences.create(
             context.applicationContext,
-            PREFS_NAME,
+            PREFS_NAME + "_encrypted",
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     } else {
-        // Plain SharedPreferences
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
@@ -89,10 +87,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
                 apply()
             }
 
-            val encStatus = if (useEncryption) "encrypted" else "unencrypted"
-            println("✅ SecureStorage: Credentials stored ($encStatus) for $normalizedUrl (remember: $remember)")
         } catch (e: Exception) {
-            println("⚠️  SecureStorage: Failed to store credentials: ${e.message}")
             throw SecureStorageException("Failed to store credentials", e)
         }
     }
@@ -112,13 +107,11 @@ class SecureStorage(context: Context) : SecureStorageProvider {
             val remember = prefs.getBoolean(normalizedUrl + REMEMBER_SUFFIX, false)
 
             if (username != null && password != null) {
-                println("✅ SecureStorage: Credentials retrieved for $normalizedUrl")
                 HttpAuthCredentials(username, password, remember)
             } else {
                 null
             }
         } catch (e: Exception) {
-            println("⚠️  SecureStorage: Failed to retrieve credentials: ${e.message}")
             null
         }
     }
@@ -134,7 +127,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
             val normalizedUrl = normalizeUrl(url)
             prefs.contains(normalizedUrl + USERNAME_SUFFIX)
         } catch (e: Exception) {
-            println("⚠️  SecureStorage: Failed to check credentials: ${e.message}")
+            // Credential check failed — logged silently
             false
         }
     }
@@ -155,9 +148,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
                 apply()
             }
 
-            println("✅ SecureStorage: Credentials removed for $normalizedUrl")
         } catch (e: Exception) {
-            println("⚠️  SecureStorage: Failed to remove credentials: ${e.message}")
             throw SecureStorageException("Failed to remove credentials", e)
         }
     }
@@ -168,9 +159,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
     override fun clearAll() {
         try {
             prefs.edit().clear().apply()
-            println("✅ SecureStorage: All credentials cleared")
         } catch (e: Exception) {
-            println("⚠️  SecureStorage: Failed to clear credentials: ${e.message}")
             throw SecureStorageException("Failed to clear credentials", e)
         }
     }
@@ -186,7 +175,7 @@ class SecureStorage(context: Context) : SecureStorageProvider {
                 .filter { it.endsWith(USERNAME_SUFFIX) }
                 .map { it.removeSuffix(USERNAME_SUFFIX) }
         } catch (e: Exception) {
-            println("⚠️  SecureStorage: Failed to list URLs: ${e.message}")
+            // URL listing failed — return empty
             emptyList()
         }
     }

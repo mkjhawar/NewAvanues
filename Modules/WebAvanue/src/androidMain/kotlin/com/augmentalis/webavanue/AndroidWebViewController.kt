@@ -2,6 +2,7 @@ package com.augmentalis.webavanue
 
 import android.util.Log
 import android.webkit.CookieManager
+import com.augmentalis.webavanue.util.JsStringEscaper
 import com.augmentalis.webavanue.ActionResult
 import com.augmentalis.webavanue.TabViewModel
 import com.augmentalis.webavanue.WebView
@@ -159,6 +160,7 @@ class AndroidWebViewController(
         try {
             // Android WebView findAllAsync doesn't support case sensitivity directly
             // We use JavaScript for better control
+            val safeQuery = JsStringEscaper.escape(query)
             val script = """
                 (function() {
                     if (!window.find) return 0;
@@ -170,13 +172,13 @@ class AndroidWebViewController(
 
                     // Find all matches
                     let count = 0;
-                    while (window.find('$query', ${!caseSensitive}, false, true, false, false, false)) {
+                    while (window.find('$safeQuery', $caseSensitive, false, true, false, false, false)) {
                         count++;
                         if (count > 1000) break; // Safety limit
                     }
 
                     // Return to first match
-                    window.find('$query', ${!caseSensitive}, false, false, false, false, false);
+                    window.find('$safeQuery', $caseSensitive, false, false, false, false, false);
 
                     return count;
                 })();

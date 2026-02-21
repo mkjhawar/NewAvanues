@@ -34,7 +34,7 @@ import java.nio.ByteOrder
  *
  * @param context Android context for database access
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-17
  */
 class IntentEmbeddingManager(

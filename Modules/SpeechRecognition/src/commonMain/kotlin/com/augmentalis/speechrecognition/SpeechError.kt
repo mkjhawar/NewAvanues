@@ -62,6 +62,7 @@ data class SpeechError(
         const val ERROR_MEMORY = 1401
         const val ERROR_LICENSE = 1402
         const val ERROR_MODEL = 1403
+        const val ERROR_NOT_AVAILABLE = 1404
 
         /**
          * Create a standard error for common cases

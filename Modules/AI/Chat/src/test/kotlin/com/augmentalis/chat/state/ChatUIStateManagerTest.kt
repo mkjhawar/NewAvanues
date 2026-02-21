@@ -32,7 +32,7 @@ import com.augmentalis.ava.core.data.util.AvidHelper
  * - Confidence learning dialog
  * - Wake word state
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-18
  */
 @OptIn(ExperimentalCoroutinesApi::class)

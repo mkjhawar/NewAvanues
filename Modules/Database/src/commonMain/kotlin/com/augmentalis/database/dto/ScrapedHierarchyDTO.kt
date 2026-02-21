@@ -2,7 +2,6 @@
  * ScrapedHierarchyDTO.kt - DTO for UI element parent-child hierarchies
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Database Migrator (Agent 2)
  * Created: 2025-11-26
  *
  * Data Transfer Object for scraped element hierarchies.

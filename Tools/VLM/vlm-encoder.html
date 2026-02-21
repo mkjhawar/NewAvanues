@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLM Encoder — VoiceOS Language Model Encryption</title>
+<style>
+  :root {
+    --bg: #0a0e1a; --surface: #131829; --card: #1a2035;
+    --primary: #3b82f6; --primary-hover: #60a5fa;
+    --success: #22c55e; --error: #ef4444; --warn: #f59e0b;
+    --text: #e2e8f0; --text-dim: #94a3b8; --text-muted: #64748b;
+    --border: #2d3748; --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .container { max-width: 720px; width: 100%; padding: 24px; }
+  header { text-align: center; margin: 32px 0 24px; }
+  header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  header h1 span { color: var(--primary); }
+  header p { color: var(--text-dim); font-size: 14px; margin-top: 6px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+  }
+  .mode-toggle {
+    display: flex; gap: 0; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border); margin-bottom: 20px;
+  }
+  .mode-toggle button {
+    flex: 1; padding: 10px 16px; background: var(--surface); color: var(--text-dim);
+    border: none; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-toggle button.active { background: var(--primary); color: white; }
+  .mode-toggle button:hover:not(.active) { background: var(--card); color: var(--text); }
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 48px 24px; text-align: center; cursor: pointer;
+    transition: all 0.2s; position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--primary); background: rgba(59, 130, 246, 0.05);
+  }
+  .drop-zone .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.6; }
+  .drop-zone .label { font-size: 16px; font-weight: 500; }
+  .drop-zone .hint { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+  .file-info {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--surface); border-radius: 8px; margin-top: 16px;
+  }
+  .file-info .name { font-weight: 500; flex: 1; word-break: break-all; }
+  .file-info .size { color: var(--text-dim); font-size: 13px; white-space: nowrap; }
+  .file-info .remove {
+    color: var(--text-muted); cursor: pointer; font-size: 18px;
+    padding: 4px 8px; border-radius: 4px;
+  }
+  .file-info .remove:hover { color: var(--error); background: rgba(239, 68, 68, 0.1); }
+  .progress-wrap { margin-top: 16px; display: none; }
+  .progress-bar {
+    height: 6px; background: var(--surface); border-radius: 3px; overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%; background: var(--primary); border-radius: 3px;
+    transition: width 0.3s; width: 0%;
+  }
+  .progress-text {
+    display: flex; justify-content: space-between; margin-top: 6px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600;
+    border: none; cursor: pointer; transition: all 0.2s; width: 100%;
+    margin-top: 16px;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { filter: brightness(1.1); }
+  .status {
+    padding: 10px 14px; border-radius: 8px; font-size: 13px;
+    margin-top: 12px; display: none;
+  }
+  .status.error { display: block; background: rgba(239, 68, 68, 0.1); color: var(--error); border: 1px solid rgba(239, 68, 68, 0.2); }
+  .status.success { display: block; background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.2); }
+  .log { margin-top: 16px; display: none; }
+  .log pre {
+    background: var(--surface); border-radius: 8px; padding: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px;
+    color: var(--text-dim); max-height: 200px; overflow-y: auto;
+    line-height: 1.6;
+  }
+  footer {
+    text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px;
+  }
+  @media (max-width: 640px) {
+    .container { padding: 16px; }
+    header h1 { font-size: 22px; }
+    .drop-zone { padding: 32px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><span>VLM</span> Encoder</h1>
+    <p>VoiceOS Language Model Encryption Tool</p>
+  </header>
+
+  <div class="card">
+    <div class="mode-toggle">
+      <button id="btnEncode" class="active" onclick="setMode('encode')">Encrypt (.bin &rarr; .vlm)</button>
+      <button id="btnDecode" onclick="setMode('decode')">Decrypt (.vlm &rarr; .bin)</button>
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".bin,.vlm" />
+      <div class="icon">&#128274;</div>
+      <div class="label" id="dropLabel">Drop a model file here or click to browse</div>
+      <div class="hint" id="dropHint">Accepts .bin files (raw Whisper models)</div>
+    </div>
+
+    <div id="fileInfo" style="display:none" class="file-info">
+      <span class="name" id="fileName"></span>
+      <span class="size" id="fileSize"></span>
+      <span class="remove" onclick="clearFile()">&times;</span>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+      <div class="progress-text">
+        <span id="progressLabel">Encrypting...</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+
+    <div class="status" id="statusBox"></div>
+
+    <button class="btn btn-primary" id="processBtn" disabled onclick="processFile()">
+      Encrypt File
+    </button>
+
+    <button class="btn btn-success" id="downloadBtn" style="display:none" onclick="downloadResult()">
+      Download Encrypted File
+    </button>
+  </div>
+
+  <div class="card log" id="logCard">
+    <pre id="logOutput"></pre>
+  </div>
+</div>
+
+<footer>
+  VoiceOS&reg; Avanues EcoSystem &mdash; Designed and Created in California with Love.
+</footer>
+
+<script>
+// ============================================================================
+// VLM Encoder — JavaScript Implementation
+// Matches VSMCodec.kt (jvmMain) byte-for-byte
+// ============================================================================
+
+const VSM = {
+  MAGIC: 0x56534D31,
+  VERSION: 0x0100,
+  HEADER_SIZE: 64,
+  BLOCK_SIZE: 65536,
+  FLAG_ENCRYPTED: 0x0001,
+  PBKDF2_ITERATIONS: 10000,
+  SALT: 'VSM-1.0-SALT-2026',
+  MASTER_SEED: new Uint8Array([
+    0x56,0x53,0x4D,0x2D,0x53,0x50,0x45,0x45,
+    0x43,0x48,0x2D,0x31,0x2E,0x30,0x2D,0x56,
+    0x4F,0x49,0x43,0x45,0x4F,0x53,0x2D,0x32,
+    0x30,0x32,0x36,0x2D,0x49,0x44,0x4C,0x00
+  ])
+};
+
+// --- java.util.Random LCG (must match JVM for cross-platform compatibility) ---
+class JavaRandom {
+  constructor(seed) {
+    // java.util.Random: seed = (seed ^ 0x5DEECE66DL) & ((1L << 48) - 1)
+    this.seed = this._xorSeed(BigInt(seed));
+  }
+  _xorSeed(s) {
+    const mask = (1n << 48n) - 1n;
+    return (s ^ 0x5DEECE66Dn) & mask;
+  }
+  _next(bits) {
+    const mask = (1n << 48n) - 1n;
+    this.seed = (this.seed * 0x5DEECE66Dn + 0xBn) & mask;
+    const val = Number(this.seed >> (48n - BigInt(bits)));
+    return val | 0; // signed 32-bit
+  }
+  nextInt(bound) {
+    if (bound <= 0) throw new Error('bound must be positive');
+    if ((bound & (bound - 1)) === 0) {
+      // power of 2
+      return Number((BigInt(bound) * BigInt(this._next(31) >>> 0)) >> 31n) | 0;
+    }
+    let bits, val;
+    do {
+      bits = this._next(31) >>> 0;
+      val = bits % bound;
+    } while (bits - val + (bound - 1) < 0);
+    return val;
+  }
+}
+
+// --- MD5 (for per-block nonce — not in Web Crypto API) ---
+function md5(data) {
+  const u8 = data instanceof Uint8Array ? data : new Uint8Array(data);
+  let h0=0x67452301,h1=0xEFCDAB89,h2=0x98BADCFE,h3=0x10325476;
+  const K=[0xd76aa478,0xe8c7b756,0x242070db,0xc1bdceee,0xf57c0faf,0x4787c62a,0xa8304613,
+    0xfd469501,0x698098d8,0x8b44f7af,0xffff5bb1,0x895cd7be,0x6b901122,0xfd987193,
+    0xa679438e,0x49b40821,0xf61e2562,0xc040b340,0x265e5a51,0xe9b6c7aa,0xd62f105d,
+    0x02441453,0xd8a1e681,0xe7d3fbc8,0x21e1cde6,0xc33707d6,0xf4d50d87,0x455a14ed,
+    0xa9e3e905,0xfcefa3f8,0x676f02d9,0x8d2a4c8a,0xfffa3942,0x8771f681,0x6d9d6122,
+    0xfde5380c,0xa4beea44,0x4bdecfa9,0xf6bb4b60,0xbebfbc70,0x289b7ec6,0xeaa127fa,
+    0xd4ef3085,0x04881d05,0xd9d4d039,0xe6db99e5,0x1fa27cf8,0xc4ac5665,0xf4292244,
+    0x432aff97,0xab9423a7,0xfc93a039,0x655b59c3,0x8f0ccc92,0xffeff47d,0x85845dd1,
+    0x6fa87e4f,0xfe2ce6e0,0xa3014314,0x4e0811a1,0xf7537e82,0xbd3af235,0x2ad7d2bb,0xeb86d391];
+  const S=[7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,5,9,14,20,5,9,14,20,5,9,14,20,
+    5,9,14,20,4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,6,10,15,21,6,10,15,21,
+    6,10,15,21,6,10,15,21];
+  const origLen = u8.length;
+  const newLen = ((origLen+8)>>>6<<6)+56;
+  const msg = new Uint8Array(newLen+8);
+  msg.set(u8); msg[origLen]=0x80;
+  const dv=new DataView(msg.buffer);
+  dv.setUint32(newLen,origLen*8,true);
+  for(let i=0;i<msg.length;i+=64){
+    const M=new Int32Array(16);
+    for(let j=0;j<16;j++) M[j]=dv.getInt32(i+j*4,true);
+    let a=h0,b=h1,c=h2,d=h3;
+    for(let j=0;j<64;j++){
+      let f,g;
+      if(j<16){f=(b&c)|((~b)&d);g=j;}
+      else if(j<32){f=(d&b)|((~d)&c);g=(5*j+1)%16;}
+      else if(j<48){f=b^c^d;g=(3*j+5)%16;}
+      else{f=c^(b|(~d));g=(7*j)%16;}
+      const temp=d; d=c; c=b;
+      const x=(a+f+K[j]+M[g])|0;
+      b=(b+((x<<S[j])|(x>>>(32-S[j]))))|0; a=temp;
+    }
+    h0=(h0+a)|0; h1=(h1+b)|0; h2=(h2+c)|0; h3=(h3+d)|0;
+  }
+  const out=new Uint8Array(16);
+  const odv=new DataView(out.buffer);
+  odv.setInt32(0,h0,true); odv.setInt32(4,h1,true);
+  odv.setInt32(8,h2,true); odv.setInt32(12,h3,true);
+  return out;
+}
+
+// --- Crypto Helpers ---
+async function sha256(data) {
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+}
+async function sha512(data) {
+  return new Uint8Array(await crypto.subtle.digest('SHA-512', data));
+}
+async function pbkdf2(password, salt, iterations, keyLen) {
+  const keyMaterial = await crypto.subtle.importKey('raw', password, 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, keyMaterial, keyLen * 8
+  );
+  return new Uint8Array(bits);
+}
+async function aesCtr(key, nonce, data, encrypt) {
+  const aesKey = await crypto.subtle.importKey('raw', key, 'AES-CTR', false, ['encrypt','decrypt']);
+  const result = await crypto.subtle[encrypt?'encrypt':'decrypt'](
+    { name: 'AES-CTR', counter: nonce, length: 128 }, aesKey, data
+  );
+  return new Uint8Array(result);
+}
+
+// --- Byte Helpers ---
+function intToLE(v) { const b=new Uint8Array(4); new DataView(b.buffer).setInt32(0,v,true); return b; }
+function longToLE(v) {
+  const b=new Uint8Array(8); const dv=new DataView(b.buffer);
+  dv.setUint32(0, Number(BigInt(v) & 0xFFFFFFFFn), true);
+  dv.setUint32(4, Number((BigInt(v) >> 32n) & 0xFFFFFFFFn), true);
+  return b;
+}
+function leToInt(b,o) { return new DataView(b.buffer,b.byteOffset).getInt32(o,true); }
+function leToLong(b,o) {
+  const dv=new DataView(b.buffer,b.byteOffset);
+  return Number(BigInt(dv.getUint32(o,true)) | (BigInt(dv.getUint32(o+4,true))<<32n));
+}
+function concat(...arrays) {
+  const len = arrays.reduce((s,a) => s+a.length, 0);
+  const r = new Uint8Array(len); let off=0;
+  for (const a of arrays) { r.set(a, off); off += a.length; }
+  return r;
+}
+function formatBytes(b) {
+  if(b<1024)return b+' B';
+  if(b<1048576)return (b/1024).toFixed(1)+' KB';
+  if(b<1073741824)return (b/1048576).toFixed(1)+' MB';
+  return (b/1073741824).toFixed(2)+' GB';
+}
+
+// --- Key Derivation ---
+async function deriveKey(fileHash, timestamp) {
+  const keyMaterial = concat(VSM.MASTER_SEED, fileHash.slice(0,16), longToLE(timestamp));
+  const salt = new TextEncoder().encode(VSM.SALT);
+  // ISO-8859-1: 1:1 byte-to-char mapping (matches JVM PBEKeySpec behavior)
+  const passwordBytes = keyMaterial;
+  return await pbkdf2(passwordBytes, salt, VSM.PBKDF2_ITERATIONS, 32);
+}
+
+// --- Block Crypto ---
+async function deriveScramblePattern(key, blockIndex) {
+  const seed = concat(key, intToLE(blockIndex));
+  const pattern = await sha512(seed); // 64 bytes
+  const repeats = Math.ceil(VSM.BLOCK_SIZE / 64);
+  const full = new Uint8Array(repeats * 64);
+  for (let i = 0; i < repeats; i++) full.set(pattern, i * 64);
+  return full.slice(0, VSM.BLOCK_SIZE);
+}
+
+function deriveNonce(key, blockIndex) {
+  const material = concat(key.slice(0,8), intToLE(blockIndex));
+  return md5(material);
+}
+
+function xorData(data, pattern) {
+  const r = new Uint8Array(data.length);
+  for (let i = 0; i < data.length; i++) r[i] = data[i] ^ pattern[i % pattern.length];
+  return r;
+}
+
+function buildPermutation(size, blockIndex, key) {
+  const seedInt = leToInt(key, 0) ^ blockIndex;
+  const indices = new Int32Array(size);
+  for (let i = 0; i < size; i++) indices[i] = i;
+  const rng = new JavaRandom(seedInt);
+  for (let i = size - 1; i > 0; i--) {
+    const j = rng.nextInt(i + 1);
+    const tmp = indices[i]; indices[i] = indices[j]; indices[j] = tmp;
+  }
+  return indices;
+}
+
+function fisherYatesShuffle(data, blockIndex, key) {
+  const perm = buildPermutation(data.length, blockIndex, key);
+  const r = new Uint8Array(data.length);
+  for (let i = 0; i < perm.length; i++) r[perm[i]] = data[i];
+  return r;
+}
+
+function fisherYatesUnshuffle(data, blockIndex, key) {
+  const perm = buildPermutation(data.length, blockIndex, key);
+  const r = new Uint8Array(data.length);
+  for (let i = 0; i < perm.length; i++) r[i] = data[perm[i]];
+  return r;
+}
+
+async function encryptBlock(data, blockIndex, key) {
+  const pattern = await deriveScramblePattern(key, blockIndex);
+  const scrambled = xorData(data, pattern);
+  const shuffled = fisherYatesShuffle(scrambled, blockIndex, key);
+  const nonce = deriveNonce(key, blockIndex);
+  return await aesCtr(key, nonce, shuffled, true);
+}
+
+async function decryptBlock(data, blockIndex, key) {
+  const nonce = deriveNonce(key, blockIndex);
+  const decrypted = await aesCtr(key, nonce, data, false);
+  const unshuffled = fisherYatesUnshuffle(decrypted, blockIndex, key);
+  const pattern = await deriveScramblePattern(key, blockIndex);
+  return xorData(unshuffled, pattern);
+}
+
+// --- File Hash (streaming SHA-256, truncated to 16 bytes) ---
+async function computeFileHash(arrayBuffer) {
+  const hash = await sha256(arrayBuffer);
+  return hash.slice(0, 16);
+}
+
+// --- Header ---
+function writeHeader(originalSize, blockCount, fileHash, timestamp) {
+  const buf = new ArrayBuffer(VSM.HEADER_SIZE);
+  const dv = new DataView(buf);
+  dv.setInt32(0, VSM.MAGIC, true);
+  dv.setInt16(4, VSM.VERSION, true);
+  dv.setInt16(6, VSM.FLAG_ENCRYPTED, true);
+  // originalSize as two 32-bit ints (LE)
+  dv.setUint32(8, Number(BigInt(originalSize) & 0xFFFFFFFFn), true);
+  dv.setUint32(12, Number((BigInt(originalSize) >> 32n) & 0xFFFFFFFFn), true);
+  // encodedSize = originalSize (no compression)
+  dv.setUint32(16, Number(BigInt(originalSize) & 0xFFFFFFFFn), true);
+  dv.setUint32(20, Number((BigInt(originalSize) >> 32n) & 0xFFFFFFFFn), true);
+  dv.setInt32(24, VSM.BLOCK_SIZE, true);
+  dv.setInt32(28, blockCount, true);
+  new Uint8Array(buf, 32, 16).set(fileHash);
+  dv.setUint32(48, Number(BigInt(timestamp) & 0xFFFFFFFFn), true);
+  dv.setUint32(52, Number((BigInt(timestamp) >> 32n) & 0xFFFFFFFFn), true);
+  dv.setInt32(56, 0, true); // contentType
+  dv.setInt32(60, 0, true); // reserved
+  return new Uint8Array(buf);
+}
+
+function parseHeader(buf) {
+  const dv = new DataView(buf.buffer, buf.byteOffset);
+  return {
+    magic: dv.getInt32(0, true),
+    version: dv.getInt16(4, true),
+    flags: dv.getInt16(6, true),
+    originalSize: leToLong(buf, 8),
+    blockCount: dv.getInt32(28, true),
+    fileHash: new Uint8Array(buf.buffer, buf.byteOffset + 32, 16),
+    timestamp: leToLong(buf, 48),
+  };
+}
+
+// ============================================================================
+// Encrypt / Decrypt Full File
+// ============================================================================
+
+async function encryptFullFile(arrayBuffer, onProgress) {
+  const originalSize = arrayBuffer.byteLength;
+  const timestamp = Date.now();
+  const fileHash = await computeFileHash(arrayBuffer);
+  const key = await deriveKey(fileHash, timestamp);
+  const blockCount = Math.ceil(originalSize / VSM.BLOCK_SIZE);
+
+  // Metadata (empty JSON for HTML tool)
+  const metaJson = '{"tool":"VLMEncoder-HTML/1.0"}';
+  const metaBytes = new TextEncoder().encode(metaJson);
+
+  const outputParts = [];
+  outputParts.push(writeHeader(originalSize, blockCount, fileHash, timestamp));
+  outputParts.push(intToLE(metaBytes.length));
+  outputParts.push(metaBytes);
+
+  for (let i = 0; i < blockCount; i++) {
+    const start = i * VSM.BLOCK_SIZE;
+    const end = Math.min(start + VSM.BLOCK_SIZE, originalSize);
+    const chunk = new Uint8Array(arrayBuffer, start, end - start);
+
+    // Pad to full block size
+    const block = new Uint8Array(VSM.BLOCK_SIZE);
+    block.set(chunk);
+
+    const encrypted = await encryptBlock(block, i, key);
+    outputParts.push(encrypted);
+
+    if (onProgress) onProgress(i + 1, blockCount);
+  }
+
+  return concat(...outputParts);
+}
+
+async function decryptFullFile(arrayBuffer, onProgress) {
+  const u8 = new Uint8Array(arrayBuffer);
+  if (u8.length < VSM.HEADER_SIZE + 4) throw new Error('File too small');
+
+  const header = parseHeader(u8.slice(0, VSM.HEADER_SIZE));
+  if (header.magic !== VSM.MAGIC) throw new Error('Invalid magic bytes (not a VLM file)');
+  if ((header.flags & VSM.FLAG_ENCRYPTED) === 0) throw new Error('File is not encrypted');
+
+  // Read metadata length and skip
+  const metaLen = leToInt(u8, VSM.HEADER_SIZE);
+  const dataStart = VSM.HEADER_SIZE + 4 + metaLen;
+
+  const key = await deriveKey(header.fileHash, header.timestamp);
+
+  const outputParts = [];
+  let totalWritten = 0;
+
+  for (let i = 0; i < header.blockCount; i++) {
+    const blockStart = dataStart + i * VSM.BLOCK_SIZE;
+    const blockEnd = Math.min(blockStart + VSM.BLOCK_SIZE, u8.length);
+    const block = new Uint8Array(VSM.BLOCK_SIZE);
+    block.set(u8.slice(blockStart, blockEnd));
+
+    const decrypted = await decryptBlock(block, i, key);
+
+    const remaining = header.originalSize - totalWritten;
+    const writeLen = Math.min(remaining, decrypted.length);
+    outputParts.push(decrypted.slice(0, writeLen));
+    totalWritten += writeLen;
+
+    if (onProgress) onProgress(i + 1, header.blockCount);
+  }
+
+  const result = concat(...outputParts);
+
+  // Verify hash
+  const decryptedHash = await computeFileHash(result.buffer);
+  const hashMatch = decryptedHash.every((b, i) => b === header.fileHash[i]);
+  if (!hashMatch) throw new Error('Hash verification FAILED — file may be corrupted');
+
+  return result;
+}
+
+// ============================================================================
+// UI Logic
+// ============================================================================
+
+let currentMode = 'encode';
+let selectedFile = null;
+let resultBlob = null;
+let resultName = '';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btnEncode').classList.toggle('active', mode === 'encode');
+  document.getElementById('btnDecode').classList.toggle('active', mode === 'decode');
+  document.getElementById('processBtn').textContent = mode === 'encode' ? 'Encrypt File' : 'Decrypt File';
+  document.getElementById('dropHint').textContent = mode === 'encode'
+    ? 'Accepts .bin files (raw Whisper models)'
+    : 'Accepts .vlm files (encrypted VoiceOS models)';
+  document.getElementById('fileInput').accept = mode === 'encode' ? '.bin' : '.vlm';
+  clearFile();
+}
+
+function clearFile() {
+  selectedFile = null;
+  resultBlob = null;
+  document.getElementById('fileInfo').style.display = 'none';
+  document.getElementById('processBtn').disabled = true;
+  document.getElementById('downloadBtn').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('statusBox').className = 'status';
+  document.getElementById('statusBox').style.display = 'none';
+  document.getElementById('logCard').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+}
+
+function handleFile(file) {
+  selectedFile = file;
+  document.getElementById('fileInfo').style.display = 'flex';
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatBytes(file.size);
+  document.getElementById('processBtn').disabled = false;
+  document.getElementById('downloadBtn').style.display = 'none';
+  document.getElementById('statusBox').style.display = 'none';
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length > 0) handleFile(e.target.files[0]);
+});
+
+function log(msg) {
+  const logCard = document.getElementById('logCard');
+  const logOutput = document.getElementById('logOutput');
+  logCard.style.display = 'block';
+  logOutput.textContent += msg + '\n';
+  logOutput.scrollTop = logOutput.scrollHeight;
+}
+
+async function processFile() {
+  if (!selectedFile) return;
+
+  const statusBox = document.getElementById('statusBox');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const progressPct = document.getElementById('progressPct');
+  const processBtn = document.getElementById('processBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const logOutput = document.getElementById('logOutput');
+
+  statusBox.style.display = 'none';
+  logOutput.textContent = '';
+  processBtn.disabled = true;
+  progressWrap.style.display = 'block';
+  progressFill.style.width = '0%';
+  progressLabel.textContent = currentMode === 'encode' ? 'Encrypting...' : 'Decrypting...';
+
+  log(`[${new Date().toLocaleTimeString()}] Starting ${currentMode}...`);
+  log(`  File: ${selectedFile.name} (${formatBytes(selectedFile.size)})`);
+
+  const startTime = performance.now();
+
+  try {
+    const arrayBuffer = await selectedFile.arrayBuffer();
+    log(`  File loaded into memory`);
+
+    const onProgress = (current, total) => {
+      const pct = Math.round((current / total) * 100);
+      progressFill.style.width = pct + '%';
+      progressPct.textContent = pct + '%';
+      if (current % 50 === 0 || current === total) {
+        progressLabel.textContent = `Block ${current}/${total}`;
+      }
+    };
+
+    let result;
+    if (currentMode === 'encode') {
+      result = await encryptFullFile(arrayBuffer, onProgress);
+      resultName = selectedFile.name.replace('.bin', '.vlm');
+      // If name doesn't end with .vlm, add it
+      if (!resultName.endsWith('.vlm')) resultName = selectedFile.name + '.vlm';
+    } else {
+      result = await decryptFullFile(arrayBuffer, onProgress);
+      resultName = selectedFile.name.replace('.vlm', '.bin');
+      if (!resultName.endsWith('.bin')) resultName = selectedFile.name + '.bin';
+    }
+
+    const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+    resultBlob = new Blob([result], { type: 'application/octet-stream' });
+
+    log(`  Complete! Output: ${formatBytes(result.length)} in ${elapsed}s`);
+    progressFill.style.width = '100%';
+    progressPct.textContent = '100%';
+    progressLabel.textContent = 'Complete';
+
+    statusBox.className = 'status success';
+    statusBox.style.display = 'block';
+    statusBox.textContent = `${currentMode === 'encode' ? 'Encryption' : 'Decryption'} successful! Output: ${formatBytes(result.length)} (${elapsed}s)`;
+
+    downloadBtn.style.display = 'block';
+    downloadBtn.textContent = `Download ${resultName}`;
+  } catch (err) {
+    log(`  ERROR: ${err.message}`);
+    statusBox.className = 'status error';
+    statusBox.style.display = 'block';
+    statusBox.textContent = `Error: ${err.message}`;
+    progressWrap.style.display = 'none';
+  }
+
+  processBtn.disabled = false;
+}
+
+function downloadResult() {
+  if (!resultBlob) return;
+  const url = URL.createObjectURL(resultBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = resultName;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

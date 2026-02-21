@@ -14,7 +14,6 @@ import com.augmentalis.nlu.IntentClassification
  * - Fallback-ready: Supports graceful degradation to templates if LLM fails
  *
  * Created: 2025-11-10
- * Author: Claude Code (Agent 3)
  */
 class LLMContextBuilder {
 

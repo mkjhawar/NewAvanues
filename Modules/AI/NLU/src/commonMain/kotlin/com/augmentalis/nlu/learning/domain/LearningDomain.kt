@@ -12,7 +12,7 @@ package com.augmentalis.nlu.learning.domain
  * - Cross-platform: KMP commonMain for iOS/Android/Desktop
  *
  * @see ADR-014: Unified Learning Architecture
- * @author Augmentalis AI Team
+ * @author Manoj Jhawar
  * @since 2025-12-18
  */
 

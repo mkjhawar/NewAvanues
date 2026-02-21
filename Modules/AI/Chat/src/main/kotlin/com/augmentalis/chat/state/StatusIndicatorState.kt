@@ -43,7 +43,7 @@ import javax.inject.Singleton
  *
  * @param context Application context for DeveloperPreferences
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-17
  */
 @Singleton

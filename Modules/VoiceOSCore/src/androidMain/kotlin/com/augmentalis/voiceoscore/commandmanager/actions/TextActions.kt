@@ -1,11 +1,10 @@
 /**
  * TextActions.kt - Text manipulation command actions
  * Path: modules/commands/src/main/java/com/augmentalis/voiceos/commands/actions/TextActions.kt
- * 
+ *
  * Created: 2025-08-19
- * Author: Claude Code
  * Module: Commands
- * 
+ *
  * Purpose: Text manipulation and editing-related voice command actions
  */
 

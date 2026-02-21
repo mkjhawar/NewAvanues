@@ -39,7 +39,7 @@ import javax.inject.Singleton
  * @param nluSelfLearner NLU self-learning system
  * @param chatPreferences User preferences for confidence threshold
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-01-15
  */
 @Singleton
