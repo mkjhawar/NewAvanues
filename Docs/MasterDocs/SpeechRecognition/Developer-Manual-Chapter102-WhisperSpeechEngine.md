@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-21 — Added VLM encryption (Section 14), jvmMain shared source set, shared model storage
+**Updated**: 2026-02-21 — Added VLM encryption (Section 14), Google Cloud STT v2 (Section 15), jvmMain shared source set, shared model storage
 
 ---
 
@@ -28,7 +28,7 @@ The Whisper Speech Engine provides **fully offline** speech recognition using Op
 | **Apple Speech** | — | SFSpeechRecognizer | SFSpeechRecognizer | — |
 | **Android STT** | Built-in | — | — | — |
 | **Vivoka** | VSDK AAR | — | — | — |
-| **Google Cloud** | Planned (Phase F) | — | — | — |
+| **Google Cloud** | GoogleCloudEngine (VAD_BATCH + STREAMING) | — | — | — |
 
 ### Why Whisper?
 
@@ -66,6 +66,12 @@ Modules/SpeechRecognition/src/
         WhisperConfig.kt          # Android configuration
         WhisperModelManager.kt    # OkHttp model downloads
         ui/WhisperModelDownloadScreen.kt  # Compose download UI
+
+    androidMain/kotlin/.../googlecloud/
+        GoogleCloudConfig.kt          # Configuration + validation
+        GoogleCloudApiClient.kt       # REST batch recognize
+        GoogleCloudStreamingClient.kt # HTTP/2 streaming recognize
+        GoogleCloudEngine.kt          # Engine orchestrator
 
     iosMain/kotlin/.../whisper/
         IosWhisperEngine.kt       # iOS engine orchestrator (cinterop)
@@ -161,6 +167,41 @@ Microphone (AVAudioEngine — no AVAudioSession needed)
 [RecognitionResult] --> MacosSpeechRecognitionService --> VoiceOS
 ```
 
+**Google Cloud — VAD Batch Mode**:
+```
+Microphone
+    |
+    v
+[WhisperAudio] --16kHz/16-bit/mono--> Float32 buffer
+    |
+    v
+[WhisperVAD] --speech chunks--> [GoogleCloudEngine.recognizeChunk()]
+    |
+    v
+[GoogleCloudApiClient.recognize()] --REST POST-->
+    |
+    v
+Google Cloud STT v2 API --JSON response-->
+    v
+[RecognitionResult] --> resultFlow --> SpeechRecognitionService --> VoiceOS
+```
+
+**Google Cloud — Streaming Mode**:
+```
+Microphone
+    |
+    v
+[WhisperAudio] --continuous audio--> Float32 buffer
+    |
+    v
+[GoogleCloudStreamingClient.sendAudioChunk()] --HTTP/2 chunked-->
+    |
+    v
+Google Cloud STT v2 Streaming API --newline-delimited JSON-->
+    v
+partial + final [RecognitionResult] --> resultFlow --> VoiceOS
+```
+
 ### 2.3 Engine Lifecycle
 
 ```
@@ -240,7 +281,24 @@ val config = DesktopWhisperConfig(
 val config = DesktopWhisperConfig.autoTuned(language = "en")
 ```
 
-### 3.3 Model Selection
+### 3.4 Google Cloud — GoogleCloudConfig
+
+```kotlin
+val config = GoogleCloudConfig(
+    projectId = "my-gcp-project",   // Required
+    mode = GoogleCloudMode.VAD_BATCH,  // or STREAMING
+    language = "en-US",              // BCP-47 language code
+    model = "latest_short",          // "latest_short" for commands, "latest_long" for dictation
+    authMode = GoogleCloudAuthMode.FIREBASE_AUTH,  // or API_KEY
+    apiKey = null,                   // Required if authMode = API_KEY
+    maxAlternatives = 3              // Alternative transcriptions
+)
+
+// From unified SpeechConfig:
+val config = GoogleCloudConfig.fromSpeechConfig(speechConfig)
+```
+
+### 3.5 Model Selection
 
 | Model | Size | Min RAM | Speed | Accuracy | English-Only |
 |---|---|---|---|---|---|
@@ -493,6 +551,20 @@ engine.modelDownloadState.collect { state ->
 3. Add SHA256 to `WhisperModelUrls.KNOWN_CHECKSUMS` if known
 4. No other changes needed — download UI auto-discovers from enum entries
 
+### 10.4 Using Google Cloud STT v2
+
+```kotlin
+// In AndroidSpeechRecognitionService.initialize():
+when (config.engine) {
+    SpeechEngine.GOOGLE_CLOUD -> {
+        val gcConfig = GoogleCloudConfig.fromSpeechConfig(config)
+        val engine = GoogleCloudEngine(context)
+        engine.initialize(gcConfig)
+        // Collect engine.resultFlow -> process -> emit to service resultFlow
+    }
+}
+```
+
 ---
 
 ## 11. JNI Native Methods
@@ -660,6 +732,27 @@ Speech recognition denied — check System Settings > Privacy > Speech Recogniti
 
 **Fix**: Open System Settings > Privacy & Security > Speech Recognition and enable the app. macOS also requires a separate Microphone permission.
 
+### Google Cloud: Authentication Failed (401)
+
+Firebase Auth: Ensure a user is signed in (`FirebaseAuth.getInstance().currentUser != null`). The engine automatically refreshes expired tokens on first 401.
+
+API Key: Verify the key is valid and has Speech-to-Text v2 API enabled in GCP Console.
+
+### Google Cloud: Rate Limited (429)
+
+The engine retries with exponential backoff (1s, 2s, 4s). If persistent, check GCP quotas for your project. Consider switching to STREAMING mode for continuous recognition.
+
+### Google Cloud: Streaming Connection Lost
+
+The streaming client auto-reconnects up to 5 times with exponential backoff (1s → 15s). If all attempts fail, the engine emits a network error. Check WiFi connectivity and Google Cloud service status.
+
+### Google Cloud: Empty Results
+
+Common causes:
+- Audio too short (below `minSpeechDurationMs` threshold)
+- Wrong language code for the spoken language
+- Model mismatch: use `latest_short` for commands (< 60s), `latest_long` for dictation
+
 ---
 
 ## 14. VLM Encryption (VoiceOS Language Model)
@@ -786,3 +879,633 @@ Each `ModelManager` has a `migrateExistingModels()` method that:
 2. Encrypts each to `.vlm` in the shared storage directory
 3. Deletes the original `.bin` on success
 4. Safe to call multiple times (skips already-migrated files)
+
+---
+
+## 15. Google Cloud Speech-to-Text v2
+
+### 15.1 Overview
+
+Google Cloud STT v2 is a premium cloud recognition engine with two modes: **VAD_BATCH** (WhisperVAD detects speech chunks, each sent as REST recognize request) and **STREAMING** (continuous HTTP/2 chunked transfer with partial+final results). Requires network. Auth via Firebase ID token (Bearer) or API key (query param).
+
+### 15.2 Architecture
+
+```
+SpeechConfig (commonMain)
+    ├── gcpProjectId
+    ├── gcpRecognizerMode
+    └── googleCloud() factory
+         │
+AndroidSpeechRecognitionService (androidMain)
+    └── initializeGoogleCloud()
+         │
+GoogleCloudEngine (androidMain/googlecloud/)
+    ├── WhisperAudio (reused — 16kHz mono PCM)
+    ├── WhisperVAD (reused — speech chunk detection)
+    ├── GoogleCloudApiClient (batch)
+    └── GoogleCloudStreamingClient (streaming)
+```
+
+All 4 files in `src/androidMain/kotlin/com/augmentalis/speechrecognition/googlecloud/`:
+
+### 15.3 GoogleCloudConfig
+
+```kotlin
+// Configuration for Google Cloud STT v2
+data class GoogleCloudConfig(
+    val projectId: String,                                    // GCP project ID (required)
+    val recognizerName: String = "_",                         // Default recognizer
+    val location: String = "global",                          // API location
+    val mode: GoogleCloudMode = GoogleCloudMode.VAD_BATCH,    // VAD_BATCH or STREAMING
+    val language: String = "en-US",                           // BCP-47 language code
+    val model: String = "latest_short",                       // "latest_short" or "latest_long"
+    val enableAutoPunctuation: Boolean = true,                // Auto punctuation
+    val enableWordTimeOffsets: Boolean = false,               // Word-level timestamps
+    val enableWordConfidence: Boolean = false,                // Per-word confidence
+    val maxAlternatives: Int = 3,                             // Alternative transcriptions
+    val authMode: GoogleCloudAuthMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+    val apiKey: String? = null,                               // For API_KEY auth
+    val silenceThresholdMs: Int = 700,                        // VAD silence duration
+    val minSpeechDurationMs: Int = 300,                       // Min utterance length
+    val maxChunkDurationMs: Int = 30_000,                     // Max chunk duration
+    val requestTimeoutMs: Long = 30_000,                      // HTTP request timeout
+    val connectTimeoutMs: Long = 10_000,                      // Connection timeout
+    val maxRetries: Int = 3                                   // Max retry attempts
+)
+
+// Mode selection
+enum class GoogleCloudMode {
+    VAD_BATCH,      // Speech chunks detected locally, each sent as REST request
+    STREAMING       // Continuous HTTP/2 streaming with partial results
+}
+
+// Authentication mode
+enum class GoogleCloudAuthMode {
+    FIREBASE_AUTH,  // Uses Firebase ID token (Bearer header)
+    API_KEY         // Uses API key (query parameter)
+}
+
+// Factory function
+fun SpeechConfig.googleCloud(
+    projectId: String,
+    apiKey: String? = null,
+    streaming: Boolean = false,
+    language: String = "en-US"
+): GoogleCloudConfig = GoogleCloudConfig(
+    projectId = projectId,
+    mode = if (streaming) GoogleCloudMode.STREAMING else GoogleCloudMode.VAD_BATCH,
+    language = language,
+    apiKey = apiKey,
+    authMode = if (apiKey != null) GoogleCloudAuthMode.API_KEY else GoogleCloudAuthMode.FIREBASE_AUTH
+)
+
+// Factory from unified config
+fun GoogleCloudConfig.fromSpeechConfig(config: SpeechConfig): GoogleCloudConfig {
+    // Extracts GCP-specific fields from unified SpeechConfig
+    return GoogleCloudConfig(
+        projectId = config.gcpProjectId ?: throw IllegalArgumentException("gcpProjectId required"),
+        mode = config.gcpRecognizerMode ?: GoogleCloudMode.VAD_BATCH,
+        language = config.language
+    )
+}
+
+// Validation
+fun GoogleCloudConfig.validate(): Result<Unit> {
+    if (projectId.isBlank()) return Result.failure(IllegalArgumentException("projectId required"))
+    if (requestTimeoutMs < 1000) return Result.failure(IllegalArgumentException("requestTimeoutMs must be >= 1000"))
+    if (maxRetries !in 0..10) return Result.failure(IllegalArgumentException("maxRetries must be 0-10"))
+    if (silenceThresholdMs !in 100..5000) return Result.failure(IllegalArgumentException("silenceThresholdMs must be 100-5000"))
+    return Result.success(Unit)
+}
+
+// URL builders (internal)
+fun GoogleCloudConfig.buildRecognizeUrl(): String {
+    val baseUrl = "https://speech.googleapis.com/v2/projects/$projectId/locations/$location/recognizers/$recognizerName:recognize"
+    return if (authMode == GoogleCloudAuthMode.API_KEY && apiKey != null) {
+        "$baseUrl?key=$apiKey"
+    } else {
+        baseUrl
+    }
+}
+
+fun GoogleCloudConfig.buildStreamingUrl(): String {
+    val baseUrl = "https://speech.googleapis.com/v2/projects/$projectId/locations/$location/recognizers/$recognizerName:streamingRecognize"
+    return if (authMode == GoogleCloudAuthMode.API_KEY && apiKey != null) {
+        "$baseUrl?key=$apiKey"
+    } else {
+        baseUrl
+    }
+}
+```
+
+**~168 lines** — Configuration data class, enums, factories, validation, URL builders.
+
+### 15.4 GoogleCloudApiClient
+
+```kotlin
+// REST client for synchronous recognize endpoint (VAD_BATCH mode)
+class GoogleCloudApiClient(
+    private val config: GoogleCloudConfig,
+    private val firebaseAuth: FirebaseAuth? = null
+) {
+    // Recognizes a single audio chunk (speech detected by WhisperVAD)
+    suspend fun recognize(audioFloatArray: FloatArray): RecognizeResponse {
+        // Audio conversion: Float32 → Int16 LE PCM → Base64 encoding
+        val pcmData = convertFloatToPcm(audioFloatArray)
+        val base64Audio = Base64.getEncoder().encodeToString(pcmData)
+
+        // Build v2 REST request JSON
+        val requestJson = buildRecognizeRequest(base64Audio)
+
+        // Auth header
+        val headers = buildHeaders()
+
+        try {
+            // POST request with retries + exponential backoff
+            val response = retryWithBackoff(maxRetries = config.maxRetries) {
+                postRequest(config.buildRecognizeUrl(), requestJson, headers)
+            }
+
+            // Parse response: transcript, confidence, word timestamps, alternatives
+            return parseRecognizeResponse(response)
+        } catch (e: HttpException) {
+            // Error mapping: 400→CHECK_CONFIGURATION, 401/403→REINITIALIZE, 429→RETRY_WITH_BACKOFF, 5xx→RETRY_WITH_BACKOFF
+            return RecognizeResponse.Error(mapHttpError(e))
+        }
+    }
+
+    // Token refresh on 401
+    private suspend fun refreshToken(): Boolean {
+        if (config.authMode != GoogleCloudAuthMode.FIREBASE_AUTH || firebaseAuth == null) {
+            return false
+        }
+        return try {
+            firebaseAuth.currentUser?.getIdToken(forceRefresh = true)?.result != null
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Retry logic: Exponential backoff (1s base, 2x multiplier, 10s cap, 20% jitter)
+    private suspend inline fun <T> retryWithBackoff(
+        maxRetries: Int,
+        block: suspend () -> T
+    ): T {
+        var lastException: Exception? = null
+        repeat(maxRetries) { attempt ->
+            try {
+                return block()
+            } catch (e: HttpException) {
+                if (e.code == 401) {
+                    if (refreshToken()) {
+                        // Retry once after refresh
+                        try {
+                            return block()
+                        } catch (e2: Exception) {
+                            lastException = e2
+                        }
+                    }
+                }
+                if (attempt < maxRetries - 1) {
+                    val backoff = minOf(
+                        (1000L shl attempt) + Random.nextLong(200),  // 1s, 2s, 4s, 8s + jitter
+                        10_000  // cap at 10s
+                    )
+                    delay(backoff)
+                    lastException = e
+                }
+            }
+        }
+        throw lastException ?: Exception("All retries exhausted")
+    }
+
+    // Build request JSON (v2 schema)
+    private fun buildRecognizeRequest(base64Audio: String): String {
+        return """
+        {
+            "config": {
+                "autoDecodingConfig": {},
+                "languageCodes": ["${config.language}"],
+                "model": "${config.model}",
+                "features": {
+                    "enableAutoPunctuation": ${config.enableAutoPunctuation},
+                    "enableWordTimeOffsets": ${config.enableWordTimeOffsets},
+                    "enableWordConfidence": ${config.enableWordConfidence}
+                },
+                "maxAlternatives": ${config.maxAlternatives}
+            },
+            "audio": {
+                "content": "$base64Audio"
+            }
+        }
+        """.trimIndent()
+    }
+
+    // Build request headers
+    private suspend fun buildHeaders(): Map<String, String> {
+        val headers = mutableMapOf(
+            "Content-Type" to "application/json"
+        )
+        if (config.authMode == GoogleCloudAuthMode.FIREBASE_AUTH && firebaseAuth != null) {
+            val token = firebaseAuth.currentUser?.getIdToken(cacheLevel = false)?.result?.token
+            if (token != null) {
+                headers["Authorization"] = "Bearer $token"
+            }
+        }
+        return headers
+    }
+
+    // Parse v2 API response
+    private fun parseRecognizeResponse(jsonResponse: String): RecognizeResponse {
+        val results = parseJson(jsonResponse)  // Results array
+        if (results.isEmpty()) {
+            return RecognizeResponse.Success(RecognitionResult(text = "", confidence = 0f))
+        }
+        // Extract transcript, confidence, alternatives
+        val transcript = results[0].transcript
+        val confidence = results[0].confidence.toFloat()
+        return RecognizeResponse.Success(
+            RecognitionResult(text = transcript, confidence = confidence)
+        )
+    }
+
+    // Response wrapper
+    sealed class RecognizeResponse {
+        data class Success(val result: RecognitionResult) : RecognizeResponse()
+        data class Error(val error: RecognitionError) : RecognizeResponse()
+    }
+}
+```
+
+**~409 lines** — REST client with audio conversion, request building, auth, retry logic, response parsing.
+
+### 15.5 GoogleCloudStreamingClient
+
+```kotlin
+// HTTP/2 streaming via OkHttp with chunked transfer encoding
+class GoogleCloudStreamingClient(
+    private val config: GoogleCloudConfig,
+    private val firebaseAuth: FirebaseAuth? = null
+) {
+    private val audioQueue = Channel<ByteArray>(Channel.UNLIMITED)  // Decouples mic from network
+    private var streamJob: Job? = null
+    private val resultFlow = MutableSharedFlow<RecognitionResult>()
+
+    // Start streaming recognize session
+    suspend fun startStreaming() {
+        streamJob = coroutineScope {
+            launch {
+                try {
+                    val client = OkHttpClient.Builder()
+                        .protocols(listOf(Protocol.H2_PRIOR_KNOWLEDGE))
+                        .connectTimeout(config.connectTimeoutMs, TimeUnit.MILLISECONDS)
+                        .readTimeout(config.requestTimeoutMs, TimeUnit.MILLISECONDS)
+                        .build()
+
+                    val request = buildStreamingRequest()
+                    val response = client.newCall(request).execute()
+
+                    // Read newline-delimited JSON responses (partial + final results)
+                    response.body?.source()?.use { source ->
+                        val streamStartTime = System.currentTimeMillis()
+                        while (!source.exhausted() && System.currentTimeMillis() - streamStartTime < 290_000) {
+                            val line = source.readUtf8Line() ?: break
+                            val result = parseStreamingResponse(line)
+                            resultFlow.emit(result)
+                        }
+                    }
+                } catch (e: IOException) {
+                    // Auto-reconnection: exponential backoff (1s → 15s, 5 max attempts)
+                    autoReconnect()
+                }
+            }
+
+            launch {
+                // Continuously drain audio buffer and send chunks
+                for (chunk in audioQueue) {
+                    sendAudioChunk(chunk)
+                }
+            }
+        }
+    }
+
+    // Queue audio chunk for streaming
+    fun sendAudioChunk(audioData: ByteArray) {
+        audioQueue.trySend(audioData)  // Non-blocking
+    }
+
+    // Stop streaming
+    fun stopStreaming() {
+        audioQueue.close()
+        streamJob?.cancel()
+    }
+
+    // Collect results
+    fun getResults(): Flow<RecognitionResult> = resultFlow.asSharedFlow()
+
+    // Auto-reconnection with backoff
+    private suspend fun autoReconnect() {
+        var attempt = 0
+        while (attempt < 5) {
+            val backoff = minOf(
+                1000L shl attempt,  // 1s, 2s, 4s, 8s, 16s
+                15_000  // cap at 15s
+            )
+            delay(backoff)
+            try {
+                startStreaming()
+                return
+            } catch (e: Exception) {
+                attempt++
+            }
+        }
+    }
+
+    // Build streaming request with config message
+    private suspend fun buildStreamingRequest(): Request {
+        val configMessage = buildConfigMessage()
+        val headers = buildHeaders()
+
+        return Request.Builder()
+            .url(config.buildStreamingUrl())
+            .post(StreamingRequestBody(configMessage, audioQueue))
+            .apply {
+                headers.forEach { (k, v) -> addHeader(k, v) }
+            }
+            .build()
+    }
+
+    // Config message (sent first)
+    private fun buildConfigMessage(): String {
+        return """
+        {
+            "streamingConfig": {
+                "config": {
+                    "autoDecodingConfig": {},
+                    "languageCodes": ["${config.language}"],
+                    "model": "${config.model}",
+                    "features": {
+                        "enableAutoPunctuation": ${config.enableAutoPunctuation}
+                    }
+                }
+            }
+        }
+        """.trimIndent()
+    }
+
+    // Build headers with auth
+    private suspend fun buildHeaders(): Map<String, String> {
+        val headers = mutableMapOf(
+            "Content-Type" to "application/json"
+        )
+        if (config.authMode == GoogleCloudAuthMode.FIREBASE_AUTH && firebaseAuth != null) {
+            val token = firebaseAuth.currentUser?.getIdToken(cacheLevel = false)?.result?.token
+            if (token != null) {
+                headers["Authorization"] = "Bearer $token"
+            }
+        }
+        return headers
+    }
+
+    // Parse newline-delimited JSON from stream
+    private fun parseStreamingResponse(jsonLine: String): RecognitionResult {
+        // Response can be partial (interim results) or final
+        val isPartial = jsonLine.contains("\"isFinal\": false")
+        val transcript = extractTranscript(jsonLine)
+        val confidence = extractConfidence(jsonLine)
+        return RecognitionResult(text = transcript, confidence = confidence)
+    }
+
+    // Custom request body for streaming
+    private class StreamingRequestBody(
+        private val configMessage: String,
+        private val audioQueue: Channel<ByteArray>
+    ) : RequestBody() {
+        override fun contentType(): MediaType? = MediaType.get("application/json")
+
+        override fun writeTo(sink: BufferedSink) {
+            // Write config message first
+            sink.writeUtf8(configMessage + "\n")
+            sink.flush()
+
+            // Stream audio chunks
+            runBlocking {
+                for (chunk in audioQueue) {
+                    val audioMessage = buildAudioMessage(chunk)
+                    sink.writeUtf8(audioMessage + "\n")
+                    sink.flush()
+                }
+            }
+        }
+
+        private fun buildAudioMessage(audioData: ByteArray): String {
+            val base64Audio = Base64.getEncoder().encodeToString(audioData)
+            return """{"audio": {"content": "$base64Audio"}}"""
+        }
+    }
+}
+```
+
+**~448 lines** — HTTP/2 streaming client with audio queue, request building, response parsing, auto-reconnect.
+
+### 15.6 GoogleCloudEngine
+
+```kotlin
+// Main engine orchestrator mirroring WhisperEngine pattern
+class GoogleCloudEngine(
+    private val context: Context
+) {
+    // State machine: UNINITIALIZED → LOADING_MODEL → READY → LISTENING → PROCESSING → READY
+    private val stateFlow = MutableStateFlow<WhisperEngineState>(WhisperEngineState.UNINITIALIZED)
+
+    // Components (reused from Whisper)
+    private lateinit var audio: WhisperAudio        // Mic capture
+    private lateinit var vad: WhisperVAD            // Speech chunk detection
+    private lateinit var apiClient: GoogleCloudApiClient  // Batch REST client
+    private lateinit var streamingClient: GoogleCloudStreamingClient  // HTTP/2 streaming
+    private lateinit var config: GoogleCloudConfig
+
+    // Results flow
+    val resultFlow = MutableSharedFlow<RecognitionResult>()
+
+    // Initialize engine
+    suspend fun initialize(gcConfig: GoogleCloudConfig) {
+        gcConfig.validate().getOrThrow()
+        config = gcConfig
+
+        stateFlow.value = WhisperEngineState.LOADING_MODEL
+
+        // Initialize components
+        audio = WhisperAudio(context, 16000)  // 16kHz mono
+        vad = WhisperVAD(
+            silenceTimeoutMs = config.silenceThresholdMs,
+            minSpeechDurationMs = config.minSpeechDurationMs,
+            maxSpeechDurationMs = config.maxChunkDurationMs
+        )
+        apiClient = GoogleCloudApiClient(config, FirebaseAuth.getInstance())
+        streamingClient = GoogleCloudStreamingClient(config, FirebaseAuth.getInstance())
+
+        stateFlow.value = WhisperEngineState.READY
+    }
+
+    // Start listening
+    suspend fun startListening() {
+        stateFlow.value = WhisperEngineState.LISTENING
+        audio.startCapture()
+
+        when (config.mode) {
+            GoogleCloudMode.VAD_BATCH -> vadListenLoop()
+            GoogleCloudMode.STREAMING -> streamingListenLoop()
+        }
+    }
+
+    // VAD Batch mode: WhisperVAD detects chunks, each sent as REST request
+    private suspend fun vadListenLoop() {
+        audio.captureFlow.collect { floatBuffer ->
+            vad.processSample(floatBuffer)
+
+            if (vad.hasSpeechChunk()) {
+                stateFlow.value = WhisperEngineState.PROCESSING
+                val chunk = vad.getChunkAndReset()
+
+                // Convert Float32 to PCM
+                val pcmData = convertFloatToPcm(chunk)
+
+                // Send REST request
+                val response = apiClient.recognize(chunk)
+                when (response) {
+                    is GoogleCloudApiClient.RecognizeResponse.Success -> {
+                        resultFlow.emit(response.result)
+                    }
+                    is GoogleCloudApiClient.RecognizeResponse.Error -> {
+                        resultFlow.emit(RecognitionResult(text = "", error = response.error))
+                    }
+                }
+
+                stateFlow.value = WhisperEngineState.READY
+            }
+        }
+    }
+
+    // Streaming mode: Continuous HTTP/2 streaming
+    private suspend fun streamingListenLoop() {
+        streamingClient.startStreaming()
+
+        audio.captureFlow.collect { floatBuffer ->
+            // Convert Float32 to PCM and queue for streaming
+            val pcmData = convertFloatToPcm(floatBuffer)
+            streamingClient.sendAudioChunk(pcmData)
+
+            // Collect streaming results
+            streamingClient.getResults().collect { result ->
+                resultFlow.emit(result)
+            }
+        }
+    }
+
+    // Stop listening (flushes remaining audio in VAD_BATCH)
+    suspend fun stopListening() {
+        audio.stopCapture()
+        streamingClient.stopStreaming()
+
+        // Flush remaining audio in VAD_BATCH mode
+        if (config.mode == GoogleCloudMode.VAD_BATCH && vad.hasPartialSpeech()) {
+            val remainingChunk = vad.getChunkAndReset()
+            if (remainingChunk.isNotEmpty()) {
+                val response = apiClient.recognize(remainingChunk)
+                when (response) {
+                    is GoogleCloudApiClient.RecognizeResponse.Success -> {
+                        resultFlow.emit(response.result)
+                    }
+                    is GoogleCloudApiClient.RecognizeResponse.Error -> {
+                        resultFlow.emit(RecognitionResult(text = "", error = response.error))
+                    }
+                }
+            }
+        }
+
+        stateFlow.value = WhisperEngineState.READY
+    }
+
+    // Pause/resume
+    suspend fun pause() {
+        audio.stopCapture()
+    }
+
+    suspend fun resume() {
+        audio.startCapture()
+    }
+
+    // Cleanup
+    fun destroy() {
+        audio.release()
+        streamingClient.stopStreaming()
+        stateFlow.value = WhisperEngineState.DESTROYED
+    }
+
+    // Getters
+    fun getState(): Flow<WhisperEngineState> = stateFlow.asStateFlow()
+}
+```
+
+**~470 lines** — Engine orchestrator with state machine, VAD_BATCH and STREAMING listen loops, lifecycle management.
+
+### 15.7 Usage Examples
+
+**VAD Batch Mode** (default, recommended for voice commands):
+```kotlin
+val config = SpeechConfig.googleCloud(
+    projectId = "my-gcp-project",
+    apiKey = "optional-api-key",
+    streaming = false
+)
+speechService.initialize(config)
+speechService.startListening()
+```
+
+**Streaming Mode** (for continuous/dictation):
+```kotlin
+val config = SpeechConfig.googleCloud(
+    projectId = "my-gcp-project",
+    streaming = true
+)
+speechService.initialize(config)
+speechService.startListening()
+```
+
+**Firebase Auth** (no API key required, uses logged-in user token):
+```kotlin
+val config = SpeechConfig.googleCloud(
+    projectId = "my-gcp-project"
+    // No apiKey → automatically uses FIREBASE_AUTH mode
+)
+```
+
+**From AndroidSpeechRecognitionService**:
+```kotlin
+when (config.engine) {
+    SpeechEngine.GOOGLE_CLOUD -> {
+        val gcConfig = GoogleCloudConfig.fromSpeechConfig(config)
+        val engine = GoogleCloudEngine(context)
+        engine.initialize(gcConfig)
+        // Collect engine.resultFlow → process → emit to service resultFlow
+    }
+}
+```
+
+### 15.8 Provisioning
+
+GCP project ID is provided via:
+1. **SpeechConfig.googleCloud(projectId = ...)** at runtime
+2. **local.properties**: `gcp.speech.project_id=my-project`
+3. **Environment variable**: `GCP_SPEECH_PROJECT_ID=my-project`
+
+Firebase Auth is recommended for production — no API key storage required.
+
+### 15.9 Dependencies
+
+- `com.google.firebase:firebase-auth` — from existing Firebase BOM 34.3.0 (already included)
+- `com.squareup.okhttp3:okhttp` — for HTTP/2 streaming (already included)
+- `com.google.code.gson:gson` — for JSON parsing (already included)
+
+No new dependencies required beyond existing stack.
