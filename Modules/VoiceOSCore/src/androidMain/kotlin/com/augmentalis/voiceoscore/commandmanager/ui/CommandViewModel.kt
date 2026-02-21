@@ -19,7 +19,6 @@ import androidx.lifecycle.viewModelScope
 import com.augmentalis.voiceoscore.*
 import com.augmentalis.voiceoscore.commandmanager.processor.CommandProcessor
 import com.augmentalis.voiceoscore.commandmanager.history.CommandHistory
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -137,32 +136,34 @@ class CommandViewModel(private val context: Context) : ViewModel() {
     }
     
     /**
-     * Start voice test (simulated for now)
+     * Start voice test by picking a random command from the registered command registry
+     * and executing it via the standard command processor pipeline.
      */
     fun startVoiceTest() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _errorMessage.value = null
-                
-                // Simulate voice recognition delay
-                delay(2000)
-                
-                // Simulate a voice command
-                val simulatedCommands = listOf(
-                    "go back",
-                    "volume up", 
-                    "scroll down",
-                    "take screenshot",
-                    "open settings"
-                )
-                
-                val randomCommand = simulatedCommands.random()
-                _successMessage.value = "Voice recognition simulated: \"$randomCommand\""
-                
-                // Execute the simulated command
-                testCommand(randomCommand, CommandSource.VOICE)
-                
+
+                // Pull patterns from the actual registered commands so the test
+                // exercises a real entry from the live registry, not a hardcoded list.
+                val registeredPatterns = commandProcessor.getAvailableCommands(null)
+                    .flatMap { it.patterns }
+                    .filter { it.isNotBlank() }
+
+                if (registeredPatterns.isEmpty()) {
+                    _errorMessage.value = "No registered commands found — initialize the command processor first"
+                    Log.w(TAG, "startVoiceTest: registry returned no patterns")
+                    return@launch
+                }
+
+                val selectedCommand = registeredPatterns.random()
+                _successMessage.value = "Voice test command selected: \"$selectedCommand\""
+                Log.d(TAG, "startVoiceTest: selected \"$selectedCommand\" from ${registeredPatterns.size} registered patterns")
+
+                // Execute through the real processor pipeline
+                testCommand(selectedCommand, CommandSource.VOICE)
+
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start voice test", e)
                 _errorMessage.value = "Voice test failed: ${e.message}"

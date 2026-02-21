@@ -346,6 +346,64 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
     // ===== FUSION ALGORITHMS =====
 
     /**
+     * Convert a 3x3 rotation matrix (supplied as 9 individual elements in row-major order)
+     * to a unit quaternion using Shepperd's method.
+     *
+     * The algorithm selects a numerically stable branch based on which diagonal element
+     * is largest, avoiding division by near-zero values.
+     *
+     * @param r00..r22  Row-major elements of the rotation matrix:
+     *                  | r00  r01  r02 |
+     *                  | r10  r11  r12 |
+     *                  | r20  r21  r22 |
+     * @return Normalised [Quaternion] representing the same rotation.
+     */
+    private fun rotationMatrixToQuaternion(
+        r00: Float, r01: Float, r02: Float,
+        r10: Float, r11: Float, r12: Float,
+        r20: Float, r21: Float, r22: Float
+    ): Quaternion {
+        val trace = r00 + r11 + r22
+        return if (trace > 0f) {
+            // Standard case — trace positive
+            val s = 0.5f / sqrt(trace + 1f)
+            Quaternion(
+                w = 0.25f / s,
+                x = (r21 - r12) * s,
+                y = (r02 - r20) * s,
+                z = (r10 - r01) * s
+            ).normalized
+        } else if (r00 > r11 && r00 > r22) {
+            // Largest diagonal element is r00
+            val s = 2f * sqrt(1f + r00 - r11 - r22)
+            Quaternion(
+                w = (r21 - r12) / s,
+                x = 0.25f * s,
+                y = (r01 + r10) / s,
+                z = (r02 + r20) / s
+            ).normalized
+        } else if (r11 > r22) {
+            // Largest diagonal element is r11
+            val s = 2f * sqrt(1f + r11 - r00 - r22)
+            Quaternion(
+                w = (r02 - r20) / s,
+                x = (r01 + r10) / s,
+                y = 0.25f * s,
+                z = (r12 + r21) / s
+            ).normalized
+        } else {
+            // Largest diagonal element is r22
+            val s = 2f * sqrt(1f + r22 - r00 - r11)
+            Quaternion(
+                w = (r10 - r01) / s,
+                x = (r02 + r20) / s,
+                y = (r12 + r21) / s,
+                z = 0.25f * s
+            ).normalized
+        }
+    }
+
+    /**
      * Complementary Filter Implementation
      * Fast, low CPU usage, good for real-time applications
      */
@@ -376,23 +434,34 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
         }
 
         private fun getOrientationFromAccelMag(accel: Vector3, mag: Vector3): Quaternion {
-            // Normalize accelerometer
+            // Normalize accelerometer — gravity direction points "down" in device frame
             val down = accel.normalized
 
-            // Use magnetometer if available
+            // Derive north vector: project magnetometer onto the plane perpendicular to gravity
             val north = if (mag.magnitude > 0.1f) {
                 val east = down.cross(mag.normalized).normalized
                 east.cross(down).normalized
             } else {
-                // No magnetometer, assume north
+                // No magnetometer — assume world Y as north
                 Vector3(0f, 1f, 0f)
             }
 
-            // Build rotation matrix from down and north vectors
+            // Complete the orthonormal basis: east = north × down
             val east = north.cross(down).normalized
 
-            // Convert to quaternion (simplified for brevity)
-            return Quaternion.identity // Simplified - full implementation would convert rotation matrix
+            // Build 3x3 row-major rotation matrix R where each row is a basis vector.
+            // Column i = world axis expressed in device frame.
+            //   R[col=east, col=north, col=down] maps device frame → world frame.
+            //
+            // Row-major layout (R[row*3 + col]):
+            //   R = | east.x  north.x  down.x |
+            //       | east.y  north.y  down.y |
+            //       | east.z  north.z  down.z |
+            val r00 = east.x;  val r01 = north.x;  val r02 = down.x
+            val r10 = east.y;  val r11 = north.y;  val r12 = down.y
+            val r20 = east.z;  val r21 = north.z;  val r22 = down.z
+
+            return rotationMatrixToQuaternion(r00, r01, r02, r10, r11, r12, r20, r21, r22)
         }
 
         fun reset() {
@@ -439,8 +508,23 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
         }
 
         private fun measureFromAccelMag(accel: Vector3, mag: Vector3): Quaternion {
-            // Simplified measurement (full implementation would use TRIAD algorithm)
-            return Quaternion.identity
+            // TRIAD-style measurement: derive orientation from two non-collinear reference vectors
+            // (gravity "down" and magnetic field "north"), then convert rotation matrix → quaternion.
+            val down = accel.normalized
+            val north = if (mag.magnitude > 0.1f) {
+                val east = down.cross(mag.normalized).normalized
+                east.cross(down).normalized
+            } else {
+                Vector3(0f, 1f, 0f)
+            }
+            val east = north.cross(down).normalized
+
+            // Build 3x3 rotation matrix (same convention as ComplementaryFilter)
+            val r00 = east.x;  val r01 = north.x;  val r02 = down.x
+            val r10 = east.y;  val r11 = north.y;  val r12 = down.y
+            val r20 = east.z;  val r21 = north.z;  val r22 = down.z
+
+            return rotationMatrixToQuaternion(r00, r01, r02, r10, r11, r12, r20, r21, r22)
         }
 
         fun reset() {

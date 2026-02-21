@@ -407,16 +407,20 @@ class IMUManager private constructor(
 
         if (alpha.isNaN() || beta.isNaN() || gamma.isNaN()) return
 
-        // Get instance from pool and populate
-        val cursorData = imuDataPool.acquire().apply {
-            this.alpha = alpha
-            this.beta = beta
-            this.gamma = gamma
-            this.ts = timestamp
+        // Borrow from pool to perform any intermediate work, then emit an immutable copy.
+        // The pooled object must be released before emit so the pool can reuse it safely;
+        // the SharedFlow replay cache and active collectors would otherwise hold a reference
+        // to the pooled object while the pool overwrites its fields on the next acquire().
+        val emitData = imuDataPool.use { pooled ->
+            pooled.alpha = alpha
+            pooled.beta = beta
+            pooled.gamma = gamma
+            pooled.ts = timestamp
+            pooled.copy() // copy() releases ownership; pooled is returned to pool by use{}
         }
 
         // Emit to flow
-        _orientationFlow.emit(cursorData)
+        _orientationFlow.emit(emitData)
     }
 
     // TODO:  

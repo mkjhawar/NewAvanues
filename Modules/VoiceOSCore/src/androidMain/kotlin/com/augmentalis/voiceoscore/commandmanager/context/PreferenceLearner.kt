@@ -73,6 +73,10 @@ class PreferenceLearner(
     private val commandStatsCache = mutableMapOf<String, MutableCommandStats>()
     private val contextPreferenceCache = mutableMapOf<String, MutableMap<String, ContextPreference>>()
 
+    // Persistent in-memory store of learned priority adjustments, keyed by commandId.
+    // updatePriorities() populates this; getPriorityBoost() lets callers apply the boost.
+    private val priorityAdjustments = mutableMapOf<String, Int>()
+
     /**
      * Record successful command execution
      * Updates learning statistics
@@ -292,8 +296,15 @@ class PreferenceLearner(
     }
 
     /**
-     * Update command priorities based on learned preferences
-     * Applies learning to adjust command priorities system-wide
+     * Update command priorities based on learned preferences.
+     *
+     * Computes a priority boost for every command that has enough usage data and
+     * stores the result in [priorityAdjustments]. Callers can query the learned
+     * boost via [getPriorityBoost].
+     *
+     * The boost formula mirrors [calculateAdjustedPriority]:
+     *   boost = (successRate * PRIORITY_WEIGHT_SUCCESS * LEARNING_RATE).toInt()
+     *   capped at MAX_PRIORITY_ADJUSTMENT.
      */
     suspend fun updatePriorities() {
         withContext(Dispatchers.IO) {
@@ -306,11 +317,13 @@ class PreferenceLearner(
 
                 android.util.Log.d(TAG, "Updating priorities for ${commandsWithStats.size} commands")
 
-                // Note: In a full implementation, this would update a persistent command registry
-                // For now, we just log the potential updates
                 for ((commandId, stats) in commandsWithStats) {
                     val successRate = stats.successfulExecutions.toFloat() / stats.totalExecutions
-                    val priorityBoost = (successRate * PRIORITY_WEIGHT_SUCCESS * LEARNING_RATE).toInt()
+                    val rawBoost = successRate * PRIORITY_WEIGHT_SUCCESS * LEARNING_RATE
+                    val priorityBoost = min(rawBoost, MAX_PRIORITY_ADJUSTMENT).toInt()
+
+                    // Persist the computed boost so callers can apply it
+                    priorityAdjustments[commandId] = priorityBoost
 
                     android.util.Log.v(TAG, "Command $commandId: success rate=$successRate, boost=$priorityBoost")
                 }
@@ -319,6 +332,14 @@ class PreferenceLearner(
             }
         }
     }
+
+    /**
+     * Return the learned priority boost for [commandId].
+     *
+     * Returns 0 if the command has not yet been seen or has insufficient data.
+     * This value should be added to the command's base priority by the caller.
+     */
+    fun getPriorityBoost(commandId: String): Int = priorityAdjustments[commandId] ?: 0
 
     /**
      * Get command statistics

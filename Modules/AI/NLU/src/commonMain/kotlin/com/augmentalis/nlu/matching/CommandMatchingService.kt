@@ -156,6 +156,7 @@ class CommandMatchingService(
     /**
      * Rebuild internal indexes after registration changes.
      */
+    @Synchronized
     fun rebuildIndexes() {
         // Build pattern matcher index
         val unifiedIntents = commands.map { cmd ->
@@ -325,6 +326,7 @@ class CommandMatchingService(
     /**
      * Quick exact-only match (for hot paths).
      */
+    @Synchronized
     fun matchExact(input: String): String? {
         val normalized = normalize(input)
         return commandIndex[normalized]?.canonicalPhrase
@@ -333,6 +335,7 @@ class CommandMatchingService(
     /**
      * Match with specific strategy only.
      */
+    @Synchronized
     fun matchWith(input: String, strategy: MatchStrategy): MatchResult {
         return match(input, setOf(strategy))
     }
@@ -375,11 +378,13 @@ class CommandMatchingService(
     /**
      * Get all learned mappings (for persistence).
      */
+    @Synchronized
     fun getLearnedMappings(): Map<String, LearnedMapping> = learnedMappings.toMap()
 
     /**
      * Restore learned mappings (from persistence).
      */
+    @Synchronized
     fun restoreLearnedMappings(mappings: Map<String, LearnedMapping>) {
         learnedMappings.clear()
         learnedMappings.putAll(mappings)
@@ -598,11 +603,13 @@ class CommandMatchingService(
     /**
      * Get registered command count.
      */
+    @Synchronized
     fun commandCount(): Int = commands.size
 
     /**
      * Check if a command is registered.
      */
+    @Synchronized
     fun hasCommand(phrase: String): Boolean = commandIndex.containsKey(normalize(phrase))
 }
 

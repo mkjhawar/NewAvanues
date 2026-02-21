@@ -15,6 +15,7 @@ package com.augmentalis.voiceoscore.managers.hudmanager.spatial
 import android.content.Context
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.*
+import com.augmentalis.devicemanager.imu.IMUData
 import com.augmentalis.voiceoscore.managers.hudmanager.ui.*
 import com.augmentalis.voiceoscore.managers.hudmanager.rendering.*
 import java.util.concurrent.ConcurrentHashMap
@@ -243,17 +244,26 @@ class SpatialRenderer(
     }
     
     /**
-     * Parse orientation data from IMUManager
+     * Parse orientation data from IMUManager.
+     *
+     * The IMU flow emits [IMUData] with fields in radians:
+     *   alpha = roll  (SensorManager orientation[2])
+     *   beta  = pitch (SensorManager orientation[1], negated upstream)
+     *   gamma = yaw   (SensorManager orientation[0])
+     *
+     * [HeadOrientation] stores angles in degrees for use by [applyHeadCompensation]
+     * which converts back via sin(deg * PI/180).
      */
-    @Suppress("UNUSED_PARAMETER")
     private fun parseOrientationData(orientationData: Any): HeadOrientation {
-        // This would parse actual IMU data - placeholder implementation
-        return HeadOrientation(
-            yaw = 0f,
-            pitch = 0f, 
-            roll = 0f,
-            timestamp = System.currentTimeMillis()
-        )
+        return when (orientationData) {
+            is IMUData -> HeadOrientation(
+                yaw = Math.toDegrees(orientationData.gamma.toDouble()).toFloat(),
+                pitch = Math.toDegrees(orientationData.beta.toDouble()).toFloat(),
+                roll = Math.toDegrees(orientationData.alpha.toDouble()).toFloat(),
+                timestamp = orientationData.ts
+            )
+            else -> HeadOrientation(timestamp = System.currentTimeMillis())
+        }
     }
     
     /**

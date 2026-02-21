@@ -115,6 +115,11 @@ class HUDManager constructor(
     // Element management
     private val hudElements = mutableMapOf<String, HUDElement>()
     private val collisionList = mutableListOf<ElementCollision>()
+
+    // FPS tracking — circular buffer of frame timestamps (nanoseconds)
+    private val frameTimes = LongArray(60)
+    private var frameTimeIndex = 0
+    private var frameTimeCount = 0
     
     /**
      * Initialize HUD system with configuration
@@ -371,13 +376,17 @@ class HUDManager constructor(
             imuManager.orientationFlow.collect { orientationData ->
                 // Update spatial rendering based on head movement
                 spatialRenderer.updateHeadOrientation(orientationData)
-                
-                // Adjust HUD elements to maintain optimal positioning via VoiceUI
+
+                // IMUData fields are in radians:
+                //   gamma = yaw  (orientation[0])
+                //   beta  = pitch (orientation[1], negated upstream)
+                //   alpha = roll  (orientation[2])
+                // OrientationData expects degrees for the VoiceUI renderer.
                 voiceUIRenderer?.adjustForHeadMovement(
                     voiceui.hud.OrientationData(
-                        yaw = 0f, // Would extract from orientationData
-                        pitch = 0f,
-                        roll = 0f
+                        yaw = Math.toDegrees(orientationData.gamma.toDouble()).toFloat(),
+                        pitch = Math.toDegrees(orientationData.beta.toDouble()).toFloat(),
+                        roll = Math.toDegrees(orientationData.alpha.toDouble()).toFloat()
                     )
                 )
             }
@@ -540,6 +549,12 @@ class HUDManager constructor(
      */
     fun onRenderFrame() {
         try {
+            // Record current frame timestamp into circular buffer
+            val now = System.nanoTime()
+            frameTimes[frameTimeIndex] = now
+            frameTimeIndex = (frameTimeIndex + 1) % frameTimes.size
+            if (frameTimeCount < frameTimes.size) frameTimeCount++
+
             val currentStats = getCurrentRenderingStats()
             updateRenderingStats(currentStats.copy(
                 renderedElements = hudElements.size,
@@ -649,8 +664,32 @@ class HUDManager constructor(
     }
     
     private fun calculateAverageFPS(): Float {
-        // Simplified FPS calculation
-        return 60.0f
+        // Need at least 2 frames to compute a time span
+        if (frameTimeCount < 2) return 60.0f
+
+        // Determine the oldest and newest timestamps in the circular buffer.
+        // When the buffer is full, the entry at `frameTimeIndex` is the oldest
+        // (it is about to be overwritten next call). When not yet full, index 0
+        // is the oldest.
+        val count = frameTimeCount
+        val oldest: Long
+        val newest: Long
+
+        if (count < frameTimes.size) {
+            // Buffer not yet wrapped: entries 0..(count-1), oldest first
+            oldest = frameTimes[0]
+            newest = frameTimes[count - 1]
+        } else {
+            // Buffer has wrapped: frameTimeIndex points to the oldest slot
+            oldest = frameTimes[frameTimeIndex]
+            newest = frameTimes[(frameTimeIndex + frameTimes.size - 1) % frameTimes.size]
+        }
+
+        val timeSpanSeconds = (newest - oldest) / 1_000_000_000.0f
+        if (timeSpanSeconds <= 0f) return 60.0f
+
+        // (count - 1) intervals between `count` timestamps
+        return (count - 1) / timeSpanSeconds
     }
     
     private fun elementsOverlap(element1: HUDElement, element2: HUDElement): Boolean {
