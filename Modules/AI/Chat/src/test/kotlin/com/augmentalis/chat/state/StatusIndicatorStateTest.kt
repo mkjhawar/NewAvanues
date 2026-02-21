@@ -34,7 +34,7 @@ import org.junit.Test
  * Note: Tests for flash mode are skipped as they require Android Context
  * and DeveloperPreferences integration.
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-18
  */
 @OptIn(ExperimentalCoroutinesApi::class)

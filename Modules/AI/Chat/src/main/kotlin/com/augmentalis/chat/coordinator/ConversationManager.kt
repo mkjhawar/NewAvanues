@@ -39,7 +39,7 @@ import javax.inject.Singleton
  * @param messageRepository Repository for message operations
  * @param chatPreferences User preferences for conversation mode, caching
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-01-15
  */
 @Singleton

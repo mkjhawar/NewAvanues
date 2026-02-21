@@ -40,7 +40,7 @@ import java.nio.ByteOrder
  * @param batchSize Number of texts to process in each batch
  * @param maxConcurrentBatches Maximum number of concurrent batch operations
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-17
  */
 class ChunkEmbeddingHandler(

@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
  * - FAST_KEYWORDS map is correctly configured
  * - Helper functions work correctly
  *
- * @author Claude Code (Cleanup Agent)
+ * @author Manoj Jhawar
  * @since 2025-12-18
  */
 class BuiltInIntentsTest {

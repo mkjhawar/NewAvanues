@@ -40,7 +40,7 @@ import java.nio.ByteOrder
  * @param topClusters Number of top clusters to search
  * @param queryCache Optional query cache for performance
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-17
  */
 class ClusteredSearchHandler(

@@ -21,7 +21,6 @@ import timber.log.Timber
  * Future: Will be fallback when LLMResponseGenerator fails.
  *
  * Created: 2025-11-10
- * Author: Claude Code (Agent 3)
  */
 class TemplateResponseGenerator : ResponseGenerator {
 

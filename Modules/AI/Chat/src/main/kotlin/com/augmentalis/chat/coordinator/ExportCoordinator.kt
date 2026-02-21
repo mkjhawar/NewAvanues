@@ -36,7 +36,7 @@ import javax.inject.Singleton
  * @param context Application context for file operations and share intents
  * @param exportConversationUseCase Use case for export logic
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-01-15
  */
 @Singleton

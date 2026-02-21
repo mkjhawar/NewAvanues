@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * @see TTSCoordinator for Android implementation
  *
- * @author Manoj Jhawar / Claude AI
+ * @author Manoj Jhawar
  * @since 2025-12-18
  */
 interface ITTSCoordinator {

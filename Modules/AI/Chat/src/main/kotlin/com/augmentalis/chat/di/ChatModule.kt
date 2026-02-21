@@ -40,7 +40,7 @@ import javax.annotation.Nullable
  * - If RAG is unavailable, ChatViewModel operates in LLM-only mode
  * - No breaking changes to existing functionality
  *
- * @author Agent 1: DI Specialist
+ * @author Manoj Jhawar
  * @version 1.0
  */
 @Module
