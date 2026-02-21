@@ -32,7 +32,8 @@ data class HttpRequest(
         other !is HttpRequest -> false
         else -> method == other.method && uri == other.uri && version == other.version &&
             headers == other.headers && body?.contentEquals(other.body) != false &&
-            queryParams == other.queryParams && pathParams == other.pathParams && context == other.context
+            queryParams == other.queryParams && pathParams == other.pathParams && context == other.context &&
+            remoteAddress == other.remoteAddress
     }
 
     override fun hashCode(): Int {
@@ -44,6 +45,7 @@ data class HttpRequest(
         result = 31 * result + queryParams.hashCode()
         result = 31 * result + pathParams.hashCode()
         result = 31 * result + context.hashCode()
+        result = 31 * result + (remoteAddress?.hashCode() ?: 0)
         return result
     }
 }
