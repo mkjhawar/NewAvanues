@@ -340,6 +340,7 @@ class IosWhisperEngine {
         // Step 3: Initialize VAD (shared commonMain implementation)
         vad = WhisperVAD(
             speechThreshold = 0f, // auto-calibrate from noise floor
+            vadSensitivity = config.vadSensitivity,
             silenceTimeoutMs = config.silenceThresholdMs.toLong(),
             minSpeechDurationMs = config.minSpeechDurationMs.toLong(),
             maxSpeechDurationMs = config.maxChunkDurationMs.toLong(),
@@ -522,11 +523,19 @@ class IosWhisperEngine {
                 )
             }
 
-            // Emit recognition result with real confidence from token probabilities
+            // Classify confidence using same thresholds as ConfidenceScorer
+            // (HIGH >0.85, MEDIUM 0.70-0.85, LOW 0.50-0.70, REJECT <0.50)
+            val confidenceLevel = when {
+                result.confidence >= 0.85f -> "HIGH"
+                result.confidence >= 0.70f -> "MEDIUM"
+                result.confidence >= 0.50f -> "LOW"
+                else -> "REJECT"
+            }
+
             val recognitionResult = RecognitionResult(
                 text = result.text,
                 originalText = result.text,
-                confidence = result.confidence,
+                confidence = result.confidence.coerceIn(0f, 1f),
                 isPartial = false,
                 isFinal = true,
                 engine = ENGINE_NAME,
@@ -538,7 +547,9 @@ class IosWhisperEngine {
                     "realTimeFactor" to realTimeFactor,
                     "segmentCount" to result.segments.size,
                     "modelSize" to config.modelSize.name,
-                    "detectedLanguage" to (result.detectedLanguage ?: config.language)
+                    "detectedLanguage" to (result.detectedLanguage ?: config.language),
+                    "confidence_level" to confidenceLevel,
+                    "scoring_method" to "WHISPER"
                 )
             )
 

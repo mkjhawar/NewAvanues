@@ -30,6 +30,11 @@ import kotlin.math.sqrt
  * Thread safety: All methods must be called from the same thread (the audio capture thread).
  *
  * @param speechThreshold RMS energy threshold (0.0-1.0). Auto-calibrates if 0.
+ * @param vadSensitivity VAD sensitivity (0.0-1.0). Controls noise floor multiplier:
+ *   0.0 = least sensitive (multiplier 5.0x, needs louder speech to trigger),
+ *   0.5 = moderate (multiplier 3.0x, balanced default),
+ *   1.0 = most sensitive (multiplier 1.5x, picks up quiet speech).
+ *   Only applies when speechThreshold is 0 (auto-calibration mode).
  * @param silenceTimeoutMs Duration (ms) of silence before a speech chunk is finalized
  * @param minSpeechDurationMs Minimum speech duration (ms) to consider valid
  * @param maxSpeechDurationMs Maximum speech duration (ms) before forced emission
@@ -39,6 +44,7 @@ import kotlin.math.sqrt
  */
 class WhisperVAD(
     private var speechThreshold: Float = 0f,
+    private val vadSensitivity: Float = 0f,
     private val silenceTimeoutMs: Long = 700,
     private val minSpeechDurationMs: Long = 300,
     private val maxSpeechDurationMs: Long = 30_000,
@@ -68,7 +74,8 @@ class WhisperVAD(
 
     // Audio accumulation
     private val speechBuffer = ArrayList<Float>(sampleRate * 5) // pre-alloc 5s
-    private val paddingBuffer = ArrayList<Float>(paddingMs.toInt() * sampleRate / 1000)
+    private val paddingBuffer = ArrayDeque<Float>(paddingMs.toInt() * sampleRate / 1000)
+    private val maxPaddingSamples = (paddingMs * sampleRate / 1000).toInt()
     private var speechStartTimeMs = 0L
     private var lastSpeechTimeMs = 0L
 
@@ -244,15 +251,13 @@ class WhisperVAD(
     }
 
     private fun appendToPaddingBuffer(samples: FloatArray, offset: Int, length: Int) {
-        val maxPaddingSamples = (paddingMs * sampleRate / 1000).toInt()
-
         for (i in offset until offset + length) {
-            paddingBuffer.add(samples[i])
+            paddingBuffer.addLast(samples[i])
         }
 
-        // Trim to max padding size
+        // Trim excess from front — O(1) per removal with ArrayDeque
         while (paddingBuffer.size > maxPaddingSamples) {
-            paddingBuffer.removeAt(0)
+            paddingBuffer.removeFirst()
         }
     }
 
@@ -277,9 +282,13 @@ class WhisperVAD(
             noiseFloor = noiseFloor * (1f - THRESHOLD_ALPHA) + energy * THRESHOLD_ALPHA
         }
 
-        // Set threshold above noise floor
+        // Set threshold above noise floor, scaled by sensitivity
+        // sensitivity 0.0 → multiplier 5.0 (least sensitive, needs louder speech)
+        // sensitivity 0.5 → multiplier 3.25 (moderate)
+        // sensitivity 1.0 → multiplier 1.5 (most sensitive, picks up quiet speech)
         if (speechThreshold <= 0f) {
-            adaptiveThreshold = maxOf(noiseFloor * 3f, MIN_THRESHOLD)
+            val multiplier = 5.0f - vadSensitivity.coerceIn(0f, 1f) * 3.5f
+            adaptiveThreshold = maxOf(noiseFloor * multiplier, MIN_THRESHOLD)
         }
     }
 }

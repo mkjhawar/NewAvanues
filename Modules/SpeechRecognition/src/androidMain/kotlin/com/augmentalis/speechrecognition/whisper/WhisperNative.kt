@@ -122,14 +122,16 @@ object WhisperNative {
 
     /**
      * Get the average token probability for a segment as confidence [0,1].
-     * Falls back to DEFAULT_CONFIDENCE if the native method isn't linked.
+     * Returns CONFIDENCE_UNAVAILABLE (-1f) if the native token probability
+     * methods aren't linked, indicating the caller should handle unknown confidence
+     * through the ConfidenceScorer system rather than assuming HIGH.
      */
     fun getSegmentConfidence(contextPtr: Long, segmentIndex: Int): Float {
-        if (contextPtr == 0L) return DEFAULT_CONFIDENCE
+        if (contextPtr == 0L) return CONFIDENCE_UNAVAILABLE
         return try {
             synchronized(this) {
                 val tokenCount = WhisperLib.getTextSegmentTokenCount(contextPtr, segmentIndex)
-                if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+                if (tokenCount <= 0) return CONFIDENCE_UNAVAILABLE
                 var probSum = 0f
                 for (t in 0 until tokenCount) {
                     probSum += WhisperLib.getTextSegmentTokenProb(contextPtr, segmentIndex, t)
@@ -137,9 +139,12 @@ object WhisperNative {
                 probSum / tokenCount
             }
         } catch (e: UnsatisfiedLinkError) {
-            // Native method not yet compiled — fall back
-            Log.d(TAG, "getSegmentConfidence: native method not available, using default")
-            DEFAULT_CONFIDENCE
+            if (!hasWarnedConfidence) {
+                Log.w(TAG, "Token probability methods not available — confidence scoring " +
+                    "will be unavailable. Transcription accuracy is not affected.")
+                hasWarnedConfidence = true
+            }
+            CONFIDENCE_UNAVAILABLE
         }
     }
 
@@ -178,6 +183,8 @@ object WhisperNative {
             val text = StringBuilder()
             var totalConfidence = 0f
 
+            var hasRealConfidence = false
+
             for (i in 0 until segCount) {
                 val segText = WhisperLib.getTextSegment(contextPtr, i)
                 val t0 = WhisperLib.getTextSegmentT0(contextPtr, i)
@@ -185,13 +192,19 @@ object WhisperNative {
 
                 // Per-segment confidence from token probabilities
                 val segConfidence = getSegmentConfidenceUnsafe(contextPtr, i)
+                val effectiveConfidence = if (segConfidence == CONFIDENCE_UNAVAILABLE) 0f else segConfidence
+                if (segConfidence != CONFIDENCE_UNAVAILABLE) hasRealConfidence = true
 
-                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10, segConfidence))
+                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10, effectiveConfidence))
                 text.append(segText)
-                totalConfidence += segConfidence
+                totalConfidence += effectiveConfidence
             }
 
-            val avgConfidence = if (segCount > 0) totalConfidence / segCount else 0f
+            // Report 0 confidence when token probabilities aren't available,
+            // letting the ConfidenceScorer classify this as REJECT/unknown
+            val avgConfidence = if (!hasRealConfidence) 0f
+                else if (segCount > 0) totalConfidence / segCount
+                else 0f
             val detectedLang = getDetectedLanguageUnsafe(contextPtr)
 
             TranscriptionResult(
@@ -210,14 +223,14 @@ object WhisperNative {
     private fun getSegmentConfidenceUnsafe(contextPtr: Long, segmentIndex: Int): Float {
         return try {
             val tokenCount = WhisperLib.getTextSegmentTokenCount(contextPtr, segmentIndex)
-            if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+            if (tokenCount <= 0) return CONFIDENCE_UNAVAILABLE
             var probSum = 0f
             for (t in 0 until tokenCount) {
                 probSum += WhisperLib.getTextSegmentTokenProb(contextPtr, segmentIndex, t)
             }
             probSum / tokenCount
         } catch (e: UnsatisfiedLinkError) {
-            DEFAULT_CONFIDENCE
+            CONFIDENCE_UNAVAILABLE
         }
     }
 
@@ -232,5 +245,10 @@ object WhisperNative {
         }
     }
 
-    private const val DEFAULT_CONFIDENCE = 0.85f
+    /** Sentinel value indicating confidence is unavailable (native methods not linked) */
+    const val CONFIDENCE_UNAVAILABLE = -1f
+
+    /** Track whether we've already logged the confidence warning */
+    @Volatile
+    private var hasWarnedConfidence = false
 }

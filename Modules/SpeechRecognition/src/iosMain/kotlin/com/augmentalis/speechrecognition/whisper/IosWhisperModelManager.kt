@@ -52,7 +52,7 @@ class IosWhisperModelManager {
     val downloadState: StateFlow<ModelDownloadState> = _downloadState.asStateFlow()
 
     // Active download task (for cancellation)
-    private var downloadTask: NSURLSessionDownloadTask? = null
+    private var downloadTask: NSURLSessionTask? = null
 
     /**
      * Download a model from HuggingFace.
@@ -252,28 +252,19 @@ class IosWhisperModelManager {
         val urlString = WhisperModelUrls.getDownloadUrl(modelSize)
         val url = NSURL.URLWithString(urlString) ?: throw IllegalStateException("Invalid URL: $urlString")
 
-        val modelPath = getModelFilePath(modelSize)
-        val partialPath = "$modelPath$PARTIAL_SUFFIX"
+        val partialPath = getModelFilePath(modelSize) + PARTIAL_SUFFIX
 
         return suspendCancellableCoroutine { cont ->
             val request = NSMutableURLRequest.requestWithURL(url).apply {
                 setHTTPMethod("GET")
                 setTimeoutInterval(300.0) // 5 minutes
-
-                // Resume support
-                val fileManager = NSFileManager.defaultManager
-                if (fileManager.fileExistsAtPath(partialPath)) {
-                    val attrs = fileManager.attributesOfItemAtPath(partialPath, error = null)
-                    val existingBytes = (attrs?.get(NSFileSize) as? NSNumber)?.longValue ?: 0L
-                    if (existingBytes > 0) {
-                        setValue("bytes=$existingBytes-", forHTTPHeaderField = "Range")
-                        logInfo(TAG, "Resuming download from byte $existingBytes")
-                    }
-                }
             }
 
             val session = NSURLSession.sharedSession
-            val task = session.dataTaskWithRequest(request) { data, response, error ->
+
+            // Use downloadTaskWithRequest — streams to temp file on disk instead of
+            // buffering entire model (75MB-1.5GB) in memory as NSData.
+            val task = session.downloadTaskWithRequest(request) { location, response, error ->
                 if (error != null) {
                     val nsError = error as NSError
                     if (nsError.code == NSURLErrorCancelled) {
@@ -283,7 +274,7 @@ class IosWhisperModelManager {
                         _downloadState.value = ModelDownloadState.Failed(modelSize, nsError.localizedDescription)
                         cont.resume(false) {}
                     }
-                    return@dataTaskWithRequest
+                    return@downloadTaskWithRequest
                 }
 
                 val httpResponse = response as? NSHTTPURLResponse
@@ -292,53 +283,82 @@ class IosWhisperModelManager {
                 if (statusCode !in 200..299) {
                     _downloadState.value = ModelDownloadState.Failed(modelSize, "HTTP $statusCode")
                     cont.resume(false) {}
-                    return@dataTaskWithRequest
+                    return@downloadTaskWithRequest
                 }
 
-                // Write data to file
-                data?.let { downloadedData ->
-                    val success = downloadedData.writeToFile(partialPath, atomically = true)
-                    if (!success) {
-                        _downloadState.value = ModelDownloadState.Failed(modelSize, "Failed to write file")
-                        cont.resume(false) {}
-                        return@dataTaskWithRequest
-                    }
-
-                    _downloadState.value = ModelDownloadState.Verifying(modelSize)
-
-                    // Encrypt to VSM format in shared storage
-                    val vsmDir = IosWhisperConfig.getSharedVsmDirectory()
-                    val vsmPath = "$vsmDir/${vsmFileName(modelSize.ggmlFileName)}"
-                    logInfo(TAG, "Encrypting to VSM: $vsmPath")
-
-                    val codec = IosVSMCodec()
-                    val metadata = mapOf(
-                        "model" to modelSize.displayName,
-                        "ggml" to modelSize.ggmlFileName,
-                        "platform" to "ios"
-                    )
-                    if (!codec.encryptFile(partialPath, vsmPath, metadata)) {
-                        // Clean up partial file on encryption failure
-                        val fm = NSFileManager.defaultManager
-                        fm.removeItemAtPath(partialPath, error = null)
-                        _downloadState.value = ModelDownloadState.Failed(
-                            modelSize, "VSM encryption failed for ${modelSize.displayName}"
-                        )
-                        cont.resume(false) {}
-                        return@dataTaskWithRequest
-                    }
-
-                    // Delete the plaintext .bin partial file
-                    val fm = NSFileManager.defaultManager
-                    fm.removeItemAtPath(partialPath, error = null)
-                    logInfo(TAG, "VSM encryption complete: $vsmPath")
-
-                    _downloadState.value = ModelDownloadState.Completed(modelSize, vsmPath)
-                    logInfo(TAG, "Model ${modelSize.displayName} ready at: $vsmPath")
-                    cont.resume(true) {}
-                } ?: run {
-                    _downloadState.value = ModelDownloadState.Failed(modelSize, "No data received")
+                // The download task streams to a temp file — move it before handler returns
+                // (temp file is auto-deleted after this callback completes)
+                val tempPath = location?.path
+                if (tempPath == null) {
+                    _downloadState.value = ModelDownloadState.Failed(modelSize, "No temp file from download")
                     cont.resume(false) {}
+                    return@downloadTaskWithRequest
+                }
+
+                val fm = NSFileManager.defaultManager
+
+                // Move temp file to partial path
+                if (fm.fileExistsAtPath(partialPath)) {
+                    fm.removeItemAtPath(partialPath, error = null)
+                }
+                val moveSuccess = fm.moveItemAtPath(tempPath, toPath = partialPath, error = null)
+                if (!moveSuccess) {
+                    _downloadState.value = ModelDownloadState.Failed(modelSize, "Failed to move downloaded file")
+                    cont.resume(false) {}
+                    return@downloadTaskWithRequest
+                }
+
+                _downloadState.value = ModelDownloadState.Verifying(modelSize)
+
+                // Encrypt to VSM format in shared storage
+                val vsmDir = IosWhisperConfig.getSharedVsmDirectory()
+                val vsmPath = "$vsmDir/${vsmFileName(modelSize.ggmlFileName)}"
+                logInfo(TAG, "Encrypting to VSM: $vsmPath")
+
+                val codec = IosVSMCodec()
+                val metadata = mapOf(
+                    "model" to modelSize.displayName,
+                    "ggml" to modelSize.ggmlFileName,
+                    "platform" to "ios"
+                )
+                if (!codec.encryptFile(partialPath, vsmPath, metadata)) {
+                    fm.removeItemAtPath(partialPath, error = null)
+                    _downloadState.value = ModelDownloadState.Failed(
+                        modelSize, "VSM encryption failed for ${modelSize.displayName}"
+                    )
+                    cont.resume(false) {}
+                    return@downloadTaskWithRequest
+                }
+
+                // Delete the plaintext .bin partial file
+                fm.removeItemAtPath(partialPath, error = null)
+                logInfo(TAG, "VSM encryption complete: $vsmPath")
+
+                _downloadState.value = ModelDownloadState.Completed(modelSize, vsmPath)
+                logInfo(TAG, "Model ${modelSize.displayName} ready at: $vsmPath")
+                cont.resume(true) {}
+            }
+
+            // Launch progress monitoring coroutine
+            val progressJob = CoroutineScope(Dispatchers.Default).launch {
+                var lastBytesReceived = 0L
+                var lastTimestampNs = kotlin.system.getTimeNanos()
+                while (isActive) {
+                    val received = task.countOfBytesReceived
+                    val expected = task.countOfBytesExpectedToReceive
+                    if (expected > 0 && received > 0) {
+                        val now = kotlin.system.getTimeNanos()
+                        val elapsedMs = (now - lastTimestampNs) / 1_000_000L
+                        val bytesPerSec = if (elapsedMs > 0) {
+                            (received - lastBytesReceived) * 1000L / elapsedMs
+                        } else 0L
+                        lastBytesReceived = received
+                        lastTimestampNs = now
+                        _downloadState.value = ModelDownloadState.Downloading(
+                            modelSize, received, expected, bytesPerSec
+                        )
+                    }
+                    delay(500)
                 }
             }
 
@@ -346,6 +366,7 @@ class IosWhisperModelManager {
             task.resume()
 
             cont.invokeOnCancellation {
+                progressJob.cancel()
                 task.cancel()
             }
         }

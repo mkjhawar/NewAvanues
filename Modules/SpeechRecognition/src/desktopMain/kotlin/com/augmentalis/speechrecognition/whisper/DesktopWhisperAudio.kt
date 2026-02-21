@@ -63,9 +63,9 @@ class DesktopWhisperAudio {
     private val isRecording = AtomicBoolean(false)
     private var captureThread: Thread? = null
 
-    // Audio buffer (synchronized access)
+    // Audio buffer (synchronized access) — ArrayDeque for O(1) removeFirst()
     private val bufferLock = Object()
-    private val audioBuffer = ArrayList<Float>(SAMPLE_RATE * 5) // pre-alloc 5s
+    private val audioBuffer = ArrayDeque<Float>(SAMPLE_RATE * 5) // pre-alloc 5s
 
     // Error callback
     var onError: ((String) -> Unit)? = null
@@ -221,12 +221,12 @@ class DesktopWhisperAudio {
 
             synchronized(bufferLock) {
                 for (sample in floatSamples) {
-                    audioBuffer.add(sample)
+                    audioBuffer.addLast(sample)
                 }
 
-                // Enforce max buffer size
+                // Enforce max buffer size — O(1) per removal with ArrayDeque
                 while (audioBuffer.size > MAX_BUFFER_SAMPLES) {
-                    audioBuffer.removeAt(0)
+                    audioBuffer.removeFirst()
                 }
             }
         }

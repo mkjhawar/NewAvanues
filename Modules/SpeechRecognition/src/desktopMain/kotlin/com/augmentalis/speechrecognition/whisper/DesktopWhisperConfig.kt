@@ -16,6 +16,7 @@ import com.augmentalis.speechrecognition.logWarn
 import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
 import com.augmentalis.speechrecognition.whisper.vsm.vsmFileName
 import java.io.File
+import java.lang.management.ManagementFactory
 
 /**
  * Configuration for the Desktop Whisper engine.
@@ -35,6 +36,9 @@ data class DesktopWhisperConfig(
 
     /** Custom model file path. If set, overrides modelSize-based path resolution. */
     val customModelPath: String? = null,
+
+    /** VAD sensitivity: higher = more sensitive to speech onset (0.0-1.0) */
+    val vadSensitivity: Float = 0.6f,
 
     /** Silence duration (ms) before a speech chunk is finalized */
     val silenceThresholdMs: Long = 700,
@@ -62,12 +66,20 @@ data class DesktopWhisperConfig(
 
         /**
          * Auto-tuned config for the current desktop machine.
-         * Uses Runtime.maxMemory() as a proxy for available resources.
+         * Uses physical RAM (via OperatingSystemMXBean) for model selection,
+         * falling back to JVM max heap if MXBean is unavailable.
          */
         fun autoTuned(language: String = "en"): DesktopWhisperConfig {
-            val maxMemMB = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
+            val physicalMemMB = try {
+                val osBean = ManagementFactory.getOperatingSystemMXBean()
+                    as com.sun.management.OperatingSystemMXBean
+                (osBean.totalMemorySize / (1024 * 1024)).toInt()
+            } catch (_: Exception) {
+                // Fallback to JVM heap if MXBean cast fails (e.g., non-HotSpot JVM)
+                (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
+            }
             val isEnglish = language.startsWith("en")
-            val modelSize = WhisperModelSize.forAvailableRAM(maxMemMB, isEnglish)
+            val modelSize = WhisperModelSize.forAvailableRAM(physicalMemMB, isEnglish)
             return DesktopWhisperConfig(modelSize = modelSize, language = language)
         }
     }
@@ -127,6 +139,9 @@ data class DesktopWhisperConfig(
      * Validate this configuration.
      */
     fun validate(): Result<Unit> {
+        if (vadSensitivity !in 0f..1f) {
+            return Result.failure(IllegalArgumentException("vadSensitivity must be 0.0-1.0"))
+        }
         if (silenceThresholdMs < 100 || silenceThresholdMs > 5000) {
             return Result.failure(IllegalArgumentException("silenceThresholdMs must be 100-5000"))
         }

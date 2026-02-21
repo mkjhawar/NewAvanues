@@ -16,6 +16,8 @@ package com.augmentalis.speechrecognition.whisper
 import android.content.Context
 import android.util.Log
 import com.augmentalis.speechrecognition.CommandCache
+import com.augmentalis.speechrecognition.ConfidenceScorer
+import com.augmentalis.speechrecognition.RecognitionEngine
 import com.augmentalis.speechrecognition.RecognitionResult
 import com.augmentalis.speechrecognition.SpeechError
 import com.augmentalis.speechrecognition.SpeechMode
@@ -75,6 +77,7 @@ class WhisperEngine(
     private val audio = WhisperAudio()
     private var vad: WhisperVAD? = null
     private val commandCache = CommandCache()
+    private val confidenceScorer = ConfidenceScorer()
     private var voiceStateManager: VoiceStateManager? = null
     private val modelManager = WhisperModelManager(context)
 
@@ -350,6 +353,7 @@ class WhisperEngine(
         // Step 2b: Initialize VAD
         vad = WhisperVAD(
             speechThreshold = 0f, // auto-calibrate from noise floor
+            vadSensitivity = config.vadSensitivity,
             silenceTimeoutMs = config.silenceThresholdMs,
             minSpeechDurationMs = config.minSpeechDurationMs,
             maxSpeechDurationMs = config.maxChunkDurationMs,
@@ -526,11 +530,17 @@ class WhisperEngine(
                 )
             }
 
-            // Emit recognition result with real confidence from token probabilities
+            // Score confidence using the unified ConfidenceScorer (same scale as Vivoka/VOSK)
+            val confidenceResult = confidenceScorer.createResult(
+                text = result.text,
+                rawConfidence = result.confidence,
+                engine = RecognitionEngine.WHISPER
+            )
+
             val recognitionResult = RecognitionResult(
                 text = result.text,
                 originalText = result.text,
-                confidence = result.confidence,
+                confidence = confidenceResult.confidence,
                 isPartial = false,
                 isFinal = true,
                 engine = ENGINE_NAME,
@@ -542,7 +552,9 @@ class WhisperEngine(
                     "realTimeFactor" to realTimeFactor,
                     "segmentCount" to result.segments.size,
                     "modelSize" to config.modelSize.name,
-                    "detectedLanguage" to (result.detectedLanguage ?: config.language)
+                    "detectedLanguage" to (result.detectedLanguage ?: config.language),
+                    "confidence_level" to confidenceResult.level.name,
+                    "scoring_method" to confidenceResult.scoringMethod.name
                 )
             )
 
