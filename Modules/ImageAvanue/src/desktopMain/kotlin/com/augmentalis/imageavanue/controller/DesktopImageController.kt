@@ -57,11 +57,13 @@ class DesktopImageController(
         val items = withContext(Dispatchers.IO) {
             runCatching {
                 if (!Files.exists(galleryRoot)) return@runCatching emptyList()
-                Files.walk(galleryRoot)
-                    .filter { path -> path.isRegularFile() && isImageFile(path) }
-                    .map { path -> buildImageItem(path) }
-                    .toList()
-                    .sortedByDescending { it.dateModified }
+                Files.walk(galleryRoot).use { stream ->
+                    stream
+                        .filter { path -> path.isRegularFile() && isImageFile(path) }
+                        .map { path -> buildImageItem(path) }
+                        .toList()
+                        .sortedByDescending { it.dateModified }
+                }
             }.getOrElse { emptyList() }
         }
         _state.update { current ->

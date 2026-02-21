@@ -585,15 +585,100 @@ class DynamicCommandRegistry(
     }
 
     /**
-     * Auto-resolve conflicts
+     * Auto-resolve conflicts using priority-based resolution.
+     *
+     * Strategy:
+     * - For each conflict, look at every existing command that shares a phrase
+     *   with [command].
+     * - If [command] has a strictly higher priority than the existing command,
+     *   lower the existing command's priority by 1 (making room for [command] to
+     *   win at runtime without a true tie). This counts as resolved.
+     * - If [command] has the same or lower priority AND the conflict is EXACT_MATCH
+     *   or PRIORITY_CONFLICT, the conflict is unresolvable automatically.
+     * - SIMILAR_PHRASE, NAMESPACE_OVERLAP, and SUBSTRING_MATCH conflicts at equal
+     *   priority are considered tolerable (runtime priority-resolution wins).
+     *
+     * Returns true only when every conflict has been handled (either by a priority
+     * adjustment or by being classified as tolerable). Returns false if any
+     * unresolvable conflict remains, signalling that manual intervention is needed.
      */
     private fun autoResolveConflicts(
         command: VoiceCommand,
         conflicts: List<ConflictInfo>
     ): Boolean {
-        // For now, auto-resolution is limited to priority adjustments
-        // More sophisticated resolution can be added later
-        return false
+        var allResolved = true
+
+        for (conflict in conflicts) {
+            // Critical conflicts (EXACT_MATCH / PRIORITY_CONFLICT at same priority)
+            // that cannot be settled by a simple priority decrement are blockers.
+            val conflictingIds = conflict.affectedCommands.filter { it != command.id }
+
+            var conflictResolved = false
+
+            for (existingId in conflictingIds) {
+                // Find the namespace that owns this command
+                val ownerNamespace = findNamespaceContaining(existingId) ?: continue
+                val existing = ownerNamespace.getCommand(existingId) ?: continue
+
+                when {
+                    command.priority > existing.priority -> {
+                        // New command already wins at runtime; no change needed.
+                        conflictResolved = true
+                    }
+                    command.priority == existing.priority &&
+                    conflict.conflictType in listOf(
+                        ConflictType.EXACT_MATCH,
+                        ConflictType.PRIORITY_CONFLICT
+                    ) -> {
+                        // True tie on an exact/priority conflict: lower existing by 1
+                        // so that [command] takes precedence, provided priority > 1.
+                        val newPriority = (existing.priority - 1).coerceAtLeast(1)
+                        if (newPriority != existing.priority) {
+                            ownerNamespace.setCommandPriority(existingId, newPriority)
+                            Log.d(
+                                TAG,
+                                "Auto-resolved: lowered '$existingId' priority " +
+                                "${existing.priority}→$newPriority to make room for '${command.id}'"
+                            )
+                            conflictResolved = true
+                        } else {
+                            // Already at minimum priority — cannot lower further
+                            Log.w(
+                                TAG,
+                                "Auto-resolve failed: '$existingId' is already at min priority 1"
+                            )
+                        }
+                    }
+                    else -> {
+                        // command.priority < existing.priority, or a tolerable conflict
+                        // type (SIMILAR_PHRASE, NAMESPACE_OVERLAP, SUBSTRING_MATCH) —
+                        // the existing command wins naturally via priority ordering.
+                        conflictResolved = conflict.conflictType !in listOf(
+                            ConflictType.EXACT_MATCH,
+                            ConflictType.PRIORITY_CONFLICT
+                        )
+                        if (!conflictResolved) {
+                            Log.w(
+                                TAG,
+                                "Auto-resolve: '${command.id}' has lower priority than " +
+                                "existing '$existingId' on an exact conflict — cannot resolve"
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (conflictingIds.isEmpty()) {
+                // No specific opposing commands identified; treat as resolved
+                conflictResolved = true
+            }
+
+            if (!conflictResolved) {
+                allResolved = false
+            }
+        }
+
+        return allResolved
     }
 
     // Listener notification methods

@@ -26,6 +26,7 @@ class PluginRegistry(
      * Register a validated plugin.
      * Plugin must be in [PluginState.VALIDATED] state.
      */
+    @Synchronized
     fun register(plugin: LoadedPlugin): PluginRegistrationResult {
         if (plugin.state != PluginState.VALIDATED) {
             return PluginRegistrationResult.Error(
@@ -67,6 +68,7 @@ class PluginRegistry(
     /**
      * Activate a registered plugin so it can handle triggers.
      */
+    @Synchronized
     fun activate(pluginId: String): Boolean {
         val plugin = plugins[pluginId] ?: return false
         if (plugin.state != PluginState.REGISTERED && plugin.state != PluginState.INACTIVE) return false
@@ -77,6 +79,7 @@ class PluginRegistry(
     /**
      * Deactivate a plugin (keeps registration but stops handling).
      */
+    @Synchronized
     fun deactivate(pluginId: String): Boolean {
         val plugin = plugins[pluginId] ?: return false
         if (plugin.state != PluginState.ACTIVE) return false
@@ -87,6 +90,7 @@ class PluginRegistry(
     /**
      * Unregister a plugin completely, removing all trigger mappings.
      */
+    @Synchronized
     fun unregister(pluginId: String): Boolean {
         plugins.remove(pluginId) ?: return false
         val toRemove = triggerIndex.entries.filter { it.value == pluginId }.map { it.key }
@@ -101,15 +105,17 @@ class PluginRegistry(
         pattern: String,
         captures: Map<String, String> = emptyMap()
     ): PluginTriggerResult {
-        val pluginId = triggerIndex[pattern]
-            ?: return PluginTriggerResult.NoHandler(pattern)
-
-        val plugin = plugins[pluginId]
-            ?: return PluginTriggerResult.Error("Plugin '$pluginId' not found")
+        // Snapshot map state under lock before doing async interpreter work
+        val plugin = synchronized(this) {
+            val pluginId = triggerIndex[pattern]
+                ?: return PluginTriggerResult.NoHandler(pattern)
+            plugins[pluginId]
+                ?: return PluginTriggerResult.Error("Plugin '$pluginId' not found")
+        }
 
         if (!plugin.isActive) {
             return PluginTriggerResult.Error(
-                "Plugin '$pluginId' is not active (state: ${plugin.state})"
+                "Plugin '${plugin.pluginId}' is not active (state: ${plugin.state})"
             )
         }
 
@@ -120,14 +126,16 @@ class PluginRegistry(
 
         return when (val result = interpreter.handleTrigger(plugin.ast, pattern, captures)) {
             is ExecutionResult.Success -> PluginTriggerResult.Success(
-                pluginId = pluginId,
+                pluginId = plugin.pluginId,
                 returnValue = result.returnValue,
                 executionTimeMs = result.executionTimeMs
             )
             is ExecutionResult.Failure -> {
-                plugins[pluginId] = plugin.withState(PluginState.ERROR, result.error.message)
+                synchronized(this) {
+                    plugins[plugin.pluginId] = plugin.withState(PluginState.ERROR, result.error.message)
+                }
                 PluginTriggerResult.Error(
-                    "Plugin '$pluginId' execution failed: ${result.error.message}"
+                    "Plugin '${plugin.pluginId}' execution failed: ${result.error.message}"
                 )
             }
             is ExecutionResult.NoHandler -> PluginTriggerResult.NoHandler(pattern)
@@ -135,28 +143,35 @@ class PluginRegistry(
     }
 
     /** Find which plugin owns a trigger pattern. */
+    @Synchronized
     fun findPluginForTrigger(pattern: String): LoadedPlugin? {
         val pluginId = triggerIndex[pattern] ?: return null
         return plugins[pluginId]
     }
 
     /** Get a plugin by ID. */
+    @Synchronized
     fun getPlugin(pluginId: String): LoadedPlugin? = plugins[pluginId]
 
     /** Get all registered plugins. */
+    @Synchronized
     fun getAllPlugins(): List<LoadedPlugin> = plugins.values.toList()
 
     /** Get active plugins only. */
+    @Synchronized
     fun getActivePlugins(): List<LoadedPlugin> = plugins.values.filter { it.isActive }
 
     /** Get all registered trigger patterns with their owning plugin IDs. */
+    @Synchronized
     fun getRegisteredTriggers(): Map<String, String> = triggerIndex.toMap()
 
     /** Get plugin count by state. */
+    @Synchronized
     fun getStatistics(): Map<PluginState, Int> =
         plugins.values.groupBy { it.state }.mapValues { it.value.size }
 
     /** Clear all plugins and triggers (for testing). */
+    @Synchronized
     fun clear() {
         plugins.clear()
         triggerIndex.clear()

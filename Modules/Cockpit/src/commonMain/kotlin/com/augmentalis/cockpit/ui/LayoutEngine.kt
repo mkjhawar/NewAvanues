@@ -660,6 +660,7 @@ private fun RowLayout(
                 isResizable = false,
                 onSelect = { onFrameSelected(frame.id) },
                 onClose = { onFrameClose(frame.id) },
+                // RowLayout uses fixed equal-width columns — minimize/maximize not applicable.
                 onMinimize = {},
                 onMaximize = {},
                 modifier = Modifier.weight(1f).fillMaxSize().padding(4.dp)

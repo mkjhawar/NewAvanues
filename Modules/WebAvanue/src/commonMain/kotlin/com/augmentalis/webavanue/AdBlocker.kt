@@ -55,15 +55,18 @@ class AdBlocker {
         return adPatterns.any { it.matches(lowerUrl) }
     }
 
-    // Statistics
+    // Statistics — @Volatile for cross-thread visibility (network + UI threads)
+    @kotlin.concurrent.Volatile
     private var blockedCount = 0
 
     fun getBlockedCount(): Int = blockedCount
 
+    @Synchronized
     fun incrementBlocked() {
         blockedCount++
     }
 
+    @Synchronized
     fun resetStats() {
         blockedCount = 0
     }

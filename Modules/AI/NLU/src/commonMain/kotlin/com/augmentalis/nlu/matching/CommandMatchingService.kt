@@ -69,10 +69,15 @@ class CommandMatchingService(
     private val learnedMappings = mutableMapOf<String, LearnedMapping>()
 
     // Statistics
+    @kotlin.concurrent.Volatile
     private var totalMatches = 0L
+    @kotlin.concurrent.Volatile
     private var exactMatches = 0L
+    @kotlin.concurrent.Volatile
     private var fuzzyMatches = 0L
+    @kotlin.concurrent.Volatile
     private var semanticMatches = 0L
+    @kotlin.concurrent.Volatile
     private var noMatches = 0L
 
     // ==========================================================================
@@ -85,6 +90,7 @@ class CommandMatchingService(
      * @param commands List of command phrases
      * @param priority Optional priority (higher = preferred)
      */
+    @Synchronized
     fun registerCommands(commands: List<String>, priority: Int = 0) {
         for (phrase in commands) {
             registerCommand(phrase, priority)
@@ -95,6 +101,7 @@ class CommandMatchingService(
     /**
      * Register a single command with metadata.
      */
+    @Synchronized
     fun registerCommand(
         phrase: String,
         priority: Int = 0,
@@ -123,6 +130,7 @@ class CommandMatchingService(
      *
      * @param synonymMap Map of synonym -> canonical word
      */
+    @Synchronized
     fun setSynonyms(synonymMap: Map<String, String>) {
         synonyms.clear()
         synonymMap.forEach { (synonym, canonical) ->
@@ -133,6 +141,7 @@ class CommandMatchingService(
     /**
      * Add a single synonym mapping.
      */
+    @Synchronized
     fun addSynonym(synonym: String, canonical: String) {
         synonyms[synonym.lowercase()] = canonical.lowercase()
     }
@@ -147,6 +156,7 @@ class CommandMatchingService(
     /**
      * Rebuild internal indexes after registration changes.
      */
+    @Synchronized
     fun rebuildIndexes() {
         // Build pattern matcher index
         val unifiedIntents = commands.map { cmd ->
@@ -188,6 +198,7 @@ class CommandMatchingService(
      * @param locale Target locale for normalization (null = auto-detect or default)
      * @return MatchResult with matched command and metadata
      */
+    @Synchronized
     fun match(
         input: String,
         strategies: Set<MatchStrategy> = config.enabledStrategies,
@@ -315,6 +326,7 @@ class CommandMatchingService(
     /**
      * Quick exact-only match (for hot paths).
      */
+    @Synchronized
     fun matchExact(input: String): String? {
         val normalized = normalize(input)
         return commandIndex[normalized]?.canonicalPhrase
@@ -323,6 +335,7 @@ class CommandMatchingService(
     /**
      * Match with specific strategy only.
      */
+    @Synchronized
     fun matchWith(input: String, strategy: MatchStrategy): MatchResult {
         return match(input, setOf(strategy))
     }
@@ -339,6 +352,7 @@ class CommandMatchingService(
      * @param misrecognized What the system heard
      * @param correct What the user actually meant
      */
+    @Synchronized
     fun learn(misrecognized: String, correct: String) {
         val normalizedMis = normalize(misrecognized)
         val normalizedCorrect = normalize(correct)
@@ -356,6 +370,7 @@ class CommandMatchingService(
     /**
      * Remove a learned mapping.
      */
+    @Synchronized
     fun unlearn(misrecognized: String) {
         learnedMappings.remove(normalize(misrecognized))
     }
@@ -363,11 +378,13 @@ class CommandMatchingService(
     /**
      * Get all learned mappings (for persistence).
      */
+    @Synchronized
     fun getLearnedMappings(): Map<String, LearnedMapping> = learnedMappings.toMap()
 
     /**
      * Restore learned mappings (from persistence).
      */
+    @Synchronized
     fun restoreLearnedMappings(mappings: Map<String, LearnedMapping>) {
         learnedMappings.clear()
         learnedMappings.putAll(mappings)
@@ -542,6 +559,7 @@ class CommandMatchingService(
     /**
      * Get matching statistics.
      */
+    @Synchronized
     fun getStatistics(): MatchingStatistics {
         return MatchingStatistics(
             totalMatches = totalMatches,
@@ -558,6 +576,7 @@ class CommandMatchingService(
     /**
      * Reset statistics.
      */
+    @Synchronized
     fun resetStatistics() {
         totalMatches = 0
         exactMatches = 0
@@ -569,6 +588,7 @@ class CommandMatchingService(
     /**
      * Clear all data.
      */
+    @Synchronized
     fun clear() {
         commands.clear()
         commandIndex.clear()
@@ -583,11 +603,13 @@ class CommandMatchingService(
     /**
      * Get registered command count.
      */
+    @Synchronized
     fun commandCount(): Int = commands.size
 
     /**
      * Check if a command is registered.
      */
+    @Synchronized
     fun hasCommand(phrase: String): Boolean = commandIndex.containsKey(normalize(phrase))
 }
 

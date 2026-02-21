@@ -240,6 +240,7 @@ private class WebViewPool {
      * @param tabId Tab identifier
      * @return WebView if exists, null otherwise
      */
+    @Synchronized
     fun get(tabId: String): WebView? {
         return webViews[tabId]
     }

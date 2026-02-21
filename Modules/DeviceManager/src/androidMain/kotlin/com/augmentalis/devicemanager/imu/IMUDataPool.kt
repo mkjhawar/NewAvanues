@@ -39,3 +39,13 @@ class IMUDataPool(capacity: Int) {
 }
 
 data class IMUData(var alpha: Float, var beta: Float, var gamma: Float, var ts: Long)
+
+/** Acquire an [IMUData] from the pool, run [block], and release it back automatically. */
+inline fun <T> IMUDataPool.use(block: (IMUData) -> T): T {
+    val data = acquire()
+    return try {
+        block(data)
+    } finally {
+        release(data)
+    }
+}

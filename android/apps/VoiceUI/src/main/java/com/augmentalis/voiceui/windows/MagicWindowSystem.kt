@@ -213,16 +213,22 @@ fun MagicWindow(
                 )
                 .then(
                     if (config.draggable && !windowState.isMaximized.value) {
+                        // Read actual screen dimensions here in composable scope so the
+                        // non-composable snapToEdges() callback can use them.
+                        val configuration = LocalConfiguration.current
+                        val screenWidthPx = configuration.screenWidthDp * LocalDensity.current.density
+                        val screenHeightPx = configuration.screenHeightDp * LocalDensity.current.density
+                        val capturedScreenBounds = Size(screenWidthPx, screenHeightPx)
                         Modifier.pointerInput(Unit) {
                             detectDragGestures(
-                                onDragStart = { 
+                                onDragStart = {
                                     MagicWindowManager.focusWindow(id)
                                     windowState.isDragging.value = true
                                 },
                                 onDragEnd = {
                                     windowState.isDragging.value = false
                                     if (config.enableSnapToEdge) {
-                                        snapToEdges(windowState)
+                                        snapToEdges(windowState, capturedScreenBounds)
                                     }
                                 },
                                 onDrag = { _, dragAmount ->
@@ -522,14 +528,20 @@ private fun MinimizedWindowIcon(
 }
 
 // Utility functions
-private fun snapToEdges(windowState: MagicWindowState) {
-    // Implement edge snapping logic
+
+/**
+ * Snap [windowState] to the nearest screen edge if it is within [threshold] pixels.
+ *
+ * [screenBounds] must be provided in pixels by the composable caller, which reads
+ * [LocalConfiguration] and [LocalDensity] before entering the non-composable
+ * [pointerInput] lambda. This avoids any hardcoded fallback resolution.
+ */
+private fun snapToEdges(windowState: MagicWindowState, screenBounds: Size) {
     val threshold = 20f
-    val screenBounds = getScreenBounds()
-    
+
     var newX = windowState.position.value.x
     var newY = windowState.position.value.y
-    
+
     // Snap to left edge
     if (abs(newX) < threshold) {
         newX = 0f
@@ -546,13 +558,8 @@ private fun snapToEdges(windowState: MagicWindowState) {
     if (abs(newY + windowState.size.value.height.value - screenBounds.height) < threshold) {
         newY = screenBounds.height - windowState.size.value.height.value
     }
-    
-    windowState.position.value = Offset(newX, newY)
-}
 
-private fun getScreenBounds(): Size {
-    // This would need proper implementation based on actual screen size
-    return Size(1920f, 1080f)
+    windowState.position.value = Offset(newX, newY)
 }
 
 // Voice command integration

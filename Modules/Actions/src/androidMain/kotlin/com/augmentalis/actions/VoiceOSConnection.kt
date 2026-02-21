@@ -96,12 +96,16 @@ class VoiceOSConnection private constructor(
         data class Failure(val error: String, val failedAtStep: Int? = null) : CommandResult()
     }
 
-    // AIDL service reference
+    // AIDL service reference — @Volatile for cross-thread visibility
+    // (Binder callbacks run on pool threads, reads happen on Main/IO)
+    @Volatile
     private var voiceOSService: IVoiceOSService? = null
     private val isBound = AtomicBoolean(false)
+    @Volatile
     private var connectionState: ConnectionState = ConnectionState.Disconnected
 
     // Callback for service events
+    @Volatile
     private var serviceCallback: IVoiceOSCallback.Stub? = null
 
     // Service connection handler

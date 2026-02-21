@@ -207,13 +207,43 @@ class IntentDispatcher(
     }
 
     /**
-     * Check if handler supports a specific app
-     * TODO: Implement app-specific handler registry
+     * Check if a handler category supports a specific app package.
+     *
+     * Global categories work across every app:
+     *   MEDIA, SCREEN, TEXT, INPUT, VOICE_CONTROL, APP_CONTROL, READING,
+     *   CURSOR, SCROLL, VOLUME, NUMBERS, NOTE, ANNOTATION, IMAGE, VIDEO,
+     *   CAST, AI — these do not require a specific host app.
+     *
+     * Browser/web categories are only meaningful inside browser packages:
+     *   BROWSER, WEB_GESTURE, WEB — restricted to known browser identifiers.
      */
-    private fun handlerSupportsApp(@Suppress("UNUSED_PARAMETER") category: String, @Suppress("UNUSED_PARAMETER") appPackage: String): Boolean {
-        // For now, all handlers support all apps (global handlers)
-        // This will be enhanced when app-specific handlers are implemented
-        return true
+    private fun handlerSupportsApp(category: String, appPackage: String): Boolean {
+        val cat = category.uppercase()
+        return when (cat) {
+            "BROWSER", "WEB_GESTURE", "WEB" -> isBrowserPackage(appPackage)
+            // All other categories are global (support every app)
+            else -> true
+        }
+    }
+
+    /**
+     * Returns true when [packageName] belongs to a browser or web-rendering app.
+     *
+     * Covers: Chrome, Firefox, Edge, Samsung Internet, Brave, Opera,
+     * DuckDuckGo, WebAvanue, and any package explicitly named "browser".
+     */
+    private fun isBrowserPackage(packageName: String): Boolean {
+        val pkg = packageName.lowercase()
+        return pkg.contains("browser") ||
+            pkg.contains("chrome") ||
+            pkg.contains("firefox") ||
+            pkg.contains("mozilla") ||
+            pkg.contains("opera") ||
+            pkg.contains("brave") ||
+            pkg.contains("edge") ||
+            pkg.contains("samsung.internet") ||
+            pkg.contains("duckduckgo") ||
+            pkg.contains("webavanue")
     }
 
     /**

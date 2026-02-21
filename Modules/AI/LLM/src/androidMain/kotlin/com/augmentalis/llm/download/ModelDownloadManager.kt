@@ -543,7 +543,7 @@ class ModelDownloadManager(
 data class DownloadJob(
     val modelId: String,
     val config: ModelDownloadConfig,
-    var bytesDownloaded: Long = 0L,
-    var isPaused: Boolean = false,
-    var isCancelled: Boolean = false
+    @Volatile var bytesDownloaded: Long = 0L,
+    @Volatile var isPaused: Boolean = false,
+    @Volatile var isCancelled: Boolean = false
 )

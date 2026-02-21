@@ -384,10 +384,15 @@ class TVMRuntime private constructor(
 
     /**
      * Clean up resources
+     *
+     * Releases the model-specific tokenizer reference. TVMRuntime does not own
+     * TVM modules directly — modules are returned to callers via loadModule() and
+     * must be disposed by the caller via TVMModule.dispose(). The fallback tokenizer
+     * is a lazy val tied to this instance's lifetime and requires no explicit release.
      */
     fun dispose() {
         Timber.d("Disposing TVM runtime")
-        // Stub - will implement when full TVM integration is done
+        modelTokenizer = null
     }
 }
 

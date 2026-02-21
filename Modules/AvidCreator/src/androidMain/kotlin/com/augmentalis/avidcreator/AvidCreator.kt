@@ -19,6 +19,7 @@ import com.augmentalis.avidcreator.AvidPosition
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -105,15 +106,15 @@ class AvidElementManager private constructor() {
 
         // Index by name
         element.name?.let { name ->
-            nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.avid)
+            nameIndex.getOrPut(name.lowercase()) { Collections.synchronizedSet(mutableSetOf()) }.add(element.avid)
         }
 
         // Index by type
-        typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.avid)
+        typeIndex.getOrPut(element.type.lowercase()) { Collections.synchronizedSet(mutableSetOf()) }.add(element.avid)
 
         // Index by parent
         element.parent?.let { parent ->
-            hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.avid)
+            hierarchyIndex.getOrPut(parent) { Collections.synchronizedSet(mutableSetOf()) }.add(element.avid)
         }
 
         // Add to ordered list
@@ -163,7 +164,7 @@ class AvidElementManager private constructor() {
      * Find elements by name
      */
     fun findByName(name: String): List<AvidElement> {
-        val avids = nameIndex[name.lowercase()] ?: return emptyList()
+        val avids = nameIndex[name.lowercase()]?.toSet() ?: return emptyList()
         return avids.mapNotNull { elements[it] }
     }
 
@@ -171,7 +172,7 @@ class AvidElementManager private constructor() {
      * Find elements by type
      */
     fun findByType(type: String): List<AvidElement> {
-        val avids = typeIndex[type.lowercase()] ?: return emptyList()
+        val avids = typeIndex[type.lowercase()]?.toSet() ?: return emptyList()
         return avids.mapNotNull { elements[it] }
     }
 

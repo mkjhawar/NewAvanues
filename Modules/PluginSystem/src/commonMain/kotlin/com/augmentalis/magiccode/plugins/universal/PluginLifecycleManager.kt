@@ -31,6 +31,9 @@ class PluginLifecycleManager(
 ) {
     private val _managedPlugins = MutableStateFlow<Map<String, ManagedPlugin>>(emptyMap())
 
+    /** Tracks the state-observer Job created per plugin in [manage], so it can be cancelled in [shutdown]. */
+    private val observerJobs = mutableMapOf<String, Job>()
+
     /**
      * Observable state of all managed plugins.
      */
@@ -65,8 +68,8 @@ class PluginLifecycleManager(
 
         _managedPlugins.value = _managedPlugins.value + (plugin.pluginId to managed)
 
-        // Observe state changes and publish events
-        scope.launch {
+        // Observe state changes and publish events; store the Job so it can be cancelled on shutdown
+        val observerJob = scope.launch {
             plugin.stateFlow.collect { newState ->
                 // Update registry with new state
                 registry.updateState(plugin.pluginId, newState)
@@ -82,6 +85,7 @@ class PluginLifecycleManager(
                 )
             }
         }
+        observerJobs[plugin.pluginId] = observerJob
 
         return Result.success(Unit)
     }
@@ -170,7 +174,8 @@ class PluginLifecycleManager(
 
         val result = managed.plugin.shutdown()
 
-        // Remove from managed plugins after shutdown
+        // Cancel the state-observer job and remove from managed plugins after shutdown
+        observerJobs.remove(pluginId)?.cancel()
         _managedPlugins.value = _managedPlugins.value - pluginId
 
         return result

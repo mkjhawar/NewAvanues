@@ -11,9 +11,11 @@ import com.augmentalis.rag.domain.SearchFilters
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.Closeable
 import java.io.File
 
 private const val TAG = "NoteRAGIndexer"
@@ -39,7 +41,7 @@ private const val TAG = "NoteRAGIndexer"
 class NoteRAGIndexer(
     private val ragRepository: RAGRepository,
     private val cacheDir: File
-) {
+) : Closeable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val indexMutex = Mutex()
 
@@ -201,6 +203,14 @@ class NoteRAGIndexer(
      * Using a fixed prefix ensures we can delete/replace by note ID.
      */
     private fun noteDocumentId(noteId: String): String = "noteavanue_$noteId"
+
+    /**
+     * Cancel the internal coroutine scope, stopping any in-flight indexing work.
+     * Call when the owning component (ViewModel, DI scope) is destroyed.
+     */
+    override fun close() {
+        scope.cancel()
+    }
 }
 
 /**

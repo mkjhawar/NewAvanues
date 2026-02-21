@@ -140,7 +140,9 @@ class AvidViewModel(
     }
     
     private fun initializeMockData() {
-        // Create mock elements for demonstration
+        // Development fallback: displayed when AVID registry has no real elements.
+        // These synthetic elements allow the UI to be exercised before any real
+        // app elements have been registered via AvidCreator.
         val types = listOf("button", "text", "image", "container", "list", "form")
         val names = listOf("Submit", "Cancel", "Home", "Settings", "Profile", "Search", 
                           "Menu", "Header", "Footer", "Sidebar", "Content", "Card")
@@ -182,8 +184,7 @@ class AvidViewModel(
     fun refreshRegistry() {
         viewModelScope.launch {
             _uiState.value = _uiState.value?.copy(isLoading = true)
-            delay(500) // Simulate loading
-            
+
             // Get real elements from AvidManager
             val realElements = avidManager.getAllElements()
             val elements = if (realElements.isNotEmpty()) {
@@ -204,6 +205,7 @@ class AvidViewModel(
                     )
                 }
             } else {
+                android.util.Log.d("AvidViewModel", "AVID registry empty, using ${mockElements.size} mock elements for development")
                 mockElements // Use mock data if no real elements
             }
             

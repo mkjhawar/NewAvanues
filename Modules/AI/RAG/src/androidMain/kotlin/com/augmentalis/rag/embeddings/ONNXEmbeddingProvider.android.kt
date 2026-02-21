@@ -672,10 +672,16 @@ class ONNXEmbeddingProvider(
 
     /**
      * Clean up resources
+     *
+     * Closes the ONNX inference session and releases references.
+     * OrtEnvironment is a JVM-wide singleton managed by ONNX Runtime — it must NOT
+     * be closed here (doing so would break other users of the same process).
+     * Nulling the reference is sufficient to allow GC if no other reference exists.
      */
     fun close() {
         ortSession?.close()
         ortSession = null
+        ortEnvironment = null
         initialized = false
     }
 }

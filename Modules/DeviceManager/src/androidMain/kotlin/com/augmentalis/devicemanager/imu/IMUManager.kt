@@ -86,9 +86,6 @@ class IMUManager private constructor(
     private var display: Display = (context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager)
         .getDisplay(Display.DEFAULT_DISPLAY)
     private var rotation: Int = display.rotation
-    private val rotationMatrixBuffer = FloatArray(9)
-    private val adjustedRotationMatrixBuffer = FloatArray(9)
-    private val orientationBuffer = FloatArray(3)
     private val rotationAxisMappings = mapOf(
         Surface.ROTATION_0 to (SensorManager.AXIS_X to SensorManager.AXIS_Z),
         Surface.ROTATION_90 to (SensorManager.AXIS_Z to SensorManager.AXIS_MINUS_X),
@@ -336,24 +333,36 @@ class IMUManager private constructor(
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        if (mLastAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE){
-            return
-        }
+        if (mLastAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) return
+
+        // Throttle BEFORE spawning coroutine to eliminate churn at 60-120 Hz
+        val currentTs = System.nanoTime()
+        val lastTs = lastProcessedTimestamp.get()
+        if (currentTs - lastTs < MIN_SENSOR_INTERVAL_NS) return
+        if (!lastProcessedTimestamp.compareAndSet(lastTs, currentTs)) return
+
+        // Copy sensor values before launch; SensorEvent.values is a live framework buffer
+        // that will be overwritten by the next event before the coroutine runs.
+        val sensorType = event.sensor.type
+        val valuesCopy = event.values.copyOf()
+        val timestamp = event.timestamp
+        val accuracy = event.accuracy
+
         scope.launch {
             try {
-                when (event.sensor.type) {
+                when (sensorType) {
                     Sensor.TYPE_GAME_ROTATION_VECTOR,
                     Sensor.TYPE_ROTATION_VECTOR -> {
-                        processRotationVector(event.values, event.timestamp, event.accuracy)
+                        processRotationVector(valuesCopy, timestamp, accuracy)
                     }
                     Sensor.TYPE_GYROSCOPE -> {
-                        processGyroscope(event)
+                        processGyroscope(valuesCopy, timestamp, accuracy)
                     }
                     Sensor.TYPE_ACCELEROMETER -> {
-                        processAccelerometer(event)
+                        processAccelerometer(valuesCopy, timestamp, accuracy)
                     }
                     Sensor.TYPE_MAGNETIC_FIELD -> {
-                        processMagnetometer(event)
+                        processMagnetometer(valuesCopy, timestamp, accuracy)
                     }
                 }
             } catch (e: Exception) {
@@ -372,27 +381,17 @@ class IMUManager private constructor(
     private suspend fun processRotationVector(values: FloatArray?, timestamp: Long, accuracy: Int) {
         if (values == null) return
 
-        // Throttle processing based on timestamp
-        val currentTs = System.nanoTime()
-        val lastTs = lastProcessedTimestamp.get()
+        // Per-call buffers — eliminates shared mutable state across concurrent coroutines (T17)
+        val rotationMatrixBuffer = FloatArray(9)
+        val adjustedRotationMatrixBuffer = FloatArray(9)
+        val orientationBuffer = FloatArray(3)
 
-        if (currentTs - lastTs < MIN_SENSOR_INTERVAL_NS) {
-            return // Skip this update
-        }
-
-        // Update timestamp atomically, only one thread will succeed
-        if (!lastProcessedTimestamp.compareAndSet(lastTs, currentTs)) {
-            return
-        }
-
-        // Reuse pre-allocated buffers
         SensorManager.getRotationMatrixFromVector(rotationMatrixBuffer, values)
 
         // Get axis mapping from cache
         val (worldAxisX, worldAxisY) = rotationAxisMappings[rotation]
             ?: (SensorManager.AXIS_X to SensorManager.AXIS_Z)
 
-        // Reuse buffer for adjusted matrix
         SensorManager.remapCoordinateSystem(
             rotationMatrixBuffer,
             worldAxisX,
@@ -400,7 +399,6 @@ class IMUManager private constructor(
             adjustedRotationMatrixBuffer
         )
 
-        // Reuse orientation buffer
         SensorManager.getOrientation(adjustedRotationMatrixBuffer, orientationBuffer)
 
         val alpha = orientationBuffer[2]
@@ -409,16 +407,20 @@ class IMUManager private constructor(
 
         if (alpha.isNaN() || beta.isNaN() || gamma.isNaN()) return
 
-        // Get instance from pool and populate
-        val cursorData = imuDataPool.acquire().apply {
-            this.alpha = alpha
-            this.beta = beta
-            this.gamma = gamma
-            this.ts = timestamp
+        // Borrow from pool to perform any intermediate work, then emit an immutable copy.
+        // The pooled object must be released before emit so the pool can reuse it safely;
+        // the SharedFlow replay cache and active collectors would otherwise hold a reference
+        // to the pooled object while the pool overwrites its fields on the next acquire().
+        val emitData = imuDataPool.use { pooled ->
+            pooled.alpha = alpha
+            pooled.beta = beta
+            pooled.gamma = gamma
+            pooled.ts = timestamp
+            pooled.copy() // copy() releases ownership; pooled is returned to pool by use{}
         }
 
         // Emit to flow
-        _orientationFlow.emit(cursorData)
+        _orientationFlow.emit(emitData)
     }
 
     // TODO:  
@@ -443,27 +445,27 @@ class IMUManager private constructor(
         _orientationFlow.emit(orientationData)
     }*/
 
-    private suspend fun processGyroscope(event: SensorEvent) {
-        val angularVelocity = Vector3(event.values[0], event.values[1], event.values[2])
-        sensorFusion.processGyroscope(angularVelocity, event.timestamp)
+    private suspend fun processGyroscope(values: FloatArray, timestamp: Long, accuracy: Int) {
+        val angularVelocity = Vector3(values[0], values[1], values[2])
+        sensorFusion.processGyroscope(angularVelocity, timestamp)
 
         val motionData = MotionData(
             angularVelocity = angularVelocity,
-            timestamp = event.timestamp,
-            accuracy = event.accuracy
+            timestamp = timestamp,
+            accuracy = accuracy
         )
 
         _motionFlow.emit(motionData)
     }
 
-    private suspend fun processAccelerometer(event: SensorEvent) {
-        val acceleration = Vector3(event.values[0], event.values[1], event.values[2])
-        sensorFusion.processAccelerometer(acceleration, event.timestamp)
+    private suspend fun processAccelerometer(values: FloatArray, timestamp: Long, accuracy: Int) {
+        val acceleration = Vector3(values[0], values[1], values[2])
+        sensorFusion.processAccelerometer(acceleration, timestamp)
     }
 
-    private suspend fun processMagnetometer(event: SensorEvent) {
-        val magneticField = Vector3(event.values[0], event.values[1], event.values[2])
-        sensorFusion.processMagnetometer(magneticField, event.timestamp)
+    private suspend fun processMagnetometer(values: FloatArray, timestamp: Long, accuracy: Int) {
+        val magneticField = Vector3(values[0], values[1], values[2])
+        sensorFusion.processMagnetometer(magneticField, timestamp)
     }
 
     /**

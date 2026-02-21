@@ -131,6 +131,7 @@ class CloudLLMProvider(
     private val healthMetrics = mutableMapOf<ProviderType, ProviderHealthMetrics>()
 
     // Current state
+    @Volatile
     private var isGenerating = false
     private var preferredProvider: ProviderType? = null
 

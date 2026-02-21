@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import java.io.Closeable
+import java.util.prefs.PreferenceChangeListener
 import java.util.prefs.Preferences
 import kotlin.concurrent.Volatile
 
@@ -26,7 +28,7 @@ import kotlin.concurrent.Volatile
 class JavaPreferencesSettingsStore<T>(
     private val nodePath: String,
     private val codec: SettingsCodec<T>
-) : ISettingsStore<T> {
+) : ISettingsStore<T>, Closeable {
 
     private val prefs: Preferences = Preferences.userRoot().node(nodePath)
     private val _settings = MutableStateFlow(loadSettings())
@@ -35,14 +37,20 @@ class JavaPreferencesSettingsStore<T>(
     @Volatile
     private var isUpdating = false
 
-    init {
-        prefs.addPreferenceChangeListener {
+    private val preferenceListener = PreferenceChangeListener {
+        synchronized(this) {
             if (!isUpdating) {
-                synchronized(this) {
-                    _settings.value = loadSettings()
-                }
+                _settings.value = loadSettings()
             }
         }
+    }
+
+    init {
+        prefs.addPreferenceChangeListener(preferenceListener)
+    }
+
+    override fun close() {
+        prefs.removePreferenceChangeListener(preferenceListener)
     }
 
     private fun loadSettings(): T = codec.decode(JavaPreferencesReader(prefs))

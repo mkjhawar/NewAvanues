@@ -95,6 +95,14 @@ abstract class BaseCloudProvider(
     // Platform-agnostic current time (for timestamps)
     private fun currentTimeMillis(): Long = Clock.System.now().toEpochMilliseconds()
 
+    /**
+     * Release the underlying HttpClient and its connection pool, threads, and coroutine scope.
+     * Subclasses that hold additional resources should override and call super.close().
+     */
+    open fun close() {
+        client.close()
+    }
+
     protected suspend fun streamRequest(
         endpoint: String,
         body: Any,

@@ -82,6 +82,7 @@ class BrowserVoiceOSCallback(
 
     // Voice command generator for matching spoken phrases to elements
     private val commandGenerator = VoiceCommandGenerator()
+    private val commandGeneratorLock = Any()
 
     // JavaScript executor for web command execution (set by platform layer)
     @Volatile
@@ -120,8 +121,8 @@ class BrowserVoiceOSCallback(
      * are WebView callbacks that fire on the Android main thread only.
      * The scope coroutines that touch sessionCache also dispatch on Default but
      * only for whitelist/persist operations that do NOT read or write sessionCache.
-     * No synchronization is needed — matches the existing pattern in this class
-     * (StateFlow writes, commandGenerator mutations all unsynchronized, main-thread only).
+     * No synchronization is needed for sessionCache — main-thread callers only.
+     * commandGenerator access is separately guarded by commandGeneratorLock.
      */
     private val sessionCache = mutableMapOf<String, CachedPage>()
 
@@ -145,10 +146,14 @@ class BrowserVoiceOSCallback(
         _currentScrapeResult.value = result
 
         // Clear previous commands and add new elements
-        commandGenerator.clear()
-        commandGenerator.addElements(result.elements)
-
-        val count = commandGenerator.getCommandCount()
+        val count: Int
+        val phrases: List<String>
+        synchronized(commandGeneratorLock) {
+            commandGenerator.clear()
+            commandGenerator.addElements(result.elements)
+            count = commandGenerator.getCommandCount()
+            phrases = commandGenerator.getAllCommands().map { it.fullText }
+        }
         _commandCount.value = count
 
         // Update scraping state to complete
@@ -168,7 +173,6 @@ class BrowserVoiceOSCallback(
 
         // Emit phrases to static flow for speech engine grammar integration.
         // The accessibility service collects this and routes to VoiceOSCore.updateWebCommands().
-        val phrases = commandGenerator.getAllCommands().map { it.fullText }
         _activeWebPhrases.value = phrases
 
         // Update session cache — next visit to this URL will restore instantly.
@@ -224,9 +228,11 @@ class BrowserVoiceOSCallback(
 
         if (cached != null) {
             // Session cache HIT: restore commands immediately
-            commandGenerator.clear()
-            commandGenerator.addElements(cached.elements)
-            val count = commandGenerator.getCommandCount()
+            val count = synchronized(commandGeneratorLock) {
+                commandGenerator.clear()
+                commandGenerator.addElements(cached.elements)
+                commandGenerator.getCommandCount()
+            }
             _commandCount.value = count
             _activeWebPhrases.value = cached.phrases
 
@@ -264,7 +270,7 @@ class BrowserVoiceOSCallback(
 
         // Session cache MISS: check Tier 2 DB cache before falling through to fresh scrape.
         _currentScrapeResult.value = null
-        commandGenerator.clear()
+        synchronized(commandGeneratorLock) { commandGenerator.clear() }
         _commandCount.value = 0
 
         // Update UI states for scanning
@@ -420,7 +426,7 @@ class BrowserVoiceOSCallback(
         // Get URL pattern (path without query params)
         val urlPattern = extractUrlPattern(url)
 
-        val commands = commandGenerator.getAllCommands().map { cmd ->
+        val commands = synchronized(commandGeneratorLock) { commandGenerator.getAllCommands() }.map { cmd ->
             ScrapedWebCommandDTO(
                 elementHash = generateElementHash(cmd),
                 domainId = domain,
@@ -653,28 +659,28 @@ class BrowserVoiceOSCallback(
      * @return List of matching commands sorted by confidence
      */
     fun findMatches(spokenPhrase: String): List<VoiceCommandGenerator.MatchResult> {
-        return commandGenerator.findMatches(spokenPhrase)
+        return synchronized(commandGeneratorLock) { commandGenerator.findMatches(spokenPhrase) }
     }
 
     /**
      * Get all available voice commands for the current page.
      */
     fun getAllCommands(): List<VoiceCommandGenerator.WebVoiceCommand> {
-        return commandGenerator.getAllCommands()
+        return synchronized(commandGeneratorLock) { commandGenerator.getAllCommands() }
     }
 
     /**
      * Get the count of available voice commands.
      */
     fun getCommandCount(): Int {
-        return commandGenerator.getCommandCount()
+        return synchronized(commandGeneratorLock) { commandGenerator.getCommandCount() }
     }
 
     /**
      * Check if a phrase could potentially match any command (fast check).
      */
     fun hasAnyPotentialMatch(spokenPhrase: String): Boolean {
-        return commandGenerator.hasAnyPotentialMatch(spokenPhrase)
+        return synchronized(commandGeneratorLock) { commandGenerator.hasAnyPotentialMatch(spokenPhrase) }
     }
 
     /**
@@ -814,7 +820,7 @@ class BrowserVoiceOSCallback(
      */
     fun getWebCommandsAsQuantized(): List<QuantizedCommand> {
         val domain = _currentDomain.value
-        return commandGenerator.getAllCommands().map { cmd ->
+        return synchronized(commandGeneratorLock) { commandGenerator.getAllCommands() }.map { cmd ->
             QuantizedCommand(
                 avid = "web__${domain}__${cmd.vosId}",
                 phrase = cmd.fullText,

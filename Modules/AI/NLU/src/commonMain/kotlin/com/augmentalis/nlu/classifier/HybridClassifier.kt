@@ -53,21 +53,27 @@ class HybridClassifier(
     private val intentCalibration = mutableMapOf<String, CalibrationData>()
 
     // Context tracking (previous intent for context-aware classification)
+    @kotlin.concurrent.Volatile
     private var previousIntent: String? = null
+    @kotlin.concurrent.Volatile
     private var previousConfidence: Float = 0f
 
     // Negative samples (things that should NOT match)
     private val negativeSamples = mutableSetOf<String>()
 
     // Learning statistics
+    @kotlin.concurrent.Volatile
     private var totalClassifications = 0
+    @kotlin.concurrent.Volatile
     private var correctClassifications = 0
 
+    @kotlin.concurrent.Volatile
     private var isIndexed = false
 
     /**
      * Index intents for classification
      */
+    @Synchronized
     fun index(intents: List<UnifiedIntent>) {
         patternMatcher.index(intents)
         fuzzyMatcher.index(intents)
@@ -104,6 +110,7 @@ class HybridClassifier(
      * @param context Additional context (e.g., current app, previous action)
      * @return Enhanced classification result
      */
+    @Synchronized
     fun classify(
         input: String,
         inputEmbedding: FloatArray? = null,
@@ -360,6 +367,7 @@ class HybridClassifier(
      * Call this when user confirms the classification was correct.
      * This improves future accuracy through calibration.
      */
+    @Synchronized
     fun recordCorrect(input: String, intentId: String, method: MatchMethod) {
         correctClassifications++
 
@@ -392,6 +400,7 @@ class HybridClassifier(
      * @param wrongIntentId The incorrect intent that was predicted
      * @param correctIntentId The actual intent the user wanted
      */
+    @Synchronized
     fun recordIncorrect(input: String, wrongIntentId: String, correctIntentId: String?) {
         // Reduce confidence for the wrong intent
         val wrongCalibration = intentCalibration.getOrPut(wrongIntentId) { CalibrationData() }
@@ -413,6 +422,7 @@ class HybridClassifier(
     /**
      * Add a negative sample (something that should NOT be classified)
      */
+    @Synchronized
     fun addNegativeSample(input: String) {
         negativeSamples.add(input.lowercase().trim())
     }
@@ -420,6 +430,7 @@ class HybridClassifier(
     /**
      * Get classification accuracy
      */
+    @Synchronized
     fun getAccuracy(): Float {
         return if (totalClassifications > 0) {
             correctClassifications.toFloat() / totalClassifications
@@ -431,6 +442,7 @@ class HybridClassifier(
     /**
      * Get calibration data (for debugging/analytics)
      */
+    @Synchronized
     fun getCalibrationData(): Map<String, CalibrationData> {
         return intentCalibration.toMap()
     }
@@ -438,6 +450,7 @@ class HybridClassifier(
     /**
      * Export learning data (for persistence)
      */
+    @Synchronized
     fun exportLearningData(): LearningExport {
         return LearningExport(
             calibration = intentCalibration.toMap(),
@@ -450,6 +463,7 @@ class HybridClassifier(
     /**
      * Import learning data (from persistence)
      */
+    @Synchronized
     fun importLearningData(data: LearningExport) {
         intentCalibration.clear()
         intentCalibration.putAll(data.calibration)
@@ -462,6 +476,7 @@ class HybridClassifier(
     /**
      * Clear all data
      */
+    @Synchronized
     fun clear() {
         patternMatcher.clear()
         fuzzyMatcher.clear()

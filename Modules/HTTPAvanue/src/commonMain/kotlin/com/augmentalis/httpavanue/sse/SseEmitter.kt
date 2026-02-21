@@ -4,6 +4,7 @@ import com.augmentalis.httpavanue.http.HttpResponse
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Server-Sent Events (SSE) data model
@@ -70,38 +71,43 @@ class SseEmitter(val id: String) {
  */
 class SseConnectionManager {
     private val emitters = mutableMapOf<String, SseEmitter>()
+    private val mutex = kotlinx.coroutines.sync.Mutex()
 
     /** Create a new SSE emitter and register it */
-    fun createEmitter(id: String): SseEmitter {
+    suspend fun createEmitter(id: String): SseEmitter {
         val emitter = SseEmitter(id)
-        emitters[id] = emitter
+        mutex.withLock { emitters[id] = emitter }
         return emitter
     }
 
     /** Remove an emitter */
-    fun removeEmitter(id: String) {
-        emitters.remove(id)?.close()
+    suspend fun removeEmitter(id: String) {
+        mutex.withLock { emitters.remove(id) }?.close()
     }
 
     /** Broadcast an event to all connected emitters */
     suspend fun broadcast(event: SseEvent) {
+        val snapshot = mutex.withLock { emitters.toMap() }
         val deadEmitters = mutableListOf<String>()
-        for ((id, emitter) in emitters) {
+        for ((id, emitter) in snapshot) {
             if (emitter.closed) { deadEmitters.add(id); continue }
             try { emitter.send(event) } catch (_: Exception) { deadEmitters.add(id) }
         }
-        deadEmitters.forEach { emitters.remove(it) }
+        if (deadEmitters.isNotEmpty()) {
+            mutex.withLock { deadEmitters.forEach { emitters.remove(it) } }
+        }
     }
 
     /** Broadcast to emitters matching a filter */
     suspend fun broadcast(event: SseEvent, filter: (String) -> Boolean) {
-        for ((id, emitter) in emitters) {
+        val snapshot = mutex.withLock { emitters.toMap() }
+        for ((id, emitter) in snapshot) {
             if (!emitter.closed && filter(id)) {
                 try { emitter.send(event) } catch (_: Exception) {}
             }
         }
     }
 
-    val activeCount: Int get() = emitters.count { !it.value.closed }
-    fun getEmitter(id: String): SseEmitter? = emitters[id]
+    suspend fun activeCount(): Int = mutex.withLock { emitters.count { !it.value.closed } }
+    suspend fun getEmitter(id: String): SseEmitter? = mutex.withLock { emitters[id] }
 }

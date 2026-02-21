@@ -36,12 +36,17 @@ class ALCEngineAndroid(
     private var modelConfig: ModelConfig? = null
     private var _isInitialized = false
     private var _currentModel: String? = null
+    @Volatile
     private var isGenerating = false
+    @Volatile
     private var shouldStop = false
 
     // Stats tracking
+    @Volatile
     private var totalTokensGenerated = 0L
+    @Volatile
     private var totalInferenceTimeMs = 0L
+    @Volatile
     private var sessionCount = 0
 
     override val isInitialized: Boolean get() = _isInitialized
