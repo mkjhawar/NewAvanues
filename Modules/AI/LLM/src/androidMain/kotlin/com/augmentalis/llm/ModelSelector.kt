@@ -42,7 +42,7 @@ class ModelSelector(
             id = "AVA-GE3-4B16",
             displayName = "Gemma 3 4B Instruct (Multilingual)",
             huggingFaceRepo = "mlc-ai/gemma-3-4b-it-q4bf16_1-MLC",
-            localSourcePath = "/Users/manoj_mbpm14/Downloads/Coding/MLC-LLM-Code/gemma-3-models/gemma-3-4b-it-q4bf16_1-MLC",
+            localSourcePath = "",
             sizeGB = 2.3f,
             supportedLanguages = Language.values().toList(), // ALL 140+ languages
             strengths = listOf("140+ languages", "Better reasoning", "Vision-ready", "128K context"),
@@ -54,7 +54,7 @@ class ModelSelector(
             id = "AVA-GE2-2B16",
             displayName = "Gemma 2B Instruct (English)",
             huggingFaceRepo = "mlc-ai/gemma-2b-it-q4f16_1-MLC",
-            localSourcePath = "/Users/manoj_mbpm14/Downloads/Coding/MLC-LLM-Code/binary-mlc-llm-libs-Android-09262024/gemma-2b-it/gemma-2b-it-q4f16_1-android.tar",
+            localSourcePath = "",
             sizeGB = 1.2f,
             supportedLanguages = listOf(
                 Language.ENGLISH,
@@ -99,7 +99,7 @@ class ModelSelector(
             id = "AVA-PHI-3B-Q4",
             displayName = "Phi 3.5 Mini",
             huggingFaceRepo = "mlc-ai/Phi-3.5-mini-instruct-q4f16_1-MLC",
-            localSourcePath = "/Users/manoj_mbpm14/Downloads/Coding/MLC-LLM-Code/binary-mlc-llm-libs-Android-09262024/phi-2/phi-2-q4f16_1-android.tar",
+            localSourcePath = "",
             sizeGB = 2.4f,
             supportedLanguages = listOf(Language.ENGLISH),
             strengths = listOf("Strong English", "Reasoning", "Math"),
@@ -109,7 +109,7 @@ class ModelSelector(
             id = "AVA-MST-7B-Q4",
             displayName = "Mistral 7B Instruct",
             huggingFaceRepo = "mlc-ai/Mistral-7B-Instruct-v0.3-q4f16_1-MLC",
-            localSourcePath = "/Users/manoj_mbpm14/Downloads/Coding/MLC-LLM-Code/binary-mlc-llm-libs-Android-09262024/Mistral-7B-Instruct-v0.2/mistral-7b-instruct-v0.2-q4f16_1-android.tar",
+            localSourcePath = "",
             sizeGB = 4.5f,
             supportedLanguages = listOf(
                 Language.ENGLISH,

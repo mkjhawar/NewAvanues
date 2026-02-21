@@ -51,7 +51,7 @@ class VosSftpClient {
         port: Int,
         username: String,
         authMode: SftpAuthMode,
-        hostKeyChecking: String = "no"
+        hostKeyChecking: String = "accept-new"
     ): SftpResult<Unit> = withContext(Dispatchers.IO) {
         try {
             disconnect()

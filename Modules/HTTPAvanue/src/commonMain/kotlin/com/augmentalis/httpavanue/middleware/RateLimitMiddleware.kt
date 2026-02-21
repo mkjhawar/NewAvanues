@@ -16,8 +16,14 @@ class RateLimitMiddleware(private val config: RateLimitConfig = RateLimitConfig(
 
     override suspend fun handle(request: HttpRequest, next: suspend (HttpRequest) -> HttpResponse): HttpResponse {
         if (++requestCount % 100 == 0) cleanupExpiredBuckets()
-        val clientIp = request.headers["X-Forwarded-For"]?.split(",")?.first()?.trim()
-            ?: request.headers["X-Real-IP"] ?: "unknown"
+        // Only trust forwarded headers when request comes from a known proxy
+        val remoteAddr = request.remoteAddress ?: "unknown"
+        val clientIp = if (config.trustedProxies.isNotEmpty() && remoteAddr in config.trustedProxies) {
+            request.headers["X-Forwarded-For"]?.split(",")?.first()?.trim()
+                ?: request.headers["X-Real-IP"] ?: remoteAddr
+        } else {
+            remoteAddr
+        }
         if (config.perIpLimit > 0 && !checkRateLimit(ipBuckets, clientIp, config.perIpLimit, config.windowMs)) {
             logger.w { "Rate limit exceeded for IP: $clientIp" }
             return createRateLimitResponse(config.perIpLimit, config.windowMs)
@@ -68,5 +74,5 @@ private data class TokenBucket(val capacity: Double, val tokens: Double, val ref
     fun tryConsume(): Pair<Boolean, TokenBucket> = if (tokens >= 1.0) true to copy(tokens = tokens - 1.0) else false to this
 }
 
-data class RateLimitConfig(val perIpLimit: Int = 100, val perEndpointLimit: Int = 0, val windowMs: Long = 60_000)
+data class RateLimitConfig(val perIpLimit: Int = 100, val perEndpointLimit: Int = 0, val windowMs: Long = 60_000, val trustedProxies: Set<String> = emptySet())
 fun rateLimitMiddleware(maxRequests: Int = 100, windowMs: Long = 60_000) = RateLimitMiddleware(RateLimitConfig(perIpLimit = maxRequests, windowMs = windowMs))

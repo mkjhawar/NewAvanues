@@ -170,7 +170,7 @@ class AVA3Decoder {
             // Verify hash
             val computedHash = computeFileHash(originalData)
             if (!computedHash.contentEquals(header.fileHash)) {
-                Timber.w("$TAG: File hash mismatch - file may be corrupted")
+                throw AVA3Exception("File hash mismatch — file may be corrupted or tampered with")
             }
 
             val elapsed = System.currentTimeMillis() - startTime
@@ -291,7 +291,7 @@ class AVA3Decoder {
 
     private fun deriveNonce(key: ByteArray, blockIndex: Int): ByteArray {
         val nonceMaterial = key.copyOf(8) + intToBytes(blockIndex)
-        val digest = MessageDigest.getInstance("MD5")
+        val digest = MessageDigest.getInstance("SHA-256")
         return digest.digest(nonceMaterial).copyOf(16)
     }
 

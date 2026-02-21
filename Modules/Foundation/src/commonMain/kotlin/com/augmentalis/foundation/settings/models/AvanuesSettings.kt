@@ -71,7 +71,7 @@ data class AvanuesSettings(
         // VOS Sync defaults
         const val DEFAULT_SFTP_PORT = 22
         const val DEFAULT_SFTP_REMOTE_PATH = "/vos"
-        const val DEFAULT_HOST_KEY_MODE = "no"
+        const val DEFAULT_HOST_KEY_MODE = "accept-new"
         const val DEFAULT_SYNC_INTERVAL_HOURS = 4
     }
 }

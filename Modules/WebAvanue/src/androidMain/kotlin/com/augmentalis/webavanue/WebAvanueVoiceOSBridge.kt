@@ -7,6 +7,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import com.augmentalis.webavanue.util.JsStringEscaper
 import kotlinx.serialization.json.Json
 
 private const val TAG = "WebAvanueVoiceOS"
@@ -135,9 +136,10 @@ class WebAvanueVoiceOSBridge(private val webView: WebView) {
      * Click an element by CSS selector.
      */
     suspend fun clickBySelector(selector: String): Boolean = withContext(Dispatchers.Main) {
+        val safe = JsStringEscaper.escapeSelector(selector)
         val script = """
             (function() {
-                const el = document.querySelector('$selector');
+                const el = document.querySelector('$safe');
                 if (el) {
                     el.click();
                     return JSON.stringify({ success: true });

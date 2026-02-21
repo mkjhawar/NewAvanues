@@ -13,6 +13,12 @@ class StaticFileMiddleware(
         if (!request.path.startsWith(urlPrefix)) return next(request)
         var filePath = request.path.removePrefix(urlPrefix).trimStart('/')
         if (filePath.isEmpty() || filePath.endsWith("/")) filePath += defaultFile
+
+        // Path traversal guard: reject any segment that is ".." to prevent directory escape
+        if (filePath.split('/').any { it == ".." }) {
+            return HttpResponse(status = 403, statusMessage = "Forbidden", headers = emptyMap(), body = "Forbidden".encodeToByteArray())
+        }
+
         val fullPath = if (resourcePath.isEmpty()) filePath else "$resourcePath/$filePath"
         val content = readResource(fullPath) ?: return next(request)
         return HttpResponse(status = 200, statusMessage = "OK", headers = mapOf("Content-Type" to getContentType(filePath)), body = content.encodeToByteArray())

@@ -83,10 +83,9 @@ object AONFileManager {
     private const val HEADER_SIZE = 256
     private const val FOOTER_SIZE = 128
 
-    // Master secret key (embedded in app, obfuscated)
-    // PRODUCTION: Generate unique key per build, store in BuildConfig
-    // For now: Placeholder (should be rotated and obfuscated)
-    private const val MASTER_KEY = "AVA-AON-HMAC-SECRET-KEY-V1-CHANGE-IN-PRODUCTION"
+    // Key must be injected via BuildConfig or secure key management
+    // TODO: Replace with BuildConfig.AON_HMAC_KEY after adding to build.gradle.kts
+    private val MASTER_KEY: String = System.getProperty("aon.hmac.key", "AVA-AON-HMAC-SECRET-KEY-V1-CHANGE-IN-PRODUCTION")
 
     /**
      * Wrap a standard ONNX file with AVA-AON header and footer
@@ -465,19 +464,17 @@ object AONFileManager {
     }
 
     private fun verifySignature(header: AONHeader, onnxData: ByteArray, context: Context) {
-        // Reconstruct header bytes for signature verification
-        // This is simplified - in production, reconstruct exact header bytes
-        val mac = Mac.getInstance("HmacSHA256")
-        val secretKey = SecretKeySpec(MASTER_KEY.toByteArray(), "HmacSHA256")
-        mac.init(secretKey)
-
-        // For now, just verify package is allowed (full HMAC verification would require
-        // reconstructing exact header bytes which is complex - TODO for Phase 2)
+        // NOTE: Full HMAC verification requires reconstructing raw header bytes with the
+        // signature field zeroed — matching computeSignature() which signs header + sha256(onnxData).
+        // This cannot be done from the parsed AONHeader alone. Deferred to AON format v2
+        // which will add a dedicated verification field.
+        //
+        // Package allowlist is enforced as the primary access control.
         val packageHash = md5(context.packageName)
         val allowed = header.allowedPackages.any { it.contentEquals(packageHash) }
 
         if (!allowed) {
-            throw AVAException.SecurityException("HMAC signature verification failed")
+            throw AVAException.SecurityException("Package not authorized to use this AON file: ${context.packageName}")
         }
     }
 

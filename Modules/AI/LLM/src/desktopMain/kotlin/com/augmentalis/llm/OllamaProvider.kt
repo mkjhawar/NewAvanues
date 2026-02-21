@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 
 /**
@@ -337,7 +339,7 @@ class OllamaProvider : LLMProvider {
         return try {
             val response = client.post("$baseUrl/api/pull") {
                 contentType(ContentType.Application.Json)
-                setBody("""{"name": "$model"}""")
+                setBody(buildJsonObject { put("name", model) }.toString())
             }
 
             if (response.status.isSuccess()) {
