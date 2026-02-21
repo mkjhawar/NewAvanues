@@ -36,7 +36,11 @@ class CockpitViewModel(
     private val repository: ICockpitRepository
 ) {
     private val viewModelJob = SupervisorJob()
-    private val scope = CoroutineScope(viewModelJob + Dispatchers.Main)
+    // Dispatchers.Main is not available on all KMP targets (e.g. Desktop JVM without a main
+    // dispatcher library). Dispatchers.Default is safe on all platforms and the ViewModel does not
+    // drive UI directly — it exposes StateFlows that platform UI layers collect on their own
+    // main/UI dispatcher.
+    private val scope = CoroutineScope(viewModelJob + Dispatchers.Default)
     private val _activeSession = MutableStateFlow<CockpitSession?>(null)
     val activeSession: StateFlow<CockpitSession?> = _activeSession.asStateFlow()
 

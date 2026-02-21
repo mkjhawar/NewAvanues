@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.ComposeView
 import com.augmentalis.voiceoscore.managers.hudmanager.ui.*
 import com.augmentalis.voiceoscore.managers.hudmanager.spatial.*
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlin.math.*
@@ -48,9 +49,9 @@ class HUDRenderer(
         isFilterBitmap = true
     }
     
-    // HUD elements to render
-    private val hudElements = mutableListOf<HUDElement>()
-    private val renderQueue = mutableListOf<RenderCommand>()
+    // HUD elements to render — CopyOnWriteArrayList for safe concurrent reads/iteration
+    private val hudElements = CopyOnWriteArrayList<HUDElement>()
+    private val renderQueue = CopyOnWriteArrayList<RenderCommand>()
     
     // Performance metrics
     private var frameCount = 0
@@ -110,30 +111,22 @@ class HUDRenderer(
      * Add HUD element to render queue
      */
     fun addHUDElement(element: HUDElement) {
-        synchronized(hudElements) {
-            hudElements.add(element)
-        }
+        hudElements.add(element)
     }
-    
+
     /**
      * Remove HUD element from render queue
      */
     fun removeHUDElement(elementId: String) {
-        synchronized(hudElements) {
-            hudElements.removeAll { it.id == elementId }
-        }
+        hudElements.removeIf { it.id == elementId }
     }
-    
+
     /**
      * Clear all HUD elements
      */
     fun clearHUDElements() {
-        synchronized(hudElements) {
-            hudElements.clear()
-        }
-        synchronized(renderQueue) {
-            renderQueue.clear()
-        }
+        hudElements.clear()
+        renderQueue.clear()
     }
     
     /**
@@ -164,12 +157,9 @@ class HUDRenderer(
      * Adjust rendering for head movement
      */
     fun adjustForHeadMovement(orientationData: Any) {
-        // Apply smooth head-relative positioning
-        // This keeps HUD elements stable in user's view
-        synchronized(hudElements) {
-            hudElements.forEach { element ->
-                element.adjustForHeadMovement(orientationData)
-            }
+        // CopyOnWriteArrayList iteration is safe without explicit synchronization
+        hudElements.forEach { element ->
+            element.adjustForHeadMovement(orientationData)
         }
     }
     
@@ -216,10 +206,9 @@ class HUDRenderer(
             renderBackgroundEffects(canvas)
             
             // Render HUD elements with liquid animations
-            synchronized(hudElements) {
-                hudElements.forEach { element ->
-                    renderHUDElement(canvas, element)
-                }
+            // CopyOnWriteArrayList snapshot iteration is safe on the Canvas thread
+            hudElements.forEach { element ->
+                renderHUDElement(canvas, element)
             }
             
             // Render performance overlay (debug mode)

@@ -206,7 +206,7 @@ VOS seed files defined 107+ commands across 11 categories, but originally only 4
 | AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService + IMUManager | v1.0 (IMU wiring v2.2) |
 | **MediaHandler** | MEDIA | play, pause, next, prev, volume | AudioManager + KeyEvent | v2.1 |
 | **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight | Settings.System + CameraManager | v2.1 |
-| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions | v2.1 |
+| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions (delete = selection-aware backspace, not clear-all) | v2.2 |
 | **InputHandler** | INPUT | show/hide keyboard | SoftKeyboardController | v2.1 |
 | **AppControlHandler** | APP | close app, exit, quit | GLOBAL_ACTION_BACK + HOME | v2.1 |
 | **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal | v2.1 |

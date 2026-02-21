@@ -61,6 +61,12 @@ class BackpressureStreamingManager(
     private val activeRequestId = AtomicInteger(0)
     private var stopRequested = false
 
+    // Local KV cache: stores the opaque cache handle returned by inference so that
+    // subsequent decode steps can reuse it instead of reprocessing the full context.
+    // Volatile for visibility; protected by the flow's single-coroutine execution model.
+    @Volatile
+    private var kvCache: Any? = null
+
     override fun streamGeneration(
         prompt: String,
         params: GenerationParams
@@ -103,14 +109,18 @@ class BackpressureStreamingManager(
             val currentTokens = inputTokens.toMutableList()
             var isPrefill = true
 
+            // Clear any stale KV cache from a previous request before starting.
+            kvCache = null
+
             // Autoregressive generation loop
             while (generatedTokens < maxTokens && !stopRequested) {
                 try {
-                    // Run inference
+                    // Run inference, supplying the locally-maintained KV cache so the
+                    // model can skip re-processing already-seen tokens (prefill → decode).
                     val inferenceResult = inferenceStrategy.infer(
                         InferenceRequest(
                             tokens = currentTokens,
-                            cache = memoryManager.getCache(),
+                            cache = kvCache,
                             isPrefill = isPrefill,
                             metadata = mapOf(
                                 "request_id" to requestId,
@@ -119,9 +129,11 @@ class BackpressureStreamingManager(
                         )
                     )
 
-                    // Update cache
+                    // Persist the updated KV cache returned by the model so the next
+                    // decode step can reuse it instead of processing the full sequence.
+                    kvCache = inferenceResult.cache
                     memoryManager.setCache(inferenceResult.cache)
-                    isPrefill = false // Only first pass is prefill
+                    isPrefill = false // Only the first pass is prefill
 
                     // Sample next token
                     val nextTokenId = samplerStrategy.sample(

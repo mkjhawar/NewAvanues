@@ -10,7 +10,9 @@ package com.augmentalis.avidcreator
 
 import android.util.Log
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 /**
  * AVID Creator Service AIDL implementation
@@ -53,6 +55,8 @@ class AvidServiceBinder(
 
     companion object {
         private const val TAG = "AvidServiceBinder"
+        /** Maximum time to wait for a suspend operation before returning a failure result to AIDL. */
+        private const val AIDL_TIMEOUT_MS = 5_000L
     }
 
     /**
@@ -256,9 +260,13 @@ class AvidServiceBinder(
                 emptyMap()
             }
 
-            // Execute action (uses runBlocking to bridge sync AIDL with async AvidElementManager)
-            runBlocking {
-                avidManager.executeAction(avid, action, parameters)
+            // Bridge AIDL's synchronous call with the coroutine-based AvidElementManager.
+            // runBlocking(Dispatchers.IO) offloads the wait from the Binder thread pool onto an
+            // IO thread and withTimeout prevents an indefinite block that would cause an ANR.
+            runBlocking(Dispatchers.IO) {
+                withTimeout(AIDL_TIMEOUT_MS) {
+                    avidManager.executeAction(avid, action, parameters)
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error executing action", e)
@@ -290,9 +298,13 @@ class AvidServiceBinder(
         }
 
         return try {
-            // Process command (uses runBlocking to bridge sync AIDL with async AvidElementManager)
-            val result = runBlocking {
-                avidManager.processVoiceCommand(command)
+            // Bridge AIDL's synchronous call with the coroutine-based AvidElementManager.
+            // runBlocking(Dispatchers.IO) + withTimeout prevents blocking the Binder thread pool
+            // and guards against indefinite suspension that would cause an ANR.
+            val result = runBlocking(Dispatchers.IO) {
+                withTimeout(AIDL_TIMEOUT_MS) {
+                    avidManager.processVoiceCommand(command)
+                }
             }
 
             AvidCommandResultData.fromAvidCommandResult(result)

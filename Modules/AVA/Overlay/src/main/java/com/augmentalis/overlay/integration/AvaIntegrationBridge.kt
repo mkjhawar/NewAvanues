@@ -14,6 +14,7 @@ import com.augmentalis.overlay.controller.Suggestion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -231,9 +232,12 @@ class AvaIntegrationBridge(
     }
 
     /**
-     * Release resources
+     * Release resources.
+     * Must be called when the bridge owner (e.g. OverlayService) is destroyed to stop all
+     * coroutines and prevent memory leaks. The SupervisorJob in the scope propagates cancellation
+     * to all children (context monitoring, transcript processing, suggestion execution).
      */
     fun release() {
-        // Scope will be cancelled automatically when parent is destroyed
+        scope.cancel()
     }
 }

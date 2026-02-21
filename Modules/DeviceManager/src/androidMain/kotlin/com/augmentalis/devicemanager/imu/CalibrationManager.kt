@@ -118,8 +118,8 @@ class CalibrationManager {
         val job = launch {
             imuManager.orientationFlow.collect { orientationData ->
                 if (isDeviceStable(imuManager)) {
-                    //calibrationData.add(orientationData.quaternion)
-                    
+                    calibrationData.add(orientationData.quaternion)
+
                     val elapsed = System.currentTimeMillis() - startTime
                     onProgress?.invoke(elapsed.toFloat() / NEUTRAL_CALIBRATION_DURATION)
                     

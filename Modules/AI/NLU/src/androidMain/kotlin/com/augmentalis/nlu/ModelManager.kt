@@ -87,8 +87,19 @@ actual class ModelManager(private val context: Context) {
         if (!internalModelsDir.exists()) {
             internalModelsDir.mkdirs()
         }
-        // Auto-detect best available model on initialization
-        detectBestModel()
+        // Auto-detect best available model on initialization.
+        // Wrapped in try-catch so that a missing model does NOT crash the constructor.
+        // When no model is installed, activeModelType stays null; callers that need the
+        // model (getActiveModelType, isModelAvailable, getModelPath) will re-attempt
+        // detection or return safe defaults. The app can still start and prompt the user
+        // to install a model rather than crashing before any UI is shown.
+        try {
+            detectBestModel()
+        } catch (e: Exception) {
+            activeModelType = null
+            activeModelFile = null
+            android.util.Log.w(TAG, "No NLU model found at startup — NLU features disabled until a model is installed. Reason: ${e.message}")
+        }
     }
 
     /**

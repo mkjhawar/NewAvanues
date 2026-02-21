@@ -25,9 +25,8 @@ package com.augmentalis.voiceoscore.commandmanager.dynamic
 
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.read
-import kotlin.concurrent.write
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Main registry for dynamic command management
@@ -51,7 +50,7 @@ class DynamicCommandRegistry(
 
     // Thread-safe namespace storage
     private val namespaces = ConcurrentHashMap<String, CommandNamespace>()
-    private val lock = ReentrantReadWriteLock()
+    private val mutex = Mutex()
 
     // Conflict detector
     private val conflictDetector = ConflictDetector(conflictDetectionConfig)
@@ -81,12 +80,12 @@ class DynamicCommandRegistry(
         command: VoiceCommand,
         checkConflicts: Boolean = true,
         autoResolveConflicts: Boolean = false
-    ): Result<Unit> = lock.write {
+    ): Result<Unit> = mutex.withLock {
         try {
             // Validate command
             val validation = validateCommand(command)
             if (validation.isFailure) {
-                return@write validation
+                return@withLock validation
             }
 
             // Get or create namespace
@@ -94,7 +93,7 @@ class DynamicCommandRegistry(
 
             // Check namespace capacity
             if (namespace.size() >= maxCommandsPerNamespace) {
-                return@write Result.failure(
+                return@withLock Result.failure(
                     IllegalStateException(
                         "Namespace '${command.namespace}' has reached maximum capacity " +
                         "($maxCommandsPerNamespace commands)"
@@ -116,7 +115,7 @@ class DynamicCommandRegistry(
                             Log.w(TAG, "Critical conflicts detected for command: ${command.id}")
                             notifyConflictsDetected(conflictResult.conflicts, command)
 
-                            return@write Result.failure(
+                            return@withLock Result.failure(
                                 IllegalArgumentException(
                                     "Critical conflicts detected (${conflictResult.criticalCount}). " +
                                     "Cannot register command."
@@ -144,7 +143,7 @@ class DynamicCommandRegistry(
             // Register the command
             val registered = namespace.addCommand(command)
             if (!registered) {
-                return@write Result.failure(
+                return@withLock Result.failure(
                     IllegalArgumentException("Command with ID '${command.id}' already exists")
                 )
             }
@@ -172,22 +171,22 @@ class DynamicCommandRegistry(
     suspend fun unregisterCommand(
         commandId: String,
         namespace: String? = null
-    ): Result<Unit> = lock.write {
+    ): Result<Unit> = mutex.withLock {
         try {
             val targetNamespace = if (namespace != null) {
-                namespaces[namespace] ?: return@write Result.failure(
+                namespaces[namespace] ?: return@withLock Result.failure(
                     NoSuchElementException("Namespace '$namespace' not found")
                 )
             } else {
                 // Search all namespaces
-                findNamespaceContaining(commandId) ?: return@write Result.failure(
+                findNamespaceContaining(commandId) ?: return@withLock Result.failure(
                     NoSuchElementException("Command '$commandId' not found in any namespace")
                 )
             }
 
             val removed = targetNamespace.removeCommand(commandId)
             if (removed == null) {
-                return@write Result.failure(
+                return@withLock Result.failure(
                     NoSuchElementException("Command '$commandId' not found")
                 )
             }
@@ -220,7 +219,7 @@ class DynamicCommandRegistry(
         phrase: String,
         namespace: String? = null,
         enabledOnly: Boolean = true
-    ): List<VoiceCommand> = lock.read {
+    ): List<VoiceCommand> = mutex.withLock {
         val searchNamespaces = if (namespace != null) {
             listOfNotNull(namespaces[namespace])
         } else {
@@ -255,7 +254,7 @@ class DynamicCommandRegistry(
         minSimilarity: Float = 0.7f,
         maxResults: Int = 5,
         namespace: String? = null
-    ): List<Pair<VoiceCommand, Float>> = lock.read {
+    ): List<Pair<VoiceCommand, Float>> = mutex.withLock {
         val searchNamespaces = if (namespace != null) {
             listOfNotNull(namespaces[namespace])
         } else {
@@ -278,8 +277,8 @@ class DynamicCommandRegistry(
      * @param command The command to check
      * @return List of detected conflicts
      */
-    suspend fun detectConflicts(command: VoiceCommand): List<ConflictInfo> = lock.read {
-        val namespace = namespaces[command.namespace] ?: return@read emptyList()
+    suspend fun detectConflicts(command: VoiceCommand): List<ConflictInfo> = mutex.withLock {
+        val namespace = namespaces[command.namespace] ?: return@withLock emptyList()
         val existing = namespace.getAllCommands().filter { it.id != command.id }
 
         val result = conflictDetector.detectConflicts(command, existing, command.namespace)
@@ -300,7 +299,18 @@ class DynamicCommandRegistry(
     suspend fun getAllCommands(
         namespace: String? = null,
         enabledOnly: Boolean = false
-    ): List<VoiceCommand> = lock.read {
+    ): List<VoiceCommand> = mutex.withLock {
+        getAllCommandsUnlocked(namespace, enabledOnly)
+    }
+
+    /**
+     * Non-locking variant for use inside existing mutex.withLock blocks.
+     * Must only be called when the mutex is already held by the current coroutine.
+     */
+    private fun getAllCommandsUnlocked(
+        namespace: String? = null,
+        enabledOnly: Boolean = false
+    ): List<VoiceCommand> {
         val targetNamespaces = if (namespace != null) {
             listOfNotNull(namespaces[namespace])
         } else {
@@ -314,7 +324,7 @@ class DynamicCommandRegistry(
             )
         }
 
-        commands.toList()
+        return commands.toList()
     }
 
     /**
@@ -327,8 +337,8 @@ class DynamicCommandRegistry(
     suspend fun getCommandsByCategory(
         category: CommandCategory,
         namespace: String? = null
-    ): List<VoiceCommand> = lock.read {
-        val commands = getAllCommands(namespace, enabledOnly = false)
+    ): List<VoiceCommand> = mutex.withLock {
+        val commands = getAllCommandsUnlocked(namespace, enabledOnly = false)
         commands.filter { it.category == category }
     }
 
@@ -342,8 +352,8 @@ class DynamicCommandRegistry(
     suspend fun getCommandsByPriorityLevel(
         priorityLevel: PriorityLevel,
         namespace: String? = null
-    ): List<VoiceCommand> = lock.read {
-        val commands = getAllCommands(namespace, enabledOnly = false)
+    ): List<VoiceCommand> = mutex.withLock {
+        val commands = getAllCommandsUnlocked(namespace, enabledOnly = false)
         commands.filter { it.getPriorityLevel() == priorityLevel }
     }
 
@@ -359,19 +369,19 @@ class DynamicCommandRegistry(
         commandId: String,
         newPriority: Int,
         namespace: String? = null
-    ): Result<Unit> = lock.write {
+    ): Result<Unit> = mutex.withLock {
         try {
             require(newPriority in 1..100) { "Priority must be between 1 and 100" }
 
             val targetNamespace = namespace?.let { namespaces[it] }
                 ?: findNamespaceContaining(commandId)
-                ?: return@write Result.failure(
+                ?: return@withLock Result.failure(
                     NoSuchElementException("Command '$commandId' not found")
                 )
 
             val updated = targetNamespace.setCommandPriority(commandId, newPriority)
             if (!updated) {
-                return@write Result.failure(
+                return@withLock Result.failure(
                     NoSuchElementException("Command '$commandId' not found in namespace")
                 )
             }
@@ -397,17 +407,17 @@ class DynamicCommandRegistry(
         commandId: String,
         enabled: Boolean,
         namespace: String? = null
-    ): Result<Unit> = lock.write {
+    ): Result<Unit> = mutex.withLock {
         try {
             val targetNamespace = namespace?.let { namespaces[it] }
                 ?: findNamespaceContaining(commandId)
-                ?: return@write Result.failure(
+                ?: return@withLock Result.failure(
                     NoSuchElementException("Command '$commandId' not found")
                 )
 
             val updated = targetNamespace.setCommandEnabled(commandId, enabled)
             if (!updated) {
-                return@write Result.failure(
+                return@withLock Result.failure(
                     NoSuchElementException("Command '$commandId' not found")
                 )
             }
@@ -432,7 +442,7 @@ class DynamicCommandRegistry(
     suspend fun recordCommandExecution(
         commandId: String,
         namespace: String? = null
-    ) = lock.write {
+    ) = mutex.withLock {
         val targetNamespace = namespace?.let { namespaces[it] }
             ?: findNamespaceContaining(commandId)
 
@@ -445,9 +455,9 @@ class DynamicCommandRegistry(
      * @param namespace Namespace to clear
      * @return Number of commands removed
      */
-    suspend fun clearNamespace(namespace: String): Result<Int> = lock.write {
+    suspend fun clearNamespace(namespace: String): Result<Int> = mutex.withLock {
         try {
-            val ns = namespaces[namespace] ?: return@write Result.failure(
+            val ns = namespaces[namespace] ?: return@withLock Result.failure(
                 NoSuchElementException("Namespace '$namespace' not found")
             )
 
@@ -469,8 +479,8 @@ class DynamicCommandRegistry(
      *
      * @return Overall registry statistics
      */
-    suspend fun getStatistics(): RegistryStatistics = lock.read {
-        val allCommands = getAllCommands(enabledOnly = false)
+    suspend fun getStatistics(): RegistryStatistics = mutex.withLock {
+        val allCommands = getAllCommandsUnlocked(enabledOnly = false)
         val enabledCount = allCommands.count { it.enabled }
 
         val byCategory = allCommands.groupBy { it.category }
@@ -505,8 +515,8 @@ class DynamicCommandRegistry(
      * @param namespace Namespace to query
      * @return Statistics for the namespace
      */
-    suspend fun getNamespaceStatistics(namespace: String): Result<NamespaceStatistics> = lock.read {
-        val ns = namespaces[namespace] ?: return@read Result.failure(
+    suspend fun getNamespaceStatistics(namespace: String): Result<NamespaceStatistics> = mutex.withLock {
+        val ns = namespaces[namespace] ?: return@withLock Result.failure(
             NoSuchElementException("Namespace '$namespace' not found")
         )
 
@@ -518,8 +528,8 @@ class DynamicCommandRegistry(
      *
      * @return Conflict statistics
      */
-    suspend fun generateConflictReport(): ConflictStatistics = lock.read {
-        val allCommands = getAllCommands(enabledOnly = false)
+    suspend fun generateConflictReport(): ConflictStatistics = mutex.withLock {
+        val allCommands = getAllCommandsUnlocked(enabledOnly = false)
         conflictDetector.generateConflictReport(allCommands)
     }
 

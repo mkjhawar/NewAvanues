@@ -1,6 +1,7 @@
 package com.augmentalis.voiceos.service
 
 import android.util.Log
+import java.util.Collections
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -236,7 +237,9 @@ object OverlayStateManager {
      *
      * @param newItems Items from the current screen state
      */
-    private val avidToNumber = linkedMapOf<String, Int>()  // preserves insertion order (optional)
+    // synchronizedMap preserves insertion order (LinkedHashMap) while making all operations thread-safe.
+    // Explicit synchronization is still required when iterating (trimCacheIfNeeded).
+    private val avidToNumber: MutableMap<String, Int> = Collections.synchronizedMap(LinkedHashMap())
     private var maxAssignedNumber = 0
     fun updateNumberedOverlayItemsIncremental(newItems: List<NumberOverlayItem>) {
 
@@ -267,18 +270,21 @@ object OverlayStateManager {
     }
 
     private fun trimCacheIfNeeded() {
-        if (avidToNumber.size <= 500) return
+        // Per Collections.synchronizedMap contract, iteration must be within a
+        // synchronized block on the map itself to prevent ConcurrentModificationException.
+        synchronized(avidToNumber) {
+            if (avidToNumber.size <= 500) return
 
-        // remove oldest entries (LRU-ish because LinkedHashMap keeps order)
-        val removeCount = avidToNumber.size - 500
-        val iterator = avidToNumber.entries.iterator()
-        repeat(removeCount) {
-            if (iterator.hasNext()) {
-                iterator.next()
-                iterator.remove()
+            // remove oldest entries (LRU-ish because LinkedHashMap keeps insertion order)
+            val removeCount = avidToNumber.size - 500
+            val iterator = avidToNumber.entries.iterator()
+            repeat(removeCount) {
+                if (iterator.hasNext()) {
+                    iterator.next()
+                    iterator.remove()
+                }
             }
         }
-
         // NOTE: maxAssignedNumber keeps increasing; that’s OK for uniqueness.
     }
 

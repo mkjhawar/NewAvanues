@@ -81,59 +81,97 @@ class EmbeddingEncryptionManager(private val context: Context) {
         private const val KEY_VERSION_2 = 2
     }
 
-    private val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
-        load(null)
+    // All three backing resources are initialized with a null-safe pattern.
+    // If any of them fail (e.g., hardware keystore unavailable, encrypted prefs
+    // failure on emulator/test device), the manager degrades gracefully instead of
+    // crashing. Callers should check isEncryptionEnabled() before use.
+
+    private val keyStore: KeyStore? = try {
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to initialise Android KeyStore — encryption unavailable")
+        null
     }
 
-    private val masterKey: MasterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    private val masterKey: MasterKey? = try {
+        MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to create MasterKey — encrypted prefs unavailable")
+        null
+    }
 
-    private val encryptedPrefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        PREFS_FILE_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val encryptedPrefs: SharedPreferences? = try {
+        masterKey?.let { mk ->
+            EncryptedSharedPreferences.create(
+                context,
+                PREFS_FILE_NAME,
+                mk,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to create EncryptedSharedPreferences — falling back to no encryption")
+        null
+    }
+
+    // true only when all backing resources are available
+    private val encryptionAvailable: Boolean
+        get() = keyStore != null && masterKey != null && encryptedPrefs != null
 
     init {
-        // Ensure encryption key exists
-        if (!keyExists(KEY_ALIAS)) {
-            generateKey(KEY_ALIAS)
-            encryptedPrefs.edit()
-                .putInt(PREF_CURRENT_KEY_VERSION, KEY_VERSION_1)
-                .putBoolean(PREF_ENCRYPTION_ENABLED, true)
-                .apply()
-            Timber.i("Generated new encryption key: $KEY_ALIAS")
+        // Ensure encryption key exists. Wrapped in try-catch so that a keystore
+        // failure (hardware module unavailable, emulator without secure storage, etc.)
+        // does NOT crash the constructor. Encryption will simply be disabled.
+        try {
+            if (encryptionAvailable && !keyExists(KEY_ALIAS)) {
+                generateKey(KEY_ALIAS)
+                encryptedPrefs!!.edit()
+                    .putInt(PREF_CURRENT_KEY_VERSION, KEY_VERSION_1)
+                    .putBoolean(PREF_ENCRYPTION_ENABLED, true)
+                    .apply()
+                Timber.i("Generated new encryption key: $KEY_ALIAS")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "EmbeddingEncryptionManager: key generation failed in init — encryption disabled. Reason: ${e.message}")
         }
     }
 
     /**
-     * Check if encryption is enabled
+     * Check if encryption is enabled.
+     * Returns false when the backing keystore or prefs are unavailable.
      */
     fun isEncryptionEnabled(): Boolean {
-        return encryptedPrefs.getBoolean(PREF_ENCRYPTION_ENABLED, true)
+        if (!encryptionAvailable) return false
+        return encryptedPrefs!!.getBoolean(PREF_ENCRYPTION_ENABLED, true)
     }
 
     /**
-     * Enable or disable encryption
+     * Enable or disable encryption.
      *
      * Note: Disabling encryption only affects new data.
      * Existing encrypted data must be migrated separately.
+     * No-op when encryption infrastructure is unavailable.
      */
     fun setEncryptionEnabled(enabled: Boolean) {
-        encryptedPrefs.edit()
+        if (!encryptionAvailable) {
+            Timber.w("setEncryptionEnabled($enabled) ignored — encryption infrastructure unavailable")
+            return
+        }
+        encryptedPrefs!!.edit()
             .putBoolean(PREF_ENCRYPTION_ENABLED, enabled)
             .apply()
         Timber.i("Encryption ${if (enabled) "enabled" else "disabled"}")
     }
 
     /**
-     * Get current key version
+     * Get current key version.
+     * Returns KEY_VERSION_1 as default when prefs are unavailable.
      */
     fun getCurrentKeyVersion(): Int {
-        return encryptedPrefs.getInt(PREF_CURRENT_KEY_VERSION, KEY_VERSION_1)
+        return encryptedPrefs?.getInt(PREF_CURRENT_KEY_VERSION, KEY_VERSION_1) ?: KEY_VERSION_1
     }
 
     /**
@@ -150,6 +188,9 @@ class EmbeddingEncryptionManager(private val context: Context) {
      */
     fun encryptEmbedding(embedding: FloatArray): ByteArray {
         return try {
+            if (!encryptionAvailable) {
+                throw EncryptionException("Encryption infrastructure unavailable (KeyStore/MasterKey/EncryptedPrefs failed to initialise)")
+            }
             val keyVersion = getCurrentKeyVersion()
             val keyAlias = getKeyAliasForVersion(keyVersion)
             val key = getKey(keyAlias)
@@ -193,6 +234,9 @@ class EmbeddingEncryptionManager(private val context: Context) {
      */
     fun decryptEmbedding(encryptedData: ByteArray): FloatArray {
         return try {
+            if (!encryptionAvailable) {
+                throw DecryptionException("Encryption infrastructure unavailable (KeyStore/MasterKey/EncryptedPrefs failed to initialise)")
+            }
             val buffer = ByteBuffer.wrap(encryptedData)
 
             // Read version
@@ -279,6 +323,10 @@ class EmbeddingEncryptionManager(private val context: Context) {
      * @return New key version
      */
     fun rotateKey(): Int {
+        if (!encryptionAvailable) {
+            Timber.w("rotateKey() ignored — encryption infrastructure unavailable")
+            return getCurrentKeyVersion()
+        }
         val currentVersion = getCurrentKeyVersion()
         val newVersion = currentVersion + 1
         val newKeyAlias = getKeyAliasForVersion(newVersion)
@@ -287,7 +335,7 @@ class EmbeddingEncryptionManager(private val context: Context) {
         generateKey(newKeyAlias)
 
         // Update version
-        encryptedPrefs.edit()
+        encryptedPrefs!!.edit()
             .putInt(PREF_CURRENT_KEY_VERSION, newVersion)
             .apply()
 
@@ -300,7 +348,7 @@ class EmbeddingEncryptionManager(private val context: Context) {
      */
     private fun keyExists(alias: String): Boolean {
         return try {
-            keyStore.containsAlias(alias)
+            keyStore?.containsAlias(alias) ?: false
         } catch (e: Exception) {
             Timber.e(e, "Failed to check key existence: $alias")
             false
@@ -344,7 +392,7 @@ class EmbeddingEncryptionManager(private val context: Context) {
      */
     private fun getKey(alias: String): SecretKey? {
         return try {
-            keyStore.getKey(alias, null) as? SecretKey
+            keyStore?.getKey(alias, null) as? SecretKey
         } catch (e: Exception) {
             Timber.e(e, "Failed to get key: $alias")
             null

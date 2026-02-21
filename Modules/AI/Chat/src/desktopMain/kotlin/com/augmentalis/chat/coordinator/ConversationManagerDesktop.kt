@@ -139,7 +139,15 @@ class ConversationManagerDesktop : IConversationManager {
     // ==================== Conversation Operations ====================
 
     override suspend fun createNewConversation(title: String): Result<String> = storageMutex.withLock {
-        try {
+        _createNewConversation(title)
+    }
+
+    /**
+     * Internal create-new-conversation that assumes the storageMutex is already held.
+     * Called directly from deleteConversation to avoid re-entrant lock acquisition.
+     */
+    private fun _createNewConversation(title: String = "New Conversation"): Result<String> {
+        return try {
             val id = UUID.randomUUID().toString()
             val now = Clock.System.now().toEpochMilliseconds()
 
@@ -179,7 +187,15 @@ class ConversationManagerDesktop : IConversationManager {
     }
 
     override suspend fun switchConversation(conversationId: String): Result<Unit> = storageMutex.withLock {
-        try {
+        _switchConversation(conversationId)
+    }
+
+    /**
+     * Internal switch-conversation that assumes the storageMutex is already held.
+     * Called directly from deleteConversation to avoid re-entrant lock acquisition.
+     */
+    private fun _switchConversation(conversationId: String): Result<Unit> {
+        return try {
             if (!conversationStore.containsKey(conversationId)) {
                 return Result.Error(
                     exception = IllegalArgumentException("Conversation not found"),
@@ -188,7 +204,14 @@ class ConversationManagerDesktop : IConversationManager {
             }
 
             _activeConversationId.value = conversationId
-            loadMessages(conversationId)
+            // loadMessages does not acquire storageMutex, so it is safe to call here
+            val allMessages = messageStore[conversationId] ?: mutableListOf()
+            _totalMessageCount.value = allMessages.size
+            _messageOffset.value = 0
+            val startIndex = maxOf(0, allMessages.size - pageSize)
+            _messages.value = allMessages.subList(startIndex, allMessages.size).toList()
+            _hasMoreMessages.value = startIndex > 0
+
             saveActiveConversationId(conversationId)
 
             println("[ConversationManagerDesktop] Switched to conversation: $conversationId")
@@ -212,13 +235,15 @@ class ConversationManagerDesktop : IConversationManager {
                 .sortedByDescending { it.updatedAt }
                 .toList()
 
-            // If deleted conversation was active, switch to most recent
+            // If deleted conversation was active, switch to most recent.
+            // Call private helpers directly — storageMutex is already held here;
+            // calling the public overrides would deadlock (Mutex is not re-entrant).
             if (_activeConversationId.value == conversationId) {
                 val mostRecent = conversationStore.values.maxByOrNull { it.updatedAt }
                 if (mostRecent != null) {
-                    switchConversation(mostRecent.id)
+                    _switchConversation(mostRecent.id)
                 } else {
-                    createNewConversation()
+                    _createNewConversation()
                 }
             }
 

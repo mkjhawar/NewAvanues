@@ -19,6 +19,7 @@ import com.augmentalis.llm.alc.models.LoadedModel
 import com.augmentalis.llm.alc.models.ModelConfig
 import com.augmentalis.llm.alc.models.ModelLoadException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
@@ -58,10 +59,14 @@ class TVMModelLoader(
                     modelUrl = config.modelPath // modelPath should be HuggingFace URL
                 )
 
-                // Download with progress tracking (collect first item to ensure download starts)
-                downloader.downloadModel(downloadConfig).first()
+                // Wait until the download flow emits a completion event before proceeding.
+                // Using .first() alone would return the first 0% progress emission immediately,
+                // leaving the model absent on disk when getModelPath() is called below.
+                downloader.downloadModel(downloadConfig)
+                    .filter { it.isComplete }
+                    .first()
 
-                Timber.i("Model download initiated: ${config.modelName}")
+                Timber.i("Model download complete: ${config.modelName}")
             }
 
             // Step 3: Get local model path (may be from extracted .amm archive)
