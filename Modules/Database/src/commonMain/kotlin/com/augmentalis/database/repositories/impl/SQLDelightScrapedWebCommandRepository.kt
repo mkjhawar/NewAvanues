@@ -8,6 +8,8 @@ import com.augmentalis.database.dto.toScrapedWebCommandDTO
 import com.augmentalis.database.repositories.IScrapedWebCommandRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class SQLDelightScrapedWebCommandRepository(
     private val database: VoiceOSDatabase
@@ -109,7 +111,7 @@ class SQLDelightScrapedWebCommandRepository(
     }
 
     override suspend fun updateSynonyms(id: Long, synonyms: List<String>) = withContext(Dispatchers.Default) {
-        val json = synonyms.joinToString(prefix = "[", postfix = "]") { "\"$it\"" }
+        val json = Json.encodeToString(synonyms)
         queries.addSynonym(json, id)
     }
 

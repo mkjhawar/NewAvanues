@@ -202,6 +202,7 @@ object NumberToWords {
      */
     fun convert(number: Long, system: NumberSystem = defaultSystem): String {
         if (number == 0L) return "zero"
+        if (number == Long.MIN_VALUE) return "negative ${convert(Long.MAX_VALUE, system)}" // -Long.MIN_VALUE overflows
         if (number < 0L) return "negative ${convert(-number, system)}"
 
         return when (system) {

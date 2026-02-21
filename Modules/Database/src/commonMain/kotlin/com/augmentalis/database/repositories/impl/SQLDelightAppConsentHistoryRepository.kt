@@ -29,13 +29,13 @@ class SQLDelightAppConsentHistoryRepository(
 
     override suspend fun insert(packageName: String, userChoice: String, timestamp: Long): Long =
         withContext(Dispatchers.Default) {
-            queries.insertConsentRecord(
-                package_name = packageName,
-                user_choice = userChoice,
-                timestamp = timestamp
-            )
             queries.transactionWithResult {
-                queries.count().executeAsOne()
+                queries.insertConsentRecord(
+                    package_name = packageName,
+                    user_choice = userChoice,
+                    timestamp = timestamp
+                )
+                queries.lastInsertRowId().executeAsOne()
             }
         }
 

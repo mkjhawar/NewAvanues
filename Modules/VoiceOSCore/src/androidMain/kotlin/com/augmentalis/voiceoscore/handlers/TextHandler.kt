@@ -105,15 +105,28 @@ class TextHandler(
     private fun performDelete(node: AccessibilityNodeInfo?): HandlerResult {
         if (node == null) return HandlerResult.failure("No text field focused")
         return try {
-            // Clear text by setting it to empty
+            val text = node.text?.toString() ?: return HandlerResult.failure("No text to delete")
+            if (text.isEmpty()) return HandlerResult.success("Field already empty")
+
+            // Get selection bounds — if text is selected, delete selection; otherwise delete last char
+            val selStart = node.textSelectionStart
+            val selEnd = node.textSelectionEnd
+            val newText = if (selStart >= 0 && selEnd > selStart) {
+                // Delete selected text
+                text.removeRange(selStart, selEnd)
+            } else {
+                // Delete last character (backspace behavior)
+                text.dropLast(1)
+            }
+
             val args = Bundle().apply {
                 putCharSequence(
                     AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                    ""
+                    newText
                 )
             }
             val success = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-            if (success) HandlerResult.success("Text deleted")
+            if (success) HandlerResult.success("Character deleted")
             else HandlerResult.failure("Failed to delete text")
         } catch (e: Exception) {
             HandlerResult.failure("Delete failed: ${e.message}")

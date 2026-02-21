@@ -331,10 +331,7 @@ class VoiceOSDatabaseManager private constructor(
      */
     suspend fun <T> transaction(block: suspend () -> T): T {
         return _database.transactionWithResult {
-            // Note: This is a simplified version - actual implementation
-            // would need coroutine-compatible transaction handling
-            @Suppress("UNCHECKED_CAST")
-            block as T
+            kotlinx.coroutines.runBlocking { block() }
         }
     }
 
