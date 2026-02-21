@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-21 — Added VLM encryption (Section 14), Google Cloud STT v2 (Section 15), jvmMain shared source set, shared model storage
+**Updated**: 2026-02-22 — Whisper engine full sweep (vadSensitivity, unified confidence, platform perf fixes), VLM encryption (Section 14), Google Cloud STT v2 (Section 15)
 
 ---
 
@@ -240,6 +240,7 @@ val config = WhisperConfig(
     language = "en",                        // BCP-47 language code
     translateToEnglish = false,             // Whisper translation feature
     numThreads = 0,                         // 0 = auto (cores/2, max 4)
+    vadSensitivity = 0.6f,                  // 0.0 (least sensitive) → 1.0 (most sensitive)
     silenceThresholdMs = 700,               // VAD silence duration
     minSpeechDurationMs = 300,              // Minimum utterance length
     maxChunkDurationMs = 30_000             // Max before forced transcription
@@ -257,6 +258,7 @@ val config = IosWhisperConfig(
     language = "en",
     translateToEnglish = false,
     numThreads = 0,                        // 0 = auto (cores/2, max 4)
+    vadSensitivity = 0.6f,                 // 0.0 (least) → 1.0 (most sensitive)
     silenceThresholdMs = 700,
     minSpeechDurationMs = 300,
     maxChunkDurationMs = 30_000
@@ -266,7 +268,7 @@ val config = IosWhisperConfig(
 val config = IosWhisperConfig.autoTuned(language = "en")
 ```
 
-**Key difference from Android**: Model storage at `NSSearchPathForDirectoriesInDomains(DocumentDirectory)`, downloads via `NSURLSession`, audio via `AVAudioEngine`.
+**Key differences from Android**: Model storage at `NSSearchPathForDirectoriesInDomains(DocumentDirectory)`, downloads via `NSURLSession.downloadTaskWithRequest` (streams to disk — avoids OOM for large models), audio via `AVAudioEngine` with FIR anti-aliasing filter for downsampling.
 
 ### 3.3 Desktop — DesktopWhisperConfig
 
@@ -274,10 +276,11 @@ val config = IosWhisperConfig.autoTuned(language = "en")
 val config = DesktopWhisperConfig(
     modelSize = WhisperModelSize.SMALL_EN,  // Desktop can handle larger models
     numThreads = 0,                          // 0 = auto (cores/2, max 8)
-    language = "en"
+    language = "en",
+    vadSensitivity = 0.6f                    // 0.0 (least) → 1.0 (most sensitive)
 )
 
-// Auto-tuned:
+// Auto-tuned (uses physical RAM via OperatingSystemMXBean, not JVM heap):
 val config = DesktopWhisperConfig.autoTuned(language = "en")
 ```
 
@@ -397,16 +400,17 @@ The VAD algorithm lives in commonMain and is shared across platforms.
 ### 5.1 Algorithm
 
 1. **Energy calculation**: RMS of audio samples per frame
-2. **Adaptive threshold**: Noise floor estimation from silence, speech threshold = noise floor * sensitivity multiplier
+2. **Adaptive threshold**: Noise floor estimation from silence, speech threshold = noise floor * sensitivity multiplier (derived from `vadSensitivity`)
 3. **State machine**: SILENCE -> SPEECH -> HANGOVER -> SILENCE
 4. **Hangover timer**: Prevents premature cutoff during brief pauses
-5. **Padding buffer**: Preserves pre-speech audio (150ms) for natural starts
+5. **Padding buffer**: `ArrayDeque<Float>` ring buffer preserving pre-speech audio (150ms) for natural starts — O(1) operations via `addLast()`/`removeFirst()`
 
 ### 5.2 Configuration
 
 ```kotlin
 WhisperVAD(
     speechThreshold = 0f,        // 0 = auto-calibrate from noise floor
+    vadSensitivity = 0.6f,       // 0.0 (least sensitive, 5.0x multiplier) → 1.0 (most sensitive, 1.5x)
     silenceTimeoutMs = 700,      // Silence before finalizing chunk
     minSpeechDurationMs = 300,   // Minimum valid utterance
     maxSpeechDurationMs = 30000, // Max before forced transcription
@@ -415,6 +419,19 @@ WhisperVAD(
     sampleRate = 16000           // Audio sample rate
 )
 ```
+
+### 5.3 Sensitivity Mapping
+
+The `vadSensitivity` parameter (0.0-1.0) controls the noise floor multiplier for adaptive threshold calculation:
+
+| vadSensitivity | Multiplier | Behavior |
+|---|---|---|
+| 0.0 (least sensitive) | 5.0x noise floor | Only loud, clear speech triggers detection |
+| 0.5 (moderate) | 3.25x noise floor | Balanced sensitivity (default-equivalent) |
+| 0.6 (default) | 2.9x noise floor | Slightly more sensitive than moderate |
+| 1.0 (most sensitive) | 1.5x noise floor | Triggers on quieter speech, may pick up background noise |
+
+Formula: `multiplier = 5.0 - vadSensitivity * 3.5`
 
 ---
 
@@ -429,11 +446,32 @@ segment_confidence = sum(token_probabilities) / token_count
 overall_confidence = sum(segment_confidences) / segment_count
 ```
 
-### 6.2 Graceful Fallback
+### 6.2 Unavailable Confidence Handling
 
-If the native JNI methods for confidence are not yet compiled (UnsatisfiedLinkError), the engine falls back to a default confidence of 0.85f. This allows the Kotlin layer to work independently of the native library version.
+When native token probability methods are not linked (`UnsatisfiedLinkError` on JNI, or cinterop failure on iOS), the native layer returns `CONFIDENCE_UNAVAILABLE = -1f` sentinel value. The engine then:
 
-### 6.3 TranscriptionResult Fields
+1. Tracks a `hasRealConfidence` flag across segments
+2. Reports `avgConfidence = 0f` when no real confidence is available (falls into REJECT level)
+3. Logs a one-time WARNING (Android only) — subsequent occurrences are silent
+
+This honest reporting (instead of the previous fake `DEFAULT_CONFIDENCE = 0.85f` which fell at the HIGH threshold) lets the unified ConfidenceScorer system properly classify results.
+
+### 6.3 Unified Confidence Levels (Vivoka/VOSK/Whisper)
+
+All engines use the same ConfidenceScorer thresholds, emitting `confidence_level` in metadata:
+
+| Level | Threshold | UI Action | Color |
+|---|---|---|---|
+| HIGH | >= 0.85 | Execute immediately | Green |
+| MEDIUM | 0.70 - 0.85 | Ask confirmation | Yellow |
+| LOW | 0.50 - 0.70 | Show alternatives | Orange |
+| REJECT | < 0.50 | Command not recognized | Red |
+
+- **Android**: Uses `ConfidenceScorer.createResult()` with `RecognitionEngine.WHISPER`
+- **Desktop/iOS**: Uses inline threshold classification (same constants)
+- **Metadata**: `confidence_level` (HIGH/MEDIUM/LOW/REJECT) + `scoring_method` (WHISPER)
+
+### 6.4 TranscriptionResult Fields
 
 ```kotlin
 data class TranscriptionResult(
