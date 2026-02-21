@@ -191,7 +191,7 @@ AvanuesSettingsCodec.encode(settings, writer)
 
 | Class | Backing | Notes |
 |-------|---------|-------|
-| `UserDefaultsSettingsStore<T>` | `NSUserDefaults` | Reactive via `NSUserDefaultsDidChangeNotification` |
+| `UserDefaultsSettingsStore<T>` | `NSUserDefaults` | Reactive via `NSUserDefaultsDidChangeNotification`. `update()` uses Mutex for atomic read-modify-write |
 | `KeychainCredentialStore` | iOS Keychain (Security framework) | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` |
 | `IosFileSystem` | `NSFileManager` | Documents + Library paths |
 | `IosPermissionChecker` | Stubs | Real permission requests via Swift layer |
@@ -212,7 +212,7 @@ val fileSystem = IosFileSystem()
 | Class | Backing | Notes |
 |-------|---------|-------|
 | `JavaPreferencesSettingsStore<T>` | `java.util.prefs.Preferences` | Reactive via `PreferenceChangeListener` |
-| `DesktopCredentialStore` | `java.util.prefs.Preferences` + Base64 | Not cryptographic; use OS keyring for production |
+| `DesktopCredentialStore` | `java.util.prefs.Preferences` + AES-256-GCM | Machine-derived key at `~/.avanues/credential.key`; ciphertext = [12B IV][GCM ciphertext+tag] → Base64 |
 | `DesktopFileSystem` | `java.nio.file` | User home + Documents + ~/.avanues |
 | `DesktopPermissionChecker` | All `true` | Desktop has no runtime permission model |
 
@@ -271,7 +271,7 @@ Modules/Foundation/src/
   desktopMain/kotlin/com/augmentalis/foundation/
     settings/
       JavaPreferencesSettingsStore.kt  # ISettingsStore<T> via java.util.prefs
-      DesktopCredentialStore.kt        # ICredentialStore via Preferences+Base64
+      DesktopCredentialStore.kt        # ICredentialStore via Preferences+AES-256-GCM
     platform/
       DesktopFileSystem.kt            # IFileSystem via java.nio.file
       DesktopPermissionChecker.kt     # IPermissionChecker (all true)
