@@ -6,6 +6,8 @@
 package com.augmentalis.foundation.settings
 
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.prefs.Preferences
@@ -90,12 +92,23 @@ class DesktopCredentialStore : ICredentialStore {
             }
 
             // Generate new key
-            keyDir.mkdirs()
             val keyBytes = ByteArray(KEY_LENGTH).also { SecureRandom().nextBytes(it) }
-            keyFile.writeBytes(keyBytes)
-            // Restrict permissions on Unix-like systems
-            try { keyFile.setReadable(false, false); keyFile.setReadable(true, true) } catch (_: Exception) {}
-            try { keyFile.setWritable(false, false); keyFile.setWritable(true, true) } catch (_: Exception) {}
+            try {
+                // POSIX systems (macOS/Linux): create file with owner-only permissions atomically.
+                // This avoids the TOCTOU race where the file is momentarily world-readable.
+                val ownerOnly = PosixFilePermissions.asFileAttribute(
+                    PosixFilePermissions.fromString("rw-------")
+                )
+                Files.createDirectories(keyDir.toPath())
+                Files.createFile(keyFile.toPath(), ownerOnly)
+                Files.write(keyFile.toPath(), keyBytes)
+            } catch (e: UnsupportedOperationException) {
+                // Non-POSIX (Windows): fall back to write-then-restrict
+                keyDir.mkdirs()
+                keyFile.writeBytes(keyBytes)
+                try { keyFile.setReadable(false, false); keyFile.setReadable(true, true) } catch (_: Exception) {}
+                try { keyFile.setWritable(false, false); keyFile.setWritable(true, true) } catch (_: Exception) {}
+            }
             return SecretKeySpec(keyBytes, "AES")
         }
     }
