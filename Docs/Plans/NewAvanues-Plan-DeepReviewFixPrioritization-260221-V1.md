@@ -303,12 +303,12 @@ Pervasive Rule 3 violations. **30+ files** across:
 | 3 | P1 | Crashes & Deadlocks | 22 | 1 | **DONE** (260221, `db6c1a52`) — C1-C2 deferred (HTTP/2) |
 | 4 | P2 | Non-Functional Modules | 16 | Decision needed | Pending |
 | 5 | P2 | KMP Compilation | 22 | 1 | **DONE** (260221, `32bc44d5`) — K18 fixed in Batch 3 |
-| 6 | P2 | Threading / Concurrency | 20 | 3 | Pending |
+| 6 | P2 | Threading / Concurrency | 20 | 3 | **DONE** (260221, `c24ba00f` + `47bbdb26`) — T1 skipped (IPC non-functional) |
 | 7 | P3 | Theme Violations | 30+ | 2-3 | Pending |
 | 8 | P3 | AI Attribution | 53 | 0.5 | **DONE** (260221, `2b6cd3c8` + `0bb87e3f`) |
-| 9 | P3 | Resource Leaks | 12 | 2 | Pending |
-| 10 | P3 | Hardcoded Stubs | 19 | 3 | Pending |
-| | | **TOTAL** | **~185** | **~25** | **5/10 done** |
+| 9 | P3 | Resource Leaks | 12 | 2 | Partial — 5/12 fixed in `e241919c` (DesktopImageController, NoteRAGIndexer, PluginLifecycleManager, AvaGrpcClient, VideoPlayer) |
+| 10 | P3 | Hardcoded Stubs | 19 | 3 | Partial — 2/19 fixed in `e241919c` (ContentRenderer stub, CommandBar icons) |
+| | | **TOTAL** | **~185** | **~25** | **6/10 done** |
 
 ---
 
