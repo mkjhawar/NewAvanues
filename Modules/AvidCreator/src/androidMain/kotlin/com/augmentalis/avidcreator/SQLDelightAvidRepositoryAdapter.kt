@@ -76,6 +76,8 @@ class SQLDelightAvidRepositoryAdapter(
     @Volatile
     private var isLoaded = false
 
+    private val loadLock = Any()
+
     // ==================== Lazy Loading ====================
 
     /**
@@ -83,43 +85,47 @@ class SQLDelightAvidRepositoryAdapter(
      */
     suspend fun loadCache() = withContext(dispatcher) {
         if (!isLoaded) {
-            // Load all elements from database
-            val elementDTOs = repository.getAllElements()
-            val hierarchyDTOs = repository.getAllHierarchy()
-            val aliasDTOs = repository.getAllAliases()
+            synchronized(loadLock) {
+                if (!isLoaded) {
+                    // Load all elements from database
+                    val elementDTOs = repository.getAllElements()
+                    val hierarchyDTOs = repository.getAllHierarchy()
+                    val aliasDTOs = repository.getAllAliases()
 
-            // Build children map from hierarchy relationships
-            val childrenMap = hierarchyDTOs
-                .groupBy { it.parentAvid }
-                .mapValues { (_, hierarchies) ->
-                    hierarchies.sortedBy { it.orderIndex }
-                        .map { it.childAvid }
-                        .toMutableList()
-                }
+                    // Build children map from hierarchy relationships
+                    val childrenMap = hierarchyDTOs
+                        .groupBy { it.parentAvid }
+                        .mapValues { (_, hierarchies) ->
+                            hierarchies.sortedBy { it.orderIndex }
+                                .map { it.childAvid }
+                                .toMutableList()
+                        }
 
-            // Convert DTOs to models and populate cache
-            elementDTOs.forEach { dto ->
-                val element = dto.toModel(
-                    children = childrenMap[dto.avid] ?: mutableListOf()
-                )
-                elementsCache[element.avid] = element
+                    // Convert DTOs to models and populate cache
+                    elementDTOs.forEach { dto ->
+                        val element = dto.toModel(
+                            children = childrenMap[dto.avid] ?: mutableListOf()
+                        )
+                        elementsCache[element.avid] = element
 
-                // Build indexes
-                element.name?.let { name ->
-                    nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.avid)
-                }
-                typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.avid)
-                element.parent?.let { parent ->
-                    hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.avid)
+                        // Build indexes
+                        element.name?.let { name ->
+                            nameIndex.getOrPut(name.lowercase()) { mutableSetOf() }.add(element.avid)
+                        }
+                        typeIndex.getOrPut(element.type.lowercase()) { mutableSetOf() }.add(element.avid)
+                        element.parent?.let { parent ->
+                            hierarchyIndex.getOrPut(parent) { mutableSetOf() }.add(element.avid)
+                        }
+                    }
+
+                    // Build alias index
+                    aliasDTOs.forEach { aliasDTO ->
+                        aliasIndex[aliasDTO.alias] = aliasDTO.avid
+                    }
+
+                    isLoaded = true
                 }
             }
-
-            // Build alias index
-            aliasDTOs.forEach { aliasDTO ->
-                aliasIndex[aliasDTO.alias] = aliasDTO.avid
-            }
-
-            isLoaded = true
         }
     }
 

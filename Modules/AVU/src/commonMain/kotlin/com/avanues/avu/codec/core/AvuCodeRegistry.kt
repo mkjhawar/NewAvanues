@@ -37,6 +37,7 @@ object AvuCodeRegistry {
      * @param info The code metadata
      * @throws IllegalArgumentException if code is already registered with different info
      */
+    @Synchronized
     fun register(info: AvuCodeInfo) {
         val existing = codes[info.code]
         if (existing != null && existing != info) {
@@ -53,6 +54,7 @@ object AvuCodeRegistry {
      *
      * @param infos List of code metadata
      */
+    @Synchronized
     fun registerAll(vararg infos: AvuCodeInfo) {
         infos.forEach { register(it) }
     }
@@ -63,6 +65,7 @@ object AvuCodeRegistry {
      * @param code The 3-letter code
      * @return Code info or null if not registered
      */
+    @Synchronized
     fun get(code: String): AvuCodeInfo? = codes[code]
 
     /**
@@ -71,6 +74,7 @@ object AvuCodeRegistry {
      * @param category The code category
      * @return List of codes in that category
      */
+    @Synchronized
     fun getByCategory(category: AvuCodeCategory): List<AvuCodeInfo> {
         return codesByCategory[category]?.toList() ?: emptyList()
     }
@@ -80,6 +84,7 @@ object AvuCodeRegistry {
      *
      * @return Map of code to info
      */
+    @Synchronized
     fun getAll(): Map<String, AvuCodeInfo> = codes.toMap()
 
     /**
@@ -88,6 +93,7 @@ object AvuCodeRegistry {
      * @param code The 3-letter code
      * @return true if registered
      */
+    @Synchronized
     fun isRegistered(code: String): Boolean = codes.containsKey(code)
 
     /**
@@ -97,6 +103,7 @@ object AvuCodeRegistry {
      * @param includeDescriptions Whether to include descriptions
      * @return Formatted legend string
      */
+    @Synchronized
     fun generateLegend(
         filter: Set<String>? = null,
         includeDescriptions: Boolean = false
@@ -127,6 +134,7 @@ object AvuCodeRegistry {
      * @param codes Set of codes to include
      * @return Compact legend string
      */
+    @Synchronized
     fun generateCompactLegend(codes: Set<String>): String = buildString {
         appendLine("codes:")
         codes.sorted().forEach { code ->
@@ -141,6 +149,7 @@ object AvuCodeRegistry {
      *
      * @return Markdown-formatted documentation
      */
+    @Synchronized
     fun generateDocumentation(): String = buildString {
         appendLine("# AVU Code Reference")
         appendLine()
@@ -164,6 +173,7 @@ object AvuCodeRegistry {
      * @param message The AVU message string
      * @return Validation result
      */
+    @Synchronized
     fun validate(message: String): ValidationResult {
         if (message.length < 4) {
             return ValidationResult.Invalid("Message too short")
@@ -198,6 +208,7 @@ object AvuCodeRegistry {
     /**
      * Clear all registered codes (useful for testing).
      */
+    @Synchronized
     fun clear() {
         codes.clear()
         codesByCategory.clear()
@@ -206,6 +217,7 @@ object AvuCodeRegistry {
     /**
      * Get count of registered codes.
      */
+    @Synchronized
     fun count(): Int = codes.size
 }
 
