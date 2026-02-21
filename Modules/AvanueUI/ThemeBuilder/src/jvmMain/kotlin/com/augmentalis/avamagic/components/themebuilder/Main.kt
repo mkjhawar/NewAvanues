@@ -49,6 +49,9 @@ fun ThemeBuilderApp() {
     val state by editorWindow.state.collectAsState()
     val scope = rememberCoroutineScope()
 
+    // TODO(RULE3): Replace MaterialTheme{} with AvanueThemeProvider once
+    // project(":Modules:AvanueUI:DesignSystem") is added to ThemeBuilder's jvmMain dependencies.
+    // AvanueThemeProvider(colors = if (state.isDarkMode) HydraColors else HydraColors, isDark = state.isDarkMode) {
     MaterialTheme(
         colorScheme = if (state.isDarkMode) darkColorScheme() else lightColorScheme()
     ) {
@@ -104,11 +107,12 @@ fun TopAppBar(editorWindow: ThemeEditorWindow, state: ThemeBuilderState) {
     TopAppBar(
         title = {
             Column {
+                // TODO(RULE3): MaterialTheme.typography/colorScheme → AvanueTheme.colors once DesignSystem dep added
                 Text("AvaElements Theme Builder", style = MaterialTheme.typography.titleLarge)
                 Text(
                     "Editing: ${state.currentTheme.name}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant // → AvanueTheme.colors.textSecondary
                 )
             }
         },
@@ -141,6 +145,7 @@ fun TopAppBar(editorWindow: ThemeEditorWindow, state: ThemeBuilderState) {
 
             // Toggle Grid
             IconButton(onClick = { editorWindow.toggleGrid() }) {
+                // TODO(RULE3): → AvanueTheme.colors.primary once DesignSystem dep added
                 Icon(Icons.Default.GridOn, "Toggle Grid", tint = if (state.showGrid) MaterialTheme.colorScheme.primary else LocalContentColor.current)
             }
 
@@ -205,10 +210,11 @@ fun ComponentGalleryPanel(
     state: ThemeBuilderState,
     modifier: Modifier = Modifier
 ) {
+    // TODO(RULE3): MaterialTheme.colorScheme/typography → AvanueTheme.colors once DesignSystem dep added
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.surfaceVariant) // → AvanueTheme.colors.surfaceVariant
             .padding(16.dp)
     ) {
         Text(
@@ -230,7 +236,7 @@ fun ComponentGalleryPanel(
                 Text(
                     category,
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.primary, // → AvanueTheme.colors.primary
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
@@ -262,6 +268,7 @@ fun ComponentItem(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clickable(onClick = onClick),
+        // TODO(RULE3): → AvanueTheme.colors.primaryContainer / .surface once DesignSystem dep added
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
         )
@@ -274,10 +281,11 @@ fun ComponentItem(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
+            // TODO(RULE3): → AvanueTheme.colors.textSecondary once DesignSystem dep added
             Text(
                 component.description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant // → AvanueTheme.colors.textSecondary
             )
         }
     }
@@ -292,10 +300,11 @@ fun PreviewCanvasPanel(
     state: ThemeBuilderState,
     modifier: Modifier = Modifier
 ) {
+    // TODO(RULE3): MaterialTheme.colorScheme.background → AvanueTheme.colors.background once DesignSystem dep added
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background) // → AvanueTheme.colors.background
             .padding(24.dp)
     ) {
         Text(
@@ -344,10 +353,11 @@ fun PropertyInspectorPanel(
     state: ThemeBuilderState,
     modifier: Modifier = Modifier
 ) {
+    // TODO(RULE3): MaterialTheme.colorScheme.surfaceVariant → AvanueTheme.colors.surfaceVariant once DesignSystem dep added
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.surfaceVariant) // → AvanueTheme.colors.surfaceVariant
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -398,10 +408,11 @@ fun PropertySection(
     val properties = editorWindow.propertyInspector.getPropertiesByCategory(category)
 
     Column {
+        // TODO(RULE3): MaterialTheme.colorScheme → AvanueTheme.colors once DesignSystem dep added
         Text(
             title,
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary // → AvanueTheme.colors.primary
         )
 
         Spacer(Modifier.height(8.dp))
@@ -414,7 +425,7 @@ fun PropertySection(
             Text(
                 "+${properties.size - 5} more...",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, // → AvanueTheme.colors.textSecondary
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
@@ -458,6 +469,7 @@ fun PropertyRow(
                             ),
                             RoundedCornerShape(4.dp)
                         )
+                        // TODO(RULE3): MaterialTheme.colorScheme.outline → AvanueTheme.colors.border once DesignSystem dep added
                         .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
                 )
             }
@@ -504,12 +516,13 @@ fun ExportDialog(
                 if (exportedCode.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
                     Text("Preview:", style = MaterialTheme.typography.labelMedium)
+                    // TODO(RULE3): MaterialTheme.colorScheme.surfaceVariant → AvanueTheme.colors.surfaceVariant once DesignSystem dep added
                     Text(
                         exportedCode.take(200) + if (exportedCode.length > 200) "..." else "",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)) // → AvanueTheme.colors.surfaceVariant
                             .padding(8.dp)
                     )
                 }
@@ -559,10 +572,11 @@ fun PresetDialog(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(preset.name, fontWeight = FontWeight.Bold)
+                            // TODO(RULE3): MaterialTheme.colorScheme.onSurfaceVariant → AvanueTheme.colors.textSecondary once DesignSystem dep added
                             Text(
                                 preset.description,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant // → AvanueTheme.colors.textSecondary
                             )
                         }
                     }
