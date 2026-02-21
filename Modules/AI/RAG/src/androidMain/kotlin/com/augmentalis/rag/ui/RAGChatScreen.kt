@@ -5,6 +5,7 @@
 
 package com.augmentalis.rag.ui
 
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -198,7 +199,7 @@ private fun SourcesSidebar(
                     Icon(
                         Icons.Default.Source,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = AvanueTheme.colors.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -231,7 +232,7 @@ private fun SourceCard(source: Source) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Row(
@@ -244,7 +245,7 @@ private fun SourceCard(source: Source) {
                 Icons.Default.Description,
                 contentDescription = null,
                 modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = AvanueTheme.colors.primary
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -258,7 +259,7 @@ private fun SourceCard(source: Source) {
                 Text(
                     text = "Page ${source.page ?: "?"} • ${(source.similarity * 100).toInt()}% match",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -290,7 +291,7 @@ private fun ChatPane(
                     .fillMaxWidth()
                     .padding(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
+                    containerColor = AvanueTheme.colors.errorContainer
                 )
             ) {
                 Row(
@@ -300,13 +301,13 @@ private fun ChatPane(
                     Icon(
                         Icons.Default.Warning,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
+                        tint = AvanueTheme.colors.error
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = errorMessage,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
+                        color = AvanueTheme.colors.error,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = onClearError) {
@@ -361,19 +362,19 @@ private fun EmptyChatState() {
             imageVector = Icons.Default.Chat,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Ask a Question",
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "I'll search your documents and provide accurate answers with sources",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -407,9 +408,9 @@ private fun ChatMessageBubble(
             modifier = Modifier.widthIn(max = 320.dp),
             colors = CardDefaults.cardColors(
                 containerColor = if (isUser) {
-                    MaterialTheme.colorScheme.primaryContainer
+                    AvanueTheme.colors.primaryContainer
                 } else {
-                    MaterialTheme.colorScheme.secondaryContainer
+                    AvanueTheme.colors.secondaryContainer
                 }
             ),
             shape = RoundedCornerShape(
@@ -440,7 +441,7 @@ private fun ChatMessageBubble(
                         Text(
                             text = "Generating...",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -465,7 +466,7 @@ private fun ChatMessageBubble(
                 Text(
                     text = dateFormat.format(Date(message.timestamp)),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = AvanueTheme.colors.textSecondary,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -481,7 +482,7 @@ private fun SourceChip(source: Source) {
             .fillMaxWidth()
             .padding(vertical = 2.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(AvanueTheme.colors.surface)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -489,7 +490,7 @@ private fun SourceChip(source: Source) {
             Icons.Default.Description,
             contentDescription = null,
             modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = AvanueTheme.colors.primary
         )
         Spacer(modifier = Modifier.width(6.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -501,7 +502,7 @@ private fun SourceChip(source: Source) {
             Text(
                 text = "Page ${source.page ?: "?"} • ${(source.similarity * 100).toInt()}% match",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }
@@ -543,7 +544,7 @@ private fun ChatInputBar(
                 FilledIconButton(
                     onClick = onStop,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.error
+                        containerColor = AvanueTheme.colors.error
                     )
                 ) {
                     Icon(Icons.Default.Stop, "Stop")
@@ -555,8 +556,8 @@ private fun ChatInputBar(
                     enabled = value.isNotBlank(),
                     modifier = if (value.isNotBlank()) Modifier.gradientBackground() else Modifier,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = if (value.isNotBlank()) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (value.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = if (value.isNotBlank()) Color.Transparent else AvanueTheme.colors.surfaceVariant,
+                        contentColor = if (value.isNotBlank()) Color.White else AvanueTheme.colors.textSecondary
                     )
                 ) {
                     Icon(Icons.Default.Send, "Send")

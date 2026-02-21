@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -179,8 +180,8 @@ private fun SystemIndicator(
             Text(
                 text = text,
                 color = when (state) {
-                    SystemIndicatorState.NOT_LOADED -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
-                    SystemIndicatorState.INITIALIZING -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+                    SystemIndicatorState.NOT_LOADED -> AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.38f)
+                    SystemIndicatorState.INITIALIZING -> AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.38f)
                     SystemIndicatorState.READY -> activeColor
                     SystemIndicatorState.ACTIVE -> {
                         // Apply flash animation if testing mode enabled (REQ-007)
@@ -205,7 +206,7 @@ private fun SystemIndicator(
                 CircularProgressIndicator(
                     modifier = Modifier.size(12.dp),
                     strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                    color = AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.6f)
                 )
             }
         }

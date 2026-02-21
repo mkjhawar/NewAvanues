@@ -1,4 +1,5 @@
 package com.augmentalis.teach
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,7 +40,7 @@ fun AddExampleDialog(
                 .fillMaxWidth()
                 .padding(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = AvanueTheme.colors.surface
             )
         ) {
             Column(
@@ -49,7 +50,7 @@ fun AddExampleDialog(
                 Text(
                     text = "Add Training Example",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = AvanueTheme.colors.textPrimary
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -129,7 +130,7 @@ fun AddExampleDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = errorMessage,
-                        color = MaterialTheme.colorScheme.error,
+                        color = AvanueTheme.colors.error,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

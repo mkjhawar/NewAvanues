@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.augmentalis.ava.core.domain.model.InstalledApp
 import com.augmentalis.ava.core.domain.resolution.AppResolverService
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * Bottom sheet for selecting the preferred app for a capability.
@@ -115,7 +116,7 @@ private fun AppPreferenceContent(
         Text(
             text = "AVA found multiple apps. Which would you like to use?",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -145,7 +146,7 @@ private fun AppPreferenceContent(
             Text(
                 text = "Always ask me",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = AvanueTheme.colors.primary
             )
         }
     }
@@ -171,9 +172,9 @@ private fun AppOptionCard(
             },
         colors = CardDefaults.cardColors(
             containerColor = if (isRecommended) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                AvanueTheme.colors.primaryContainer.copy(alpha = 0.5f)
             } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                AvanueTheme.colors.surfaceVariant.copy(alpha = 0.3f)
             }
         ),
         shape = RoundedCornerShape(12.dp)
@@ -199,13 +200,13 @@ private fun AppOptionCard(
                 Surface(
                     modifier = Modifier.size(48.dp),
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
+                    color = AvanueTheme.colors.surfaceVariant
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = app.appName.take(1).uppercase(),
                             style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -230,13 +231,13 @@ private fun AppOptionCard(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = AvanueTheme.colors.primary
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Recommended",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = AvanueTheme.colors.primary
                         )
                     }
                 }
@@ -246,7 +247,7 @@ private fun AppOptionCard(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "Select ${app.appName}",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = AvanueTheme.colors.textSecondary
             )
         }
     }

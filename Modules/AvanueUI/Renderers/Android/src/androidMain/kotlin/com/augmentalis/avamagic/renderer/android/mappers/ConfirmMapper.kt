@@ -7,6 +7,7 @@ import com.augmentalis.avamagic.ui.core.feedback.ConfirmSeverity
 import com.augmentalis.avamagic.renderer.android.ComponentMapper
 import com.augmentalis.avamagic.renderer.android.ComposeRenderer
 import com.augmentalis.avamagic.renderer.android.ModifierConverter
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * ConfirmMapper - Maps Confirm to Material3 AlertDialog
@@ -17,10 +18,10 @@ class ConfirmMapper : ComponentMapper<Confirm> {
     override fun map(component: Confirm, renderer: ComposeRenderer): @Composable () -> Unit {
         return {
             val (containerColor, contentColor) = when (component.severity) {
-                ConfirmSeverity.INFO -> MaterialTheme.colorScheme.surface to MaterialTheme.colorScheme.onSurface
-                ConfirmSeverity.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-                ConfirmSeverity.ERROR -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-                ConfirmSeverity.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+                ConfirmSeverity.INFO -> AvanueTheme.colors.surface to AvanueTheme.colors.textPrimary
+                ConfirmSeverity.WARNING -> AvanueTheme.colors.tertiaryContainer to AvanueTheme.colors.onTertiaryContainer
+                ConfirmSeverity.ERROR -> AvanueTheme.colors.errorContainer to AvanueTheme.colors.onErrorContainer
+                ConfirmSeverity.SUCCESS -> AvanueTheme.colors.primaryContainer to AvanueTheme.colors.onPrimaryContainer
             }
 
             AlertDialog(
@@ -42,8 +43,8 @@ class ConfirmMapper : ComponentMapper<Confirm> {
                         onClick = { component.onConfirm?.invoke() },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = when (component.severity) {
-                                ConfirmSeverity.ERROR -> MaterialTheme.colorScheme.error
-                                else -> MaterialTheme.colorScheme.primary
+                                ConfirmSeverity.ERROR -> AvanueTheme.colors.error
+                                else -> AvanueTheme.colors.primary
                             }
                         )
                     ) {

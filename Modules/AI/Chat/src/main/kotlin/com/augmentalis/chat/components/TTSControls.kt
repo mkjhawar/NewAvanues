@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.chat.tts.TTSSettings
 import com.augmentalis.chat.tts.VoiceInfo
 import com.augmentalis.chat.tts.VoiceQuality
@@ -59,9 +60,9 @@ fun TTSButton(
             },
             contentDescription = null,
             tint = when {
-                !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                isSpeaking -> MaterialTheme.colorScheme.primary
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                !enabled -> AvanueTheme.colors.textPrimary.copy(alpha = 0.38f)
+                isSpeaking -> AvanueTheme.colors.primary
+                else -> AvanueTheme.colors.textSecondary
             }
         )
     }
@@ -128,7 +129,7 @@ fun TTSSettingsPanel(
                     Icon(
                         imageVector = Icons.Filled.RecordVoiceOver,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = AvanueTheme.colors.primary
                     )
                     Text(
                         text = "Text-to-Speech",
@@ -222,7 +223,7 @@ fun TTSSettingsPanel(
                             Text(
                                 text = "${(settings.speechRate * 100).toInt()}%",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
+                                color = AvanueTheme.colors.primary
                             )
                         }
                         Slider(
@@ -249,7 +250,7 @@ fun TTSSettingsPanel(
                             Text(
                                 text = "${(settings.pitch * 100).toInt()}%",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
+                                color = AvanueTheme.colors.primary
                             )
                         }
                         Slider(
@@ -372,7 +373,7 @@ private fun VoiceSelector(
                                 Text(
                                     text = voice.locale,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = AvanueTheme.colors.textSecondary
                                 )
                             }
                         },
@@ -390,7 +391,7 @@ private fun VoiceSelector(
                                 Icon(
                                     imageVector = Icons.Filled.Cloud,
                                     contentDescription = "Requires network",
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = AvanueTheme.colors.primary,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }

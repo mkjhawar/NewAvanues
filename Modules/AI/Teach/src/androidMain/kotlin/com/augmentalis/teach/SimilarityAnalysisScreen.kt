@@ -1,4 +1,5 @@
 package com.augmentalis.teach
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,7 +39,7 @@ fun SimilarityAnalysisScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = AvanueTheme.colors.primaryContainer
                 )
             )
         }
@@ -104,7 +105,7 @@ private fun SummaryCard(report: IntentSimilarityReport) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Column(
@@ -155,7 +156,7 @@ private fun SummaryCard(report: IntentSimilarityReport) {
                     Text(
                         "Review consolidation suggestions to improve intent taxonomy",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -213,7 +214,7 @@ private fun ConsolidationSuggestionCard(
                     Text(
                         "Keep:",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                     Text(
                         suggestion.keepIntent,
@@ -225,7 +226,7 @@ private fun ConsolidationSuggestionCard(
                 Text(
                     "${suggestion.keepCount} examples",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
 
@@ -238,7 +239,7 @@ private fun ConsolidationSuggestionCard(
                     Text(
                         "Merge:",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                     Text(
                         suggestion.mergeIntent,
@@ -250,7 +251,7 @@ private fun ConsolidationSuggestionCard(
                 Text(
                     "${suggestion.mergeCount} examples",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
 
@@ -271,7 +272,7 @@ private fun ConsolidationSuggestionCard(
                 Text(
                     "Shared terms: ${suggestion.sharedTerms.joinToString(", ")}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
 
@@ -331,7 +332,7 @@ private fun SimilarityCard(similarity: IntentSimilarity) {
                 Text(
                     "Shared: ${similarity.sharedTerms.joinToString(", ")}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -373,12 +374,12 @@ private fun StatItem(
             text = value,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = color ?: MaterialTheme.colorScheme.primary
+            color = color ?: AvanueTheme.colors.primary
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -388,7 +389,7 @@ private fun EmptyStateCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Column(
@@ -402,7 +403,7 @@ private fun EmptyStateCard() {
                 Icons.Default.CheckCircle,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = AvanueTheme.colors.textSecondary
             )
             Text(
                 "No Similar Intents Found",
@@ -412,7 +413,7 @@ private fun EmptyStateCard() {
             Text(
                 "Your intents are well differentiated!",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
         }
     }

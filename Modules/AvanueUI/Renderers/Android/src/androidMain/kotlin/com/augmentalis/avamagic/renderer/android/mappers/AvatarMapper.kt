@@ -18,6 +18,7 @@ import com.augmentalis.avamagic.components.core.ComponentSize
 import com.augmentalis.avamagic.renderer.android.ComponentMapper
 import com.augmentalis.avamagic.renderer.android.ComposeRenderer
 import com.augmentalis.avamagic.renderer.android.ModifierConverter
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * AvatarMapper - Maps AvatarComponent to circular/square image or initials
@@ -46,14 +47,14 @@ class AvatarMapper : ComponentMapper<AvatarComponent> {
                 modifier = modifier
                     .size(sizeDp)
                     .clip(shape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(AvanueTheme.colors.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 component.initials?.let { initials ->
                     Text(
                         text = initials,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = AvanueTheme.colors.onPrimaryContainer
                     )
                 }
                 // TODO: Handle image loading from component.imageUrl when image loading library is added

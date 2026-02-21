@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.llm.config.ConfigurationType
 import com.augmentalis.llm.config.DeviceProfile
 import com.augmentalis.llm.config.ModelConfiguration
@@ -157,7 +158,7 @@ private fun DeviceInfoCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = AvanueTheme.colors.primaryContainer
         )
     ) {
         Row(
@@ -172,26 +173,26 @@ private fun DeviceInfoCard(
                     Icon(
                         imageVector = Icons.Default.PhoneAndroid,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = AvanueTheme.colors.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Detected Device",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        color = AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 }
                 Text(
                     text = device.displayName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = AvanueTheme.colors.onPrimaryContainer
                 )
                 Text(
                     text = "${device.ramGB}GB RAM • ${device.gpuType}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
 
@@ -218,14 +219,14 @@ private fun DeviceOverrideSelector(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 text = "Select Device Profile",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AvanueTheme.colors.textSecondary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
@@ -239,7 +240,7 @@ private fun DeviceOverrideSelector(
                     text = manufacturer,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = AvanueTheme.colors.primary,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                 )
 
@@ -251,7 +252,7 @@ private fun DeviceOverrideSelector(
                             .clickable { onSelectDevice(device) }
                             .background(
                                 if (device == currentDevice)
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                    AvanueTheme.colors.primaryContainer.copy(alpha = 0.5f)
                                 else Color.Transparent
                             )
                             .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -266,14 +267,14 @@ private fun DeviceOverrideSelector(
                             Text(
                                 text = "${device.ramGB}GB • ${device.gpuType}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                color = AvanueTheme.colors.textPrimary.copy(alpha = 0.6f)
                             )
                         }
                         if (device == currentDevice) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Selected",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = AvanueTheme.colors.primary
                             )
                         }
                     }
@@ -294,15 +295,15 @@ private fun ConfigurationCard(
     onClick: () -> Unit
 ) {
     val borderColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        !isAvailable || !config.runtimeAvailable -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        isSelected -> AvanueTheme.colors.primary
+        !isAvailable || !config.runtimeAvailable -> AvanueTheme.colors.border.copy(alpha = 0.3f)
+        else -> AvanueTheme.colors.border.copy(alpha = 0.5f)
     }
 
     val backgroundColor = when {
-        isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        !isAvailable || !config.runtimeAvailable -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-        else -> MaterialTheme.colorScheme.surface
+        isSelected -> AvanueTheme.colors.primaryContainer.copy(alpha = 0.3f)
+        !isAvailable || !config.runtimeAvailable -> AvanueTheme.colors.surface.copy(alpha = 0.5f)
+        else -> AvanueTheme.colors.surface
     }
 
     val contentAlpha = if (isAvailable && config.runtimeAvailable) 1f else 0.5f
@@ -344,7 +345,7 @@ private fun ConfigurationCard(
                     text = config.displayName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                    color = AvanueTheme.colors.textPrimary.copy(alpha = contentAlpha),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -352,9 +353,9 @@ private fun ConfigurationCard(
 
                 // Type badge
                 val typeColor = when (config.type) {
-                    ConfigurationType.BASE -> MaterialTheme.colorScheme.tertiary
-                    ConfigurationType.MULTILINGUAL -> MaterialTheme.colorScheme.secondary
-                    ConfigurationType.GEMMA3N -> MaterialTheme.colorScheme.primary
+                    ConfigurationType.BASE -> AvanueTheme.colors.tertiary
+                    ConfigurationType.MULTILINGUAL -> AvanueTheme.colors.secondary
+                    ConfigurationType.GEMMA3N -> AvanueTheme.colors.primary
                 }
                 Surface(
                     color = typeColor.copy(alpha = 0.2f),
@@ -375,7 +376,7 @@ private fun ConfigurationCard(
             Text(
                 text = config.description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f * contentAlpha),
+                color = AvanueTheme.colors.textPrimary.copy(alpha = 0.7f * contentAlpha),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -393,12 +394,12 @@ private fun ConfigurationCard(
                     Text(
                         text = "LLM: ${config.llmModel}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f * contentAlpha)
+                        color = AvanueTheme.colors.textPrimary.copy(alpha = 0.6f * contentAlpha)
                     )
                     Text(
                         text = "${config.totalMemoryGB}GB • ${config.estimatedSpeed}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f * contentAlpha)
+                        color = AvanueTheme.colors.textPrimary.copy(alpha = 0.6f * contentAlpha)
                     )
                 }
 
@@ -420,18 +421,18 @@ private fun ConfigurationCard(
                     if (isSelected) {
                         StatusBadge(
                             text = "Active",
-                            color = MaterialTheme.colorScheme.primary
+                            color = AvanueTheme.colors.primary
                         )
                     }
                     if (!config.runtimeAvailable) {
                         StatusBadge(
                             text = "${config.llmRuntime} (Coming Soon)",
-                            color = MaterialTheme.colorScheme.outline
+                            color = AvanueTheme.colors.border
                         )
                     } else if (!isAvailable) {
                         StatusBadge(
                             text = "Model Not Installed",
-                            color = MaterialTheme.colorScheme.error
+                            color = AvanueTheme.colors.error
                         )
                     }
                 }

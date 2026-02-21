@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,7 +56,7 @@ fun RAGSettingsSection(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Column(
@@ -69,7 +70,7 @@ fun RAGSettingsSection(
                 text = "RAG (Retrieval-Augmented Generation)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AvanueTheme.colors.textSecondary
             )
 
             HorizontalDivider()
@@ -84,12 +85,12 @@ fun RAGSettingsSection(
                     Text(
                         text = "Enable RAG",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AvanueTheme.colors.textSecondary
                     )
                     Text(
                         text = "Use documents to enhance responses",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        color = AvanueTheme.colors.textSecondary.copy(alpha = 0.7f)
                     )
                 }
                 Switch(
@@ -122,9 +123,9 @@ fun RAGSettingsSection(
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (selectedDocumentCount > 0) {
-                                MaterialTheme.colorScheme.primary
+                                AvanueTheme.colors.primary
                             } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                AvanueTheme.colors.textPrimary.copy(alpha = 0.6f)
                             }
                         )
                     }
@@ -148,9 +149,9 @@ fun RAGSettingsSection(
                         text = "Similarity Threshold",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (ragEnabled) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            AvanueTheme.colors.textSecondary
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            AvanueTheme.colors.textSecondary.copy(alpha = 0.4f)
                         }
                     )
                     Text(
@@ -158,9 +159,9 @@ fun RAGSettingsSection(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (ragEnabled) {
-                            MaterialTheme.colorScheme.primary
+                            AvanueTheme.colors.primary
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            AvanueTheme.colors.textSecondary.copy(alpha = 0.4f)
                         }
                     )
                 }
@@ -178,9 +179,9 @@ fun RAGSettingsSection(
                     text = "Higher threshold = more relevant results only",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (ragEnabled) {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        AvanueTheme.colors.textSecondary.copy(alpha = 0.7f)
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        AvanueTheme.colors.textSecondary.copy(alpha = 0.4f)
                     }
                 )
             }
@@ -188,7 +189,7 @@ fun RAGSettingsSection(
             // Info Message
             if (ragEnabled && selectedDocumentCount == 0) {
                 Surface(
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    color = AvanueTheme.colors.tertiaryContainer,
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -200,12 +201,12 @@ fun RAGSettingsSection(
                         Icon(
                             imageVector = androidx.compose.material.icons.Icons.Default.Info,
                             contentDescription = "Info",
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            tint = AvanueTheme.colors.onTertiaryContainer
                         )
                         Text(
                             text = "Please select at least one document to enable RAG",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                            color = AvanueTheme.colors.onTertiaryContainer
                         )
                     }
                 }

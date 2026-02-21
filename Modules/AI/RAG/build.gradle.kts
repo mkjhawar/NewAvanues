@@ -72,6 +72,9 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
+                // AvanueUI theming
+                implementation(project(":Modules:AvanueUI"))
+
                 // AVA Core modules (Android-only)
                 implementation(project(":Modules:AVA:core:Data"))
 

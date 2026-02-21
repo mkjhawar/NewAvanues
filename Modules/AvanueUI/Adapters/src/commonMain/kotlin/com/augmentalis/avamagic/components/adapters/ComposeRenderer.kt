@@ -11,6 +11,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.components.glass.*
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avamagic.coretypes.*
 import com.augmentalis.avamagic.state.rememberMagicState
 import com.augmentalis.avamagic.core.*
@@ -487,10 +488,10 @@ class ComposeRenderer : Renderer {
             modifier = applyModifiers(alert),
             colors = CardDefaults.cardColors(
                 containerColor = when (alert.severity) {
-                    AlertSeverity.Info -> MaterialTheme.colorScheme.secondaryContainer
-                    AlertSeverity.Success -> MaterialTheme.colorScheme.tertiaryContainer
-                    AlertSeverity.Warning -> MaterialTheme.colorScheme.errorContainer
-                    AlertSeverity.Error -> MaterialTheme.colorScheme.errorContainer
+                    AlertSeverity.Info -> AvanueTheme.colors.secondaryContainer
+                    AlertSeverity.Success -> AvanueTheme.colors.tertiaryContainer
+                    AlertSeverity.Warning -> AvanueTheme.colors.errorContainer
+                    AlertSeverity.Error -> AvanueTheme.colors.errorContainer
                 }
             )
         ) {

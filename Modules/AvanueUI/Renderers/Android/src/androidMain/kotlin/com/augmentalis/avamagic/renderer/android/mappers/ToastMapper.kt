@@ -15,6 +15,7 @@ import com.augmentalis.avamagic.ui.core.feedback.ToastComponent
 import com.augmentalis.avamagic.renderer.android.ComponentMapper
 import com.augmentalis.avamagic.renderer.android.ComposeRenderer
 import com.augmentalis.avamagic.renderer.android.ModifierConverter
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * ToastMapper - Maps ToastComponent to Material3 Snackbar-style toast
@@ -25,11 +26,11 @@ class ToastMapper : ComponentMapper<ToastComponent> {
     override fun map(component: ToastComponent, renderer: ComposeRenderer): @Composable () -> Unit {
         return {
             val (backgroundColor, contentColor) = when (component.severity) {
-                Severity.INFO -> MaterialTheme.colorScheme.inverseSurface to MaterialTheme.colorScheme.inverseOnSurface
-                Severity.SUCCESS -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-                Severity.WARNING -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-                Severity.ERROR -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-                else -> MaterialTheme.colorScheme.inverseSurface to MaterialTheme.colorScheme.inverseOnSurface
+                Severity.INFO -> AvanueTheme.colors.inverseSurface to AvanueTheme.colors.inverseOnSurface
+                Severity.SUCCESS -> AvanueTheme.colors.primaryContainer to AvanueTheme.colors.onPrimaryContainer
+                Severity.WARNING -> AvanueTheme.colors.tertiaryContainer to AvanueTheme.colors.onTertiaryContainer
+                Severity.ERROR -> AvanueTheme.colors.errorContainer to AvanueTheme.colors.onErrorContainer
+                else -> AvanueTheme.colors.inverseSurface to AvanueTheme.colors.inverseOnSurface
             }
 
             val icon = when (component.severity) {

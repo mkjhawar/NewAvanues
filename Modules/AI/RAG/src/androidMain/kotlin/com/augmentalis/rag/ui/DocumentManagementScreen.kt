@@ -5,6 +5,7 @@
 
 package com.augmentalis.rag.ui
 
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -117,7 +118,7 @@ fun DocumentManagementScreen(
                         .fillMaxWidth()
                         .padding(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = AvanueTheme.colors.primaryContainer
                     )
                 ) {
                     Row(
@@ -145,7 +146,7 @@ fun DocumentManagementScreen(
                         .fillMaxWidth()
                         .padding(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
+                        containerColor = AvanueTheme.colors.errorContainer
                     )
                 ) {
                     Row(
@@ -155,13 +156,13 @@ fun DocumentManagementScreen(
                         Icon(
                             Icons.Default.Warning,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
+                            tint = AvanueTheme.colors.error
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = errorMessage,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
+                            color = AvanueTheme.colors.error,
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { viewModel.clearError() }) {
@@ -251,7 +252,7 @@ fun DocumentManagementScreen(
                         showDeleteConfirmation = null
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
+                        contentColor = AvanueTheme.colors.error
                     )
                 ) {
                     Text("Delete")
@@ -272,12 +273,12 @@ private fun StatItem(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = AvanueTheme.colors.primary
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -295,19 +296,19 @@ private fun EmptyState(onAddDocument: () -> Unit) {
             imageVector = Icons.Default.Description,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "No Documents",
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Add documents to enable RAG search",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onAddDocument) {
@@ -367,12 +368,12 @@ private fun DocumentCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = when (document.status) {
-                DocumentStatus.PENDING -> MaterialTheme.colorScheme.surfaceVariant
-                DocumentStatus.PROCESSING -> MaterialTheme.colorScheme.tertiaryContainer
-                DocumentStatus.INDEXED -> MaterialTheme.colorScheme.surface
-                DocumentStatus.FAILED -> MaterialTheme.colorScheme.errorContainer
-                DocumentStatus.OUTDATED -> MaterialTheme.colorScheme.secondaryContainer
-                DocumentStatus.DELETED -> MaterialTheme.colorScheme.errorContainer
+                DocumentStatus.PENDING -> AvanueTheme.colors.surfaceVariant
+                DocumentStatus.PROCESSING -> AvanueTheme.colors.tertiaryContainer
+                DocumentStatus.INDEXED -> AvanueTheme.colors.surface
+                DocumentStatus.FAILED -> AvanueTheme.colors.errorContainer
+                DocumentStatus.OUTDATED -> AvanueTheme.colors.secondaryContainer
+                DocumentStatus.DELETED -> AvanueTheme.colors.errorContainer
             }
         )
     ) {
@@ -392,7 +393,7 @@ private fun DocumentCard(
                 },
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = AvanueTheme.colors.primary
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -409,12 +410,12 @@ private fun DocumentCard(
                 Text(
                     text = "${document.chunkCount} chunks • ${document.fileType.name}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
                 Text(
                     text = "Added ${dateFormat.format(Date(document.createdAt.toEpochMilliseconds()))}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
 
@@ -428,7 +429,7 @@ private fun DocumentCard(
                 Icon(
                     Icons.Default.Error,
                     contentDescription = "Failed",
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = AvanueTheme.colors.error,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -440,7 +441,7 @@ private fun DocumentCard(
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
+                    tint = AvanueTheme.colors.error
                 )
             }
         }

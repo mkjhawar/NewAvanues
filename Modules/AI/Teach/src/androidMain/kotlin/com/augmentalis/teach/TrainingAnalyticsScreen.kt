@@ -1,4 +1,5 @@
 package com.augmentalis.teach
+import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -51,7 +52,7 @@ fun TrainingAnalyticsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = AvanueTheme.colors.primaryContainer
                 )
             )
         }
@@ -101,7 +102,7 @@ private fun OverviewCard(analytics: TrainingAnalytics) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = AvanueTheme.colors.surfaceVariant
         )
     ) {
         Column(
@@ -115,7 +116,7 @@ private fun OverviewCard(analytics: TrainingAnalytics) {
                 Icon(
                     Icons.Default.Info,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = AvanueTheme.colors.primary
                 )
                 Text(
                     "Overview",
@@ -159,12 +160,12 @@ private fun StatItem(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = AvanueTheme.colors.primary
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -225,7 +226,7 @@ private fun IntentDistributionCard(distribution: List<IntentDistribution>) {
                         Text(
                             "${item.count} (${item.percentage.toOneDecimal()}%)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = AvanueTheme.colors.textSecondary
                         )
                     }
                 }
@@ -233,7 +234,7 @@ private fun IntentDistributionCard(distribution: List<IntentDistribution>) {
                 Text(
                     "No data available",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AvanueTheme.colors.textSecondary
                 )
             }
         }
@@ -369,7 +370,7 @@ private fun CoverageItem(
         Text(
             text = description,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AvanueTheme.colors.textSecondary
         )
     }
 }
@@ -418,7 +419,7 @@ private fun QualityMetricsCard(quality: QualityMetrics) {
                     Text(
                         usage.toString(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = AvanueTheme.colors.primary
                     )
                 }
             }
@@ -441,7 +442,7 @@ private fun QualityMetricsCard(quality: QualityMetrics) {
                         usage.toString(),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (usage == 0) Color(0xFFF44336)
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        else AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -463,7 +464,7 @@ private fun TrendMetricsCard(trends: TrendMetrics) {
                 Icon(
                     Icons.Default.MoreVert,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = AvanueTheme.colors.primary
                 )
                 Text(
                     "Growth Trends",
@@ -499,7 +500,7 @@ private fun TrendMetricsCard(trends: TrendMetrics) {
                         Text(
                             count.toString(),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = AvanueTheme.colors.primary
                         )
                     }
                 }

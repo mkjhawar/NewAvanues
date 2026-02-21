@@ -56,6 +56,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
     
+    // AvanueUI
+    implementation(project(":Modules:AvanueUI"))
+
     // Compose BOM
     implementation(platform(libs.compose.bom.get()))
     implementation("androidx.compose.ui:ui")

@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.rag.domain.Document
 import com.augmentalis.rag.domain.DocumentStatus
 
@@ -90,7 +91,7 @@ fun DocumentSelectorDialog(
                 Text(
                     text = "${currentSelection.size} document(s) selected",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = AvanueTheme.colors.textPrimary.copy(alpha = 0.7f)
                 )
             }
         },
@@ -143,7 +144,7 @@ fun DocumentSelectorDialog(
                                 imageVector = androidx.compose.material.icons.Icons.Default.Info,
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                tint = AvanueTheme.colors.textPrimary.copy(alpha = 0.4f)
                             )
                             Text(
                                 text = if (searchQuery.isNotEmpty()) {
@@ -152,13 +153,13 @@ fun DocumentSelectorDialog(
                                     "No indexed documents available"
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                color = AvanueTheme.colors.textPrimary.copy(alpha = 0.6f)
                             )
                             if (searchQuery.isEmpty()) {
                                 Text(
                                     text = "Add and index documents first",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    color = AvanueTheme.colors.textPrimary.copy(alpha = 0.5f)
                                 )
                             }
                         }
@@ -218,9 +219,9 @@ private fun DocumentListItem(
             .fillMaxWidth()
             .clickable { onSelectionChange(!isSelected) },
         color = if (isSelected) {
-            MaterialTheme.colorScheme.primaryContainer
+            AvanueTheme.colors.primaryContainer
         } else {
-            MaterialTheme.colorScheme.surface
+            AvanueTheme.colors.surface
         },
         shape = MaterialTheme.shapes.small
     ) {
@@ -247,9 +248,9 @@ private fun DocumentListItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
+                        AvanueTheme.colors.onPrimaryContainer
                     } else {
-                        MaterialTheme.colorScheme.onSurface
+                        AvanueTheme.colors.textPrimary
                     }
                 )
 
@@ -261,9 +262,9 @@ private fun DocumentListItem(
                         text = document.fileType.extension.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.7f)
                         } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            AvanueTheme.colors.textPrimary.copy(alpha = 0.6f)
                         }
                     )
 
@@ -271,9 +272,9 @@ private fun DocumentListItem(
                         text = "•",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                            AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.5f)
                         } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            AvanueTheme.colors.textPrimary.copy(alpha = 0.4f)
                         }
                     )
 
@@ -281,9 +282,9 @@ private fun DocumentListItem(
                         text = formatFileSize(document.sizeBytes),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.7f)
                         } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            AvanueTheme.colors.textPrimary.copy(alpha = 0.6f)
                         }
                     )
 
@@ -292,9 +293,9 @@ private fun DocumentListItem(
                             text = "•",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (isSelected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                                AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.5f)
                             } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                AvanueTheme.colors.textPrimary.copy(alpha = 0.4f)
                             }
                         )
 
@@ -302,9 +303,9 @@ private fun DocumentListItem(
                             text = "${document.chunkCount} chunks",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (isSelected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                AvanueTheme.colors.onPrimaryContainer.copy(alpha = 0.7f)
                             } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                AvanueTheme.colors.textPrimary.copy(alpha = 0.6f)
                             }
                         )
                     }

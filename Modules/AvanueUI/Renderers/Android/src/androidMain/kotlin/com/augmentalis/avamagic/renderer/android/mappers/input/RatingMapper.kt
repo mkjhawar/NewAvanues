@@ -15,6 +15,7 @@ import com.augmentalis.avamagic.ui.core.form.RatingComponent
 import com.augmentalis.avamagic.renderer.android.ComponentMapper
 import com.augmentalis.avamagic.renderer.android.ComposeRenderer
 import com.augmentalis.avamagic.renderer.android.ModifierConverter
+import com.augmentalis.avanueui.theme.AvanueTheme
 
 /**
  * RatingMapper - Maps RatingComponent to star rating UI
@@ -40,9 +41,9 @@ class RatingMapper : ComponentMapper<RatingComponent> {
                         imageVector = icon,
                         contentDescription = "Star $i",
                         tint = if (i <= component.value) {
-                            MaterialTheme.colorScheme.primary
+                            AvanueTheme.colors.primary
                         } else {
-                            MaterialTheme.colorScheme.outline
+                            AvanueTheme.colors.border
                         },
                         modifier = Modifier
                             .size(24.dp)
