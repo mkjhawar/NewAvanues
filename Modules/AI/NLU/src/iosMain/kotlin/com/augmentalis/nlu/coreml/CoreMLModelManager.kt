@@ -216,38 +216,22 @@ internal class CoreMLModelManager {
         attentionMask: LongArray,
         tokenTypeIds: LongArray
     ): Result<FloatArray> = withContext(Dispatchers.Default) {
-        try {
-            if (!isLoaded || model == null) {
-                return@withContext Result.Error(
-                    exception = IllegalStateException("Model not loaded"),
-                    message = "Call loadModel() first"
-                )
-            }
-
-            val startTime = (NSDate().timeIntervalSince1970 * 1000).toLong()
-
-            // For now, log warning and return default embedding
-            // Full Core ML inference implementation requires complex interop
-            println("CoreMLModelManager: Warning - Core ML inference not fully implemented")
-            println("CoreMLModelManager: Returning default embedding (fallback mode)")
-
-            val inferenceTime = (NSDate().timeIntervalSince1970 * 1000).toLong() - startTime
-            lastInferenceTimeMs = inferenceTime
-
-            // Track performance metrics
-            totalInferencesCount++
-            totalInferenceTimeMs += lastInferenceTimeMs
-
-            println("CoreMLModelManager: Inference complete in ${lastInferenceTimeMs}ms (fallback)")
-
-            // Return default embedding - in production, this would be the model output
-            Result.Success(FloatArray(384) { 0.0f })
-        } catch (e: Exception) {
-            Result.Error(
-                exception = e,
-                message = "Inference execution failed: ${e.message}"
+        if (!isLoaded || model == null) {
+            return@withContext Result.Error(
+                exception = IllegalStateException("Model not loaded"),
+                message = "Call loadModel() first"
             )
         }
+
+        // CoreML tensor interop is not yet configured — return explicit error
+        // rather than a zero vector that downstream consumers would treat as valid embeddings.
+        Result.Error(
+            exception = UnsupportedOperationException(
+                "CoreML inference not available — tensor interop not configured"
+            ),
+            message = "CoreML model loaded but inference requires MLMultiArray cinterop bindings. " +
+                "Configure CoreML tensor interop to enable on-device NLU inference."
+        )
     }
 
     /**

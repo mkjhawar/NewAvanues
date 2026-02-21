@@ -12,8 +12,9 @@ import kotlinx.coroutines.*
  * Supports Neural Engine, GPU, and CPU execution.
  *
  * Note: Full CoreML model inference requires proper cinterop bindings.
- * This implementation provides vocabulary loading and tokenization,
- * with stubbed inference for testing until cinterop is configured.
+ * This implementation provides vocabulary loading and tokenization.
+ * Inference methods return explicit errors until cinterop is configured,
+ * preventing silent use of fake data by downstream consumers.
  */
 @OptIn(ExperimentalForeignApi::class)
 class CoreMLRuntime {
@@ -23,7 +24,8 @@ class CoreMLRuntime {
 
     /**
      * Load a Core ML model from path
-     * Note: Model loading is stubbed - inference uses vocabulary-based testing
+     * Note: Sets model path and initialization flag for bookkeeping.
+     * Actual CoreML model loading requires cinterop configuration.
      */
     suspend fun loadModel(path: String): Result<Unit> = withContext(Dispatchers.Default) {
         try {
@@ -44,7 +46,10 @@ class CoreMLRuntime {
 
     /**
      * Run inference with input features
-     * Note: Returns uniform distribution for testing until CoreML cinterop is configured
+     *
+     * CoreML cinterop is not yet configured — inference is unavailable.
+     * Returns an explicit error so callers can handle gracefully
+     * rather than acting on meaningless data.
      */
     suspend fun predict(
         inputName: String,
@@ -55,18 +60,18 @@ class CoreMLRuntime {
             return@withContext Result.failure(Exception("Model not loaded"))
         }
 
-        try {
-            // Return uniform distribution for testing
-            val outputSize = if (vocabSize > 0) vocabSize else 32000
-            val result = FloatArray(outputSize) { 1.0f / outputSize }
-            Result.success(result)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        Result.failure(
+            UnsupportedOperationException(
+                "CoreML inference not available — cinterop not configured. " +
+                "Configure CoreML cinterop bindings to enable on-device inference."
+            )
+        )
     }
 
     /**
      * Run batched inference with multiple inputs
+     *
+     * CoreML cinterop is not yet configured — inference is unavailable.
      */
     suspend fun predictBatch(
         inputs: List<Pair<String, FloatArray>>,
@@ -76,14 +81,12 @@ class CoreMLRuntime {
             return@withContext Result.failure(Exception("Model not loaded"))
         }
 
-        try {
-            val outputSize = if (vocabSize > 0) vocabSize else 32000
-            val results = mutableMapOf<String, FloatArray>()
-            results["output"] = FloatArray(outputSize) { 1.0f / outputSize }
-            Result.success(results)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        Result.failure(
+            UnsupportedOperationException(
+                "CoreML batch inference not available — cinterop not configured. " +
+                "Configure CoreML cinterop bindings to enable on-device inference."
+            )
+        )
     }
 
     /**
