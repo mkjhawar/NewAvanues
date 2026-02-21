@@ -106,9 +106,7 @@ class HpackDecoder(maxDynamicTableSize: Int = 4096) {
             if (offset + length > data.size) throw Http2Exception(Http2ErrorCode.COMPRESSION_ERROR, "Truncated string")
             val stringBytes = data.copyOfRange(offset, offset + length)
             val result = if (isHuffman) {
-                // Huffman decoding deferred — for now, treat as raw bytes
-                // Full Huffman tables are ~4KB of lookup data; can be added incrementally
-                stringBytes.decodeToString()
+                HpackHuffman.decode(stringBytes).decodeToString()
             } else {
                 stringBytes.decodeToString()
             }

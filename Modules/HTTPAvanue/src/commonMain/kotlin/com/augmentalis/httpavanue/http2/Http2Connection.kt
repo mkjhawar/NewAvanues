@@ -6,6 +6,8 @@ import com.augmentalis.httpavanue.hpack.HpackEncoder
 import com.augmentalis.httpavanue.http.*
 import com.augmentalis.httpavanue.platform.Socket
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * HTTP/2 connection handler — manages the connection lifecycle, stream multiplexing,
@@ -24,6 +26,8 @@ class Http2Connection(
     private val flowControl = Http2FlowControl(localSettings.initialWindowSize)
     private var lastStreamId = 0
     private var goawaySent = false
+    /** Protects all sink writes — HTTP/2 frames must not interleave across streams */
+    private val sinkMutex = Mutex()
 
     /** Run the HTTP/2 connection loop */
     suspend fun run() = coroutineScope {
@@ -39,7 +43,7 @@ class Http2Connection(
         }
 
         // Send server SETTINGS
-        Http2FrameCodec.writeSettings(sink, localSettings)
+        sinkMutex.withLock { Http2FrameCodec.writeSettings(sink, localSettings) }
         logger.d { "Sent server SETTINGS" }
 
         // Frame dispatch loop
@@ -57,8 +61,7 @@ class Http2Connection(
                     Http2FrameType.PRIORITY -> { /* Advisory only, ignored */ }
                     Http2FrameType.CONTINUATION -> handleContinuation(sink, frame, this)
                     Http2FrameType.PUSH_PROMISE -> {
-                        // Servers don't receive PUSH_PROMISE; send PROTOCOL_ERROR
-                        Http2FrameCodec.writeGoaway(sink, lastStreamId, Http2ErrorCode.PROTOCOL_ERROR)
+                        sinkMutex.withLock { Http2FrameCodec.writeGoaway(sink, lastStreamId, Http2ErrorCode.PROTOCOL_ERROR) }
                         goawaySent = true
                     }
                     null -> {
@@ -69,19 +72,19 @@ class Http2Connection(
             }
         } catch (e: Http2Exception) {
             logger.e({ "HTTP/2 error: ${e.message}" }, e)
-            try { Http2FrameCodec.writeGoaway(sink, lastStreamId, e.errorCode) } catch (_: Exception) {}
+            try { sinkMutex.withLock { Http2FrameCodec.writeGoaway(sink, lastStreamId, e.errorCode) } } catch (_: Exception) {}
         } catch (e: CancellationException) {
             logger.d { "HTTP/2 connection cancelled" }
         } catch (e: Exception) {
             logger.e({ "HTTP/2 connection error" }, e)
-            try { Http2FrameCodec.writeGoaway(sink, lastStreamId, Http2ErrorCode.INTERNAL_ERROR) } catch (_: Exception) {}
+            try { sinkMutex.withLock { Http2FrameCodec.writeGoaway(sink, lastStreamId, Http2ErrorCode.INTERNAL_ERROR) } } catch (_: Exception) {}
         } finally {
             streams.values.forEach { it.dataChannel.close() }
             streams.clear()
         }
     }
 
-    private fun handleSettings(sink: okio.BufferedSink, frame: Http2Frame) {
+    private suspend fun handleSettings(sink: okio.BufferedSink, frame: Http2Frame) {
         if (frame.hasFlag(Http2Flags.ACK)) {
             logger.d { "Received SETTINGS ACK" }
             return
@@ -89,11 +92,10 @@ class Http2Connection(
         if (frame.streamId != 0) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "SETTINGS on non-zero stream")
         remoteSettings = Http2Settings.decode(frame.payload)
         logger.d { "Received SETTINGS: maxConcurrent=${remoteSettings.maxConcurrentStreams}, windowSize=${remoteSettings.initialWindowSize}" }
-        // Send SETTINGS ACK
-        Http2FrameCodec.writeSettings(sink, Http2Settings(), ack = true)
+        sinkMutex.withLock { Http2FrameCodec.writeSettings(sink, Http2Settings(), ack = true) }
     }
 
-    private fun handleHeaders(sink: okio.BufferedSink, frame: Http2Frame, scope: CoroutineScope) {
+    private suspend fun handleHeaders(sink: okio.BufferedSink, frame: Http2Frame, scope: CoroutineScope) {
         val streamId = frame.streamId
         if (streamId == 0) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "HEADERS on stream 0")
         if (streamId % 2 == 0) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "Client initiated even stream $streamId")
@@ -101,7 +103,7 @@ class Http2Connection(
         lastStreamId = streamId
 
         if (streams.size >= localSettings.maxConcurrentStreams) {
-            Http2FrameCodec.writeRstStream(sink, streamId, Http2ErrorCode.REFUSED_STREAM)
+            sinkMutex.withLock { Http2FrameCodec.writeRstStream(sink, streamId, Http2ErrorCode.REFUSED_STREAM) }
             return
         }
 
@@ -132,7 +134,7 @@ class Http2Connection(
         }
     }
 
-    private fun handleData(sink: okio.BufferedSink, frame: Http2Frame) {
+    private suspend fun handleData(sink: okio.BufferedSink, frame: Http2Frame) {
         val stream = streams[frame.streamId] ?: throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "DATA for unknown stream ${frame.streamId}")
         if (!stream.isOpen()) throw Http2Exception(Http2ErrorCode.STREAM_CLOSED, "DATA on closed stream ${frame.streamId}", frame.streamId)
 
@@ -154,7 +156,7 @@ class Http2Connection(
         // Send WINDOW_UPDATE if window is getting low
         if (flowControl.connectionReceiveWindow < localSettings.initialWindowSize / 2) {
             val increment = localSettings.initialWindowSize - flowControl.connectionReceiveWindow
-            flowControl.sendWindowUpdate(sink, 0, increment)
+            sinkMutex.withLock { flowControl.sendWindowUpdate(sink, 0, increment) }
         }
     }
 
@@ -169,10 +171,10 @@ class Http2Connection(
         else streams[frame.streamId]?.increaseSendWindow(increment)
     }
 
-    private fun handlePing(sink: okio.BufferedSink, frame: Http2Frame) {
+    private suspend fun handlePing(sink: okio.BufferedSink, frame: Http2Frame) {
         if (frame.streamId != 0) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "PING on non-zero stream")
         if (frame.payload.size != 8) throw Http2Exception(Http2ErrorCode.FRAME_SIZE_ERROR, "PING payload must be 8 bytes")
-        if (!frame.hasFlag(Http2Flags.ACK)) Http2FrameCodec.writePing(sink, ack = true, opaqueData = frame.payload)
+        if (!frame.hasFlag(Http2Flags.ACK)) sinkMutex.withLock { Http2FrameCodec.writePing(sink, ack = true, opaqueData = frame.payload) }
     }
 
     private fun handleRstStream(frame: Http2Frame) {
@@ -199,10 +201,10 @@ class Http2Connection(
 
             val request = HttpRequest(method = method, uri = path, version = "HTTP/2", headers = headerMap)
             val response = requestHandler(request)
-            sendResponse(sink, stream, response)
+            sinkMutex.withLock { sendResponse(sink, stream, response) }
         } catch (e: Exception) {
             logger.e({ "Error dispatching HTTP/2 request on stream ${stream.id}" }, e)
-            Http2FrameCodec.writeRstStream(sink, stream.id, Http2ErrorCode.INTERNAL_ERROR)
+            sinkMutex.withLock { Http2FrameCodec.writeRstStream(sink, stream.id, Http2ErrorCode.INTERNAL_ERROR) }
             stream.state = Http2StreamState.CLOSED
             streams.remove(stream.id)
         }
