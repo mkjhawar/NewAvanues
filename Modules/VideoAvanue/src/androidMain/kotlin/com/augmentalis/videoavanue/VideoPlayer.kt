@@ -76,7 +76,7 @@ fun VideoPlayer(
         }
     }
 
-    LaunchedEffect(exoPlayer) {
+    DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 isLoading = state == Player.STATE_BUFFERING
@@ -85,6 +85,7 @@ fun VideoPlayer(
             override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
         }
         exoPlayer.addListener(listener)
+        onDispose { exoPlayer.removeListener(listener) }
     }
 
     LaunchedEffect(isPlaying) {

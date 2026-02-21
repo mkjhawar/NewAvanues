@@ -25,21 +25,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Maximize
 import androidx.compose.material.icons.filled.Minimize
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.ScreenSearchDesktop
 import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.ZoomIn
@@ -171,7 +176,7 @@ fun CommandBar(
                     // Wire to CockpitCommandHandler dispatch when voice-to-UI bridge is ready.
                     CommandBarState.WEB_ACTIONS -> {
                         CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Back", false) {}
-                        CommandChip(Icons.Default.Language, "Forward", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowForward, "Forward", false) {}
                         CommandChip(Icons.Default.Language, "Refresh", false) {}
                         CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {}
                         CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {}
@@ -191,14 +196,14 @@ fun CommandBar(
                     }
 
                     CommandBarState.VIDEO_ACTIONS -> {
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Rewind", false) {}
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Play/Pause", false) {}
+                        CommandChip(Icons.Default.FastRewind, "Rewind", false) {}
+                        CommandChip(Icons.Default.PlayArrow, "Play/Pause", false) {}
                         CommandChip(Icons.Default.Fullscreen, "Fullscreen", false) {}
                     }
 
                     CommandBarState.NOTE_ACTIONS -> {
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Undo", false) {}
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Redo", false) {}
+                        CommandChip(Icons.Default.Undo, "Undo", false) {}
+                        CommandChip(Icons.Default.Redo, "Redo", false) {}
                     }
 
                     CommandBarState.CAMERA_ACTIONS -> {

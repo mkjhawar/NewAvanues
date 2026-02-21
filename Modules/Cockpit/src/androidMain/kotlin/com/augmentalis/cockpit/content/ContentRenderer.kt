@@ -166,7 +166,12 @@ fun ContentRenderer(
             is FrameContent.AiSummary -> AiSummaryContent(
                 content = content,
                 onGenerateSummary = {
-                    // TODO: AI module integration deferred — wire to Modules/AI:LLM when ready
+                    // AI module integration deferred — Modules/AI:LLM not yet available.
+                    // Reflect the unavailability in the content state so the UI can show it.
+                    onContentStateChanged(
+                        frame.id,
+                        content.copy(summary = "AI summary generation is not available yet.")
+                    )
                 },
                 onContentStateChanged = { updatedSummary ->
                     onContentStateChanged(frame.id, updatedSummary)

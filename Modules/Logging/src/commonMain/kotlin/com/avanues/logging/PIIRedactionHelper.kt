@@ -47,10 +47,14 @@ object PIIRedactionHelper {
         RegexOption.IGNORE_CASE
     )
 
-    /** Name (heuristic): John Smith, Mary-Jane O'Connor */
+    /**
+     * Name (heuristic): John Smith, Mary-Jane O'Connor
+     * Requires both words to start with an uppercase letter followed by at least two lowercase
+     * letters, so generic two-word phrases and single-case log tokens are not falsely redacted.
+     * IGNORE_CASE is intentionally omitted — lowercase phrases must not match.
+     */
     private val NAME_PATTERN: Regex = Regex(
-        "\\b[A-Z][a-z]+(?:['-][A-Z][a-z]+)?\\s+[A-Z][a-z]+(?:['-][A-Z][a-z]+)?\\b",
-        RegexOption.IGNORE_CASE
+        "\\b[A-Z][a-z]{2,}(?:['-][A-Z][a-z]+)?\\s+[A-Z][a-z]{2,}(?:['-][A-Z][a-z]+)?\\b"
     )
 
     /** Address (heuristic): 123 Main St, 456 Oak Avenue */
@@ -59,10 +63,13 @@ object PIIRedactionHelper {
         RegexOption.IGNORE_CASE
     )
 
-    /** ZIP code: 12345, 12345-6789 */
+    /**
+     * ZIP code: 12345, 12345-6789
+     * Negative lookbehind (?<!:) prevents matching port numbers like :50051.
+     * IGNORE_CASE is irrelevant for digit-only patterns but removed for clarity.
+     */
     private val ZIP_CODE_PATTERN: Regex = Regex(
-        "\\b\\d{5}(?:-\\d{4})?\\b",
-        RegexOption.IGNORE_CASE
+        "(?<!:)\\b\\d{5}(?:-\\d{4})?\\b"
     )
 
     /**

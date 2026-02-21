@@ -165,6 +165,9 @@ open class AvaGrpcClient(
             channel = null
             _connectionState.value = ConnectionState.Disconnected
             _isConnected.value = false
+
+            udsEventLoopGroup?.shutdownGracefully()
+            udsEventLoopGroup = null
         }
     }
 
