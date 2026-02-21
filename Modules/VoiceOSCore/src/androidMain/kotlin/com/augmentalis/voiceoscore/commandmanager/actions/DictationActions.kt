@@ -1,11 +1,10 @@
 /**
  * DictationActions.kt - Dictation and keyboard command actions
  * Path: modules/commands/src/main/java/com/augmentalis/voiceos/commands/actions/DictationActions.kt
- * 
+ *
  * Created: 2025-08-19
- * Author: Claude Code
  * Module: Commands
- * 
+ *
  * Purpose: Dictation, keyboard, and text input-related voice command actions
  */
 

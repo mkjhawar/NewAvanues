@@ -1,11 +1,10 @@
 /**
  * BaseAction.kt - Base class for all command actions
  * Path: modules/commands/src/main/java/com/augmentalis/voiceos/commands/actions/BaseAction.kt
- * 
+ *
  * Created: 2025-08-19
- * Author: Claude Code
  * Module: Commands
- * 
+ *
  * Purpose: Base implementation for all command actions
  */
 

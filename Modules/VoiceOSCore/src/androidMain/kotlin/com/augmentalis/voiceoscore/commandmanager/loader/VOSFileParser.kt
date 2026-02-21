@@ -5,7 +5,7 @@
  * Format: VOS files contain localized voice commands with action IDs, primary text, and synonyms
  * Schema: v1.0 - Initial implementation with schema validation
  *
- * @author VOS4 Agent
+ * @author Manoj Jhawar
  * @since 2025-10-13
  */
 

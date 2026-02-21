@@ -1,11 +1,10 @@
 /**
  * ScrollActions.kt - Scroll and swipe command actions
  * Path: modules/commands/src/main/java/com/augmentalis/voiceos/commands/actions/ScrollActions.kt
- * 
+ *
  * Created: 2025-08-19
- * Author: Claude Code
  * Module: Commands
- * 
+ *
  * Purpose: Scroll and swipe-related voice command actions
  */
 

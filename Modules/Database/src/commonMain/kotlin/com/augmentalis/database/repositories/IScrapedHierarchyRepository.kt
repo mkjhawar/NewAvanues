@@ -2,7 +2,6 @@
  * IScrapedHierarchyRepository.kt - Repository interface for element hierarchies
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Database Migrator (Agent 2)
  * Created: 2025-11-26
  */
 

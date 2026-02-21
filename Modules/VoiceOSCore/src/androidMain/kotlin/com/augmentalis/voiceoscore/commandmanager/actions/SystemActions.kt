@@ -1,11 +1,10 @@
 /**
  * SystemActions.kt - System control command actions
  * Path: modules/commands/src/main/java/com/augmentalis/voiceos/commands/actions/SystemActions.kt
- * 
+ *
  * Created: 2025-08-19
- * Author: Claude Code
  * Module: Commands
- * 
+ *
  * Purpose: System control and settings-related voice command actions
  */
 

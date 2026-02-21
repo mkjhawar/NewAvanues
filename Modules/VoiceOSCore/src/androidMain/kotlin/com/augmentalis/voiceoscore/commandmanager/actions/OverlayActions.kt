@@ -4,7 +4,6 @@
  *
  * Created: 2025-08-19
  * Updated: 2025-10-10 20:00 PDT - Added Q7 dual-mode support (visual + audio)
- * Author: Claude Code
  * Module: Commands
  *
  * Purpose: Overlay, help, and UI-related voice command actions
