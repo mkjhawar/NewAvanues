@@ -13,6 +13,8 @@ package com.augmentalis.speechrecognition
 
 import android.content.Context
 import com.augmentalis.nlu.matching.CommandMatchingService
+import com.augmentalis.speechrecognition.googlecloud.GoogleCloudConfig
+import com.augmentalis.speechrecognition.googlecloud.GoogleCloudEngine
 import com.augmentalis.speechrecognition.whisper.WhisperConfig
 import com.augmentalis.speechrecognition.whisper.WhisperEngine
 import kotlinx.coroutines.CoroutineScope
@@ -64,10 +66,10 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
     // Engine implementations
     private var androidSTTEngine: AndroidSTTEngine? = null
     private var whisperEngine: WhisperEngine? = null
+    private var googleCloudEngine: GoogleCloudEngine? = null
     // TODO: Add other engines as they are migrated:
     // private var voskEngine: VoskEngine? = null
     // private var vivokaEngine: VivokaEngine? = null
-    // private var googleCloudEngine: GoogleCloudEngine? = null
 
     // Flows
     private val _resultFlow = MutableSharedFlow<RecognitionResult>(replay = 1)
@@ -114,11 +116,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
                     initializeAndroidSTT(context, config.copy(engine = SpeechEngine.ANDROID_STT))
                 }
                 SpeechEngine.WHISPER -> initializeWhisper(context, config)
-                SpeechEngine.GOOGLE_CLOUD -> {
-                    // TODO: Implement when GoogleCloudEngine is migrated
-                    logInfo(TAG, "Google Cloud engine not yet migrated, using Android STT fallback")
-                    initializeAndroidSTT(context, config.copy(engine = SpeechEngine.ANDROID_STT))
-                }
+                SpeechEngine.GOOGLE_CLOUD -> initializeGoogleCloud(context, config)
                 else -> {
                     logInfo(TAG, "Unknown engine ${config.engine}, using Android STT fallback")
                     initializeAndroidSTT(context, config.copy(engine = SpeechEngine.ANDROID_STT))
@@ -210,6 +208,39 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
         return success
     }
 
+    /**
+     * Initialize Google Cloud STT v2 engine
+     */
+    private suspend fun initializeGoogleCloud(context: Context, config: SpeechConfig): Boolean {
+        val engine = GoogleCloudEngine(context)
+        val gcConfig = GoogleCloudConfig.fromSpeechConfig(config)
+
+        val success = engine.initialize(gcConfig)
+
+        if (success) {
+            googleCloudEngine = engine
+
+            // Collect results from engine
+            scope.launch {
+                engine.resultFlow.collect { result ->
+                    _resultFlow.emit(result)
+                }
+            }
+
+            // Collect errors from engine
+            scope.launch {
+                engine.errorFlow.collect { error ->
+                    _errorFlow.emit(error)
+                    if (!error.isRecoverable) {
+                        updateState(ServiceState.ERROR)
+                    }
+                }
+            }
+        }
+
+        return success
+    }
+
     override suspend fun startListening(): Result<Unit> {
         return try {
             if (!state.canStart()) {
@@ -219,6 +250,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
             // Delegate to active engine
             val started = when (config.engine) {
                 SpeechEngine.WHISPER -> whisperEngine?.startListening(config.mode) ?: false
+                SpeechEngine.GOOGLE_CLOUD -> googleCloudEngine?.startListening(config.mode) ?: false
                 SpeechEngine.ANDROID_STT -> androidSTTEngine?.startListening(config.mode) ?: false
                 else -> androidSTTEngine?.startListening(config.mode) ?: false
             }
@@ -242,6 +274,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
             // Delegate to active engine
             when (config.engine) {
                 SpeechEngine.WHISPER -> whisperEngine?.stopListening()
+                SpeechEngine.GOOGLE_CLOUD -> googleCloudEngine?.stopListening()
                 SpeechEngine.ANDROID_STT -> androidSTTEngine?.stopListening()
                 else -> androidSTTEngine?.stopListening()
             }
@@ -260,6 +293,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
             if (state == ServiceState.LISTENING) {
                 when (config.engine) {
                     SpeechEngine.WHISPER -> whisperEngine?.pause()
+                    SpeechEngine.GOOGLE_CLOUD -> googleCloudEngine?.pause()
                     SpeechEngine.ANDROID_STT -> androidSTTEngine?.stopListening()
                     else -> androidSTTEngine?.stopListening()
                 }
@@ -277,6 +311,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
             if (state == ServiceState.PAUSED) {
                 when (config.engine) {
                     SpeechEngine.WHISPER -> whisperEngine?.resume()
+                    SpeechEngine.GOOGLE_CLOUD -> googleCloudEngine?.resume()
                     SpeechEngine.ANDROID_STT -> androidSTTEngine?.startListening(config.mode)
                     else -> androidSTTEngine?.startListening(config.mode)
                 }
@@ -300,6 +335,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
         // Sync to active engine
         when (config.engine) {
             SpeechEngine.WHISPER -> whisperEngine?.setCommands(staticCommands, dynamicCommands)
+            SpeechEngine.GOOGLE_CLOUD -> googleCloudEngine?.setCommands(staticCommands, dynamicCommands)
             else -> {
                 androidSTTEngine?.setStaticCommands(staticCommands)
                 androidSTTEngine?.setDynamicCommands(dynamicCommands)
@@ -316,6 +352,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
         // Update engine mode
         when (config.engine) {
             SpeechEngine.WHISPER -> whisperEngine?.setMode(mode)
+            SpeechEngine.GOOGLE_CLOUD -> googleCloudEngine?.setMode(mode)
             else -> androidSTTEngine?.changeMode(mode)
         }
 
@@ -346,6 +383,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
     override fun isListening(): Boolean {
         return when (config.engine) {
             SpeechEngine.WHISPER -> whisperEngine?.isListening() ?: false
+            SpeechEngine.GOOGLE_CLOUD -> googleCloudEngine?.isListening() ?: false
             else -> androidSTTEngine?.isListening() ?: false
         }
     }
@@ -361,6 +399,8 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
             // Destroy all engines
             whisperEngine?.destroy()
             whisperEngine = null
+            googleCloudEngine?.destroy()
+            googleCloudEngine = null
             androidSTTEngine?.destroy()
             androidSTTEngine = null
 

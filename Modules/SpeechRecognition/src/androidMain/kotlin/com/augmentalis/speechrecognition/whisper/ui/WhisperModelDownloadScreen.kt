@@ -105,7 +105,7 @@ fun WhisperModelDownloadScreen(
                 text = "Whisper Models",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = AvanueTheme.colors.onBackground
+                color = AvanueTheme.colors.textPrimary
             )
             IconButton(
                 onClick = onDismiss,
@@ -116,7 +116,7 @@ fun WhisperModelDownloadScreen(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Close",
-                    tint = AvanueTheme.colors.onBackground
+                    tint = AvanueTheme.colors.textPrimary
                 )
             }
         }
@@ -125,7 +125,7 @@ fun WhisperModelDownloadScreen(
         Text(
             text = "Storage: ${availableStorageMB}MB available",
             fontSize = 12.sp,
-            color = AvanueTheme.colors.onBackground.copy(alpha = 0.6f)
+            color = AvanueTheme.colors.textSecondary
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -205,7 +205,7 @@ private fun ModelCard(
                         text = modelSize.displayName,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = AvanueTheme.colors.onSurface
+                        color = AvanueTheme.colors.textPrimary
                     )
                     if (isRecommended) {
                         Spacer(modifier = Modifier.width(8.dp))
@@ -300,7 +300,7 @@ private fun ModelCard(
                     text = "Downloaded: ${"%.1f".format(localInfo.fileSizeMB)}MB" +
                             if (localInfo.isVerified) " (verified)" else "",
                     fontSize = 11.sp,
-                    color = AvanueTheme.colors.onSurface.copy(alpha = 0.5f)
+                    color = AvanueTheme.colors.textTertiary
                 )
             }
         }
@@ -312,7 +312,7 @@ private fun DetailChip(text: String) {
     Text(
         text = text,
         fontSize = 11.sp,
-        color = AvanueTheme.colors.onSurface.copy(alpha = 0.6f),
+        color = AvanueTheme.colors.textSecondary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
@@ -340,7 +340,7 @@ private fun DownloadProgressCard(
                     text = "Downloading ${state.modelSize.displayName}...",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = AvanueTheme.colors.onBackground
+                    color = AvanueTheme.colors.textPrimary
                 )
                 TextButton(
                     onClick = onCancel,
@@ -373,20 +373,20 @@ private fun DownloadProgressCard(
                 Text(
                     text = "${"%.1f".format(state.downloadedMB)} / ${"%.1f".format(state.totalMB)} MB",
                     fontSize = 11.sp,
-                    color = AvanueTheme.colors.onBackground.copy(alpha = 0.6f)
+                    color = AvanueTheme.colors.textSecondary
                 )
                 if (state.speedMBPerSec > 0) {
                     Text(
                         text = "${"%.1f".format(state.speedMBPerSec)} MB/s",
                         fontSize = 11.sp,
-                        color = AvanueTheme.colors.onBackground.copy(alpha = 0.6f)
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
                 if (state.estimatedRemainingSeconds > 0) {
                     Text(
                         text = formatDuration(state.estimatedRemainingSeconds),
                         fontSize = 11.sp,
-                        color = AvanueTheme.colors.onBackground.copy(alpha = 0.6f)
+                        color = AvanueTheme.colors.textSecondary
                     )
                 }
             }
@@ -413,7 +413,7 @@ private fun VerifyingCard(modelSize: WhisperModelSize) {
             Text(
                 text = "Verifying ${modelSize.displayName}...",
                 fontSize = 14.sp,
-                color = AvanueTheme.colors.onSurface
+                color = AvanueTheme.colors.textPrimary
             )
         }
     }
@@ -438,7 +438,7 @@ private fun ErrorCard(modelSize: WhisperModelSize, error: String) {
             Text(
                 text = error,
                 fontSize = 12.sp,
-                color = AvanueTheme.colors.onBackground.copy(alpha = 0.6f),
+                color = AvanueTheme.colors.textSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )

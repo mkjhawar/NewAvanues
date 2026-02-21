@@ -131,6 +131,9 @@ kotlin {
                 implementation("androidx.compose.ui:ui:1.5.4")
                 implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
                 implementation("androidx.compose.material3:material3:1.1.2")
+
+                // AvanueUI Design System (for WhisperModelDownloadScreen theme)
+                implementation(project(":Modules:AvanueUI"))
                 // Using material-icons-core + vector drawables to reduce APK size
                 implementation("androidx.compose.material:material-icons-core:1.5.4")
                 implementation("androidx.activity:activity-compose:1.8.2")
@@ -170,6 +173,7 @@ kotlin {
                 // Firebase
                 implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
                 implementation("com.google.firebase:firebase-config")
+                implementation("com.google.firebase:firebase-auth")
 
                 // Hilt
                 implementation(libs.hilt.android)
@@ -260,6 +264,11 @@ android {
             ?: System.getenv("VIVOKA_DOWNLOAD_PASSWORD") ?: ""
         buildConfigField("String", "VIVOKA_DOWNLOAD_USERNAME", "\"$vivokaUser\"")
         buildConfigField("String", "VIVOKA_DOWNLOAD_PASSWORD", "\"$vivokaPwd\"")
+
+        // Google Cloud Speech-to-Text v2
+        val gcpProjectId = props.getProperty("gcp.speech.project_id")
+            ?: System.getenv("GCP_SPEECH_PROJECT_ID") ?: ""
+        buildConfigField("String", "GCP_SPEECH_PROJECT_ID", "\"$gcpProjectId\"")
     }
 
     // Include legacy Android-only source set for Vivoka and other engines
