@@ -188,67 +188,33 @@ class LocalThemeRepository(
     // These functions need to be implemented using expect/actual for each platform
 
     /**
-     * Write content to file
+     * Write content to file — delegates to platform-specific themeWriteFile expect/actual.
      */
     private fun writeFile(path: String, content: String) {
-        // Platform-specific implementation
-        // For JVM/Android: Use java.io.File
-        // For iOS: Use NSFileManager
-        // For JS: Use Node.js fs module or browser storage
-
-        // Simplified implementation for demonstration
-        try {
-            val file = java.io.File(path)
-            file.parentFile?.mkdirs()
-            file.writeText(content)
-        } catch (e: Exception) {
-            println("Error writing file $path: ${e.message}")
-        }
+        themeWriteFile(path, content)
     }
 
     /**
-     * Read content from file
-     * Returns null if file doesn't exist
+     * Read content from file.
+     * Returns null if file doesn't exist.
      */
     private fun readFile(path: String): String? {
-        return try {
-            val file = java.io.File(path)
-            if (file.exists()) file.readText() else null
-        } catch (e: Exception) {
-            println("Error reading file $path: ${e.message}")
-            null
-        }
+        return themeReadFile(path)
     }
 
     /**
-     * Delete file
+     * Delete file.
      */
     private fun deleteFile(path: String) {
-        try {
-            val file = java.io.File(path)
-            if (file.exists()) file.delete()
-        } catch (e: Exception) {
-            println("Error deleting file $path: ${e.message}")
-        }
+        themeDeleteFile(path)
     }
 
     /**
-     * List all app theme files
-     * Returns list of filenames (not full paths)
+     * List all app theme files.
+     * Returns list of filenames (not full paths).
      */
     private fun listAppThemeFiles(): List<String> {
-        return try {
-            val appsDir = java.io.File("$themesDir/apps")
-            if (!appsDir.exists()) return emptyList()
-
-            appsDir.listFiles()
-                ?.filter { it.isFile && it.name.endsWith(".json") && !it.name.endsWith(".override.json") }
-                ?.map { it.name }
-                ?: emptyList()
-        } catch (e: Exception) {
-            println("Error listing app theme files: ${e.message}")
-            emptyList()
-        }
+        return themeListFiles("$themesDir/apps")
     }
 
     companion object {

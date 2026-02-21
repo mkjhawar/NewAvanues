@@ -17,7 +17,6 @@
 
 package com.augmentalis.avamagic.voice.handlers.input
 
-import android.net.Uri
 import com.avanues.logging.LoggerFactory
 import com.augmentalis.voiceoscore.ActionCategory
 import com.augmentalis.voiceoscore.BaseHandler
@@ -336,13 +335,13 @@ class FileUploadHandler(
 /**
  * Information about a selected file
  *
- * @property uri Content URI of the file
+ * @property uri Content URI of the file (as a String for KMP compatibility)
  * @property name Display name of the file
  * @property size File size in bytes
  * @property mimeType MIME type of the file
  */
 data class FileInfo(
-    val uri: Uri,
+    val uri: String,
     val name: String,
     val size: Long,
     val mimeType: String
@@ -412,14 +411,14 @@ enum class UploadStatus {
  * @property selectedFile Currently selected file info
  * @property status Current upload status
  * @property progress Upload progress (0.0 to 1.0)
- * @property uploadedUri URI of uploaded file (after completion)
+ * @property uploadedUri URI of uploaded file as a String (after completion)
  * @property errorMessage Error message if status is ERROR
  */
 data class FileUploadState(
     val selectedFile: FileInfo? = null,
     val status: UploadStatus = UploadStatus.IDLE,
     val progress: Float = 0f,
-    val uploadedUri: Uri? = null,
+    val uploadedUri: String? = null,
     val errorMessage: String? = null
 )
 
@@ -483,7 +482,7 @@ sealed class FileUploadResult {
     object NothingToCancel : FileUploadResult()
 
     /** Upload completed successfully */
-    data class UploadCompleted(val uploadedUri: Uri?) : FileUploadResult()
+    data class UploadCompleted(val uploadedUri: String?) : FileUploadResult()
 
     /** Upload failed */
     data class UploadFailed(val message: String) : FileUploadResult()
@@ -559,11 +558,11 @@ interface FileUploadExecutor {
     /**
      * Handle file selected callback from picker.
      *
-     * Called by the Activity when file picker returns a result.
+     * Called by the platform when file picker returns a result.
      *
-     * @param uri URI of the selected file, or null if cancelled
+     * @param uri URI of the selected file as a String, or null if cancelled
      */
-    suspend fun onFileSelected(uri: Uri?)
+    suspend fun onFileSelected(uri: String?)
 
     /**
      * Update upload progress.
@@ -575,9 +574,9 @@ interface FileUploadExecutor {
     /**
      * Mark upload as completed.
      *
-     * @param uploadedUri URI of the uploaded file (if applicable)
+     * @param uploadedUri URI of the uploaded file as a String (if applicable)
      */
-    suspend fun onUploadComplete(uploadedUri: Uri?)
+    suspend fun onUploadComplete(uploadedUri: String?)
 
     /**
      * Mark upload as failed.

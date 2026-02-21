@@ -215,7 +215,11 @@ fun PhotoAvanueScreen(
                     Icon(Icons.Default.ZoomIn, "Zoom In", tint = colors.textPrimary.copy(alpha = 0.7f))
                 }
                 Text(
-                    text = "${String.format("%.1f", cameraState.zoom.currentRatio)}x",
+                    text = run {
+                        val r = cameraState.zoom.currentRatio
+                        val rounded = kotlin.math.round(r * 10)
+                        "${rounded / 10}.${rounded % 10}x"
+                    },
                     color = colors.textPrimary.copy(alpha = 0.7f),
                     fontSize = 11.sp
                 )
@@ -640,7 +644,7 @@ private fun RecordingOverlay(
     val seconds = recording.durationMs / 1000
     val minutes = seconds / 60
     val secs = seconds % 60
-    val timeText = String.format("%02d:%02d", minutes, secs)
+    val timeText = "${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
 
     Row(
         modifier = modifier

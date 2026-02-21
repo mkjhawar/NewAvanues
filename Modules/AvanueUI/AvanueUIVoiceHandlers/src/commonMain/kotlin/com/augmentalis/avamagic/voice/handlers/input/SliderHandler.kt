@@ -545,8 +545,18 @@ class SliderHandler(
         return if (value == value.toLong().toDouble()) {
             value.toLong().toString()
         } else {
-            String.format("%.1f", value)
+            formatOneDecimal(value)
         }
+    }
+
+    /**
+     * Format a Double to one decimal place without using String.format (KMP-safe).
+     */
+    private fun formatOneDecimal(value: Double): String {
+        val rounded = (value * 10).toLong()
+        val intPart = rounded / 10
+        val fracPart = kotlin.math.abs(rounded % 10)
+        return "$intPart.$fracPart"
     }
 
 }

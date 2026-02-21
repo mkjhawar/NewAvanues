@@ -50,7 +50,7 @@ import com.augmentalis.voiceoscore.Bounds
 import com.augmentalis.voiceoscore.ElementInfo
 import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
-import java.util.concurrent.ConcurrentLinkedDeque
+import kotlinx.datetime.Clock
 
 /**
  * Voice command handler for Toast message interactions.
@@ -111,9 +111,11 @@ class ToastHandler(
     )
 
     /**
-     * Thread-safe toast history (most recent first).
+     * Toast history (most recent first).
+     * Uses ArrayDeque as a KMP-compatible deque.
+     * Access should be confined to the main/handler coroutine context.
      */
-    private val toastHistory = ConcurrentLinkedDeque<ToastInfo>()
+    private val toastHistory = ArrayDeque<ToastInfo>()
 
     /**
      * Callback for voice feedback when toast message is read.
@@ -140,7 +142,7 @@ class ToastHandler(
     /**
      * Get the most recent toast from history.
      */
-    fun getLastToast(): ToastInfo? = toastHistory.peekFirst()
+    fun getLastToast(): ToastInfo? = toastHistory.firstOrNull()
 
     /**
      * Clear toast history.
@@ -367,7 +369,7 @@ data class ToastInfo(
     val duration: ToastDuration = ToastDuration.SHORT,
     val gravity: ToastGravity = ToastGravity.BOTTOM,
     val isDismissable: Boolean = false,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = Clock.System.now().toEpochMilliseconds(),
     val bounds: Bounds = Bounds.EMPTY,
     val node: Any? = null
 ) {

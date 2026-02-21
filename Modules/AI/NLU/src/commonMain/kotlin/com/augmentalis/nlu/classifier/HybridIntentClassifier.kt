@@ -19,6 +19,7 @@ import com.augmentalis.nlu.matcher.SemanticMatcher
 import com.augmentalis.nlu.model.IntentMatch
 import com.augmentalis.nlu.model.MatchMethod
 import com.augmentalis.nlu.model.UnifiedIntent
+import kotlinx.datetime.Clock
 
 /**
  * Hybrid classifier combining three matching strategies.
@@ -216,8 +217,7 @@ class HybridIntentClassifier(
      * Platform-agnostic time function
      */
     private fun currentTimeMillis(): Long {
-        // This will be implemented platform-specifically
-        return 0L // Placeholder - actual implementation in platform modules
+        return Clock.System.now().toEpochMilliseconds()
     }
 }
 

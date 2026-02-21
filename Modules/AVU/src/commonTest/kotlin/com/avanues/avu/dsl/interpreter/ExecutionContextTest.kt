@@ -68,7 +68,7 @@ class ExecutionContextTest {
     @Test
     fun registerFunction_canBeRetrieved() {
         val ctx = ExecutionContext(SandboxConfig.DEFAULT)
-        val funcDef = com.augmentalis.voiceoscore.dsl.ast.AvuAstNode.Declaration.FunctionDef(
+        val funcDef = com.avanues.avu.dsl.ast.AvuAstNode.Declaration.FunctionDef(
             name = "myFunc",
             parameters = listOf("a", "b"),
             body = emptyList(),

@@ -23,10 +23,9 @@ import com.augmentalis.voiceoscore.ActionCategory
 import com.augmentalis.voiceoscore.BaseHandler
 import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.regex.Pattern
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * Voice command handler for DatePicker interactions.
@@ -55,27 +54,27 @@ class DatePickerHandler(
         private const val TAG = "DatePickerHandler"
         private val Log = LoggerFactory.getLogger(TAG)
 
-        // Date pattern constants
+        // Date pattern constants (month values are 0-indexed, matching Calendar.JANUARY=0 convention)
         private val MONTH_NAMES = mapOf(
-            "january" to Calendar.JANUARY,
-            "february" to Calendar.FEBRUARY,
-            "march" to Calendar.MARCH,
-            "april" to Calendar.APRIL,
-            "may" to Calendar.MAY,
-            "june" to Calendar.JUNE,
-            "july" to Calendar.JULY,
-            "august" to Calendar.AUGUST,
-            "september" to Calendar.SEPTEMBER,
-            "october" to Calendar.OCTOBER,
-            "november" to Calendar.NOVEMBER,
-            "december" to Calendar.DECEMBER
+            "january" to 0,
+            "february" to 1,
+            "march" to 2,
+            "april" to 3,
+            "may" to 4,
+            "june" to 5,
+            "july" to 6,
+            "august" to 7,
+            "september" to 8,
+            "october" to 9,
+            "november" to 10,
+            "december" to 11
         )
 
         // Regex patterns for date parsing
         // Pattern: "January 15" or "January 15 2026"
-        private val DATE_PATTERN = Pattern.compile(
+        private val DATE_PATTERN = Regex(
             "^(january|february|march|april|may|june|july|august|september|october|november|december)\\s+(\\d{1,2})(?:\\s+(\\d{4}))?$",
-            Pattern.CASE_INSENSITIVE
+            RegexOption.IGNORE_CASE
         )
     }
 
@@ -103,8 +102,10 @@ class DatePickerHandler(
     // State
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // Current date state (for relative operations)
-    private var currentDate: Calendar = Calendar.getInstance()
+    // Current date state (for relative operations) — stored as year/month(0-indexed)/day
+    private var currentDateYear: Int = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
+    private var currentDateMonth: Int = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).monthNumber - 1
+    private var currentDateDay: Int = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).dayOfMonth
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Initialization
@@ -171,43 +172,53 @@ class DatePickerHandler(
                 suggestedAction = "Say 'set date to' followed by month and day"
             )
 
-        return applyDate(parsedDate)
+        return applyDate(parsedDate.first, parsedDate.second, parsedDate.third)
     }
 
     /**
-     * Handle relative date commands
+     * Handle relative date commands using kotlinx-datetime arithmetic
      */
     private suspend fun handleRelativeDate(relativeDate: RelativeDate): HandlerResult {
-        val calendar = Calendar.getInstance()
+        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        var year = now.year
+        var month = now.monthNumber - 1  // 0-indexed
+        var day = now.dayOfMonth
 
         when (relativeDate) {
             RelativeDate.TODAY -> {
                 // Already set to today
             }
             RelativeDate.TOMORROW -> {
-                calendar.add(Calendar.DAY_OF_MONTH, 1)
+                val result = addDays(year, month, day, 1)
+                year = result.first; month = result.second; day = result.third
             }
             RelativeDate.YESTERDAY -> {
-                calendar.add(Calendar.DAY_OF_MONTH, -1)
+                val result = addDays(year, month, day, -1)
+                year = result.first; month = result.second; day = result.third
             }
             RelativeDate.NEXT_WEEK -> {
-                calendar.add(Calendar.WEEK_OF_YEAR, 1)
+                val result = addDays(year, month, day, 7)
+                year = result.first; month = result.second; day = result.third
             }
             RelativeDate.NEXT_MONTH -> {
-                calendar.add(Calendar.MONTH, 1)
+                val result = addMonths(year, month, 1)
+                year = result.first; month = result.second; day = minOf(day, daysInMonth(result.first, result.second))
             }
             RelativeDate.PREVIOUS_MONTH -> {
-                calendar.add(Calendar.MONTH, -1)
+                val result = addMonths(year, month, -1)
+                year = result.first; month = result.second; day = minOf(day, daysInMonth(result.first, result.second))
             }
             RelativeDate.NEXT_YEAR -> {
-                calendar.add(Calendar.YEAR, 1)
+                year += 1
+                day = minOf(day, daysInMonth(year, month))
             }
             RelativeDate.PREVIOUS_YEAR -> {
-                calendar.add(Calendar.YEAR, -1)
+                year -= 1
+                day = minOf(day, daysInMonth(year, month))
             }
         }
 
-        return applyDate(calendar)
+        return applyDate(year, month, day)
     }
 
     /**
@@ -216,22 +227,25 @@ class DatePickerHandler(
      * Supports:
      * - "January 15" (uses current year)
      * - "January 15 2026" (specific year)
+     *
+     * Returns Triple(year, month 0-indexed, day) or null
      */
-    private fun parseNaturalDate(dateString: String): Calendar? {
-        val matcher = DATE_PATTERN.matcher(dateString.lowercase().trim())
+    private fun parseNaturalDate(dateString: String): Triple<Int, Int, Int>? {
+        val matchResult = DATE_PATTERN.find(dateString.lowercase().trim())
 
-        if (!matcher.matches()) {
+        if (matchResult == null) {
             Log.d { "Date string did not match pattern: $dateString" }
             return null
         }
 
-        val monthName = matcher.group(1)?.lowercase() ?: return null
-        val dayString = matcher.group(2) ?: return null
-        val yearString = matcher.group(3)
+        val monthName = matchResult.groupValues[1].lowercase()
+        val dayString = matchResult.groupValues[2]
+        val yearString = matchResult.groupValues[3].takeIf { it.isNotBlank() }
 
         val month = MONTH_NAMES[monthName] ?: return null
         val day = dayString.toIntOrNull() ?: return null
-        val year = yearString?.toIntOrNull() ?: Calendar.getInstance().get(Calendar.YEAR)
+        val year = yearString?.toIntOrNull()
+            ?: Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
 
         // Validate day for month
         if (!isValidDayForMonth(day, month, year)) {
@@ -239,11 +253,7 @@ class DatePickerHandler(
             return null
         }
 
-        return Calendar.getInstance().apply {
-            set(Calendar.YEAR, year)
-            set(Calendar.MONTH, month)
-            set(Calendar.DAY_OF_MONTH, day)
-        }
+        return Triple(year, month, day)
     }
 
     /**
@@ -251,16 +261,45 @@ class DatePickerHandler(
      */
     private fun isValidDayForMonth(day: Int, month: Int, year: Int): Boolean {
         if (day < 1) return false
+        return day <= daysInMonth(year, month)
+    }
 
-        val maxDays = when (month) {
-            Calendar.JANUARY, Calendar.MARCH, Calendar.MAY, Calendar.JULY,
-            Calendar.AUGUST, Calendar.OCTOBER, Calendar.DECEMBER -> 31
-            Calendar.APRIL, Calendar.JUNE, Calendar.SEPTEMBER, Calendar.NOVEMBER -> 30
-            Calendar.FEBRUARY -> if (isLeapYear(year)) 29 else 28
-            else -> return false
+    /**
+     * Returns the number of days in the given month (0-indexed month).
+     */
+    private fun daysInMonth(year: Int, month: Int): Int {
+        return when (month) {
+            0, 2, 4, 6, 7, 9, 11 -> 31  // Jan, Mar, May, Jul, Aug, Oct, Dec
+            3, 5, 8, 10 -> 30            // Apr, Jun, Sep, Nov
+            1 -> if (isLeapYear(year)) 29 else 28  // Feb
+            else -> 30
         }
+    }
 
-        return day <= maxDays
+    /**
+     * Add days to a date, rolling over months and years as needed.
+     */
+    private fun addDays(year: Int, month: Int, day: Int, delta: Int): Triple<Int, Int, Int> {
+        var y = year; var m = month; var d = day + delta
+        while (d > daysInMonth(y, m)) {
+            d -= daysInMonth(y, m)
+            val next = addMonths(y, m, 1)
+            y = next.first; m = next.second
+        }
+        while (d < 1) {
+            val prev = addMonths(y, m, -1)
+            y = prev.first; m = prev.second
+            d += daysInMonth(y, m)
+        }
+        return Triple(y, m, d)
+    }
+
+    /**
+     * Add months to a date, rolling over years as needed.
+     */
+    private fun addMonths(year: Int, month: Int, delta: Int): Pair<Int, Int> {
+        val totalMonths = year * 12 + month + delta
+        return Pair(totalMonths / 12, totalMonths % 12)
     }
 
     /**
@@ -275,31 +314,37 @@ class DatePickerHandler(
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Apply date via executor
+     * Apply date via executor.
+     *
+     * @param year The year
+     * @param month The month (0-indexed, 0=January)
+     * @param day The day of month
      */
-    private suspend fun applyDate(calendar: Calendar): HandlerResult {
-        val result = executor.setDate(
-            year = calendar.get(Calendar.YEAR),
-            month = calendar.get(Calendar.MONTH),
-            day = calendar.get(Calendar.DAY_OF_MONTH)
-        )
+    private suspend fun applyDate(year: Int, month: Int, day: Int): HandlerResult {
+        val result = executor.setDate(year = year, month = month, day = day)
 
         return when (result) {
             is DatePickerResult.Success -> {
                 // Update internal state
-                currentDate = calendar
+                currentDateYear = year
+                currentDateMonth = month
+                currentDateDay = day
 
-                // Format date for feedback
-                val dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault())
-                val formattedDate = dateFormat.format(calendar.time)
+                // Format date for feedback using manual formatting (KMP-safe)
+                val monthNames = listOf(
+                    "January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"
+                )
+                val monthName = if (month in 0..11) monthNames[month] else "Unknown"
+                val formattedDate = "$monthName $day, $year"
 
                 Log.i { "Date set to: $formattedDate" }
                 HandlerResult.Success(
                     message = "Date set to $formattedDate",
                     data = mapOf(
-                        "year" to calendar.get(Calendar.YEAR),
-                        "month" to calendar.get(Calendar.MONTH),
-                        "day" to calendar.get(Calendar.DAY_OF_MONTH),
+                        "year" to year,
+                        "month" to month,
+                        "day" to day,
                         "formatted" to formattedDate
                     )
                 )

@@ -13,11 +13,10 @@ package com.augmentalis.voiceoscore
 
 import com.augmentalis.voiceoscore.Command
 import com.augmentalis.voiceoscore.CommandError
-import com.augmentalis.voiceoscore.CommandResult
+import com.augmentalis.voiceoscore.CommandExecutionResult
 import com.augmentalis.voiceoscore.CommandSource
 import com.augmentalis.voiceoscore.ErrorCode
 import com.augmentalis.voiceoscore.command.LocalizedVerbProvider
-import com.augmentalis.voiceoscore.command.StaticCommandRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -880,8 +879,8 @@ class ActionCoordinator(
 
         _results.emit(actionResult)
 
-        // Convert to CommandResult for metrics recording
-        val metricsResult = CommandResult(
+        // Convert to CommandExecutionResult for metrics recording
+        val metricsResult = CommandExecutionResult(
             success = result.isSuccess,
             command = Command(
                 id = command.avid,
