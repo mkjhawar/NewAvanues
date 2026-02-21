@@ -127,7 +127,11 @@ data class AccessibilityFingerprint(
          */
         private fun calculateDefaultHierarchyPath(node: AccessibilityNodeInfo): String {
             val path = mutableListOf<Int>()
+            // `current` starts as the caller-owned node — do NOT recycle it.
+            // Each subsequent assignment is a parent obtained via getParent(), which we DO recycle
+            // once we advance to the next level.
             var current: AccessibilityNodeInfo? = node
+            var isFirstNode = true
 
             // Walk up tree, collecting indices
             while (current != null) {
@@ -138,8 +142,17 @@ data class AccessibilityFingerprint(
                     if (index >= 0) {
                         path.add(0, index) // Prepend to build path from root
                     }
+                    // Recycle the previous `current` node only if it is not the caller-owned root.
+                    if (!isFirstNode) {
+                        current.recycle()
+                    }
+                    isFirstNode = false
                     current = parent
                 } else {
+                    // At the root — recycle if it is not the caller-owned node.
+                    if (!isFirstNode) {
+                        current.recycle()
+                    }
                     break
                 }
             }
@@ -159,10 +172,12 @@ data class AccessibilityFingerprint(
             child: AccessibilityNodeInfo
         ): Int {
             for (i in 0 until parent.childCount) {
-                val currentChild = parent.getChild(i)
-                if (currentChild != null && currentChild == child) {
-                    return i
-                }
+                val currentChild = parent.getChild(i) ?: continue
+                val matches = currentChild == child
+                // Always recycle the child node reference obtained via getChild() to avoid
+                // AccessibilityNodeInfo memory leaks. The caller retains ownership of `child`.
+                currentChild.recycle()
+                if (matches) return i
             }
             return -1
         }

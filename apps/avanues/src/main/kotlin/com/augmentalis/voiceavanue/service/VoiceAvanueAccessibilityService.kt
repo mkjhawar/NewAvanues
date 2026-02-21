@@ -66,7 +66,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import com.augmentalis.webavanue.BrowserVoiceOSCallback
 import com.augmentalis.webavanue.WebCommandExecutorImpl
@@ -583,14 +582,20 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
             Log.w(TAG, "Error stopping CommandOverlayService", e)
         }
 
-        try {
-            runBlocking {
+        // Dispose VoiceOSCore on a background thread to avoid blocking (and deadlocking)
+        // the accessibility service Main thread. A dedicated scope with SupervisorJob
+        // ensures the disposal runs to completion even after serviceScope is cancelled.
+        val disposeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        disposeScope.launch {
+            try {
                 withTimeout(3000L) {
                     voiceOSCore?.dispose()
                 }
+            } catch (e: Exception) {
+                Log.w(TAG, "VoiceOSCore dispose timed out or failed", e)
+            } finally {
+                disposeScope.cancel()
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "VoiceOSCore dispose timed out or failed", e)
         }
         serviceScope.cancel()
         super.onDestroy()

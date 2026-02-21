@@ -127,14 +127,19 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
     private val _fusedMotion = MutableStateFlow<FusedMotion?>(null)
     val fusedMotion: StateFlow<FusedMotion?> = _fusedMotion.asStateFlow()
 
-    // Latest sensor data
+    // Sensor data lock — guards all lastXxx fields accessed from concurrent sensor callbacks
+    private val sensorLock = Any()
+
+    // Latest sensor data — written from sensor callback threads, read from the processing coroutine.
+    // Guarded by sensorLock; lastTimestamp is additionally @Volatile so the isActive guard in
+    // onSensorChanged can do a cheap read without the lock.
+    @Volatile private var lastTimestamp: Long = 0L
     private var lastAcceleration: Vector3 = Vector3.zero
     private var lastAngularVelocity: Vector3 = Vector3.zero
     private var lastMagneticField: Vector3 = Vector3.zero
-    private var lastTimestamp: Long = 0L
 
     // Active state
-    private var isActive = false
+    @Volatile private var isActive = false
 
     /**
      * Start sensor fusion
@@ -205,6 +210,11 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
         kalmanFilter.reset()
         madgwickFilter.reset()
 
+        synchronized(sensorLock) {
+            lastAcceleration = Vector3.zero
+            lastAngularVelocity = Vector3.zero
+            lastMagneticField = Vector3.zero
+        }
         lastTimestamp = 0L
 
         Log.i(TAG, "Sensor fusion stopped")
@@ -228,21 +238,24 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
     override fun onSensorChanged(event: SensorEvent) {
         if (!isActive) return
 
+        // Capture event values immediately on the sensor thread (values array is reused by the OS).
+        val values = event.values.copyOf()
+        val timestamp = event.timestamp
+        val sensorType = event.sensor.type
+
         scope.launch {
-            when (event.sensor.type) {
-                Sensor.TYPE_ACCELEROMETER -> {
-                    lastAcceleration = Vector3(event.values[0], event.values[1], event.values[2])
-                    processSensorData(event.timestamp)
-                }
-                Sensor.TYPE_GYROSCOPE -> {
-                    lastAngularVelocity = Vector3(event.values[0], event.values[1], event.values[2])
-                    processSensorData(event.timestamp)
-                }
-                Sensor.TYPE_MAGNETIC_FIELD -> {
-                    lastMagneticField = Vector3(event.values[0], event.values[1], event.values[2])
-                    processSensorData(event.timestamp)
+            // Update the shared state under lock, then call processSensorData outside the lock.
+            synchronized(sensorLock) {
+                when (sensorType) {
+                    Sensor.TYPE_ACCELEROMETER ->
+                        lastAcceleration = Vector3(values[0], values[1], values[2])
+                    Sensor.TYPE_GYROSCOPE ->
+                        lastAngularVelocity = Vector3(values[0], values[1], values[2])
+                    Sensor.TYPE_MAGNETIC_FIELD ->
+                        lastMagneticField = Vector3(values[0], values[1], values[2])
                 }
             }
+            processSensorData(timestamp)
         }
     }
 
@@ -265,29 +278,39 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
             return
         }
 
+        // Snapshot the shared sensor state under lock to avoid data races with concurrent writes.
+        val accel: Vector3
+        val gyro: Vector3
+        val mag: Vector3
+        synchronized(sensorLock) {
+            accel = lastAcceleration
+            gyro = lastAngularVelocity
+            mag = lastMagneticField
+        }
+
         // Apply selected fusion algorithm
         val orientation = when (fusionMode) {
             FusionMode.COMPLEMENTARY -> {
                 complementaryFilter.update(
-                    lastAcceleration,
-                    lastAngularVelocity,
-                    lastMagneticField,
+                    accel,
+                    gyro,
+                    mag,
                     deltaTime
                 )
             }
             FusionMode.KALMAN -> {
                 kalmanFilter.update(
-                    lastAcceleration,
-                    lastAngularVelocity,
-                    lastMagneticField,
+                    accel,
+                    gyro,
+                    mag,
                     deltaTime
                 )
             }
             FusionMode.MADGWICK -> {
                 madgwickFilter.update(
-                    lastAcceleration,
-                    lastAngularVelocity,
-                    lastMagneticField,
+                    accel,
+                    gyro,
+                    mag,
                     deltaTime
                 )
             }
@@ -301,11 +324,11 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
             fusionMode = fusionMode
         )
 
-        // Emit fused motion
+        // Emit fused motion (using the locked snapshot from above)
         _fusedMotion.value = FusedMotion(
-            acceleration = lastAcceleration,
-            angularVelocity = lastAngularVelocity,
-            magneticField = lastMagneticField,
+            acceleration = accel,
+            angularVelocity = gyro,
+            magneticField = mag,
             timestamp = timestamp
         )
 

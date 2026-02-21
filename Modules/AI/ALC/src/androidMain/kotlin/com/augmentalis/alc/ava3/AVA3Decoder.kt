@@ -10,6 +10,7 @@ package com.augmentalis.alc.ava3
 
 import android.content.Context
 import timber.log.Timber
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -337,13 +338,25 @@ class AVA3Decoder {
 
     private fun decompress(data: ByteArray): ByteArray {
         return try {
-            java.util.zip.Inflater().run {
-                setInput(data)
-                val output = ByteArray(data.size * 4)
-                val size = inflate(output)
-                end()
-                output.copyOf(size)
+            val inflater = java.util.zip.Inflater()
+            inflater.setInput(data)
+            val baos = ByteArrayOutputStream(data.size * 2)
+            // Chunk buffer — sized to balance memory pressure and copy overhead.
+            val chunk = ByteArray(65536)
+            try {
+                while (!inflater.finished()) {
+                    val count = inflater.inflate(chunk)
+                    if (count == 0 && !inflater.finished()) {
+                        // Inflater needs more input but we gave it everything — data is truncated.
+                        Timber.w("$TAG: Inflater stalled before finishing — input may be truncated")
+                        break
+                    }
+                    baos.write(chunk, 0, count)
+                }
+            } finally {
+                inflater.end()
             }
+            baos.toByteArray()
         } catch (e: Exception) {
             Timber.w("$TAG: Decompression failed, returning raw data")
             data

@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.*
 import com.augmentalis.voiceoscore.managers.hudmanager.ui.*
 import com.augmentalis.voiceoscore.managers.hudmanager.rendering.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlin.math.*
@@ -28,9 +29,9 @@ class SpatialRenderer(
     private val context: Context
 ) {
     
-    // Spatial rendering state
-    private val spatialElements = mutableMapOf<String, SpatialElement>()
-    private val renderLayers = mutableMapOf<RenderLayer, MutableList<SpatialElement>>()
+    // Spatial rendering state — ConcurrentHashMap for safe multi-thread access
+    private val spatialElements = ConcurrentHashMap<String, SpatialElement>()
+    private val renderLayers = ConcurrentHashMap<RenderLayer, MutableList<SpatialElement>>()
     
     // 3D transformation matrices
     private var viewMatrix = FloatArray(16)

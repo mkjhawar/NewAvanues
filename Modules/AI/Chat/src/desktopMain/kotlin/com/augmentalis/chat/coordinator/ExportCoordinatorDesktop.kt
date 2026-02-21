@@ -14,8 +14,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToString
+import kotlinx.serialization.json.put
 import java.awt.Desktop
 import java.io.File
 import java.time.LocalDateTime
@@ -278,26 +282,34 @@ class ExportCoordinatorDesktop(
         messages: List<ExportMessage>,
         privacyOptions: PrivacyOptions
     ): Pair<String, String> {
-        val exportData = mapOf(
-            "exportVersion" to "1.0",
-            "exportedAt" to Clock.System.now().toString(),
-            "conversation" to mapOf(
-                "id" to conversationId,
-                "title" to conversationTitle,
-                "messageCount" to messages.size
-            ),
-            "messages" to messages.map { msg ->
-                buildMap {
-                    put("id", msg.id)
-                    put("role", msg.role)
-                    put("content", msg.content)
-                    if (msg.timestamp != null) put("timestamp", msg.timestamp)
-                    if (msg.metadata != null) put("metadata", msg.metadata)
+        // Build a fully-typed JsonObject so kotlinx.serialization can encode it
+        // without needing a serializer for Map<String, Any>.
+        val exportData: JsonObject = buildJsonObject {
+            put("exportVersion", "1.0")
+            put("exportedAt", Clock.System.now().toString())
+            put("conversation", buildJsonObject {
+                put("id", conversationId)
+                put("title", conversationTitle)
+                put("messageCount", messages.size)
+            })
+            put("messages", buildJsonArray {
+                messages.forEach { msg ->
+                    add(buildJsonObject {
+                        put("id", msg.id)
+                        put("role", msg.role)
+                        put("content", msg.content)
+                        if (msg.timestamp != null) put("timestamp", msg.timestamp)
+                        if (msg.metadata != null) {
+                            put("metadata", buildJsonObject {
+                                msg.metadata.forEach { (k, v) -> put(k, v) }
+                            })
+                        }
+                    })
                 }
-            }
-        )
+            })
+        }
 
-        val content = json.encodeToString(exportData)
+        val content = json.encodeToString(JsonObject.serializer(), exportData)
         return content to "application/json"
     }
 
@@ -316,31 +328,40 @@ class ExportCoordinatorDesktop(
         conversations: List<ConversationExportData>,
         privacyOptions: PrivacyOptions
     ): Pair<String, String> {
-        val exportData = mapOf(
-            "exportVersion" to "1.0",
-            "exportedAt" to Clock.System.now().toString(),
-            "totalConversations" to conversations.size,
-            "conversations" to conversations.map { conv ->
-                mapOf(
-                    "id" to conv.id,
-                    "title" to conv.title,
-                    "createdAt" to conv.createdAt,
-                    "updatedAt" to conv.updatedAt,
-                    "messageCount" to conv.messages.size,
-                    "messages" to conv.messages.map { msg ->
-                        buildMap {
-                            put("id", msg.id)
-                            put("role", msg.role)
-                            put("content", msg.content)
-                            if (msg.timestamp != null) put("timestamp", msg.timestamp)
-                            if (msg.metadata != null) put("metadata", msg.metadata)
-                        }
-                    }
-                )
-            }
-        )
+        // Build a fully-typed JsonObject to avoid SerializationException on Map<String, Any>.
+        val exportData: JsonObject = buildJsonObject {
+            put("exportVersion", "1.0")
+            put("exportedAt", Clock.System.now().toString())
+            put("totalConversations", conversations.size)
+            put("conversations", buildJsonArray {
+                conversations.forEach { conv ->
+                    add(buildJsonObject {
+                        put("id", conv.id)
+                        put("title", conv.title)
+                        put("createdAt", conv.createdAt)
+                        put("updatedAt", conv.updatedAt)
+                        put("messageCount", conv.messages.size)
+                        put("messages", buildJsonArray {
+                            conv.messages.forEach { msg ->
+                                add(buildJsonObject {
+                                    put("id", msg.id)
+                                    put("role", msg.role)
+                                    put("content", msg.content)
+                                    if (msg.timestamp != null) put("timestamp", msg.timestamp)
+                                    if (msg.metadata != null) {
+                                        put("metadata", buildJsonObject {
+                                            msg.metadata.forEach { (k, v) -> put(k, v) }
+                                        })
+                                    }
+                                })
+                            }
+                        })
+                    })
+                }
+            })
+        }
 
-        val content = json.encodeToString(exportData)
+        val content = json.encodeToString(JsonObject.serializer(), exportData)
         return content to "application/json"
     }
 

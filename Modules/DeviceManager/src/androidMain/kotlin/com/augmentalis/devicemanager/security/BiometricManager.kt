@@ -974,16 +974,29 @@ class BiometricManager(
     }
     
     private fun authenticateWithDeviceCredential(
-        @Suppress("UNUSED_PARAMETER") request: AuthenticationRequest,
+        request: AuthenticationRequest,
         callback: (AuthenticationResult) -> Unit
     ) {
         if (!keyguardManager.isDeviceSecure) {
             handleAuthenticationError(ERROR_NO_DEVICE_CREDENTIAL, "No device credential set", callback)
             return
         }
-        
-        // This would typically launch the system credential UI
-        // Implementation depends on specific requirements
+
+        // Device credential (PIN/pattern/password) authentication is only available via
+        // KeyguardManager.createConfirmDeviceCredentialIntent() which requires the caller to
+        // start an Activity and handle onActivityResult. We cannot complete that flow from a
+        // non-Activity context, so we report an error that callers can handle by launching the
+        // system credential UI themselves.
+        //
+        // For API 29+ the preferred approach is BiometricPrompt with
+        // DEVICE_CREDENTIAL authenticator — handled in authenticateWithBiometricPrompt().
+        // This fallback path (pre-API 28) cannot silently hang; we must call the callback.
+        handleAuthenticationError(
+            ERROR_HW_UNAVAILABLE,
+            "Device credential authentication requires launching a system Activity. " +
+                "Use BiometricPrompt on API 28+ or start KeyguardManager.createConfirmDeviceCredentialIntent() manually.",
+            callback
+        )
     }
     
     @RequiresApi(Build.VERSION_CODES.P)

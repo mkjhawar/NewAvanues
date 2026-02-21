@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.LinkedList
 import com.augmentalis.ava.core.data.util.AvidHelper
@@ -200,16 +201,20 @@ object DialogQueueManager {
     }
 
     /**
-     * Remove a specific dialog from the queue
+     * Remove a specific dialog from the queue.
+     *
+     * This is a suspending function so it can wait for the mutex and return the actual result.
+     * The previous non-suspend implementation used `scope.launch { }` which always returned
+     * `false` immediately because the lambda executed asynchronously after the function returned.
      *
      * @param dialogId ID of dialog to remove
-     * @return true if dialog was removed
+     * @return true if dialog was found in the queue and removed
      */
-    fun removeFromQueue(dialogId: String): Boolean {
-        var removed = false
-        scope.launch {
+    suspend fun removeFromQueue(dialogId: String): Boolean {
+        return withContext(Dispatchers.Main) {
             mutex.withLock {
                 val iterator = queue.iterator()
+                var removed = false
                 while (iterator.hasNext()) {
                     if (iterator.next().id == dialogId) {
                         iterator.remove()
@@ -218,9 +223,9 @@ object DialogQueueManager {
                         break
                     }
                 }
+                removed
             }
         }
-        return removed
     }
 
     /**

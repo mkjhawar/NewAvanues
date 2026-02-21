@@ -181,22 +181,29 @@ class HUDManager constructor(
      * Register a consumer application for HUD services
      */
     fun registerConsumer(consumerId: String): Boolean {
-        return synchronized(activeConsumers) {
+        synchronized(activeConsumers) {
             activeConsumers.add(consumerId)
+        }
+        // Compose mutableStateOf writes must happen on the Main thread.
+        // hudScope is Dispatchers.Main, so this is safe from any caller thread.
+        hudScope.launch {
             if (!_isActive.value) {
                 _isActive.value = true
                 startHUDServices()
             }
-            true
         }
+        return true
     }
-    
+
     /**
      * Unregister a consumer application
      */
     fun unregisterConsumer(consumerId: String) {
         synchronized(activeConsumers) {
             activeConsumers.remove(consumerId)
+        }
+        // Compose mutableStateOf writes must happen on the Main thread.
+        hudScope.launch {
             if (activeConsumers.isEmpty()) {
                 _isActive.value = false
                 stopHUDServices()
