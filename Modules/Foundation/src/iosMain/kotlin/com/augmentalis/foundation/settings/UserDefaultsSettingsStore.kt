@@ -48,6 +48,12 @@ class UserDefaultsSettingsStore<T>(
         }
     }
 
+    /** Remove the NSNotificationCenter observer. Call when the store is no longer needed. */
+    fun close() {
+        observer?.let { NSNotificationCenter.defaultCenter.removeObserver(it) }
+        observer = null
+    }
+
     private val updateMutex = Mutex()
 
     override suspend fun update(block: (T) -> T) = updateMutex.withLock {

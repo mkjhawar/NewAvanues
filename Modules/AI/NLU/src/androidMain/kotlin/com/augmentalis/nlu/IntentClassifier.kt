@@ -566,20 +566,20 @@ actual class IntentClassifier private constructor(
         try {
             android.util.Log.d("IntentClassifier", "Loading intent embeddings from database...")
 
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
-            val embeddingQueries = database.intentEmbeddingQueries
-
-            // Multi-locale support: Use fallback chain for robust locale handling
             val locale = localeManager.getCurrentLocale()
             val fallbackChain = localeManager.getFallbackChain(locale)
 
             android.util.Log.d("IntentClassifier", "Loading embeddings for locale chain: $fallbackChain")
 
-            // Try each locale in fallback chain until embeddings found
-            val cachedEmbeddings = fallbackChain.firstNotNullOfOrNull { localeCode ->
-                embeddingQueries.selectByLocale(localeCode).executeAsList()
-                    .takeIf { it.isNotEmpty() }
-            } ?: emptyList()
+            // Open the database, query all needed data, then close the driver immediately.
+            val cachedEmbeddings = withDatabase { database ->
+                val embeddingQueries = database.intentEmbeddingQueries
+                // Try each locale in fallback chain until embeddings found
+                fallbackChain.firstNotNullOfOrNull { localeCode ->
+                    embeddingQueries.selectByLocale(localeCode).executeAsList()
+                        .takeIf { it.isNotEmpty() }
+                } ?: emptyList()
+            }
 
             if (cachedEmbeddings.isNotEmpty()) {
                 val loadedLocale = cachedEmbeddings.firstOrNull()?.locale ?: locale
@@ -735,8 +735,9 @@ actual class IntentClassifier private constructor(
             embeddingManager.addEmbedding(intentId, normalizedAvg)
 
             // Save to database for persistence
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
-            saveIntentEmbeddingToDatabase(database, intentId, normalizedAvg, examples.size)
+            withDatabase { database ->
+                saveIntentEmbeddingToDatabase(database, intentId, normalizedAvg, examples.size)
+            }
 
             android.util.Log.i("IntentClassifier", "  ✓ Saved embedding for $intentId (${normalizedAvg.size}-dim)")
             Result.Success(Unit)
@@ -780,9 +781,9 @@ actual class IntentClassifier private constructor(
      */
     suspend fun findEmbeddingByUtterance(utterance: String): ByteArray? = withContext(Dispatchers.IO) {
         try {
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
-            val result = database.trainExampleQueries.findByUtteranceWithEmbedding(utterance).executeAsOneOrNull()
-            result?.embedding_vector
+            withDatabase { database ->
+                database.trainExampleQueries.findByUtteranceWithEmbedding(utterance).executeAsOneOrNull()
+            }?.embedding_vector
         } catch (e: Exception) {
             android.util.Log.e("IntentClassifier", "findEmbeddingByUtterance error: ${e.message}")
             null
@@ -807,7 +808,6 @@ actual class IntentClassifier private constructor(
         confidence: Float
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
             val locale = localeManager.getCurrentLocale()
             val currentTime = System.currentTimeMillis()
             val exampleHash = utterance.hashCode().toString()
@@ -818,17 +818,19 @@ actual class IntentClassifier private constructor(
             embedding.forEach { buffer.putFloat(it) }
             val embeddingBytes = buffer.array()
 
-            database.trainExampleQueries.insertWithEmbedding(
-                example_hash = exampleHash,
-                utterance = utterance,
-                intent = intent,
-                locale = locale,
-                source = source,
-                created_at = currentTime,
-                confidence = confidence.toDouble(),
-                embedding_vector = embeddingBytes,
-                embedding_dimension = embedding.size.toLong()
-            )
+            withDatabase { database ->
+                database.trainExampleQueries.insertWithEmbedding(
+                    example_hash = exampleHash,
+                    utterance = utterance,
+                    intent = intent,
+                    locale = locale,
+                    source = source,
+                    created_at = currentTime,
+                    confidence = confidence.toDouble(),
+                    embedding_vector = embeddingBytes,
+                    embedding_dimension = embedding.size.toLong()
+                )
+            }
 
             // Delegate to embedding manager for in-memory cache
             embeddingManager.addEmbedding("trained_${exampleHash}", embedding)
@@ -849,8 +851,9 @@ actual class IntentClassifier private constructor(
      */
     suspend fun confirmTrainedEmbedding(utterance: String) = withContext(Dispatchers.IO) {
         try {
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
-            database.trainExampleQueries.confirmUtterance(utterance)
+            withDatabase { database ->
+                database.trainExampleQueries.confirmUtterance(utterance)
+            }
             android.util.Log.i("IntentClassifier", "Confirmed embedding: '$utterance'")
         } catch (e: Exception) {
             android.util.Log.e("IntentClassifier", "confirmTrainedEmbedding error: ${e.message}")
@@ -864,8 +867,9 @@ actual class IntentClassifier private constructor(
      */
     suspend fun deleteTrainedEmbedding(utterance: String) = withContext(Dispatchers.IO) {
         try {
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
-            database.trainExampleQueries.deleteByUtterance(utterance)
+            withDatabase { database ->
+                database.trainExampleQueries.deleteByUtterance(utterance)
+            }
 
             // Delegate removal to embedding manager
             val hash = utterance.hashCode().toString()
@@ -901,8 +905,9 @@ actual class IntentClassifier private constructor(
      */
     suspend fun getLearningStats(): LearningStatsResult = withContext(Dispatchers.IO) {
         try {
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
-            val stats = database.trainExampleQueries.getLearningStats().executeAsOne()
+            val stats = withDatabase { database ->
+                database.trainExampleQueries.getLearningStats().executeAsOne()
+            }
             LearningStatsResult(
                 total = (stats.total ?: 0L).toInt(),
                 llmAuto = (stats.llm_auto ?: 0L).toInt(),
@@ -922,8 +927,9 @@ actual class IntentClassifier private constructor(
      */
     suspend fun clearAllTrainedEmbeddings() = withContext(Dispatchers.IO) {
         try {
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
-            database.trainExampleQueries.deleteAllLearned()
+            withDatabase { database ->
+                database.trainExampleQueries.deleteAllLearned()
+            }
 
             // Delegate clearing trained entries to embedding manager
             embeddingManager.getIntentNames()
@@ -945,8 +951,9 @@ actual class IntentClassifier private constructor(
      */
     private suspend fun loadTrainedEmbeddings() = withContext(Dispatchers.IO) {
         try {
-            val database = DatabaseDriverFactory(context).createDriver().createDatabase()
-            val trainedExamples = database.trainExampleQueries.selectAllWithEmbeddings().executeAsList()
+            val trainedExamples = withDatabase { database ->
+                database.trainExampleQueries.selectAllWithEmbeddings().executeAsList()
+            }
 
             android.util.Log.i("IntentClassifier", "Loading ${trainedExamples.size} trained embeddings")
 
@@ -969,6 +976,22 @@ actual class IntentClassifier private constructor(
     }
 
     // ==================== End ADR-013 Methods ====================
+
+    /**
+     * Create a database connection, execute [block], and close the driver in all code paths.
+     *
+     * Every call to [DatabaseDriverFactory.createDriver] opens a new SQLite connection.
+     * The [SqlDriver] is the resource that must be closed; AVADatabase itself holds no
+     * additional resources beyond what the driver provides.
+     */
+    private inline fun <T> withDatabase(block: (database: AVADatabase) -> T): T {
+        val driver = DatabaseDriverFactory(context).createDriver()
+        return try {
+            block(driver.createDatabase())
+        } finally {
+            driver.close()
+        }
+    }
 
     /**
      * Save a single intent embedding to database
