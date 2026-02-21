@@ -301,7 +301,7 @@ Pervasive Rule 3 violations. **30+ files** across:
 | 1 | P0 | Security Vulnerabilities | 20 | 3-4 | **DONE** (260221, `1bc545a7`) |
 | 2 | P0 | Data Corruption / Loss | 12 | 1 | **DONE** (260221, `91a6ce18`) — D2 false positive |
 | 3 | P1 | Crashes & Deadlocks | 22 | 1 | **DONE** (260221, `db6c1a52`) — C1-C2 deferred (HTTP/2) |
-| 4 | P2 | Non-Functional Modules | 16 | 0.5 | **RESOLVED** — NF9,10,15 already fixed in Batches 2/3/5; remaining 13 are honest platform stubs (keep as future work) |
+| 4 | P2 | Non-Functional Modules | 16 | 0.5 | **RESOLVED** — NF3,NF4 fake inference → explicit errors; NF9,NF15 already fixed; NF1-2 (IPC/Rpc) delete candidates; rest are honest platform stubs |
 | 5 | P2 | KMP Compilation | 22 | 1 | **DONE** (260221, `32bc44d5`) — K18 fixed in Batch 3 |
 | 6 | P2 | Threading / Concurrency | 20 | 3 | **DONE** (260221, `c24ba00f` + `47bbdb26`) — T1 skipped (IPC non-functional) |
 | 7 | P3 | Theme Violations | 30+ | 2-3 | **DONE** (`f8fba223` + `269cab66`) — 124 violations fixed in Modules + active apps; legacy apps skipped; ThemeBuilder annotated (needs dep) |
