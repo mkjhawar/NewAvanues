@@ -79,7 +79,11 @@ data class FocusState(
     }
 
     val displayText: String get() {
-        return if (currentDiopters <= 0.01f) "INF" else String.format("%.1fm", 1f / currentDiopters)
+        return if (currentDiopters <= 0.01f) "INF" else run {
+            val meters = 1f / currentDiopters
+            val rounded = kotlin.math.round(meters * 10)
+            "${rounded / 10}.${rounded % 10}m"
+        }
     }
 }
 

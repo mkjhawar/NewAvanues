@@ -252,7 +252,7 @@ class HandlerRegistry : IHandlerRegistry {
      * Get all registered handler categories.
      * Used by "list commands" to show available command areas.
      */
-    fun getRegisteredCategories(): List<ActionCategory> {
+    override fun getRegisteredCategories(): List<ActionCategory> {
         return handlers.keys.toList().sortedBy { ActionCategory.PRIORITY_ORDER.indexOf(it) }
     }
 

@@ -120,17 +120,17 @@ data class Transform3D(
     }
 
     fun rotateX(degrees: Float): Transform3D {
-        val rotation = rotationXMatrix(Math.toRadians(degrees.toDouble()).toFloat())
+        val rotation = rotationXMatrix((degrees.toDouble() * kotlin.math.PI / 180.0).toFloat())
         return Transform3D(multiplyMatrices(matrix, rotation))
     }
 
     fun rotateY(degrees: Float): Transform3D {
-        val rotation = rotationYMatrix(Math.toRadians(degrees.toDouble()).toFloat())
+        val rotation = rotationYMatrix((degrees.toDouble() * kotlin.math.PI / 180.0).toFloat())
         return Transform3D(multiplyMatrices(matrix, rotation))
     }
 
     fun rotateZ(degrees: Float): Transform3D {
-        val rotation = rotationZMatrix(Math.toRadians(degrees.toDouble()).toFloat())
+        val rotation = rotationZMatrix((degrees.toDouble() * kotlin.math.PI / 180.0).toFloat())
         return Transform3D(multiplyMatrices(matrix, rotation))
     }
 
@@ -210,7 +210,7 @@ data class Transform3D(
         )
 
         private fun perspectiveMatrix(fov: Float, aspect: Float, near: Float, far: Float): FloatArray {
-            val f = 1f / kotlin.math.tan(Math.toRadians(fov.toDouble() / 2.0).toFloat())
+            val f = 1f / kotlin.math.tan((fov.toDouble() / 2.0 * kotlin.math.PI / 180.0).toFloat())
             val rangeInv = 1f / (near - far)
             return floatArrayOf(
                 f / aspect, 0f, 0f, 0f,

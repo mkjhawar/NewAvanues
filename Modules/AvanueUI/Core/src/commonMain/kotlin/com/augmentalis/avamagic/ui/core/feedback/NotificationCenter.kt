@@ -3,6 +3,7 @@ package com.augmentalis.avamagic.ui.core.feedback
 import com.augmentalis.avamagic.components.core.*
 import com.augmentalis.avamagic.components.core.Position
 import com.augmentalis.avamagic.components.core.Severity
+import kotlinx.datetime.Clock
 
 /**
  * Centralized notification display system.
@@ -109,7 +110,7 @@ data class Notification(
     val message: String,
     val severity: Severity = Severity.INFO,
     val title: String? = null,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = Clock.System.now().toEpochMilliseconds(),
     val dismissible: Boolean = true
 ) {
     init {

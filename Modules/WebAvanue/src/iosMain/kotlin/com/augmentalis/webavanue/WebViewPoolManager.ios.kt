@@ -2,48 +2,56 @@ package com.augmentalis.webavanue
 
 import platform.WebKit.WKWebView
 import platform.WebKit.WKWebViewConfiguration
+import platform.WebKit.WKWebsiteDataStore
 
 /**
- * iOS WebViewPoolManager implementation
+ * iOS WebViewPoolManager implementation.
  *
- * Manages a pool of WKWebView instances for performance
+ * Manages lifecycle of WKWebView instances keyed by tab ID, and handles
+ * cookie/data-store cleanup on exit.
  */
 actual object WebViewPoolManager {
-    private val pool = mutableListOf<WKWebView>()
-    private const val MAX_POOL_SIZE = 3
+    private val webViews = mutableMapOf<String, WKWebView>()
 
-    actual fun preWarmWebView() {
-        if (pool.size < MAX_POOL_SIZE) {
-            val configuration = WKWebViewConfiguration()
-            configuration.preferences.javaScriptEnabled = true
+    /**
+     * Remove and destroy the WKWebView associated with [tabId].
+     */
+    actual fun removeWebView(tabId: String) {
+        val webView = webViews.remove(tabId) ?: return
+        webView.stopLoading()
+        webView.loadHTMLString("", baseURL = null)
+        webView.removeFromSuperview()
+    }
 
-            val webView = WKWebView(
-                frame = platform.CoreGraphics.CGRectZero.readValue(),
-                configuration = configuration
-            )
-            pool.add(webView)
+    /**
+     * Remove and destroy all managed WKWebView instances.
+     */
+    actual fun clearAllWebViews() {
+        val ids = webViews.keys.toList()
+        ids.forEach { removeWebView(it) }
+        webViews.clear()
+    }
+
+    /**
+     * Clear all website cookies and cached data from the default data store.
+     * Called on app exit to ensure no browsing data persists across sessions.
+     */
+    actual fun clearCookiesOnExit() {
+        val dataStore = WKWebsiteDataStore.defaultDataStore()
+        val allTypes = WKWebsiteDataStore.allWebsiteDataTypes()
+        dataStore.removeDataOfTypes(
+            dataTypes = allTypes,
+            modifiedSince = platform.Foundation.NSDate.distantPast()
+        ) {
+            // Completion handler — no action required on exit
         }
     }
 
-    actual fun getWebView(): Any? {
-        return pool.removeFirstOrNull()
-    }
-
-    actual fun returnWebView(webView: Any) {
-        if (webView is WKWebView && pool.size < MAX_POOL_SIZE) {
-            // Clear webview state before returning to pool
-            webView.stopLoading()
-            webView.loadHTMLString("", baseURL = null)
-            pool.add(webView)
-        }
-    }
-
-    actual fun clearPool() {
-        pool.forEach { it.removeFromSuperview() }
-        pool.clear()
-    }
-
-    actual fun getPoolSize(): Int {
-        return pool.size
+    /**
+     * Register a WKWebView instance for a given tab ID so it can be managed.
+     * Platform-specific convenience method — not part of the expect declaration.
+     */
+    fun registerWebView(tabId: String, webView: WKWebView) {
+        webViews[tabId] = webView
     }
 }

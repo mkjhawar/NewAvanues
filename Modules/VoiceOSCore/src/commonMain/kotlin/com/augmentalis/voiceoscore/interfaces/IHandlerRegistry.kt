@@ -113,6 +113,14 @@ interface IHandlerRegistry {
     suspend fun getCategoryCount(): Int
 
     /**
+     * Get all registered handler categories.
+     * Used by "list commands" to show available command areas.
+     *
+     * @return List of ActionCategory values that have registered handlers
+     */
+    fun getRegisteredCategories(): List<ActionCategory>
+
+    /**
      * Clear all registered handlers.
      */
     suspend fun clear()

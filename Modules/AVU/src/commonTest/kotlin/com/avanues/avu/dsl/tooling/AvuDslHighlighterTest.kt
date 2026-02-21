@@ -137,21 +137,21 @@ class AvuDslHighlighterTest {
     @Test
     fun categorize_maps_all_directives() {
         val directiveTypes = listOf(
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_WORKFLOW,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_DEFINE,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_ON,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_IF,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_ELSE,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_WAIT,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_REPEAT,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_WHILE,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_SET,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_RETURN,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.AT_EMIT
+            com.avanues.avu.dsl.lexer.TokenType.AT_WORKFLOW,
+            com.avanues.avu.dsl.lexer.TokenType.AT_DEFINE,
+            com.avanues.avu.dsl.lexer.TokenType.AT_ON,
+            com.avanues.avu.dsl.lexer.TokenType.AT_IF,
+            com.avanues.avu.dsl.lexer.TokenType.AT_ELSE,
+            com.avanues.avu.dsl.lexer.TokenType.AT_WAIT,
+            com.avanues.avu.dsl.lexer.TokenType.AT_REPEAT,
+            com.avanues.avu.dsl.lexer.TokenType.AT_WHILE,
+            com.avanues.avu.dsl.lexer.TokenType.AT_SET,
+            com.avanues.avu.dsl.lexer.TokenType.AT_RETURN,
+            com.avanues.avu.dsl.lexer.TokenType.AT_EMIT
         )
 
         for (type in directiveTypes) {
-            val token = com.augmentalis.voiceoscore.dsl.lexer.Token(type, "@test", 1, 1)
+            val token = com.avanues.avu.dsl.lexer.Token(type, "@test", 1, 1)
             assertEquals(HighlightCategory.DIRECTIVE, AvuDslHighlighter.categorize(token),
                 "TokenType.$type should be DIRECTIVE")
         }
@@ -160,13 +160,13 @@ class AvuDslHighlighterTest {
     @Test
     fun categorize_operators() {
         val opTypes = listOf(
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.PLUS,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.MINUS,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.EQ,
-            com.augmentalis.voiceoscore.dsl.lexer.TokenType.NEQ
+            com.avanues.avu.dsl.lexer.TokenType.PLUS,
+            com.avanues.avu.dsl.lexer.TokenType.MINUS,
+            com.avanues.avu.dsl.lexer.TokenType.EQ,
+            com.avanues.avu.dsl.lexer.TokenType.NEQ
         )
         for (type in opTypes) {
-            val token = com.augmentalis.voiceoscore.dsl.lexer.Token(type, "+", 1, 1)
+            val token = com.avanues.avu.dsl.lexer.Token(type, "+", 1, 1)
             assertEquals(HighlightCategory.OPERATOR, AvuDslHighlighter.categorize(token))
         }
     }

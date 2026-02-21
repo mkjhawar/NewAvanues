@@ -35,6 +35,9 @@ kotlin {
 
                 // Kotlinx Serialization
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+
+                // Kotlinx DateTime (KMP-safe alternative to System.currentTimeMillis)
+                implementation(libs.kotlinx.datetime)
             }
         }
 

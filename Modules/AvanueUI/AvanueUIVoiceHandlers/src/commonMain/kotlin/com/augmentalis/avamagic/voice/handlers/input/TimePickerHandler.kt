@@ -32,9 +32,9 @@ import com.augmentalis.voiceoscore.ActionCategory
 import com.augmentalis.voiceoscore.BaseHandler
 import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.QuantizedCommand
-import java.util.Calendar
-import java.util.Locale
-import java.util.regex.Pattern
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * Voice command handler for TimePicker widget interactions.
@@ -57,21 +57,21 @@ class TimePickerHandler(
         private val Log = LoggerFactory.getLogger(TAG)
 
         // Time parsing patterns
-        private val TIME_PATTERN_12H = Pattern.compile(
+        private val TIME_PATTERN_12H = Regex(
             "(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a\\.m\\.|p\\.m\\.)?",
-            Pattern.CASE_INSENSITIVE
+            RegexOption.IGNORE_CASE
         )
-        private val TIME_PATTERN_24H = Pattern.compile(
+        private val TIME_PATTERN_24H = Regex(
             "(\\d{1,2}):(\\d{2})(?::(\\d{2}))?",
-            Pattern.CASE_INSENSITIVE
+            RegexOption.IGNORE_CASE
         )
-        private val HOUR_PATTERN = Pattern.compile(
+        private val HOUR_PATTERN = Regex(
             "(?:set\\s+)?hour\\s+(?:to\\s+)?(\\d{1,2})",
-            Pattern.CASE_INSENSITIVE
+            RegexOption.IGNORE_CASE
         )
-        private val MINUTE_PATTERN = Pattern.compile(
+        private val MINUTE_PATTERN = Regex(
             "(?:set\\s+)?minute[s]?\\s+(?:to\\s+)?(\\d{1,2})",
-            Pattern.CASE_INSENSITIVE
+            RegexOption.IGNORE_CASE
         )
 
         // Word to number mapping for natural speech
@@ -164,7 +164,7 @@ class TimePickerHandler(
                 }
 
                 // Hour setting
-                normalized.startsWith("set hour") || HOUR_PATTERN.matcher(normalized).find() -> {
+                normalized.startsWith("set hour") || HOUR_PATTERN.containsMatchIn(normalized) -> {
                     handleSetHour(normalized)
                 }
 
@@ -177,7 +177,7 @@ class TimePickerHandler(
                 }
 
                 // Minute setting
-                normalized.startsWith("set minute") || MINUTE_PATTERN.matcher(normalized).find() -> {
+                normalized.startsWith("set minute") || MINUTE_PATTERN.containsMatchIn(normalized) -> {
                     handleSetMinute(normalized)
                 }
 
@@ -244,11 +244,11 @@ class TimePickerHandler(
         val convertedInput = convertWordsToNumbers(trimmed)
 
         // Try 12-hour format with AM/PM
-        val matcher12h = TIME_PATTERN_12H.matcher(convertedInput)
-        if (matcher12h.find()) {
-            val hour = matcher12h.group(1)?.toIntOrNull() ?: return null
-            val minute = matcher12h.group(2)?.toIntOrNull() ?: 0
-            val period = matcher12h.group(3)?.lowercase()
+        val match12h = TIME_PATTERN_12H.find(convertedInput)
+        if (match12h != null) {
+            val hour = match12h.groupValues[1].toIntOrNull() ?: return null
+            val minute = match12h.groupValues[2].toIntOrNull() ?: 0
+            val period = match12h.groupValues[3].lowercase().takeIf { it.isNotBlank() }
 
             if (hour !in 1..12 || minute !in 0..59) return null
 
@@ -263,10 +263,10 @@ class TimePickerHandler(
         }
 
         // Try 24-hour format
-        val matcher24h = TIME_PATTERN_24H.matcher(convertedInput)
-        if (matcher24h.find()) {
-            val hour24 = matcher24h.group(1)?.toIntOrNull() ?: return null
-            val minute = matcher24h.group(2)?.toIntOrNull() ?: 0
+        val match24h = TIME_PATTERN_24H.find(convertedInput)
+        if (match24h != null) {
+            val hour24 = match24h.groupValues[1].toIntOrNull() ?: return null
+            val minute = match24h.groupValues[2].toIntOrNull() ?: 0
 
             if (hour24 !in 0..23 || minute !in 0..59) return null
 
@@ -360,9 +360,9 @@ class TimePickerHandler(
      * Handle "set hour to [N]" command
      */
     private suspend fun handleSetHour(command: String): HandlerResult {
-        val matcher = HOUR_PATTERN.matcher(command)
-        if (matcher.find()) {
-            val hour = matcher.group(1)?.toIntOrNull()
+        val matchResult = HOUR_PATTERN.find(command)
+        if (matchResult != null) {
+            val hour = matchResult.groupValues[1].toIntOrNull()
             if (hour != null && hour in 1..12) {
                 val result = executor.setHour(hour)
                 return handleTimeResult(result, "Hour set to $hour")
@@ -413,9 +413,9 @@ class TimePickerHandler(
      * Handle "set minute to [N]" command
      */
     private suspend fun handleSetMinute(command: String): HandlerResult {
-        val matcher = MINUTE_PATTERN.matcher(command)
-        if (matcher.find()) {
-            val minute = matcher.group(1)?.toIntOrNull()
+        val matchResult = MINUTE_PATTERN.find(command)
+        if (matchResult != null) {
+            val minute = matchResult.groupValues[1].toIntOrNull()
             if (minute != null && minute in 0..59) {
                 val result = executor.setMinute(minute)
                 return handleTimeResult(result, "Minute set to $minute")
@@ -497,13 +497,14 @@ class TimePickerHandler(
      * Set to current system time
      */
     private suspend fun handleSetCurrentTime(): HandlerResult {
-        val calendar = Calendar.getInstance()
-        var hour = calendar.get(Calendar.HOUR)
-        if (hour == 0) hour = 12
-        val minute = calendar.get(Calendar.MINUTE)
-        val isAM = calendar.get(Calendar.AM_PM) == Calendar.AM
+        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        val hour24 = now.hour
+        val minute = now.minute
+        val isAM = hour24 < 12
+        var hour12 = hour24 % 12
+        if (hour12 == 0) hour12 = 12
 
-        val result = executor.setTime(hour, minute, isAM)
+        val result = executor.setTime(hour12, minute, isAM)
         return handleTimeResult(result, "Set to current time")
     }
 
@@ -531,7 +532,8 @@ class TimePickerHandler(
         return when (result) {
             is TimePickerResult.Success -> {
                 onTimeChanged?.invoke(result.hour, result.minute, result.isAM)
-                val formattedTime = "${result.hour}:${String.format(Locale.US, "%02d", result.minute)} ${if (result.isAM) "AM" else "PM"}"
+                val minutePadded = if (result.minute < 10) "0${result.minute}" else "${result.minute}"
+                val formattedTime = "${result.hour}:$minutePadded ${if (result.isAM) "AM" else "PM"}"
                 HandlerResult.Success(
                     message = "$successMessage: $formattedTime",
                     data = mapOf(

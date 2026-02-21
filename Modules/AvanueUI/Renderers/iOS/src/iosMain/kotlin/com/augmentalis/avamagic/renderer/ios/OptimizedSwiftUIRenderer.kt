@@ -216,9 +216,9 @@ class OptimizedSwiftUIRenderer : Renderer {
      * Render with profiling
      */
     fun renderWithProfiling(component: Component): RenderResult {
-        val startTime = System.currentTimeMillis()
+        val startTime = platform.Foundation.NSDate().timeIntervalSince1970.toLong() * 1000L
         val result = renderComponent(component)
-        val endTime = System.currentTimeMillis()
+        val endTime = platform.Foundation.NSDate().timeIntervalSince1970.toLong() * 1000L
 
         return RenderResult(
             view = result,

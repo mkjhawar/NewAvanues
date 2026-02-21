@@ -2,6 +2,7 @@ package com.augmentalis.teach
 import com.augmentalis.ava.core.domain.model.TrainExample
 import com.augmentalis.ava.core.domain.model.TrainExampleSource
 import kotlin.math.roundToInt
+import kotlinx.datetime.Clock
 
 /**
  * Phase 1.1: Training Analytics
@@ -207,7 +208,7 @@ class TrainingAnalyticsCalculator {
      * Calculate trend metrics
      */
     private fun calculateTrendMetrics(examples: List<TrainExample>): TrendMetrics {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000L)
         val thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000L)
 

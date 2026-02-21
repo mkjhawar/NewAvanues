@@ -1,5 +1,8 @@
 package com.augmentalis.avamagic.components.input
 
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 
 /**
@@ -236,8 +239,15 @@ data class Date(
     val day: Int
 ) {
     companion object {
-        fun now(): Date = Date(2025, 12, 28)
-        fun fromTimestamp(timestamp: Long): Date = Date(2025, 12, 28)
+        fun now(): Date {
+            val local = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            return Date(local.year, local.monthNumber, local.dayOfMonth)
+        }
+        fun fromTimestamp(timestamp: Long): Date {
+            val local = kotlinx.datetime.Instant.fromEpochMilliseconds(timestamp)
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+            return Date(local.year, local.monthNumber, local.dayOfMonth)
+        }
     }
 
     fun toTimestamp(): Long = 0L
@@ -256,7 +266,10 @@ data class Time(
     val second: Int = 0
 ) {
     companion object {
-        fun now(): Time = Time(12, 0, 0)
+        fun now(): Time {
+            val local = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            return Time(local.hour, local.minute, local.second)
+        }
     }
 
     fun format(is24Hour: Boolean): String = if (is24Hour) {
