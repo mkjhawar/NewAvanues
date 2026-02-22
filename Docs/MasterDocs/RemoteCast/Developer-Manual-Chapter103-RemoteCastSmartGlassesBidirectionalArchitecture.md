@@ -3,7 +3,7 @@
 **Module:** `Modules/RemoteCast/`
 **Apps:** `Apps/Android/GlassAvanue/` (server), `Apps/Android/GlassClient/` (receiver)
 **Platforms:** Android (primary), iOS (planned), Desktop (sender only)
-**Dependencies:** HTTPAvanue (WebSocket), VoiceOSCore (voice pipeline), DeviceManager (detection), AvanueUI (theme)
+**Dependencies:** HTTPAvanue (WebSocket), VoiceOSCore (voice pipeline), DeviceManager (detection), AvanueUI (theme), NetAvanue (P2P signaling — Phase 8+)
 **Created:** 2026-02-21
 **Author:** Manoj Jhawar
 
@@ -1198,11 +1198,16 @@ RemoteCast transforms augmented reality glasses from passive displays into activ
 
 **For questions on architecture, protocol design, or vendor integration, see:**
 - Chapter 101: HTTPAvanue (WebSocket + HTTP/2 foundation)
+- Chapter 105: SignalingAvanue (P2P signaling server — NAT traversal for RemoteCast Phase 8)
 - Chapter 95: VOS Distribution & Handler Dispatch (command routing)
 - Chapter 93: Voice Command Pipeline & Localization (speech recognition)
 - Chapter 94: 4-Tier Voice Enablement (AVID system)
+
+**NAT Traversal (Phase 8+):**
+RemoteCast currently uses direct WiFi/TCP WebSocket connections (same LAN). Phase 8 of the NetAvanue/SignalingAvanue plan adds NAT traversal via the AvanueCentral signaling server + coturn TURN relay, enabling remote casting across different networks. The `CastWebSocketServer` and `CastWebSocketClient` in commonMain will be wired to use `NetAvanue.SessionManager` for P2P connection establishment with ICE candidate exchange and TURN fallback. See Chapter 105 for signaling server details.
 
 **Related documentation:**
 - Spec: `docs/plans/RemoteCast/RemoteCast-Spec-GlassClientArchitecture-260219-V1.md`
 - SDK research: `docs/analysis/RemoteCast/RemoteCast-Analysis-SmartGlassesSDKResearch-260219-V1.md`
 - UI mockups: `docs/demo/remoteavanue/RemoteCast-UI-Mockups.html`
+- Signaling integration plan: `docs/plans/NetAvanue/NetAvanue-Plan-AvanueCentralSignalingIntegration-260222-V1.md`
