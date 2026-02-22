@@ -41,16 +41,30 @@ enum class ContentAccent {
     TERTIARY;
 
     companion object {
-        /** Map content type ID to the appropriate accent */
+        /** Map content type ID to the appropriate accent. Exhaustive — every type explicit. */
         fun forContentType(typeId: String): ContentAccent = when (typeId) {
+            // P0: Core
             "web" -> INFO
             "pdf" -> ERROR
             "image" -> PRIMARY
             "video" -> SECONDARY
             "note", "voice_note" -> SUCCESS
             "camera" -> WARNING
+            // P1: Extended
+            "form" -> INFO
+            "signature" -> WARNING
+            "voice" -> SECONDARY
+            // P2: Advanced
+            "map" -> SUCCESS
+            "whiteboard" -> PRIMARY
+            "terminal" -> TERTIARY
+            // Killer Features
+            "ai_summary" -> INFO
             "screen_cast" -> SECONDARY
+            // Mini Widgets & External
+            "widget" -> TERTIARY
             "external_app" -> INFO
+            // Safety net — should never reach here if ALL_TYPES is in sync
             else -> TERTIARY
         }
     }

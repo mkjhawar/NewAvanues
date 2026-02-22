@@ -307,15 +307,25 @@ fun layoutModeLabel(mode: LayoutMode): String = when (mode) {
  * Content type options for the ADD_FRAME state.
  */
 fun addFrameOptions(): List<Pair<String, FrameContent>> = listOf(
+    // P0: Core content types
     "Web" to FrameContent.Web(),
     "PDF" to FrameContent.Pdf(),
     "Image" to FrameContent.Image(),
     "Video" to FrameContent.Video(),
     "Note" to FrameContent.Note(),
     "Camera" to FrameContent.Camera(),
+    // P1: Extended
     "Voice Note" to FrameContent.VoiceNote(),
+    "Voice" to FrameContent.Voice(),
+    "Form" to FrameContent.Form(),
     "Whiteboard" to FrameContent.Whiteboard(),
     "Signature" to FrameContent.Signature(),
+    // P2: Advanced
+    "Map" to FrameContent.Map(),
+    "Terminal" to FrameContent.Terminal(),
+    "Widget" to FrameContent.Widget(),
     "Screen Cast" to FrameContent.ScreenCast(),
-    "External App" to FrameContent.ExternalApp()
+    "External App" to FrameContent.ExternalApp(),
+    // Killer Features
+    "AI Summary (Beta)" to FrameContent.AiSummary(),
 )

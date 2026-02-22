@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.annotationavanue.AnnotationCanvas
 import com.augmentalis.annotationavanue.SignatureCapture
+import com.augmentalis.annotationavanue.controller.AnnotationSerializer
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cameraavanue.CameraPreview
 import com.augmentalis.cockpit.AndroidExternalAppResolver
@@ -124,7 +125,7 @@ fun ContentRenderer(
                 onComplete = { strokes ->
                     onContentStateChanged(frame.id, content.copy(
                         isSigned = strokes.isNotEmpty(),
-                        signatureData = strokes.toString()
+                        signatureData = AnnotationSerializer.strokesToJson(strokes)
                     ))
                 },
                 modifier = Modifier.fillMaxSize()
