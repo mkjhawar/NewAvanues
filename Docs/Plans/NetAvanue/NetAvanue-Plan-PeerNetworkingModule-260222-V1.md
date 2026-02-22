@@ -105,6 +105,40 @@ Third-party  → Pick either or both independently
 | `DataChannel.kt` | Bidirectional data channel (ordered/unordered, reliable/unreliable) | ~80 |
 | `PeerConnectionConfig.kt` | STUN/TURN server URLs, ICE configuration, timeouts | ~30 |
 
+### Tier 6: Device Capability + Role Election
+
+**Purpose**: Peers advertise hardware/software capabilities, automatically elect the most capable device as hub/server. Enables persistent calls that survive device disconnections via re-election.
+
+| Component | Description | Lines (est.) |
+|-----------|-------------|-------------|
+| `DeviceCapability.kt` | Device fingerprint: CPU, RAM, battery, camera, mic, network, codecs, modules | ~80 |
+| `DeviceFingerprint.kt` | Unique stable device ID (survives app reinstall) + signing key pair | ~60 |
+| `CapabilityScorer.kt` | Score calculation: hardware + battery + network + codec support | ~50 |
+| `RoleElection.kt` | Hub election algorithm — highest score wins, auto re-election on disconnect/degradation | ~80 |
+| `CapabilityExchange.kt` | Secure capability broadcast: signed with device key, verified by all peers | ~70 |
+| `GroupTopology.kt` | Star (hub-spoke) / Mesh / Hybrid topology management | ~60 |
+| `SessionPersistence.kt` | Call persistence: reconnect to same session after network change, hub migration | ~60 |
+
+**Key features**:
+- **Device fingerprint**: Stable ID per device (platform-specific: Android ID, iOS identifierForVendor, Desktop MAC hash). Used for re-identification on reconnect.
+- **Signed capability messages**: Each device generates an Ed25519 key pair on first run. Capability advertisements are signed — peers verify signatures to prevent spoofing.
+- **Automatic hub election**: Highest `CapabilityScore` becomes hub. If hub disconnects, next-highest takes over with zero user intervention. Open sessions migrate seamlessly.
+- **Battery-aware re-election**: Hub automatically yields when battery drops below threshold (configurable, default 20%). Plugged-in devices get bonus score.
+- **Persistent sessions**: Session state (participants, topology, active channels) survives network changes. Peers reconnect to the same session via session ID + device fingerprint. No new handshake needed — just ICE restart.
+- **Capability change events**: If a device plugs in/unplugs, switches WiFi/cellular, or a module becomes available, it re-broadcasts capabilities. May trigger re-election.
+
+**Scoring formula**:
+```
+score = cpuCores × 10
+      + ramMb / 100
+      + (batteryPercent × 2 if !charging, else 200)
+      + bandwidthMbps × 5
+      + (isDesktop ? 100 : 0)
+      + (hasEthernet ? 50 : 0)
+      + (screenWidth / 10)
+      + (supportedCodecs.size × 15)
+```
+
 ### Tier 6: Platform Abstractions
 
 | Platform | UDP Socket | WebRTC | Notes |
@@ -125,9 +159,10 @@ Third-party  → Pick either or both independently
 | ICE | 5 | ~460 | 6 hrs |
 | Signaling | 4 | ~320 | 3 hrs |
 | Peer Manager | 3 | ~210 | 2 hrs |
-| Platform (4 targets) | 8 | ~400 | 4 hrs |
-| Tests | 6 | ~500 | 3 hrs |
-| **Total** | **~36** | **~2,810** | **~28 hrs** |
+| Capability + Election | 7 | ~460 | 5 hrs |
+| Platform (4 targets) | 10 | ~500 | 5 hrs |
+| Tests | 8 | ~600 | 4 hrs |
+| **Total** | **~47** | **~3,470** | **~35 hrs** |
 
 ---
 
