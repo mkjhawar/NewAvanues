@@ -898,7 +898,19 @@ To improve quality, use the App Trainer to create a .VOS profile.
 
 ---
 
+## 12. AVID Hash Truncation Fix (260222)
+
+`Fingerprint.deterministicHash()` in `Modules/AVID/src/commonMain/.../Fingerprint.kt` was producing collisions on short inputs because it used `.take(length)` (most-significant hex digits) instead of `.takeLast(length)` (least-significant hex digits).
+
+**Root cause:** For inputs like `"input-a"` and `"input-b"`, the polynomial hash values differ by 1 (96444125982 vs 96444125983). When zero-padded to 16 hex chars, the difference is only in the last digit (`...931e` vs `...931f`). `.take(8)` grabbed the leading zeros `00000016` for both — a collision.
+
+**Fix:** Changed to `.takeLast(length)` which preserves the least-significant (most discriminating) bits. This is the standard approach for truncated hashes — the low-order bits carry the most entropy for polynomial hash functions.
+
+**Impact:** All AVID identifiers generated from short inputs will change. Existing `.VOS` profiles with cached AVIDs may need regeneration. Runtime AVID generation (from live accessibility tree) is unaffected since AVIDs are always regenerated fresh on each screen scrape.
+
+---
+
 *Chapter 94 | 4-Tier Voice Enablement Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-22 (Phase 5 AVID sweep expansion, 120+ UI elements, 20+ modules)*
+*Created: 2026-02-11 | Updated: 2026-02-22 (Phase 5 AVID sweep, AVID hash truncation fix — takeLast for LSB preservation)*
 *Previous: 2026-02-19 (overlay-aligned numeric command system, AUTO mode badge rendering, Section 9 added)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 03 (VoiceOSCore Deep Dive)*
