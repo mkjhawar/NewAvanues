@@ -182,7 +182,21 @@ Implements `ICameraController` using CameraX. Ported from Avenue-Redux's `Camera
 
 **Bug fix (from Avenue-Redux):** Original `setExposure()` always set `minExposure` instead of the computed level. Fixed in `setExposureLevel()` to properly map level 1-5 to the exposure range.
 
-### 5.2 AndroidLocationProvider
+### 5.2 AndroidProCameraController (260222)
+
+`AndroidProCameraController` extends `IProCameraController` (which extends `ICameraController`) with Camera2 interop features: manual ISO, shutter speed, focus distance, white balance presets, CameraX Extensions (Bokeh/HDR/Night), RAW capture, and video stabilization.
+
+**setCaptureMode fix (260222):** Previously missing the `setCaptureMode(CaptureMode)` abstract member from `ICameraController`. Now implements the same logic as `AndroidCameraController`:
+- Early return if mode unchanged
+- Stop active recording before switching away from video mode
+- Reset `RecordingState` and clear errors on mode switch
+
+**Key differences from AndroidCameraController:**
+- Supports `setExtensionMode()`, `setProMode()`, `setIso()`, `setShutterSpeed()`, `setFocusDistance()`, `setWhiteBalance()`, `setRawCapture()`, `setStabilization()`
+- Uses `Camera2CameraControl` / `Camera2CameraInfo` for Camera2 interop
+- Tracks additional `ProCameraState` alongside base `CameraState`
+
+### 5.3 AndroidLocationProvider
 
 Dual GPS + Network location provider for EXIF tagging.
 
@@ -191,7 +205,7 @@ Dual GPS + Network location provider for EXIF tagging.
 - Exposes both `currentMetadata: GpsMetadata?` and `currentLocation: Location?`
 - Requires `ACCESS_FINE_LOCATION` + `ACCESS_COARSE_LOCATION` permissions
 
-### 5.3 GpsMetadata DMS Conversion
+### 5.4 GpsMetadata DMS Conversion
 
 EXIF GPS tags require Degrees/Minutes/Seconds rational format. The `GpsMetadata` model handles this:
 
@@ -335,6 +349,7 @@ Both `kotlin.compose` AND `compose` plugins are required for commonMain Compose 
 | 10 | `AndroidCameraController.kt` | androidMain | ~280 | CameraX implementation |
 | 11 | `AndroidLocationProvider.kt` | androidMain | ~70 | Dual GPS+Network location |
 | 12 | `CameraPreview.kt` | androidMain | ~295 | Embeddable camera for Cockpit |
+| 13 | `AndroidProCameraController.kt` | androidMain | ~600 | Pro camera with Camera2 interop (260222: setCaptureMode fix) |
 
 **KMP Score:** 8/12 feature areas in commonMain (67% shared). Platform-specific: CameraX binding, location provider, preview surface, permission handling.
 
@@ -342,8 +357,8 @@ Both `kotlin.compose` AND `compose` plugins are required for commonMain Compose 
 
 ## 11. Future Roadmap
 
-- **Tier 2:** CameraX Extensions (Bokeh, HDR, Night Mode) via `ExtensionsManager`
-- **Tier 3:** Camera2 Pro Controls (manual ISO, shutter, focus, white balance, RAW/DNG)
+- **Tier 2:** ~~CameraX Extensions~~ DONE — `AndroidProCameraController` supports Bokeh/HDR/Night/FaceRetouch via `ExtensionsManager`
+- **Tier 3:** ~~Camera2 Pro Controls~~ DONE — manual ISO, shutter speed, focus distance, white balance presets, RAW capture via Camera2 interop
 - **Tier 4:** ARCore Depth API (depth maps, portrait bokeh from depth, AR occlusion)
 - **Tier 5:** Desktop camera (JavaCV/webcam-capture), iOS AVFoundation, macOS Continuity Camera
 - **Hub search integration:** Voice-searchable camera features and modes

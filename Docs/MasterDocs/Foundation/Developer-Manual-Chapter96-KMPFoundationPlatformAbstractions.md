@@ -345,6 +345,37 @@ Test suite now covers Foundation + 13 additional modules:
 
 ---
 
+### 8.6 Clock.System KMP Timestamp Migration (260222)
+
+All `System.currentTimeMillis()` calls in `commonMain` source sets have been replaced with `kotlinx.datetime.Clock.System.now().toEpochMilliseconds()` for full KMP portability.
+
+**Why:** `System.currentTimeMillis()` is a JVM-only API. It compiles for Android/Desktop targets but fails on iOS/Native/JS. The `kotlinx-datetime` library provides a cross-platform `Clock` interface that works on all Kotlin targets.
+
+**Modules swept (260222 session):**
+
+| Module | Files | Example Usage |
+|--------|-------|---------------|
+| WebAvanue | 8 | Scrape cooldown, session cache timestamps, command persistence |
+| PluginSystem | 14 | Marketplace cache, asset access logging, security audit timestamps |
+| AVACode | 2 | Workflow instance/persistence timing |
+| WebSocket | 1 | Reconnection delay tracking |
+| AvanueUI/Theme | 2 + build.gradle.kts | ThemeSync last-sync, ThemeOverride created/modified timestamps |
+| AvanueUI/ThemeBuilder | 2 | Auto-save timing, undo history timestamps |
+
+**Pattern:**
+```kotlin
+// BEFORE (JVM-only)
+val now = System.currentTimeMillis()
+
+// AFTER (KMP-portable)
+import kotlinx.datetime.Clock
+val now = Clock.System.now().toEpochMilliseconds()
+```
+
+**Dependency:** `kotlinx-datetime` is declared in `gradle/libs.versions.toml` as `libs.kotlinx.datetime` (v0.5.0). Modules that previously lacked it (e.g., AvanueUI/Theme) had it added to their `commonMain` dependencies.
+
+---
+
 ## 9. Commit History
 
 | Commit | Description | Phase |

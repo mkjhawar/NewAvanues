@@ -670,7 +670,18 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 
 ---
 
-## 12. Related Documentation
+## 12. Updates (260222)
+
+### ContentRenderer Import Fix
+`ContentRenderer.kt` imports `CameraPreview` for the `FrameContent.Camera` content type. The import was corrected from the non-existent `com.augmentalis.cameraavanue` package to `com.augmentalis.photoavanue.CameraPreview`, which is the actual composable in the PhotoAvanue module (Chapter 98). The CameraAvanue module is not included in `settings.gradle.kts` — PhotoAvanue is the canonical camera module.
+
+### Build Dependency Fixes
+- **BouncyCastle conflict:** `pdfbox-android:2.0.27.0` (in RAG module) transitively pulled `bcprov-jdk15to18:1.72`, conflicting with JSch's `bcprov-jdk18on:1.78.1`. Resolved by excluding the older `jdk15to18` artifacts from pdfbox-android.
+- **META-INF merge:** Wildcard `META-INF/versions/*/OSGI-INF/MANIFEST.MF` exclusion added to app packaging to handle JSch/BouncyCastle resource conflicts.
+
+---
+
+## 13. Related Documentation
 
 | Document | Location |
 |----------|---------|
@@ -688,4 +699,4 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 ---
 
 *Cockpit SpatialVoice Multi-Window System — Chapter 97*
-*NewAvanues Developer Manual — Updated 260217 (Traffic Lights, Multi-Pane Workflow, ExternalApp)*
+*NewAvanues Developer Manual — Updated 260222 (CameraPreview import fix, build dependency fixes)*
