@@ -9,6 +9,7 @@ import com.augmentalis.alc.provider.*
 import com.augmentalis.alc.response.HybridResponseGenerator
 import com.augmentalis.alc.response.TemplateResponseGenerator
 import com.augmentalis.llm.security.ApiKeyManager
+import com.augmentalis.llm.ProviderType as LLMProviderType
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,7 +52,7 @@ object ALCModule {
     fun provideAnthropicProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = runBlocking { apiKeyManager.getApiKey(ProviderType.ANTHROPIC) }
+        val key = runBlocking { apiKeyManager.getApiKey(LLMProviderType.ANTHROPIC) }
             .let { result ->
                 when (result) {
                     is com.augmentalis.llm.LLMResult.Success -> result.data
@@ -77,7 +78,7 @@ object ALCModule {
     fun provideOpenAIProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = runBlocking { apiKeyManager.getApiKey(ProviderType.OPENAI) }
+        val key = runBlocking { apiKeyManager.getApiKey(LLMProviderType.OPENAI) }
             .let { result ->
                 when (result) {
                     is com.augmentalis.llm.LLMResult.Success -> result.data
@@ -103,7 +104,7 @@ object ALCModule {
     fun provideGroqProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = runBlocking { apiKeyManager.getApiKey(ProviderType.GROQ) }
+        val key = runBlocking { apiKeyManager.getApiKey(LLMProviderType.GROQ) }
             .let { result ->
                 when (result) {
                     is com.augmentalis.llm.LLMResult.Success -> result.data
@@ -129,7 +130,7 @@ object ALCModule {
     fun provideGoogleAIProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = runBlocking { apiKeyManager.getApiKey(ProviderType.GOOGLE_AI) }
+        val key = runBlocking { apiKeyManager.getApiKey(LLMProviderType.GOOGLE_AI) }
             .let { result ->
                 when (result) {
                     is com.augmentalis.llm.LLMResult.Success -> result.data

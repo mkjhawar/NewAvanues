@@ -488,8 +488,9 @@ class PluginManager(
                         file.absolutePath,
                         PackageManager.GET_SIGNATURES
                     )
-                    if (packageInfo?.signatures?.isNotEmpty() == true) {
-                        calculateSignatureHash(packageInfo.signatures[0])
+                    val sigs = packageInfo?.signatures
+                    if (sigs != null && sigs.isNotEmpty()) {
+                        calculateSignatureHash(sigs[0])
                     } else {
                         ""
                     }

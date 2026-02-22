@@ -52,6 +52,9 @@ dependencies {
     implementation(project(":Modules:AVA:core:Data"))
     implementation(project(":Modules:AVA:core:Utils"))
 
+    // AvanueUI theme system
+    implementation(project(":Modules:AvanueUI"))
+
     // Feature modules for integration
     //implementation(project(":Modules:AVA:SharedNLU"))  // TODO: SharedNLU not found in current structure
     implementation(project(":Modules:AI:Chat"))

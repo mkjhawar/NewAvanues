@@ -136,7 +136,7 @@ class VoiceKeyboardService : InputMethodService(), KeyboardActionListener {
         Log.d(TAG, "Starting input, restarting: $restarting")
         
         currentEditorInfo = attribute
-        currentInputConnection = currentInputConnection()
+        currentInputConnection = getCurrentInputConnection()
         
         // Configure keyboard based on input type
         attribute?.let { configureKeyboardForInputType(it) }
