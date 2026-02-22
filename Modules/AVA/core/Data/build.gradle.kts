@@ -17,14 +17,11 @@ kotlin {
             }
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        iosX64()
-        iosArm64()
-        iosSimulatorArm64()
-    }
+    // iOS targets
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -85,26 +82,22 @@ kotlin {
                 implementation(libs.androidx.test.junit.ktx)
             }
         }
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
-            val iosMain by creating {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-                dependencies {
-                    // iOS-specific SQLDelight driver
-                    api("app.cash.sqldelight:native-driver:2.0.1")
-                }
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                // iOS-specific SQLDelight driver
+                api("app.cash.sqldelight:native-driver:2.0.1")
             }
+        }
 
-            val iosTest by creating {
-                dependsOn(commonTest)
-            }
+        val iosTest by creating {
+            dependsOn(commonTest)
         }
     }
 }

@@ -32,19 +32,15 @@ kotlin {
             }
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets (conditional - only when explicitly building for iOS)
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach {
-            it.binaries.framework {
-                baseName = "VoiceIsolation"
-                isStatic = true
-            }
+    // iOS targets
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "VoiceIsolation"
+            isStatic = true
         }
     }
     sourceSets {
@@ -84,20 +80,16 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
             }
         }
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            // iOS source set (conditional)
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
+        // iOS source set
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
 
-            val iosMain by creating {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-            }
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
         }
     }
 }

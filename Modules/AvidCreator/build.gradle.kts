@@ -36,19 +36,15 @@ kotlin {
             }
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach {
-            it.binaries.framework {
-                baseName = "AvidCreator"
-                isStatic = true
-            }
+    // iOS targets
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "AvidCreator"
+            isStatic = true
         }
     }
     sourceSets {
@@ -131,19 +127,15 @@ kotlin {
                 implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
             }
         }
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            // iOS source sets
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
-            val iosMain by creating {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-            }
+        // iOS source sets
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
         }
     }
 }

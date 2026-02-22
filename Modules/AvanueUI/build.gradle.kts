@@ -23,19 +23,15 @@ kotlin {
             }
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets - only compiled when explicitly requested
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach { iosTarget ->
-            iosTarget.binaries.framework {
-                baseName = "AvanueUI"
-                isStatic = true
-            }
+    // iOS targets
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "AvanueUI"
+            isStatic = true
         }
     }
 
