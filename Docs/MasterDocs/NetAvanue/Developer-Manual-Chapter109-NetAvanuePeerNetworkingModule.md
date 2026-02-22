@@ -301,6 +301,121 @@ TTL: same as session (24h max)
 
 ---
 
+## STUN/ICE Layer (Phase 6)
+
+### STUN Message Codec (`ice/stun/`)
+
+RFC 5389 compliant STUN message encoding/decoding:
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `StunMessageType.kt` | 114 | Method + Class encoding with interleaved bits |
+| `StunAttribute.kt` | 387 | TLV attributes (MAPPED-ADDRESS, XOR-MAPPED-ADDRESS, ERROR-CODE, SOFTWARE) |
+| `StunMessage.kt` | 208 | 20-byte header + attribute list encode/decode |
+| `StunClient.kt` | 120 | Binding Request with RFC 5389 retransmission (500ms RTO, 7 retries) |
+
+### UdpSocket (`ice/UdpSocket.kt`)
+
+| Platform | Implementation | Key API |
+|----------|---------------|---------|
+| Android/Desktop | `java.net.DatagramSocket` | `withContext(Dispatchers.IO)` for blocking I/O |
+| iOS | POSIX `socket(AF_INET, SOCK_DGRAM, 0)` | `sendto`/`recvfrom` via cinterop |
+
+### ICE Candidates (`ice/candidate/`)
+
+| Type | Priority | Source |
+|------|----------|--------|
+| Host | 126 (highest) | Local network interfaces |
+| ServerReflexive | 100 | STUN Binding Response |
+| PeerReflexive | 110 | Discovered during checks |
+| Relay | 0 (lowest) | TURN allocation (future) |
+
+Priority formula: `(2^24 * typePreference) + (2^8 * localPreference) + (256 - componentId)`
+
+---
+
+## PeerConnection Layer (Phase 7)
+
+### PeerConnection (`peer/PeerConnection.kt`)
+
+High-level API for establishing P2P connections:
+
+```kotlin
+// Offerer
+val pc = PeerConnection(config)
+pc.start(scope)
+val offer = pc.createOffer()  // Gathers candidates + creates SDP
+// Send offer via SignalingClient...
+pc.setRemoteAnswer(remoteSdp)
+val channel = pc.createDataChannel("cast")
+channel.sendText("hello")
+
+// Answerer
+val pc = PeerConnection(config.copy(isControlling = false))
+pc.start(scope)
+pc.setRemoteOffer(remoteSdp)
+val answer = pc.createAnswer()  // Gathers + starts connectivity checks
+pc.onDataChannel.collect { channel -> ... }
+```
+
+### DataChannel (`peer/DataChannel.kt`)
+
+Bidirectional data over the nominated ICE pair:
+
+Frame format: `[2B channel ID][2B flags][4B length][payload]`
+- Flags: `0x01` TEXT, `0x02` BINARY, `0x04` CLOSE
+
+```kotlin
+val channel = pc.createDataChannel("data")
+channel.sendText("hello")
+channel.send(jpegBytes)
+channel.textMessages.collect { msg -> println(msg) }
+channel.binaryMessages.collect { frame -> renderFrame(frame) }
+```
+
+### SimpleSdp (`peer/SimpleSdp.kt`)
+
+Minimal SDP for data-only connections (no codec negotiation):
+- ICE credentials (ufrag + pwd)
+- Candidate list
+- Setup role (actpass for offer, active for answer)
+
+---
+
+## RemoteCast Integration (Phase 8)
+
+### CastTransport Interface
+
+```kotlin
+interface CastTransport {
+    val isRunning: StateFlow<Boolean>
+    val clientConnected: StateFlow<Boolean>
+    fun start()
+    suspend fun sendFrame(frameData: CastFrameData)
+    suspend fun stop()
+}
+```
+
+### Two Transport Paths
+
+| Transport | Class | When Used |
+|-----------|-------|-----------|
+| LAN WebSocket | `CastWebSocketServer` | Same network, port 54321 |
+| P2P DataChannel | `CastP2PTransport` | Through NAT, via NetAvanue ICE |
+
+Cast managers can use either transport interchangeably:
+```kotlin
+// LAN mode (existing)
+val transport: CastTransport = CastWebSocketServer(port = 54321, scope = scope)
+
+// P2P mode (new)
+val transport: CastTransport = CastP2PTransport(scope).apply {
+    addChannel(dataChannel)  // From PeerConnection
+}
+```
+
+---
+
 ## File Inventory
 
 ```
@@ -318,6 +433,21 @@ Modules/NetAvanue/
 │   │   │   ├── DeviceCapability.kt       (50 lines)
 │   │   │   ├── DeviceFingerprint.kt      (25 lines, expect)
 │   │   │   └── CapabilityScorer.kt       (45 lines)
+│   │   ├── ice/
+│   │   │   ├── UdpSocket.kt             (84 lines, expect)
+│   │   │   ├── stun/
+│   │   │   │   ├── StunMessageType.kt   (114 lines)
+│   │   │   │   ├── StunAttribute.kt     (387 lines)
+│   │   │   │   ├── StunMessage.kt       (208 lines)
+│   │   │   │   └── StunClient.kt        (120 lines)
+│   │   │   └── candidate/
+│   │   │       ├── IceCandidate.kt      (140 lines)
+│   │   │       └── IceCandidatePair.kt  (105 lines)
+│   │   ├── peer/
+│   │   │   ├── PeerConnection.kt        (220 lines)
+│   │   │   ├── PeerConnectionConfig.kt  (55 lines)
+│   │   │   ├── DataChannel.kt           (155 lines)
+│   │   │   └── SimpleSdp.kt            (115 lines)
 │   │   ├── session/
 │   │   │   ├── Session.kt               (80 lines)
 │   │   │   ├── SessionManager.kt        (180 lines)
@@ -326,36 +456,41 @@ Modules/NetAvanue/
 │   │       ├── PairedDevice.kt           (15 lines)
 │   │       └── PairingManager.kt         (100 lines)
 │   ├── commonTest/kotlin/.../
-│   │   └── capability/CapabilityScorerTest.kt (70 lines)
-│   ├── androidMain/kotlin/.../capability/
-│   │   ├── CapabilityCollector.android.kt    (100 lines)
-│   │   └── DeviceFingerprint.android.kt      (85 lines)
-│   ├── desktopMain/kotlin/.../capability/
-│   │   ├── CapabilityCollector.desktop.kt    (55 lines)
-│   │   └── DeviceFingerprint.desktop.kt      (80 lines)
-│   └── iosMain/kotlin/.../capability/
-│       ├── CapabilityCollector.ios.kt        (50 lines)
-│       └── DeviceFingerprint.ios.kt          (135 lines)
-Total: ~1,920 lines across 21 files
+│   │   ├── capability/CapabilityScorerTest.kt  (70 lines)
+│   │   ├── ice/stun/StunCodecTest.kt           (90 lines)
+│   │   ├── ice/candidate/IceCandidateTest.kt   (65 lines)
+│   │   └── peer/SimpleSdpTest.kt               (55 lines)
+│   ├── androidMain/ (UdpSocket, CapabilityCollector, DeviceFingerprint, TimeMillis, LocalAddresses)
+│   ├── desktopMain/ (same)
+│   └── iosMain/ (same)
+Total: ~4,800 lines across 44 files, 24 tests
+
+RemoteCast Integration:
+├── CastTransport.kt      (interface)
+├── CastP2PTransport.kt   (NetAvanue DataChannel transport)
+└── CastWebSocketServer.kt (now implements CastTransport)
 ```
 
 ---
 
-## Future Phases (6-10)
+## Phase Status
 
 | Phase | What | Status |
 |-------|------|--------|
-| 6 | ICE agent + STUN client (NAT traversal) | Planned |
-| 7 | PeerConnection + DataChannel (P2P data) | Planned |
-| 8 | RemoteCast integration (screen casting through NAT) | Planned |
-| 9 | Web/JS target (browser RTCPeerConnection wrapper) | Planned |
-| 10 | End-to-end testing + this chapter update | Planned |
+| 1-3 | AvanueCentral signaling backend | COMPLETE |
+| 4-5 | KMP module + signaling client + session management | COMPLETE |
+| 6 | STUN codec + UdpSocket + StunClient + ICE candidates | COMPLETE |
+| 7 | PeerConnection + DataChannel + SimpleSdp | COMPLETE |
+| 8 | RemoteCast P2P transport integration | COMPLETE |
+| 9 | Web/JS target (browser RTCPeerConnection wrapper) | Future |
+| 10 | End-to-end testing across NAT | Future |
 
 ---
 
 ## Related Documents
 
 - NetAvanue Core Plan: `docs/plans/NetAvanue/NetAvanue-Plan-PeerNetworkingModule-260222-V1.md`
+- Phase 6-10 Plan: `docs/plans/NetAvanue/NetAvanue-Plan-Phase6-10-Implementation-260223-V1.md`
 - AvanueCentral Signaling Plan: `docs/plans/NetAvanue/NetAvanue-Plan-AvanueCentralSignalingIntegration-260222-V1.md`
 - HTTPAvanue v2.0 (Chapter 104): `Docs/MasterDocs/HTTPAvanue/Developer-Manual-Chapter104-HTTPAvanueV2ZeroDepEnhancements.md`
 - RemoteCast Architecture: `docs/plans/RemoteCast/RemoteCast-Spec-GlassClientArchitecture-260219-V1.md`
