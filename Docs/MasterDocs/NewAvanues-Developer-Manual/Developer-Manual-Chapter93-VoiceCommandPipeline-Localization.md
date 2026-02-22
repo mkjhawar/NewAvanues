@@ -349,6 +349,20 @@ For development: call `CommandLoader.forceReload()` to reload immediately.
 ### Step 6: Add Verb Synonyms (if new verb)
 Add `SynonymEntry` to `SynonymRegistry` for the new verb.
 
+## 7.5 WebAvanue Disambiguation Fix (260222)
+
+WebCommandHandler disambiguation for web elements has been fixed in two key areas:
+
+**1. Disambiguation Match Indexing** — `selectDisambiguationOption()` now properly indexes into `lastDisambiguationMatches` using the selected option number. Previously, the wrong index could select an incorrect element when multiple candidates shared the same phrase.
+
+**2. Nonce Validation in Scrape Results** — `sendScrapeResult()` now validates incoming nonce values against the current session nonce before accepting scraped element updates. This prevents stale scrape results from a previous session/page from corrupting the command registry. Nonce mismatch → log warning + discard.
+
+**3. Google Cloud Audio Queue Rebuild** — The Google Cloud STT audio queue is now properly rebuilt per session/page context. Previously, queue state could persist across page navigations, causing audio from old pages to be processed in new contexts. Now: session change → new queue → fresh audio stream.
+
+These fixes ensure web element command resolution is accurate, resilient to async scraping, and properly scoped to the active page/session.
+
+---
+
 ## 8. Multi-Locale Runtime Support
 
 ### Supported Locales (v1.0)

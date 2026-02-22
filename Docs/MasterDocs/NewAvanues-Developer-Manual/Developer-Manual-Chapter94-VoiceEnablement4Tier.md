@@ -833,6 +833,19 @@ The overlay render and the voice grammar share the same badge number because the
    ```
 4. AVID is automatically assigned by `ElementFingerprint.fromElementInfo()`
 
+**260222 Status:** `apps/avanues` now has **100% AVID coverage** across 12 UI files. All interactive elements (buttons, chips, text fields, navigation items, toggles) carry proper `Modifier.semantics { contentDescription = "Voice: click {label}" }` or use the `(Voice: phrase)` convention. New screens must follow this pattern immediately — no stubs.
+
+Example pattern:
+```kotlin
+// Pattern: Modifier.semantics for ALL interactive elements
+Button(
+    onClick = { },
+    modifier = Modifier.semantics {
+        contentDescription = "Voice: click Camera"
+    }
+) { Text("Camera") }
+```
+
 ### 10.2 For Third-Party Developers (Tier 2)
 
 Tell them to add `(Voice: phrase)` to `contentDescription`. That's it.

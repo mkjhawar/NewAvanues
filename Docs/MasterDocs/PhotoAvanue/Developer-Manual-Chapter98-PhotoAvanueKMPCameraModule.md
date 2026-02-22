@@ -143,6 +143,7 @@ interface ICameraController {
     fun increaseExposure()
     fun decreaseExposure()
     fun setExposureLevel(level: Int)  // 1-5 discrete levels
+    fun setCaptureMode(mode: CaptureMode) // 260222: photo/video/scan mode switching
 
     // Lifecycle
     fun release()
@@ -154,6 +155,7 @@ interface ICameraController {
 - **5-level discrete controls** for zoom/exposure (not continuous sliders) — optimized for voice commands ("zoom in" = +1 level)
 - **StateFlow-driven** — reactive UI pattern replaces imperative callbacks
 - **No CameraX types in interface** — clean KMP abstraction, platform-agnostic consumers
+- **Capture mode switching** (260222) — `setCaptureMode()` allows dynamic switching between PHOTO, VIDEO, and SCAN modes
 
 ---
 
@@ -176,6 +178,7 @@ Implements `ICameraController` using CameraX. Ported from Avenue-Redux's `Camera
 | `setFlashMode()` | `ImageCapture.flashMode` + `CameraControl.enableTorch()` | TORCH mode uses enableTorch(true) |
 | `zoomIn()` / `zoomOut()` | `CameraControl.setZoomRatio()` | Steps by `ZoomState.stepSize` |
 | `increaseExposure()` / `decreaseExposure()` | `CameraControl.setExposureCompensationIndex()` | Steps by `ExposureState.stepSize` |
+| `setCaptureMode()` (260222) | Update `state.copy(captureMode = mode)` | Recording stop guard: if recording active, stop before switching to PHOTO |
 
 **Bug fix (from Avenue-Redux):** Original `setExposure()` always set `minExposure` instead of the computed level. Fixed in `setExposureLevel()` to properly map level 1-5 to the exposure range.
 
@@ -236,6 +239,7 @@ Minimal camera view for Cockpit frame embedding:
 - No TopAppBar or navigation chrome
 - AndroidView wrapping `PreviewView` with CameraX binding
 - Bottom control bar: flash cycle, capture/record, lens switch
+- **Mode chips:** Photo/Video mode selector with `ModeChip` onClick wired to `controller.setCaptureMode()` (260222)
 - Recording indicator overlay with timer
 - Permission request UI (AvanueTheme-styled)
 - Uses `DisposableEffect` for clean controller lifecycle

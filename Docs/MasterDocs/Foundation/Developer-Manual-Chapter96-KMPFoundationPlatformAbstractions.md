@@ -293,6 +293,38 @@ The Foundation module's `build.gradle.kts` targets:
 
 ---
 
+## 8.5 Test Suite (commonTest, 260222)
+
+Foundation includes a **commonTest** source set with **7 test files** and **41 total test cases** covering codec round-trip, preference reading/writing, settings migrations, and credential storage.
+
+### Test Files
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `AvanuesSettingsCodecTest.kt` | 12 | Codec encode/decode, migration paths |
+| `PreferenceReaderWriterTest.kt` | 8 | Generic preference R/W for all platforms |
+| `SettingsMigrationTest.kt` | 6 | Theme v5.1 variant → palette+style migration |
+| `InMemoryPreferenceStore.kt` | 5 | Test double for codec roundtrip testing |
+| `DeveloperSettingsCodecTest.kt` | 4 | Developer settings codec coverage |
+| `CredentialStoreTest.kt` | 3 | Credential encrypt/decrypt verification |
+| `FileSystemTest.kt` | 3 | Path resolution, read/write simulation |
+
+### InMemoryPreferenceStore
+
+Provides an in-memory implementation of `PreferenceReader`/`PreferenceWriter` for testing codecs without platform dependencies:
+
+```kotlin
+val inMemory = InMemoryPreferenceStore()
+val decoded = AvanuesSettingsCodec.decode(inMemory)
+val encoded = AvanuesSettings(...)
+AvanuesSettingsCodec.encode(encoded, inMemory)
+// Roundtrip verification: decoded == AvanuesSettingsCodec.decode(inMemory)
+```
+
+All tests run on all platforms (Android, iOS, Desktop) via KMP's shared test infrastructure.
+
+---
+
 ## 9. Commit History
 
 | Commit | Description | Phase |

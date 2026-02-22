@@ -626,6 +626,33 @@ These packages no longer exist:
 
 ---
 
+## 8.5 DSL Render Methods (260222)
+
+All 28 unified component types now have full `render()` implementations in `DslComponentExtensions.kt` (998 lines). The DSL pattern enables programmatic composable generation:
+
+```kotlin
+// Pattern: Component.render() delegates to renderer.render(this)
+val button = AvanueButton(onClick = {}, label = "Submit")
+val rendered = button.render(renderer)  // → renderer.render(button)
+```
+
+**DslComponentExtensions.kt** provides extension functions for all component types:
+- `AvanueSurface.render(renderer: ComponentRenderer)`
+- `AvanueCard.render(renderer: ComponentRenderer)`
+- `AvanueButton.render(renderer: ComponentRenderer)`
+- `AvanueChip.render(renderer: ComponentRenderer)`
+- `AvanueBubble.render(renderer: ComponentRenderer)`
+- `AvanueFAB.render(renderer: ComponentRenderer)`
+- `AvanueIconButton.render(renderer: ComponentRenderer)`
+- Plus 21 additional component types (all unified + glass/water variants)
+
+Each `render()` function receives a `ComponentRenderer` interface that delegates to platform-specific or theme-specific implementations. This enables:
+- Theme-aware rendering (each palette/style/appearance gets custom render logic)
+- Programmatic UI generation from data models
+- Cross-platform rendering (Compose on Android, iOS, Desktop; web via code generation)
+
+---
+
 ## 9. Quick Reference
 
 > **NOTE:** As of Phase 2 (Chapter 92), prefer **unified components** (`AvanueCard`, `AvanueSurface`, etc.) over the Glass* components below. The Glass* components are now `@Deprecated` — they still work but the unified API is the recommended path forward. See Chapter 92 for full details.

@@ -493,6 +493,8 @@ data class SessionExport(
 
 Export/import uses `SessionExport` for single-pass serialization (no double-encoding). Backed by SQLDelight. Content serialized as JSON. Timestamps in ISO 8601.
 
+**260222 Fix:** `getSessions()` and `getSession(id)` now properly load `workflowSteps` from the database for each session. Previously, `workflowSteps` always returned an empty list, breaking workflow state reconstruction after app restart. Both Android and Desktop implementations have been updated.
+
 ### CockpitViewModel Lifecycle (v2.3)
 
 - `createSession()` is `suspend` — awaits DB save before returning the session
