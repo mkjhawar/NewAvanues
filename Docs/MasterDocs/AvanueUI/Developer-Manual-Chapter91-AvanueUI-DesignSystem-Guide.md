@@ -411,7 +411,7 @@ object MyModuleGlassConfigs {
 }
 ```
 
-See `AvidCreator/GlassmorphismUtils.kt` for a real-world example (`UUIDGlassConfigs`).
+See `Modules/AvidCreator/src/androidMain/.../avidcreator/GlassmorphismUtils.kt` for a real-world example (`UUIDGlassConfigs`).
 
 ---
 

@@ -618,7 +618,7 @@ Android's security model prevents non-system apps from visually embedding 3rd-pa
 
 | Scope | Approach | Status |
 |-------|----------|--------|
-| **Own modules** (NoteAvanue, CameraAvanue, etc.) | Compose content slots | Implemented |
+| **Own modules** (NoteAvanue, PhotoAvanue, etc.) | Compose content slots | Implemented |
 | **3rd-party apps** | `FLAG_ACTIVITY_LAUNCH_ADJACENT` + split-screen | **Implemented** |
 | **Voice control across apps** | AccessibilityService overlay | Implemented |
 | **True 3rd-party embedding** | TaskOrganizer / VirtualDisplay | Not viable (requires system UID) |
@@ -673,7 +673,7 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 ## 12. Updates (260222)
 
 ### ContentRenderer Import Fix
-`ContentRenderer.kt` imports `CameraPreview` for the `FrameContent.Camera` content type. The import was corrected from the non-existent `com.augmentalis.cameraavanue` package to `com.augmentalis.photoavanue.CameraPreview`, which is the actual composable in the PhotoAvanue module (Chapter 98). The CameraAvanue module is not included in `settings.gradle.kts` — PhotoAvanue is the canonical camera module.
+`ContentRenderer.kt` imports `CameraPreview` for the `FrameContent.Camera` content type. The import was corrected from the non-existent `com.augmentalis.cameraavanue` package to `com.augmentalis.photoavanue.CameraPreview`, which is the actual composable in the PhotoAvanue module (Chapter 98). The orphaned CameraAvanue module has been deleted — PhotoAvanue is the canonical camera module.
 
 ### Build Dependency Fixes
 - **BouncyCastle conflict:** `pdfbox-android:2.0.27.0` (in RAG module) transitively pulled `bcprov-jdk15to18:1.72`, conflicting with JSch's `bcprov-jdk18on:1.78.1`. Resolved by excluding the older `jdk15to18` artifacts from pdfbox-android.
