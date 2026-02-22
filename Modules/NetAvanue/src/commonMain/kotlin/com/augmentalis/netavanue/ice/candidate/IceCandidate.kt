@@ -156,7 +156,13 @@ data class IceCandidate(
      * `candidate:{foundation} {componentId} {protocol} {priority} {address} {port} typ {type} [raddr {related} rport {rport}]`
      */
     fun toSdpAttribute(): String = buildString {
-        append("candidate:$foundation $componentId ${protocol.name.lowercase()} $priority $address $port typ ${type.name.lowercase()}")
+        val sdpType = when (type) {
+            CandidateType.HOST -> "host"
+            CandidateType.SERVER_REFLEXIVE -> "srflx"
+            CandidateType.PEER_REFLEXIVE -> "prflx"
+            CandidateType.RELAY -> "relay"
+        }
+        append("candidate:$foundation $componentId ${protocol.name.lowercase()} $priority $address $port typ $sdpType")
         if (relatedAddress != null && relatedPort != null) {
             append(" raddr $relatedAddress rport $relatedPort")
         }

@@ -1,6 +1,7 @@
 package com.augmentalis.netavanue.capability
 
 import kotlinx.cinterop.*
+import platform.CommonCrypto.CC_SHA256
 import platform.Foundation.*
 import platform.Security.*
 import platform.UIKit.UIDevice
@@ -128,29 +129,19 @@ actual class DeviceFingerprint actual constructor() {
         }
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     private fun sha256(input: ByteArray): ByteArray {
-        // Use platform CC_SHA256 via kotlinx.cinterop
-        val nsInput = input.toNSData()
-        val hashBytes = ByteArray(32)
-        // Simplified: use Foundation's built-in hashing
-        val digest = NSMutableData.dataWithLength(32u) ?: return hashBytes
-        // In production, use CommonCrypto CC_SHA256 via cinterop
-        // For now, use a Kotlin-native implementation
-        return kotlinSha256(input)
-    }
-
-    private fun kotlinSha256(input: ByteArray): ByteArray {
-        // Delegate to java.security.MessageDigest equivalent is not available on iOS
-        // Use a simple approach: NSData with hash computation
-        // This is a placeholder that will be replaced with proper CC_SHA256 cinterop
-        val data = input.toNSData()
-        // Use SHA-256 from CryptoKit if available, otherwise manual
-        // For now, return a deterministic hash based on content
-        val result = ByteArray(32)
-        for (i in input.indices) {
-            result[i % 32] = (result[i % 32].toInt() xor input[i].toInt()).toByte()
+        val digest = ByteArray(32) // CC_SHA256_DIGEST_LENGTH = 32
+        input.usePinned { pinnedInput ->
+            digest.usePinned { pinnedDigest ->
+                platform.CommonCrypto.CC_SHA256(
+                    pinnedInput.addressOf(0),
+                    input.size.toUInt(),
+                    pinnedDigest.addressOf(0).reinterpret()
+                )
+            }
         }
-        return result
+        return digest
     }
 
     private fun ByteArray.toNSData(): NSData {

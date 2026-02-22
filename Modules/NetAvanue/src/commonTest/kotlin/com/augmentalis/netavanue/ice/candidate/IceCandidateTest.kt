@@ -34,7 +34,7 @@ class IceCandidateTest {
         assertTrue(sdp.contains("udp"))
         assertTrue(sdp.contains("192.168.1.5"))
         assertTrue(sdp.contains("54321"))
-        assertTrue(sdp.contains("typ host"))
+        assertTrue(sdp.contains("typ host"), "SDP should contain 'typ host': $sdp")
     }
 
     @Test

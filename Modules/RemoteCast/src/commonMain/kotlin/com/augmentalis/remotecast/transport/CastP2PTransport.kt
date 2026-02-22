@@ -7,6 +7,8 @@ import com.augmentalis.remotecast.protocol.CastFrameData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * P2P transport for CAST frames using NetAvanue DataChannel.
@@ -29,6 +31,7 @@ class CastP2PTransport(
 ) : CastTransport {
     private val logger = LoggerFactory.getLogger("CastP2P")
 
+    private val channelMutex = Mutex()
     private val channels = mutableListOf<DataChannel>()
 
     private val _isRunning = MutableStateFlow(false)
@@ -44,21 +47,24 @@ class CastP2PTransport(
      * multi-peer broadcasting (e.g. phone → multiple glasses).
      */
     fun addChannel(channel: DataChannel) {
-        channels.add(channel)
-        _clientConnected.value = channels.any { it.state.value == DataChannelState.OPEN }
-
-        // Monitor channel state for disconnect detection
         scope.launch {
+            channelMutex.withLock { channels.add(channel) }
+            val hasOpen = channelMutex.withLock { channels.any { it.state.value == DataChannelState.OPEN } }
+            _clientConnected.value = hasOpen
+            val count = channelMutex.withLock { channels.size }
+            logger.i { "P2P receiver added: '${channel.label}' (total: $count)" }
+
+            // Monitor channel state for disconnect detection
             channel.state.collect { state ->
                 if (state == DataChannelState.CLOSED) {
-                    channels.remove(channel)
-                    _clientConnected.value = channels.any { it.state.value == DataChannelState.OPEN }
-                    logger.i { "P2P receiver disconnected (remaining: ${channels.size})" }
+                    channelMutex.withLock { channels.remove(channel) }
+                    val stillOpen = channelMutex.withLock { channels.any { it.state.value == DataChannelState.OPEN } }
+                    _clientConnected.value = stillOpen
+                    val remaining = channelMutex.withLock { channels.size }
+                    logger.i { "P2P receiver disconnected (remaining: $remaining)" }
                 }
             }
         }
-
-        logger.i { "P2P receiver added: '${channel.label}' (total: ${channels.size})" }
     }
 
     override fun start() {
@@ -69,7 +75,7 @@ class CastP2PTransport(
 
     override suspend fun sendFrame(frameData: CastFrameData) {
         if (!_isRunning.value) return
-        val openChannels = channels.filter { it.state.value == DataChannelState.OPEN }
+        val openChannels = channelMutex.withLock { channels.filter { it.state.value == DataChannelState.OPEN } }
         if (openChannels.isEmpty()) return
 
         val packet = CastFrameData.buildPacket(frameData)
@@ -86,10 +92,12 @@ class CastP2PTransport(
 
     override suspend fun stop() {
         _isRunning.value = false
-        for (channel in channels) {
-            try { channel.close() } catch (_: Exception) {}
+        channelMutex.withLock {
+            for (channel in channels) {
+                try { channel.close() } catch (_: Exception) {}
+            }
+            channels.clear()
         }
-        channels.clear()
         _clientConnected.value = false
         logger.i { "CastP2PTransport stopped ($frameCount frames sent)" }
     }

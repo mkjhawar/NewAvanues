@@ -78,6 +78,11 @@ actual class DeviceFingerprint actual constructor() {
         keyDir.mkdirs()
         pubKeyFile.writeText(Base64.encode(pair.public.encoded))
         privKeyFile.writeText(Base64.encode(pair.private.encoded))
+        // Restrict key file permissions to owner-only
+        privKeyFile.setReadable(false, false)
+        privKeyFile.setReadable(true, true)
+        privKeyFile.setWritable(false, false)
+        privKeyFile.setWritable(true, true)
 
         return pair
     }

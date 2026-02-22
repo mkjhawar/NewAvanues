@@ -7,6 +7,8 @@ import com.augmentalis.netavanue.ice.stun.StunClient
 import com.augmentalis.netavanue.signaling.SignalingClient
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * High-level peer connection manager.
@@ -65,6 +67,7 @@ class PeerConnection(
     private var socket: UdpSocket? = null
     private var stunClient: StunClient? = null
     private var scope: CoroutineScope? = null
+    private val channelMutex = Mutex()
     private val dataChannels = mutableMapOf<Int, DataChannel>()
     private var nominatedPair: IceCandidatePair? = null
     private var nextChannelId = 0
@@ -154,21 +157,20 @@ class PeerConnection(
     /**
      * Create a data channel for sending/receiving data.
      */
-    fun createDataChannel(label: String): DataChannel {
-        val channelId = nextChannelId++
-        val pair = nominatedPair
-        if (pair == null || socket == null) {
-            throw IllegalStateException("No connected pair — wait for PeerConnectionState.CONNECTED")
-        }
+    suspend fun createDataChannel(label: String): DataChannel {
+        val pair = requireNotNull(nominatedPair) { "No connected pair — wait for PeerConnectionState.CONNECTED" }
+        val sock = requireNotNull(socket) { "PeerConnection not started" }
+        val sc = requireNotNull(scope) { "PeerConnection not started" }
+        val channelId = channelMutex.withLock { nextChannelId++ }
         val channel = DataChannel(
             label = label,
             channelId = channelId,
-            socket = socket!!,
+            socket = sock,
             remoteHost = pair.remote.address,
             remotePort = pair.remote.port,
         )
-        dataChannels[channelId] = channel
-        channel.open(scope!!)
+        channelMutex.withLock { dataChannels[channelId] = channel }
+        channel.open(sc)
         return channel
     }
 
@@ -177,10 +179,12 @@ class PeerConnection(
      */
     suspend fun close() {
         _state.value = PeerConnectionState.CLOSED
-        for (channel in dataChannels.values) {
-            channel.close()
+        channelMutex.withLock {
+            for (channel in dataChannels.values) {
+                channel.close()
+            }
+            dataChannels.clear()
         }
-        dataChannels.clear()
         socket?.close()
         socket = null
         scope?.cancel()

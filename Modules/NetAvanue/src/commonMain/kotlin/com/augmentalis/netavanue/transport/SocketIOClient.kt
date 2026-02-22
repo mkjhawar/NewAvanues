@@ -4,6 +4,8 @@ import com.avanues.logging.LoggerFactory
 import com.augmentalis.httpavanue.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.*
 import kotlin.concurrent.Volatile
 
@@ -43,7 +45,8 @@ class SocketIOClient(
     private var scope: CoroutineScope? = null
     private var pingJob: Job? = null
     private var handshake: EioHandshake? = null
-    @Volatile private var ackCounter = 0
+    private var ackCounter = 0
+    private val ackMutex = Mutex()
     private val pendingAcks = mutableMapOf<Int, CompletableDeferred<JsonElement?>>()
     @Volatile private var connected = false
 
@@ -112,9 +115,12 @@ class SocketIOClient(
         timeout: Long = 10_000,
     ): JsonElement? {
         if (!connected) throw IllegalStateException("Not connected to Socket.IO")
-        val ackId = ackCounter++
         val deferred = CompletableDeferred<JsonElement?>()
-        pendingAcks[ackId] = deferred
+        val ackId = ackMutex.withLock {
+            val id = ackCounter++
+            pendingAcks[id] = deferred
+            id
+        }
 
         val frame = SocketIOCodec.encodeSioEvent(namespace, eventName, payload, ackId)
         wsClient?.sendText(frame)
@@ -122,7 +128,7 @@ class SocketIOClient(
         return try {
             withTimeout(timeout) { deferred.await() }
         } catch (e: TimeoutCancellationException) {
-            pendingAcks.remove(ackId)
+            ackMutex.withLock { pendingAcks.remove(ackId) }
             throw SocketIOTimeoutException("Ack timeout for event '$eventName' (id=$ackId)")
         }
     }
@@ -207,7 +213,7 @@ class SocketIOClient(
     }
 
     /** Handle a Socket.IO packet (EIO MESSAGE prefix already stripped) */
-    private fun handleSioMessage(raw: String) {
+    private suspend fun handleSioMessage(raw: String) {
         val packet = SocketIOCodec.parseSioPacket(raw)
         if (packet.namespace != namespace && packet.namespace != "/") return
 
@@ -243,9 +249,9 @@ class SocketIOClient(
     }
 
     /** Handle a Socket.IO acknowledgement response */
-    private fun handleSioAck(packet: SioPacket) {
+    private suspend fun handleSioAck(packet: SioPacket) {
         val ackId = packet.ackId ?: return
-        val deferred = pendingAcks.remove(ackId) ?: return
+        val deferred = ackMutex.withLock { pendingAcks.remove(ackId) } ?: return
         val data = packet.data?.let { element ->
             when (element) {
                 is JsonArray -> element.firstOrNull()

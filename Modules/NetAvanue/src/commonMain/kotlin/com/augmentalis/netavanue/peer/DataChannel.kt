@@ -135,6 +135,11 @@ class DataChannel(
                 break
             }
 
+            if (payloadLen < 0 || payloadLen > MAX_PAYLOAD_SIZE) {
+                logger.w { "Invalid payload length: $payloadLen" }
+                continue
+            }
+
             if (payloadLen > 0 && HEADER_SIZE + payloadLen <= data.size) {
                 val payload = data.copyOfRange(HEADER_SIZE, HEADER_SIZE + payloadLen)
                 val isText = flags and FLAG_TEXT != 0
@@ -148,5 +153,6 @@ class DataChannel(
         const val FLAG_TEXT = 0x01
         const val FLAG_BINARY = 0x02
         const val FLAG_CLOSE = 0x04
+        const val MAX_PAYLOAD_SIZE = 65528 // 64KB - header
     }
 }

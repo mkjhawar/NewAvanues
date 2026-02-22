@@ -2,7 +2,7 @@ package com.augmentalis.netavanue.signaling
 
 import com.avanues.logging.LoggerFactory
 import com.augmentalis.netavanue.transport.SocketIOClient
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 
@@ -27,36 +27,40 @@ class SignalingClient(
     private val logger = LoggerFactory.getLogger("SignalingClient")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
     private val socketIO = SocketIOClient(serverUrl = serverUrl, namespace = namespace)
+    private var eventScope: CoroutineScope? = null
 
     /** Connection state */
     val connectionState: StateFlow<SocketIOClient.State> = socketIO.state
 
-    /** All server events parsed into typed [ServerEvent] instances */
-    val serverEvents: SharedFlow<ServerEvent> = socketIO.events.map { (eventName, payload) ->
-        if (eventName == "message") parseServerEvent(payload)
-        else ServerEvent.Unknown(eventName, payload.toString())
-    }.shareIn(
-        scope = CoroutineScope(kotlinx.coroutines.Dispatchers.Default),
-        started = SharingStarted.WhileSubscribed(),
-    )
+    /** All server events parsed into typed [ServerEvent] instances. Active only while connected. */
+    lateinit var serverEvents: SharedFlow<ServerEvent>
+        private set
 
     /** Filtered flows for specific event types */
-    val sessionEvents: Flow<ServerEvent> = serverEvents.filter {
+    val sessionEvents: Flow<ServerEvent> get() = serverEvents.filter {
         it is ServerEvent.SessionCreated || it is ServerEvent.SessionJoined ||
             it is ServerEvent.SessionRejoined || it is ServerEvent.ParticipantJoined ||
             it is ServerEvent.ParticipantLeft || it is ServerEvent.HubElected
     }
-    val peerEvents: Flow<ServerEvent> = serverEvents.filter {
+    val peerEvents: Flow<ServerEvent> get() = serverEvents.filter {
         it is ServerEvent.PeerDisconnected || it is ServerEvent.TurnCredentials
     }
-    val pairingEvents: Flow<ServerEvent> = serverEvents.filter {
+    val pairingEvents: Flow<ServerEvent> get() = serverEvents.filter {
         it is ServerEvent.PairRequested || it is ServerEvent.PairEstablished
     }
-    val errorEvents: Flow<ServerEvent.Error> = serverEvents.filterIsInstance()
+    val errorEvents: Flow<ServerEvent.Error> get() = serverEvents.filterIsInstance()
 
     /** Connect to the signaling server */
     suspend fun connect(scope: CoroutineScope) {
         logger.i { "Connecting to signaling server" }
+        eventScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[kotlinx.coroutines.Job]))
+        serverEvents = socketIO.events.map { (eventName, payload) ->
+            if (eventName == "message") parseServerEvent(payload)
+            else ServerEvent.Unknown(eventName, payload.toString())
+        }.shareIn(
+            scope = eventScope!!,
+            started = SharingStarted.WhileSubscribed(),
+        )
         socketIO.connect(scope)
     }
 
@@ -64,6 +68,8 @@ class SignalingClient(
     suspend fun disconnect() {
         logger.i { "Disconnecting from signaling server" }
         socketIO.disconnect()
+        eventScope?.cancel()
+        eventScope = null
     }
 
     // ─── Device Registration ────────────────────────────────────────
