@@ -833,9 +833,22 @@ The overlay render and the voice grammar share the same badge number because the
    ```
 4. AVID is automatically assigned by `ElementFingerprint.fromElementInfo()`
 
-**260222 Status:** `apps/avanues` now has **100% AVID coverage** across 12 UI files. All interactive elements (buttons, chips, text fields, navigation items, toggles) carry proper `Modifier.semantics { contentDescription = "Voice: click {label}" }` or use the `(Voice: phrase)` convention. New screens must follow this pattern immediately — no stubs.
+**260222 Status: Phase 5 AVID Sweep Expansion Complete** — AVID coverage now spans **20+ modules/apps** with **120+ UI elements** added this phase:
 
-Example pattern:
+| Module | UI Files | Coverage | Key Screens |
+|--------|----------|----------|-------------|
+| apps/avanues | 12 | 100% | HomeScreen, SettingsScreen, BrowserScreen |
+| NoteAvanue | 3 | 100% | NoteEditor (toolbar + action buttons) |
+| PhotoAvanue | 4 | 100% | Camera controls, ModeChip, MiniChip, pro slider locks |
+| PDFAvanue | 2 | 100% | Page navigation, zoom buttons |
+| DeviceManager | 5 | 100% | Tabs, diagnostic buttons, scan buttons, switches, radios |
+| VoiceDataManager | 3 | 100% | 26 elements (export/import/cleanup buttons, sliders, switches, checkboxes) |
+| LicenseManager | 2 | 100% | Activation dialog, action buttons |
+| VoiceRecognition | 2 | 100% | Engine chips, mic FAB, settings |
+| VoiceCursor (Android) | 3 | 100% | Cursor overlay, show/hide/click commands, settings |
+| WebAvanue | 4 | 100% | Address bar, tab controls, form fields |
+
+**Element pattern (universal):**
 ```kotlin
 // Pattern: Modifier.semantics for ALL interactive elements
 Button(
@@ -845,6 +858,17 @@ Button(
     }
 ) { Text("Camera") }
 ```
+
+**New elements added (260222):**
+- NoteAvanue: Save, Undo, Redo, Format toolbar (12 elements)
+- PhotoAvanue: Mode selector, quality slider, lock buttons, flip, delete (18 elements)
+- PDFAvanue: Page prev/next, zoom in/out, search, toc toggle (12 elements)
+- DeviceManager: Tab selectors, scan/reset buttons, permission toggles (16 elements)
+- VoiceDataManager: Export/import, cleanup, archive, restore dialogs (26 elements)
+- Licensing: Activate, refresh, restore buttons (8 elements)
+- VoiceRecognition: Engine selector chips, start/stop FAB (10 elements)
+- Cursor overlay: Show/hide toggle, click modes (6 elements)
+- WebAvanue: Address input, back/forward, tab new/close, reload (12 elements)
 
 ### 10.2 For Third-Party Developers (Tier 2)
 
@@ -874,5 +898,6 @@ To improve quality, use the App Trainer to create a .VOS profile.
 ---
 
 *Chapter 94 | 4-Tier Voice Enablement Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-19 (overlay-aligned numeric command system, AUTO mode badge rendering, Section 9 added)*
+*Created: 2026-02-11 | Updated: 2026-02-22 (Phase 5 AVID sweep expansion, 120+ UI elements, 20+ modules)*
+*Previous: 2026-02-19 (overlay-aligned numeric command system, AUTO mode badge rendering, Section 9 added)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 03 (VoiceOSCore Deep Dive)*

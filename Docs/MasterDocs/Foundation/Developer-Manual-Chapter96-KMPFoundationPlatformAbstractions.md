@@ -3,7 +3,7 @@
 **Module:** Foundation (`Modules/Foundation/`)
 **Scope:** Cross-platform settings, credentials, file system, permissions
 **Version:** 1.0 (Phase 1+2+3 Complete)
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-02-22 (14-module test expansion documented)
 
 ---
 
@@ -293,9 +293,11 @@ The Foundation module's `build.gradle.kts` targets:
 
 ---
 
-## 8.5 Test Suite (commonTest, 260222)
+## 8.5 Test Suite Expansion (260222)
 
-Foundation includes a **commonTest** source set with **7 test files** and **41 total test cases** covering codec round-trip, preference reading/writing, settings migrations, and credential storage.
+Foundation is part of a **14-module test infrastructure expansion** tracking KMP test coverage across the codebase.
+
+**Foundation-specific (commonTest):** 7 test files, 41 test cases covering codec round-trip, preference reading/writing, settings migrations, and credential storage.
 
 ### Test Files
 
@@ -322,6 +324,24 @@ AvanuesSettingsCodec.encode(encoded, inMemory)
 ```
 
 All tests run on all platforms (Android, iOS, Desktop) via KMP's shared test infrastructure.
+
+### 14-Module Test Expansion (260222)
+
+Test suite now covers Foundation + 13 additional modules:
+1. **Foundation** (41 tests) — Settings, credentials, file system, permissions
+2. **VoiceOSCore** — Multi-locale command registry, handler dispatch, AVID generation
+3. **Database** — SQLDelight migrations, query verification
+4. **WebAvanue** — DOM scraping, command generation
+5. **PhotoAvanue** — Camera integration, file handling
+6. **NoteAvanue** — Rich text editing, persistence
+7. **HTTPAvanue** — Server startup, request routing
+8. **RemoteCast** — Wire protocol encoding, VOCAB sync
+9. **AvanueUI** — Token resolution, theme composition
+10. **DeviceManager** — Device scanning, permission checks
+11. **Accessibility** — Gesture dispatch, overlay rendering
+12. **VoiceRecognition** — Engine abstraction, STT result parsing
+13. **Navigation** — Route resolution, back stack management
+14. **Logging** — Log filtering, output formatting
 
 ---
 

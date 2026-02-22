@@ -626,9 +626,9 @@ These packages no longer exist:
 
 ---
 
-## 8.5 DSL Render Methods (260222)
+## 8.5 DSL Render Methods — Complete (260222)
 
-All 28 unified component types now have full `render()` implementations in `DslComponentExtensions.kt` (998 lines). The DSL pattern enables programmatic composable generation:
+All **28/28 unified component types** now have full `render()` implementations in `DslComponentExtensions.kt` (998 lines). The DSL pattern enables programmatic composable generation:
 
 ```kotlin
 // Pattern: Component.render() delegates to renderer.render(this)
@@ -636,20 +636,69 @@ val button = AvanueButton(onClick = {}, label = "Submit")
 val rendered = button.render(renderer)  // → renderer.render(button)
 ```
 
-**DslComponentExtensions.kt** provides extension functions for all component types:
-- `AvanueSurface.render(renderer: ComponentRenderer)`
-- `AvanueCard.render(renderer: ComponentRenderer)`
-- `AvanueButton.render(renderer: ComponentRenderer)`
-- `AvanueChip.render(renderer: ComponentRenderer)`
-- `AvanueBubble.render(renderer: ComponentRenderer)`
-- `AvanueFAB.render(renderer: ComponentRenderer)`
-- `AvanueIconButton.render(renderer: ComponentRenderer)`
-- Plus 21 additional component types (all unified + glass/water variants)
+### 28 Rendered Components
+
+**7 Primary unified components:**
+1. `AvanueSurface.render(renderer: ComponentRenderer)`
+2. `AvanueCard.render(renderer: ComponentRenderer)`
+3. `AvanueButton.render(renderer: ComponentRenderer)`
+4. `AvanueChip.render(renderer: ComponentRenderer)`
+5. `AvanueBubble.render(renderer: ComponentRenderer)`
+6. `AvanueFAB.render(renderer: ComponentRenderer)`
+7. `AvanueIconButton.render(renderer: ComponentRenderer)`
+
+**21 additional component types** (glass/water variants + legacy components with full render delegation):
+- `GlassSurface` — glass effect surface (deprecated API, full render)
+- `GlassCard` — glass-effect card container (deprecated API, full render)
+- `OceanButton` — legacy primary button (deprecated API, full render)
+- `GlassChip` — glass-effect chip/tag (deprecated API, full render)
+- `GlassIndicator` — status indicator (deprecated API, full render)
+- `WaterSurface` — water effect surface (deprecated API, full render)
+- `WaterCard` — water-effect card (deprecated API, full render)
+- `WaterButton` — water-effect button (deprecated API, full render)
+- Plus 13 additional variants and utility components
+
+### Rendering Mechanism
 
 Each `render()` function receives a `ComponentRenderer` interface that delegates to platform-specific or theme-specific implementations. This enables:
-- Theme-aware rendering (each palette/style/appearance gets custom render logic)
-- Programmatic UI generation from data models
-- Cross-platform rendering (Compose on Android, iOS, Desktop; web via code generation)
+- **Theme-aware rendering** — each palette/style/appearance gets custom render logic
+- **Programmatic UI generation** — data models → composables without manual Compose code
+- **Cross-platform rendering** — Compose on Android/iOS/Desktop; web via code generation
+- **DSL extensibility** — new components automatically inherit render pattern
+
+### Example: Custom Renderer
+
+```kotlin
+object MyThemeRenderer : ComponentRenderer {
+    override fun render(button: AvanueButton): @Composable () -> Unit {
+        return {
+            Button(
+                onClick = button.onClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MyTheme.primaryColor
+                )
+            ) {
+                Text(button.label)
+            }
+        }
+    }
+
+    // ... implement for all 28 component types
+}
+
+// Usage
+val uiModel = listOf(
+    AvanueButton(onClick = {}, label = "Save"),
+    AvanueChip(label = "Active"),
+    AvanueCard(content = { Text("Info") })
+)
+
+Column {
+    uiModel.forEach { component ->
+        component.render(MyThemeRenderer)  // Theme-aware rendering
+    }
+}
+```
 
 ---
 
@@ -708,5 +757,5 @@ DATASTORE KEYS:
 
 ---
 
-*Chapter 91 | AvanueUI Design System Guide v2.0 | 2026-02-11 | Branch: VoiceOSCore-KotlinUpdate*
-*Prerequisite: Chapter 88 (Consolidated App), Chapter 90 (Unified Settings), Chapter 92 (Unified Components)*
+*Chapter 91 | AvanueUI Design System Guide v2.0 | Created: 2026-02-11 | Updated: 2026-02-22 (28/28 DSL renders complete)*
+*Branch: VoiceOSCore-KotlinUpdate | Prerequisite: Chapter 88 (Consolidated App), Chapter 90 (Unified Settings), Chapter 92 (Unified Components)*
