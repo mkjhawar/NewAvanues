@@ -211,7 +211,10 @@ fun PhotoAvanueScreen(
                 modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(onClick = { controller.zoomIn() }) {
+                IconButton(
+                    onClick = { controller.zoomIn() },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Zoom In" }
+                ) {
                     Icon(Icons.Default.ZoomIn, "Zoom In", tint = colors.textPrimary.copy(alpha = 0.7f))
                 }
                 Text(
@@ -223,17 +226,26 @@ fun PhotoAvanueScreen(
                     color = colors.textPrimary.copy(alpha = 0.7f),
                     fontSize = 11.sp
                 )
-                IconButton(onClick = { controller.zoomOut() }) {
+                IconButton(
+                    onClick = { controller.zoomOut() },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Zoom Out" }
+                ) {
                     Icon(Icons.Default.ZoomOut, "Zoom Out", tint = colors.textPrimary.copy(alpha = 0.7f))
                 }
 
                 Spacer(Modifier.height(16.dp))
 
-                IconButton(onClick = { controller.increaseExposure() }) {
+                IconButton(
+                    onClick = { controller.increaseExposure() },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Increase Exposure" }
+                ) {
                     Icon(Icons.Default.ExposurePlus1, "Exposure +", tint = colors.textPrimary.copy(alpha = 0.7f))
                 }
                 Icon(Icons.Default.Exposure, "Exposure", tint = colors.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
-                IconButton(onClick = { controller.decreaseExposure() }) {
+                IconButton(
+                    onClick = { controller.decreaseExposure() },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Decrease Exposure" }
+                ) {
                     Icon(Icons.Default.ExposureNeg1, "Exposure -", tint = colors.textPrimary.copy(alpha = 0.7f))
                 }
             }
@@ -327,10 +339,14 @@ fun PhotoAvanueScreen(
             when {
                 cameraState.captureMode == CaptureMode.VIDEO && cameraState.recording.isRecording -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = {
-                            if (cameraState.recording.isPaused) controller.resumeRecording()
-                            else controller.pauseRecording()
-                        }) {
+                        val pauseResumeLabel = if (cameraState.recording.isPaused) "Resume Recording" else "Pause Recording"
+                        IconButton(
+                            onClick = {
+                                if (cameraState.recording.isPaused) controller.resumeRecording()
+                                else controller.pauseRecording()
+                            },
+                            modifier = Modifier.semantics { contentDescription = "Voice: click $pauseResumeLabel" }
+                        ) {
                             Icon(
                                 if (cameraState.recording.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                                 "Pause/Resume",
@@ -340,7 +356,11 @@ fun PhotoAvanueScreen(
                         Spacer(Modifier.width(8.dp))
                         IconButton(
                             onClick = { controller.stopRecording() },
-                            modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.error.copy(alpha = 0.3f))
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(colors.error.copy(alpha = 0.3f))
+                                .semantics { contentDescription = "Voice: click Stop Recording" }
                         ) {
                             Icon(Icons.Default.Stop, "Stop", tint = colors.error, modifier = Modifier.size(40.dp))
                         }
@@ -441,7 +461,7 @@ private fun ExtensionChip(
             .background(if (selected) colors.primary.copy(alpha = 0.25f) else colors.surface.copy(alpha = 0.4f))
             .clickable(enabled = available, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp)
-            .semantics { contentDescription = "Voice: click $label" }
+            .semantics { contentDescription = "Voice: click $label mode" }
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, modifier = Modifier.size(14.dp), tint = if (selected) colors.primary else colors.textSecondary)
@@ -479,8 +499,8 @@ private fun ProControlsPanel(
         ) {
             Text("PRO", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (pro.isProMode) colors.warning else colors.textSecondary)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MiniChip("ON", pro.isProMode) { controller.setProMode(true) }
-                MiniChip("OFF", !pro.isProMode) { controller.setProMode(false) }
+                MiniChip("ON", pro.isProMode, "Pro Mode On") { controller.setProMode(true) }
+                MiniChip("OFF", !pro.isProMode, "Pro Mode Off") { controller.setProMode(false) }
             }
         }
 
@@ -535,6 +555,7 @@ private fun ProControlsPanel(
                     MiniChip(
                         label = mode.name.take(4),
                         selected = pro.whiteBalance == mode,
+                        voiceLabel = "White Balance ${mode.name}",
                         onClick = { controller.setWhiteBalance(mode) }
                     )
                 }
@@ -548,7 +569,12 @@ private fun ProControlsPanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("RAW", fontSize = 11.sp, color = colors.textSecondary, fontWeight = FontWeight.Medium)
-                    MiniChip("DNG", pro.isRawEnabled) { controller.setRawCapture(!pro.isRawEnabled) }
+                    MiniChip(
+                        label = "DNG",
+                        selected = pro.isRawEnabled,
+                        voiceLabel = "RAW DNG capture",
+                        onClick = { controller.setRawCapture(!pro.isRawEnabled) }
+                    )
                 }
             }
         }
@@ -585,7 +611,11 @@ private fun ProSliderRow(
         Text(displayText, fontSize = 10.sp, color = colors.textPrimary, modifier = Modifier.width(48.dp))
         IconButton(
             onClick = onLockToggle,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier
+                .size(24.dp)
+                .semantics {
+                    contentDescription = if (locked) "Voice: click Unlock $label" else "Voice: click Lock $label"
+                }
         ) {
             Icon(
                 if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
@@ -614,6 +644,7 @@ private fun ProReadout(label: String, value: String, locked: Boolean) {
 private fun MiniChip(
     label: String,
     selected: Boolean,
+    voiceLabel: String,
     onClick: () -> Unit
 ) {
     val colors = AvanueTheme.colors
@@ -623,6 +654,7 @@ private fun MiniChip(
             .background(if (selected) colors.primary.copy(alpha = 0.25f) else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 3.dp)
+            .semantics { contentDescription = "Voice: click $voiceLabel" }
     ) {
         Text(
             text = label,
@@ -680,7 +712,9 @@ private fun ModeChip(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .background(if (selected) colors.primary.copy(alpha = 0.2f) else Color.Transparent)
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 6.dp)
+            .semantics { contentDescription = "Voice: click $label mode" }
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(

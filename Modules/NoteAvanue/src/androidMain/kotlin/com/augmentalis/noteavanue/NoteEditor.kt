@@ -39,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -124,7 +126,9 @@ fun NoteEditor(
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = if (boldActive) colors.primary.copy(alpha = 0.15f) else Color.Transparent
                     ),
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(36.dp)
+                        .semantics { contentDescription = "Voice: click Bold" }
                 ) {
                     Icon(
                         Icons.Default.FormatBold, "Bold",
@@ -138,7 +142,9 @@ fun NoteEditor(
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = if (italicActive) colors.primary.copy(alpha = 0.15f) else Color.Transparent
                     ),
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(36.dp)
+                        .semantics { contentDescription = "Voice: click Italic" }
                 ) {
                     Icon(
                         Icons.Default.FormatItalic, "Italic",
@@ -147,16 +153,28 @@ fun NoteEditor(
                 }
             }
             Row {
-                IconButton(onClick = onTakePhoto) {
+                IconButton(
+                    onClick = onTakePhoto,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Take Photo" }
+                ) {
                     Icon(Icons.Default.CameraAlt, "Photo", tint = colors.textPrimary)
                 }
-                IconButton(onClick = onAttachFile) {
+                IconButton(
+                    onClick = onAttachFile,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Attach File" }
+                ) {
                     Icon(Icons.Default.AttachFile, "Attach", tint = colors.textPrimary)
                 }
-                IconButton(onClick = onStartDictation) {
+                IconButton(
+                    onClick = onStartDictation,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Dictate" }
+                ) {
                     Icon(Icons.Default.Mic, "Dictate", tint = colors.primary)
                 }
-                IconButton(onClick = { onSave(titleField, richTextState.toMarkdown()) }) {
+                IconButton(
+                    onClick = { onSave(titleField, richTextState.toMarkdown()) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Save" }
+                ) {
                     Icon(Icons.Default.Save, "Save", tint = colors.primary)
                 }
             }
@@ -191,7 +209,9 @@ fun NoteEditor(
                         inner()
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Voice: type Note Title" }
             )
 
             Spacer(Modifier.height(16.dp))
@@ -216,6 +236,7 @@ fun NoteEditor(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .semantics { contentDescription = "Voice: type Note Content" }
             )
 
             // ── Attachments ──────────────────────────────────────────
@@ -233,9 +254,13 @@ fun NoteEditor(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     attachments.forEach { att ->
+                        val attLabel = att.name.ifBlank { att.type.name }
                         AssistChip(
                             onClick = {},
-                            label = { Text(att.name.ifBlank { att.type.name }, maxLines = 1) }
+                            label = { Text(attLabel, maxLines = 1) },
+                            modifier = Modifier.semantics {
+                                contentDescription = "Voice: click attachment $attLabel"
+                            }
                         )
                     }
                 }

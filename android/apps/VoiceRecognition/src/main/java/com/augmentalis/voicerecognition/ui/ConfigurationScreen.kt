@@ -24,6 +24,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -85,7 +87,10 @@ fun ConfigurationScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBackPressed) {
+            IconButton(
+                onClick = onBackPressed,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Back to Speech Recognition" }
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -216,7 +221,8 @@ fun ConfigurationScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp),
+                .padding(vertical = 16.dp)
+                .semantics { contentDescription = "Voice: click Reset Configuration to Defaults" },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF007AFF)
             ),
@@ -290,7 +296,9 @@ fun LanguageSelector(
     Box {
         OutlinedButton(
             onClick = { expanded = true },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "Voice: select Language for Speech Recognition" },
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.outlinedButtonColors(
                 containerColor = Color(0x1A007AFF)
@@ -314,7 +322,7 @@ fun LanguageSelector(
         ) {
             languages.forEach { (code, label) ->
                 DropdownMenuItem(
-                    text = { 
+                    text = {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -333,7 +341,8 @@ fun LanguageSelector(
                     onClick = {
                         onLanguageSelected(code)
                         expanded = false
-                    }
+                    },
+                    modifier = Modifier.semantics { contentDescription = "Voice: select $label" }
                 )
             }
         }
@@ -353,7 +362,14 @@ fun ModeSelector(
             val isSelected = mode == selectedMode
             val backgroundColor = if (isSelected) Color(0xFF007AFF) else Color(0x1A007AFF)
             val textColor = if (isSelected) Color.White else Color(0xFF007AFF)
-            
+            val modeLabel = when (mode) {
+                SpeechMode.STATIC_COMMAND -> "Static Commands"
+                SpeechMode.DYNAMIC_COMMAND -> "Dynamic Commands"
+                SpeechMode.DICTATION -> "Free Dictation"
+                SpeechMode.FREE_SPEECH -> "Free Speech"
+                SpeechMode.HYBRID -> "Hybrid Mode"
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -361,18 +377,13 @@ fun ModeSelector(
                         color = backgroundColor,
                         shape = RoundedCornerShape(8.dp)
                     )
+                    .semantics { contentDescription = "Voice: select $modeLabel Recognition Mode" }
                     .clickable { onModeSelected(mode) }
                     .padding(12.dp)
             ) {
                 Column {
                     Text(
-                        text = when (mode) {
-                            SpeechMode.STATIC_COMMAND -> "Static Commands"
-                            SpeechMode.DYNAMIC_COMMAND -> "Dynamic Commands"
-                            SpeechMode.DICTATION -> "Free Dictation"
-                            SpeechMode.FREE_SPEECH -> "Free Speech"
-                            SpeechMode.HYBRID -> "Hybrid Mode"
-                        },
+                        text = modeLabel,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = textColor
@@ -432,7 +443,8 @@ fun ConfigSwitch(
                 checkedTrackColor = Color(0xFF007AFF),
                 uncheckedThumbColor = Color.White,
                 uncheckedTrackColor = Color(0xFFE5E5EA)
-            )
+            ),
+            modifier = Modifier.semantics { contentDescription = "Voice: toggle $title" }
         )
     }
 }
@@ -481,7 +493,8 @@ fun ConfigSlider(
                 thumbColor = Color(0xFF007AFF),
                 activeTrackColor = Color(0xFF007AFF),
                 inactiveTrackColor = Color(0xFFE5E5EA)
-            )
+            ),
+            modifier = Modifier.semantics { contentDescription = "Voice: adjust $title slider" }
         )
     }
 }

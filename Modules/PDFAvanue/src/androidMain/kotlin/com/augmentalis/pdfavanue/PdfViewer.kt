@@ -40,6 +40,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -126,17 +128,44 @@ fun PdfViewer(
             }
         }
         if (pageCount > 0) {
-            Row(Modifier.fillMaxWidth().height(48.dp).background(colors.surface.copy(alpha = 0.8f)).padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { if (currentPage > 0) { currentPage--; zoom = 1f; offsetX = 0f; offsetY = 0f } }, enabled = currentPage > 0) {
-                    Icon(Icons.Default.ChevronLeft, "Previous", tint = colors.textPrimary) }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .background(colors.surface.copy(alpha = 0.8f))
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { if (currentPage > 0) { currentPage--; zoom = 1f; offsetX = 0f; offsetY = 0f } },
+                    enabled = currentPage > 0,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Previous Page" }
+                ) {
+                    Icon(Icons.Default.ChevronLeft, "Previous", tint = colors.textPrimary)
+                }
                 Text("${currentPage + 1} / $pageCount", color = colors.textPrimary, fontSize = 14.sp)
                 Row {
-                    IconButton(onClick = { zoom = (zoom * 0.8f).coerceAtLeast(0.5f) }) { Icon(Icons.Default.ZoomOut, "Zoom out", tint = colors.textPrimary) }
-                    IconButton(onClick = { zoom = (zoom * 1.25f).coerceAtMost(5f) }) { Icon(Icons.Default.ZoomIn, "Zoom in", tint = colors.textPrimary) }
+                    IconButton(
+                        onClick = { zoom = (zoom * 0.8f).coerceAtLeast(0.5f) },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Zoom Out" }
+                    ) {
+                        Icon(Icons.Default.ZoomOut, "Zoom out", tint = colors.textPrimary)
+                    }
+                    IconButton(
+                        onClick = { zoom = (zoom * 1.25f).coerceAtMost(5f) },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Zoom In" }
+                    ) {
+                        Icon(Icons.Default.ZoomIn, "Zoom in", tint = colors.textPrimary)
+                    }
                 }
-                IconButton(onClick = { if (currentPage < pageCount - 1) { currentPage++; zoom = 1f; offsetX = 0f; offsetY = 0f } }, enabled = currentPage < pageCount - 1) {
-                    Icon(Icons.Default.ChevronRight, "Next", tint = colors.textPrimary) }
+                IconButton(
+                    onClick = { if (currentPage < pageCount - 1) { currentPage++; zoom = 1f; offsetX = 0f; offsetY = 0f } },
+                    enabled = currentPage < pageCount - 1,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Next Page" }
+                ) {
+                    Icon(Icons.Default.ChevronRight, "Next", tint = colors.textPrimary)
+                }
             }
         }
     }
