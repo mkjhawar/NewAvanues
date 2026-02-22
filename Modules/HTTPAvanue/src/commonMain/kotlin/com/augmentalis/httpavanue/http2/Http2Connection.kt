@@ -28,6 +28,8 @@ class Http2Connection(
     private var goawaySent = false
     /** Protects all sink writes — HTTP/2 frames must not interleave across streams */
     private val sinkMutex = Mutex()
+    /** Protects the streams map from concurrent access between main loop and child coroutines */
+    private val streamsMutex = Mutex()
 
     /** Run the HTTP/2 connection loop */
     suspend fun run() = coroutineScope {
@@ -79,8 +81,10 @@ class Http2Connection(
             logger.e({ "HTTP/2 connection error" }, e)
             try { sinkMutex.withLock { Http2FrameCodec.writeGoaway(sink, lastStreamId, Http2ErrorCode.INTERNAL_ERROR) } } catch (_: Exception) {}
         } finally {
-            streams.values.forEach { it.dataChannel.close() }
-            streams.clear()
+            streamsMutex.withLock {
+                streams.values.forEach { it.dataChannel.close() }
+                streams.clear()
+            }
         }
     }
 
@@ -102,14 +106,15 @@ class Http2Connection(
         if (streamId <= lastStreamId) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "Stream $streamId <= last $lastStreamId")
         lastStreamId = streamId
 
-        if (streams.size >= localSettings.maxConcurrentStreams) {
+        val streamCount = streamsMutex.withLock { streams.size }
+        if (streamCount >= localSettings.maxConcurrentStreams) {
             sinkMutex.withLock { Http2FrameCodec.writeRstStream(sink, streamId, Http2ErrorCode.REFUSED_STREAM) }
             return
         }
 
         val stream = Http2Stream(streamId, localSettings.initialWindowSize)
         stream.state = Http2StreamState.OPEN
-        streams[streamId] = stream
+        streamsMutex.withLock { streams[streamId] = stream }
 
         val headers = hpackDecoder.decode(frame.payload)
         stream.headers.addAll(headers)
@@ -125,8 +130,9 @@ class Http2Connection(
         }
     }
 
-    private fun handleContinuation(sink: okio.BufferedSink, frame: Http2Frame, scope: CoroutineScope) {
-        val stream = streams[frame.streamId] ?: throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "CONTINUATION for unknown stream ${frame.streamId}")
+    private suspend fun handleContinuation(sink: okio.BufferedSink, frame: Http2Frame, scope: CoroutineScope) {
+        val stream = streamsMutex.withLock { streams[frame.streamId] }
+            ?: throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "CONTINUATION for unknown stream ${frame.streamId}")
         val headers = hpackDecoder.decode(frame.payload)
         stream.headers.addAll(headers)
         if (frame.hasFlag(Http2Flags.END_HEADERS)) {
@@ -135,7 +141,8 @@ class Http2Connection(
     }
 
     private suspend fun handleData(sink: okio.BufferedSink, frame: Http2Frame) {
-        val stream = streams[frame.streamId] ?: throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "DATA for unknown stream ${frame.streamId}")
+        val stream = streamsMutex.withLock { streams[frame.streamId] }
+            ?: throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "DATA for unknown stream ${frame.streamId}")
         if (!stream.isOpen()) throw Http2Exception(Http2ErrorCode.STREAM_CLOSED, "DATA on closed stream ${frame.streamId}", frame.streamId)
 
         val dataLength = frame.payload.size
@@ -149,8 +156,12 @@ class Http2Connection(
         if (frame.hasFlag(Http2Flags.END_STREAM)) {
             stream.endStreamReceived = true
             stream.dataChannel.close()
-            if (stream.endStreamSent) { stream.state = Http2StreamState.CLOSED; streams.remove(frame.streamId) }
-            else stream.state = Http2StreamState.HALF_CLOSED_REMOTE
+            if (stream.endStreamSent) {
+                stream.state = Http2StreamState.CLOSED
+                streamsMutex.withLock { streams.remove(frame.streamId) }
+            } else {
+                stream.state = Http2StreamState.HALF_CLOSED_REMOTE
+            }
         }
 
         // Send WINDOW_UPDATE if window is getting low
@@ -160,15 +171,18 @@ class Http2Connection(
         }
     }
 
-    private fun handleWindowUpdate(frame: Http2Frame) {
+    private suspend fun handleWindowUpdate(frame: Http2Frame) {
         if (frame.payload.size != 4) throw Http2Exception(Http2ErrorCode.FRAME_SIZE_ERROR, "WINDOW_UPDATE payload must be 4 bytes")
         val increment = ((frame.payload[0].toInt() and 0x7F) shl 24) or
             ((frame.payload[1].toInt() and 0xFF) shl 16) or
             ((frame.payload[2].toInt() and 0xFF) shl 8) or
             (frame.payload[3].toInt() and 0xFF)
         if (increment == 0) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "Zero WINDOW_UPDATE increment")
-        if (frame.streamId == 0) flowControl.updateConnectionSendWindow(increment)
-        else streams[frame.streamId]?.increaseSendWindow(increment)
+        if (frame.streamId == 0) {
+            flowControl.updateConnectionSendWindow(increment)
+        } else {
+            streamsMutex.withLock { streams[frame.streamId] }?.increaseSendWindow(increment)
+        }
     }
 
     private suspend fun handlePing(sink: okio.BufferedSink, frame: Http2Frame) {
@@ -177,8 +191,8 @@ class Http2Connection(
         if (!frame.hasFlag(Http2Flags.ACK)) sinkMutex.withLock { Http2FrameCodec.writePing(sink, ack = true, opaqueData = frame.payload) }
     }
 
-    private fun handleRstStream(frame: Http2Frame) {
-        val stream = streams.remove(frame.streamId) ?: return
+    private suspend fun handleRstStream(frame: Http2Frame) {
+        val stream = streamsMutex.withLock { streams.remove(frame.streamId) } ?: return
         stream.state = Http2StreamState.CLOSED
         stream.dataChannel.close()
         logger.d { "Stream ${frame.streamId} reset" }
@@ -201,41 +215,78 @@ class Http2Connection(
 
             val request = HttpRequest(method = method, uri = path, version = "HTTP/2", headers = headerMap)
             val response = requestHandler(request)
-            sinkMutex.withLock { sendResponse(sink, stream, response) }
+            sendResponse(sink, stream, response)
         } catch (e: Exception) {
             logger.e({ "Error dispatching HTTP/2 request on stream ${stream.id}" }, e)
             sinkMutex.withLock { Http2FrameCodec.writeRstStream(sink, stream.id, Http2ErrorCode.INTERNAL_ERROR) }
             stream.state = Http2StreamState.CLOSED
-            streams.remove(stream.id)
+            streamsMutex.withLock { streams.remove(stream.id) }
         }
     }
 
-    private fun sendResponse(sink: okio.BufferedSink, stream: Http2Stream, response: HttpResponse) {
+    /**
+     * Send an HTTP/2 response on a stream.
+     *
+     * Acquires sinkMutex per-frame (not for the entire response) to allow
+     * other streams to interleave. Respects flow control windows per
+     * RFC 7540 Section 6.9 — waits for WINDOW_UPDATE if the send window
+     * is exhausted.
+     */
+    private suspend fun sendResponse(sink: okio.BufferedSink, stream: Http2Stream, response: HttpResponse) {
         val responseHeaders = mutableListOf<Pair<String, String>>()
         responseHeaders.add(":status" to response.status.toString())
         for ((name, value) in response.headers) {
             responseHeaders.add(name.lowercase() to value)
         }
 
-        val headerBlock = hpackEncoder.encode(responseHeaders)
         val hasBody = response.body != null && response.body.isNotEmpty()
 
-        Http2FrameCodec.writeHeaders(sink, stream.id, headerBlock, endStream = !hasBody, endHeaders = true)
+        // HPACK encoder state must be serialized with header writes (dynamic table order)
+        sinkMutex.withLock {
+            val headerBlock = hpackEncoder.encode(responseHeaders)
+            Http2FrameCodec.writeHeaders(sink, stream.id, headerBlock, endStream = !hasBody, endHeaders = true)
+        }
 
         if (hasBody) {
             val body = response.body!!
             var offset = 0
             while (offset < body.size) {
-                val chunkSize = minOf(body.size - offset, remoteSettings.maxFrameSize)
+                // Respect flow control windows (RFC 7540 Section 6.9)
+                var available = flowControl.availableSendBytes(stream, remoteSettings.maxFrameSize)
+                if (available <= 0) {
+                    // Wait for WINDOW_UPDATE from peer (processed by main loop)
+                    var waited = 0L
+                    while (available <= 0 && waited < 30_000L) {
+                        delay(10)
+                        waited += 10
+                        available = flowControl.availableSendBytes(stream, remoteSettings.maxFrameSize)
+                    }
+                    if (available <= 0) {
+                        logger.e { "Flow control window exhausted on stream ${stream.id} after 30s, truncating response" }
+                        break
+                    }
+                }
+
+                val chunkSize = minOf(body.size - offset, available)
                 val isLast = offset + chunkSize >= body.size
                 val chunk = body.copyOfRange(offset, offset + chunkSize)
-                Http2FrameCodec.writeData(sink, stream.id, chunk, endStream = isLast)
+                flowControl.consumeConnectionSendWindow(chunkSize)
+                stream.consumeSendWindow(chunkSize)
+                sinkMutex.withLock {
+                    Http2FrameCodec.writeData(sink, stream.id, chunk, endStream = isLast)
+                }
                 offset += chunkSize
             }
         }
 
         stream.endStreamSent = true
-        if (stream.endStreamReceived) { stream.state = Http2StreamState.CLOSED; streams.remove(stream.id) }
-        else stream.state = Http2StreamState.HALF_CLOSED_LOCAL
+        streamsMutex.withLock {
+            if (stream.endStreamReceived) {
+                stream.state = Http2StreamState.CLOSED
+                streams.remove(stream.id)
+            } else {
+                stream.state = Http2StreamState.HALF_CLOSED_LOCAL
+            }
+        }
     }
 }

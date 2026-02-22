@@ -1,14 +1,20 @@
 package com.augmentalis.httpavanue.hpack
 
 /**
- * HPACK encoder (RFC 7541) — encodes headers into compressed header blocks
+ * HPACK encoder (RFC 7541) — encodes headers into compressed header blocks.
+ *
+ * Uses Huffman encoding for string values when it produces smaller output
+ * (RFC 7541 Section 5.2), and leverages both static and dynamic table
+ * indexing for header name/value compression.
  */
 class HpackEncoder(maxDynamicTableSize: Int = 4096) {
     private val dynamicTable = HpackDynamicTable(maxDynamicTableSize)
 
     /** Encode a list of header name-value pairs into an HPACK header block */
     fun encode(headers: List<Pair<String, String>>): ByteArray {
-        val buffer = mutableListOf<Byte>()
+        // Pre-allocate with rough estimate: ~4 bytes overhead per header + string lengths
+        val estimated = headers.sumOf { it.first.length + it.second.length + 4 }
+        val buffer = ArrayList<Byte>(estimated)
         for ((name, value) in headers) {
             encodeHeader(buffer, name, value)
         }
@@ -64,11 +70,23 @@ class HpackEncoder(maxDynamicTableSize: Int = 4096) {
             }
         }
 
-        /** Encode HPACK string without Huffman encoding (RFC 7541 Section 5.2) */
+        /**
+         * Encode HPACK string (RFC 7541 Section 5.2).
+         * Uses Huffman encoding when it produces a smaller output (H=1),
+         * otherwise sends raw bytes (H=0).
+         */
         fun encodeString(buffer: MutableList<Byte>, value: String) {
             val bytes = value.encodeToByteArray()
-            encodeInteger(buffer, bytes.size, 7, 0x00) // H=0 (no Huffman)
-            bytes.forEach { buffer.add(it) }
+            val huffmanEncoded = HpackHuffman.encodeIfSmaller(bytes)
+            if (huffmanEncoded != null) {
+                // Huffman-encoded: H=1 (0x80 prefix)
+                encodeInteger(buffer, huffmanEncoded.size, 7, 0x80)
+                for (b in huffmanEncoded) buffer.add(b)
+            } else {
+                // Raw: H=0 (0x00 prefix)
+                encodeInteger(buffer, bytes.size, 7, 0x00)
+                for (b in bytes) buffer.add(b)
+            }
         }
     }
 }
