@@ -31,6 +31,10 @@ kotlin {
             isStatic = true
         }
     }
+    // macOS targets
+    macosX64()
+    macosArm64()
+
     // Desktop JVM target
     jvm("desktop") {
         compilations.all {
@@ -73,6 +77,15 @@ kotlin {
         val iosSimulatorArm64Main by getting {
             dependsOn(iosMain)
         }
+        // macOS-specific
+        val macosX64Main by getting
+        val macosArm64Main by getting
+        val macosMain by creating {
+            dependsOn(commonMain)
+            macosX64Main.dependsOn(this)
+            macosArm64Main.dependsOn(this)
+        }
+
         // Desktop-specific (currently none needed)
         val desktopMain by getting
     }

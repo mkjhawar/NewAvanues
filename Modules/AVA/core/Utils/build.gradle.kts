@@ -23,6 +23,10 @@ kotlin {
             isStatic = true
         }
     }
+    // macOS targets
+    macosX64()
+    macosArm64()
+
     // Desktop JVM target
     jvm("desktop") {
         compilations.all {
