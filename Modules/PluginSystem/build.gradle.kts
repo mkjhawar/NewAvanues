@@ -8,6 +8,10 @@ group = "com.augmentalis.magiccode"
 version = "1.0.0"
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     // Android target
     androidTarget {
         compilations.all {

@@ -17,7 +17,7 @@ import com.avanues.avu.dsl.plugin.LoadedPlugin
  * The `entrypoint` parameter is used as the registry key (the plugin's declared
  * `plugin_id` from the .avp header must match it for ID verification to pass).
  */
-expect class PluginClassLoader {
+expect class PluginClassLoader() {
     /**
      * Load and parse an .avp plugin file.
      *
