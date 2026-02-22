@@ -44,6 +44,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.theme.AvanueTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 
 @Composable
@@ -88,7 +91,13 @@ fun PdfViewer(
         isLoading = false
     }
 
-    DisposableEffect(Unit) { onDispose { scope.launch { engine.closeCurrent() } } }
+    DisposableEffect(Unit) {
+        onDispose {
+            GlobalScope.launch(Dispatchers.IO + NonCancellable) {
+                engine.closeCurrent()
+            }
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         Box(

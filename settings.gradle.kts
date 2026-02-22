@@ -197,8 +197,8 @@ include(":android:apps:VoiceRecognition")          // Speech recognition testing
 include(":android:apps:VoiceOSIPCTest")            // IPC testing
 
 // Android Apps - Legacy (for comparison)
-include(":apps:voiceavanue-legacy")                // Legacy VoiceAvanue app
-include(":android:apps:webavanue-legacy")          // Legacy WebAvanue browser
+// include(":apps:voiceavanue-legacy")                // DELETED (2026-02-22) — exact duplicate of :Apps:voiceavanue
+// include(":android:apps:webavanue-legacy")          // DELETED (2026-02-22) — exact duplicate of :android:apps:webavanue
 // include(":android:apps:webavanue-ipc-legacy")   // DISABLED (2026-02-07) — legacy, missing domain layer
 // include(":android:apps:ava-legacy")             // Old AVA app - archived
 // include(":android:apps:browseravanue-legacy")   // Old browser - archived

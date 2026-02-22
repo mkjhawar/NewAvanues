@@ -280,13 +280,13 @@ fun PhotoAvanueScreen(
             ModeChip(
                 label = "Photo",
                 selected = cameraState.captureMode == CaptureMode.PHOTO,
-                onClick = { }
+                onClick = { controller.setCaptureMode(CaptureMode.PHOTO) }
             )
             Spacer(Modifier.width(12.dp))
             ModeChip(
                 label = "Video",
                 selected = cameraState.captureMode == CaptureMode.VIDEO,
-                onClick = { }
+                onClick = { controller.setCaptureMode(CaptureMode.VIDEO) }
             )
             Spacer(Modifier.weight(1f))
         }

@@ -88,7 +88,7 @@ class Http2Connection(
         }
     }
 
-    private suspend fun handleSettings(sink: okio.BufferedSink, frame: Http2Frame) {
+    private suspend fun handleSettings(sink: com.augmentalis.httpavanue.io.AvanueSink, frame: Http2Frame) {
         if (frame.hasFlag(Http2Flags.ACK)) {
             logger.d { "Received SETTINGS ACK" }
             return
@@ -99,7 +99,7 @@ class Http2Connection(
         sinkMutex.withLock { Http2FrameCodec.writeSettings(sink, Http2Settings(), ack = true) }
     }
 
-    private suspend fun handleHeaders(sink: okio.BufferedSink, frame: Http2Frame, scope: CoroutineScope) {
+    private suspend fun handleHeaders(sink: com.augmentalis.httpavanue.io.AvanueSink, frame: Http2Frame, scope: CoroutineScope) {
         val streamId = frame.streamId
         if (streamId == 0) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "HEADERS on stream 0")
         if (streamId % 2 == 0) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "Client initiated even stream $streamId")
@@ -130,7 +130,7 @@ class Http2Connection(
         }
     }
 
-    private suspend fun handleContinuation(sink: okio.BufferedSink, frame: Http2Frame, scope: CoroutineScope) {
+    private suspend fun handleContinuation(sink: com.augmentalis.httpavanue.io.AvanueSink, frame: Http2Frame, scope: CoroutineScope) {
         val stream = streamsMutex.withLock { streams[frame.streamId] }
             ?: throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "CONTINUATION for unknown stream ${frame.streamId}")
         val headers = hpackDecoder.decode(frame.payload)
@@ -140,7 +140,7 @@ class Http2Connection(
         }
     }
 
-    private suspend fun handleData(sink: okio.BufferedSink, frame: Http2Frame) {
+    private suspend fun handleData(sink: com.augmentalis.httpavanue.io.AvanueSink, frame: Http2Frame) {
         val stream = streamsMutex.withLock { streams[frame.streamId] }
             ?: throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "DATA for unknown stream ${frame.streamId}")
         if (!stream.isOpen()) throw Http2Exception(Http2ErrorCode.STREAM_CLOSED, "DATA on closed stream ${frame.streamId}", frame.streamId)
@@ -185,7 +185,7 @@ class Http2Connection(
         }
     }
 
-    private suspend fun handlePing(sink: okio.BufferedSink, frame: Http2Frame) {
+    private suspend fun handlePing(sink: com.augmentalis.httpavanue.io.AvanueSink, frame: Http2Frame) {
         if (frame.streamId != 0) throw Http2Exception(Http2ErrorCode.PROTOCOL_ERROR, "PING on non-zero stream")
         if (frame.payload.size != 8) throw Http2Exception(Http2ErrorCode.FRAME_SIZE_ERROR, "PING payload must be 8 bytes")
         if (!frame.hasFlag(Http2Flags.ACK)) sinkMutex.withLock { Http2FrameCodec.writePing(sink, ack = true, opaqueData = frame.payload) }
@@ -198,7 +198,7 @@ class Http2Connection(
         logger.d { "Stream ${frame.streamId} reset" }
     }
 
-    private suspend fun dispatchRequest(sink: okio.BufferedSink, stream: Http2Stream) {
+    private suspend fun dispatchRequest(sink: com.augmentalis.httpavanue.io.AvanueSink, stream: Http2Stream) {
         try {
             val headerMap = mutableMapOf<String, String>()
             var method = HttpMethod.GET; var path = "/"; var scheme = "http"; var authority = ""
@@ -232,7 +232,7 @@ class Http2Connection(
      * RFC 7540 Section 6.9 — waits for WINDOW_UPDATE if the send window
      * is exhausted.
      */
-    private suspend fun sendResponse(sink: okio.BufferedSink, stream: Http2Stream, response: HttpResponse) {
+    private suspend fun sendResponse(sink: com.augmentalis.httpavanue.io.AvanueSink, stream: Http2Stream, response: HttpResponse) {
         val responseHeaders = mutableListOf<Pair<String, String>>()
         responseHeaders.add(":status" to response.status.toString())
         for ((name, value) in response.headers) {

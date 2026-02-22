@@ -268,6 +268,20 @@ class AndroidCameraController(
 
     // ── Controls ─────────────────────────────────────────────────────
 
+    override fun setCaptureMode(mode: CaptureMode) {
+        if (_state.value.captureMode == mode) return
+        // Stop any in-progress recording before switching away from video mode
+        if (_state.value.recording.isRecording) {
+            currentRecording?.stop()
+            currentRecording = null
+        }
+        _state.value = _state.value.copy(
+            captureMode = mode,
+            recording = RecordingState(),
+            error = null
+        )
+    }
+
     override fun switchLens() {
         val newLens = when (_state.value.lens) {
             CameraLens.BACK -> CameraLens.FRONT

@@ -14,7 +14,7 @@ import com.augmentalis.ava.core.data.db.Rag_document
 import com.augmentalis.rag.domain.*
 import com.augmentalis.rag.embeddings.EmbeddingProvider
 import com.augmentalis.rag.parser.DocumentParser
-import com.augmentalis.rag.parser.PdfParser
+import com.augmentalis.rag.parser.DocumentParserFactory
 import com.augmentalis.rag.parser.TextChunker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -192,11 +192,14 @@ class DocumentIngestionHandler(
         val docEntity = documentQueries.selectById(documentId).executeAsOneOrNull()
             ?: throw Exception("Document not found: $documentId")
 
-        // Get parser
-        val parser: DocumentParser = when (docType) {
-            DocumentType.PDF -> PdfParser(context)
-            else -> throw Exception("Unsupported document type: $docType")
+        // Get parser via factory — supports PDF, TXT, HTML, RTF, MD, DOCX
+        if (!DocumentParserFactory.isSupported(docType)) {
+            throw Exception("Unsupported document type: $docType")
         }
+        // Ensure factory is initialized with context before retrieving a parser
+        DocumentParserFactory.initialize(context)
+        val parser: DocumentParser = DocumentParserFactory.getParser(docType)
+            ?: throw Exception("No parser registered for document type: $docType")
 
         // Parse document
         val parseResult = parser.parse(filePath, docType)

@@ -81,6 +81,9 @@ kotlin {
                 // Shared AI modules
                 implementation(project(":Modules:AI:LLM"))
 
+                // NLU module for real BERT WordPiece tokenization
+                implementation(project(":Modules:AI:NLU"))
+
                 // Compose dependencies
                 implementation(project.dependencies.platform(libs.compose.bom))
                 implementation("androidx.compose.ui:ui")

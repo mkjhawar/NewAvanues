@@ -1,6 +1,7 @@
 package com.augmentalis.license
 
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
 /**
@@ -87,12 +88,8 @@ data class GracePeriodInfo(
         get() = parseIsoDate(nextValidationDue)
 
     private fun parseIsoDate(isoDate: String): Long {
-        // Simple ISO-8601 parsing (YYYY-MM-DDTHH:MM:SS.sssZ)
         return try {
-            // This is a simplified parser - in production use kotlinx-datetime
-            val cleaned = isoDate.replace("Z", "").replace("T", " ")
-            // Return approximate millis (this would need proper parsing in production)
-            Clock.System.now().toEpochMilliseconds() + (validationIntervalHours * 60 * 60 * 1000L)
+            Instant.parse(isoDate).toEpochMilliseconds()
         } catch (e: Exception) {
             Clock.System.now().toEpochMilliseconds()
         }

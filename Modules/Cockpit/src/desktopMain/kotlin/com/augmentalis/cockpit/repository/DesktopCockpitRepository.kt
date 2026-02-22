@@ -39,10 +39,21 @@ class DesktopCockpitRepository(
 
     override suspend fun getSessions(): List<CockpitSession> = withContext(Dispatchers.IO) {
         database.cockpitSessionQueries.getAll().executeAsList().map { row ->
+            val steps = database.cockpitWorkflowStepQueries.getBySession(row.id).executeAsList().map { stepRow ->
+                WorkflowStep(
+                    id = stepRow.id,
+                    sessionId = stepRow.sessionId,
+                    frameId = stepRow.frameId,
+                    stepNumber = stepRow.stepNumber.toInt(),
+                    name = stepRow.name,
+                    description = stepRow.description
+                )
+            }
             CockpitSession(
                 id = row.id,
                 name = row.name,
                 layoutMode = parseLayoutMode(row.layoutMode),
+                workflowSteps = steps,
                 selectedFrameId = row.selectedFrameId,
                 isDefault = row.isDefault == 1L,
                 createdAt = row.createdAt,
@@ -53,10 +64,21 @@ class DesktopCockpitRepository(
 
     override suspend fun getSession(sessionId: String): CockpitSession? = withContext(Dispatchers.IO) {
         database.cockpitSessionQueries.getById(sessionId).executeAsOneOrNull()?.let { row ->
+            val steps = database.cockpitWorkflowStepQueries.getBySession(sessionId).executeAsList().map { stepRow ->
+                WorkflowStep(
+                    id = stepRow.id,
+                    sessionId = stepRow.sessionId,
+                    frameId = stepRow.frameId,
+                    stepNumber = stepRow.stepNumber.toInt(),
+                    name = stepRow.name,
+                    description = stepRow.description
+                )
+            }
             CockpitSession(
                 id = row.id,
                 name = row.name,
                 layoutMode = parseLayoutMode(row.layoutMode),
+                workflowSteps = steps,
                 selectedFrameId = row.selectedFrameId,
                 isDefault = row.isDefault == 1L,
                 createdAt = row.createdAt,

@@ -5,43 +5,97 @@
  * Created: 2025-12-13
  *
  * Handles database schema migrations for VoiceOS Database.
+ *
+ * ## Migration System Overview
+ *
+ * SQLDelight generates a Schema with version=1 when deriveSchemaFromMigrations=false.
+ * To make platform drivers (Android/iOS/Desktop) correctly call onUpgrade for existing
+ * databases, we wrap the generated schema in [MigratedSchema], which reports the true
+ * version ([CURRENT_VERSION]) while delegating create() to SQLDelight's generated DDL
+ * and migrate() to this class.
+ *
+ * ## How to add a new migration (e.g., v7 → v8)
+ * 1. Write `private fun migrateV7ToV8(driver: SqlDriver)` with your ALTER TABLE / CREATE TABLE DDL
+ * 2. Add the corresponding branch to `migrate()`:
+ *    ```kotlin
+ *    if (oldVersion < 8 && newVersion >= 8) migrateV7ToV8(driver)
+ *    ```
+ * 3. Bump [CURRENT_VERSION] to 8
+ * 4. Update the corresponding `.sq` files with the new schema columns/tables
+ * 5. Rebuild — all three platform drivers pick up the new version automatically
+ *
+ * No .sqm files are required. The Kotlin migration functions ARE the migration record.
  */
 
 package com.augmentalis.database.migrations
 
+import app.cash.sqldelight.db.AfterVersion
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlSchema
 
 /**
- * Database migrations for VoiceOS Database
+ * The true schema version of VoiceOSDatabase.
  *
- * ## Migration Versioning:
- * - Version 1: Initial schema (before appId)
- * - Version 2: Added appId column to commands_generated
- * - Version 3: Added version tracking (appVersion, versionCode, lastVerified, isDeprecated)
- * - Version 4: Added foreign key constraints for data integrity (D-P0-1, D-P0-2, D-P0-3)
- * - Version 5: Added pkg_hash column for compact AVID format support
+ * SQLDelight's generated Schema.version is always 1 when deriveSchemaFromMigrations=false.
+ * This constant is the authoritative version used by MigratedSchema and all platform drivers.
+ * Increment this whenever a new migration function is added to DatabaseMigrations.
  *
- * ## Usage:
- * ```kotlin
- * val driver = AndroidSqliteDriver(
- *     schema = DatabaseMigrations.Schema,
- *     context = context,
- *     name = "voiceos.db"
- * )
- * ```
- *
- * ## Adding New Migrations:
- * 1. Create migration SQL file: `migrations/{version}.sqm`
- * 2. Increment schema version
- * 3. Add migration logic to `migrate()` method
+ * Version history:
+ *  1 — Initial schema (before appId column)
+ *  2 — Added appId to commands_generated + idx_gc_app_id
+ *  3 — Added appVersion/versionCode/lastVerified/isDeprecated + app_version table
+ *  4 — Enabled FK enforcement via PRAGMA foreign_keys=ON
+ *  5 — Added pkg_hash column to scraped_app
+ *  6 — UNIQUE(elementHash, screen_hash) on scraped_element (table recreation)
+ *  7 — Removed FK from element_relationship (table recreation, FK mismatch crash fix)
  */
+const val CURRENT_SCHEMA_VERSION: Long = 7
+
+/**
+ * A SqlSchema wrapper that reports the true schema version ([CURRENT_SCHEMA_VERSION])
+ * to platform drivers, while delegating create() to SQLDelight's generated DDL
+ * (which always creates the latest schema) and migrate() to [DatabaseMigrations.migrate()].
+ *
+ * Usage (in each platform DatabaseDriverFactory):
+ * ```kotlin
+ * val schema = MigratedSchema(VoiceOSDatabase.Schema)
+ * // then pass `schema` to the platform driver instead of VoiceOSDatabase.Schema directly
+ * ```
+ */
+class MigratedSchema(
+    private val delegate: SqlSchema<QueryResult.Value<Unit>>
+) : SqlSchema<QueryResult.Value<Unit>> {
+
+    /** Report the true version so platform drivers call onUpgrade on existing databases. */
+    override val version: Long get() = CURRENT_SCHEMA_VERSION
+
+    /** Create the full schema (SQLDelight-generated DDL, always at current version). */
+    override fun create(driver: SqlDriver): QueryResult.Value<Unit> = delegate.create(driver)
+
+    /**
+     * Apply incremental migrations from [oldVersion] to [newVersion].
+     * Delegates to [DatabaseMigrations.migrate], which contains the full migration chain.
+     */
+    override fun migrate(
+        driver: SqlDriver,
+        oldVersion: Long,
+        newVersion: Long,
+        vararg callbacks: AfterVersion
+    ): QueryResult.Value<Unit> {
+        DatabaseMigrations.migrate(driver, oldVersion, newVersion)
+        // Run any AfterVersion callbacks the caller supplied (e.g., for data backfills)
+        callbacks
+            .filter { it.afterVersion in oldVersion until newVersion }
+            .forEach { it.block(driver) }
+        return QueryResult.Unit
+    }
+}
+
 object DatabaseMigrations {
 
     /**
-     * Migration from version 1 to 2
-     * Adds appId column to commands_generated table
+     * Migration from version 1 to 2: added appId to commands_generated
      */
     private fun migrateV1ToV2(driver: SqlDriver) {
         // Check if appId column exists
