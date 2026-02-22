@@ -45,6 +45,9 @@ kotlin {
                 // Unified Database - for repository interfaces
                 api(project(":Modules:Database"))
 
+                // AVU - for AvuDslLexer, AvuDslParser, AvuInterpreter, PluginLoader (.avp text plugin dispatch)
+                implementation(project(":Modules:AVU"))
+
                 // YAML parsing
                 implementation("net.mamoe.yamlkt:yamlkt:0.13.0")
 

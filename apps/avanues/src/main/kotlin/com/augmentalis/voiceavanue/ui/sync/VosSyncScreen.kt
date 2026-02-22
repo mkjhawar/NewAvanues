@@ -57,6 +57,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -104,7 +106,10 @@ fun VosSyncScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -222,14 +227,14 @@ fun VosSyncScreen(
                             icon = Icons.Default.NetworkCheck,
                             enabled = !syncStatus.isSyncing && settings.vosSftpHost.isNotBlank(),
                             onClick = { viewModel.testConnection() },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).semantics { contentDescription = "Voice: click Test Connection" }
                         )
                         SyncActionButton(
                             text = "Upload",
                             icon = Icons.Default.CloudUpload,
                             enabled = !syncStatus.isSyncing && settings.vosSftpHost.isNotBlank(),
                             onClick = { viewModel.uploadAll() },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).semantics { contentDescription = "Voice: click Upload VOS Files" }
                         )
                     }
                     Row(
@@ -241,14 +246,14 @@ fun VosSyncScreen(
                             icon = Icons.Default.CloudDownload,
                             enabled = !syncStatus.isSyncing && settings.vosSftpHost.isNotBlank(),
                             onClick = { viewModel.downloadAll() },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).semantics { contentDescription = "Voice: click Download VOS Files" }
                         )
                         SyncActionButton(
                             text = "Full Sync",
                             icon = Icons.Default.Sync,
                             enabled = !syncStatus.isSyncing && settings.vosSftpHost.isNotBlank(),
                             onClick = { viewModel.fullSync() },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).semantics { contentDescription = "Voice: click Full Sync" }
                         )
                     }
                 }
@@ -361,7 +366,7 @@ fun VosSyncScreen(
                 item {
                     AvanueButton(
                         onClick = { viewModel.exportSuggestions() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Voice: click Export Suggestions" }
                     ) {
                         Icon(
                             imageVector = Icons.Default.CloudUpload,

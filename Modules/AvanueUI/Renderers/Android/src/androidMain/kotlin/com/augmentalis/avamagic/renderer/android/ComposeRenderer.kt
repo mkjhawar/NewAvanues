@@ -13,6 +13,11 @@ import com.augmentalis.avamagic.ui.core.feedback.*
 import com.augmentalis.avamagic.ui.core.navigation.*
 import com.augmentalis.avamagic.ui.core.data.*
 import com.augmentalis.avamagic.renderer.android.extensions.*
+import com.augmentalis.avamagic.components.dsl.ButtonComponent as DslButtonComponent
+import com.augmentalis.avamagic.components.dsl.TextComponent as DslTextComponent
+import com.augmentalis.avamagic.components.dsl.CardComponent as DslCardComponent
+import com.augmentalis.avamagic.components.dsl.TextFieldComponent as DslTextFieldComponent
+import com.augmentalis.avamagic.components.dsl.ImageComponent as DslImageComponent
 
 /**
  * ComposeRenderer - Converts AvaElements components to Jetpack Compose UI
@@ -108,6 +113,13 @@ class ComposeRenderer : Renderer {
             is ChipComponent -> { { component.Render(this@ComposeRenderer) } }
             is PaperComponent -> { { component.Render(this@ComposeRenderer) } }
             is EmptyStateComponent -> { { component.Render(this@ComposeRenderer) } }
+
+            // DSL components (from AvaUI { } builder in com.augmentalis.avamagic.components.dsl)
+            is DslButtonComponent -> { { component.RenderDsl(this@ComposeRenderer) } }
+            is DslTextComponent -> { { component.RenderDsl(this@ComposeRenderer) } }
+            is DslCardComponent -> { { component.RenderDsl(this@ComposeRenderer) } }
+            is DslTextFieldComponent -> { { component.RenderDsl(this@ComposeRenderer) } }
+            is DslImageComponent -> { { component.RenderDsl(this@ComposeRenderer) } }
 
             else -> throw IllegalArgumentException("Unsupported component type: ${component::class.simpleName}")
         }

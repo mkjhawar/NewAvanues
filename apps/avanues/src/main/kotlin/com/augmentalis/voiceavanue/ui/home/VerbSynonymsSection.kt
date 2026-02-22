@@ -38,6 +38,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.components.AvanueChip
 import com.augmentalis.avanueui.components.AvanueSurface
@@ -240,7 +242,9 @@ private fun ExpandableSynonymEntry(
                             onValueChange = { newSynonymText = it },
                             label = { Text("New synonym") },
                             singleLine = true,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = "Voice: input New Synonym for ${entry.canonical}" },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = AvanueTheme.colors.textPrimary,
                                 unfocusedTextColor = AvanueTheme.colors.textPrimary,
@@ -259,6 +263,9 @@ private fun ExpandableSynonymEntry(
                                     newSynonymText = ""
                                     showAddSynonymField = false
                                 }
+                            },
+                            modifier = Modifier.semantics {
+                                contentDescription = "Voice: click Add Synonym for ${entry.canonical}"
                             }
                         ) {
                             Text("Add", color = AvanueTheme.colors.primary)
@@ -298,7 +305,9 @@ private fun AddSynonymDialog(
                     onValueChange = { canonical = it },
                     label = { Text("Canonical action (e.g., \"click\")") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: input Canonical Verb" },
                     colors = textFieldColors
                 )
                 OutlinedTextField(
@@ -306,7 +315,9 @@ private fun AddSynonymDialog(
                     onValueChange = { synonymsText = it },
                     label = { Text("Synonyms (comma-separated)") },
                     singleLine = false,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: input Synonym List" },
                     colors = textFieldColors
                 )
             }
@@ -318,13 +329,17 @@ private fun AddSynonymDialog(
                     if (canonical.isNotBlank() && synonyms.isNotEmpty()) {
                         onConfirm(canonical.trim(), synonyms)
                     }
-                }
+                },
+                modifier = Modifier.semantics { contentDescription = "Voice: click Add Verb Synonym" }
             ) {
                 Text("Add", color = AvanueTheme.colors.primary)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Cancel" }
+            ) {
                 Text("Cancel", color = AvanueTheme.colors.textSecondary)
             }
         },

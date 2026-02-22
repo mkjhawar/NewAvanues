@@ -71,6 +71,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -266,7 +268,10 @@ private fun SettingsModuleList(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -275,7 +280,10 @@ private fun SettingsModuleList(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onSearchToggle) {
+                    IconButton(
+                        onClick = onSearchToggle,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Search Settings" }
+                    ) {
                         Icon(
                             Icons.Default.Search,
                             contentDescription = "Search",
@@ -320,6 +328,7 @@ private fun SettingsModuleList(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
+                            .semantics { contentDescription = "Voice: input Search Settings" }
                     )
                 }
             }
@@ -444,10 +453,11 @@ private fun SettingsModuleList(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Code,
-                        contentDescription = null,
+                        contentDescription = "Developer Mode",
                         tint = AvanueTheme.colors.textDisabled.copy(alpha = 0.4f),
                         modifier = Modifier
                             .size(24.dp)
+                            .semantics { contentDescription = "Voice: click Developer Mode" }
                             .clickable {
                                 val now = System.currentTimeMillis()
                                 if (now - lastDevTapTime > 2000L) {
@@ -571,7 +581,10 @@ private fun SettingsDetailPane(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -612,7 +625,10 @@ private fun SettingsDetailPane(
                         Tab(
                             selected = selectedTabIndex == index,
                             onClick = { selectedTabIndex = index },
-                            text = { Text(section.title) }
+                            text = { Text(section.title) },
+                            modifier = Modifier.semantics {
+                                contentDescription = "Voice: click ${section.title}"
+                            }
                         )
                     }
                 }

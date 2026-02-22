@@ -62,9 +62,7 @@ data class CardComponent(
     val elevation: Int,
     val children: List<Component>
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 // ==================== Basic Components ====================
@@ -80,9 +78,7 @@ data class TextComponent(
     val maxLines: Int?,
     val overflow: TextScope.TextOverflow
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class ButtonComponent(
@@ -96,9 +92,7 @@ data class ButtonComponent(
     val leadingIcon: String?,
     val trailingIcon: String?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class ImageComponent(
@@ -109,9 +103,7 @@ data class ImageComponent(
     val contentDescription: String?,
     val contentScale: ImageScope.ContentScale
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class CheckboxComponent(
@@ -144,9 +136,7 @@ data class TextFieldComponent(
     val maxLength: Int?,
     val onValueChange: ((String) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class SwitchComponent(
