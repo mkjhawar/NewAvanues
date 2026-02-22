@@ -740,5 +740,5 @@ interface SyncEntryPoint {
 ---
 
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants)*
+*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants) | Updated: 2026-02-22 (CommandManager import path fix: managers.commandmanager → commandmanager)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement), Chapter 96 (KMP Foundation)*

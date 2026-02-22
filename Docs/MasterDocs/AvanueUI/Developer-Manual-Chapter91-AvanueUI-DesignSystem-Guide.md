@@ -757,5 +757,5 @@ DATASTORE KEYS:
 
 ---
 
-*Chapter 91 | AvanueUI Design System Guide v2.0 | Created: 2026-02-11 | Updated: 2026-02-22 (28/28 DSL renders complete)*
+*Chapter 91 | AvanueUI Design System Guide v2.0 | Created: 2026-02-11 | Updated: 2026-02-22 (28/28 DSL renders complete, ThemeSync/ThemeOverride Clock.System migration, kotlinx-datetime added to Theme build)*
 *Branch: VoiceOSCore-KotlinUpdate | Prerequisite: Chapter 88 (Consolidated App), Chapter 90 (Unified Settings), Chapter 92 (Unified Components)*

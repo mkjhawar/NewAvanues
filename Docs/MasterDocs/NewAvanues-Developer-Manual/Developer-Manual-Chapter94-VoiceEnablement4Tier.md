@@ -578,7 +578,8 @@ and similar patterns in third-party app labels.
 
 ### 6.1 Why It's Not a Problem
 
-**AVID hash** = `hash(className + resourceId + text + contentDescription)`
+**AVID hash** = `hash(packageName + className + resourceId + text + contentDescription)`
+- `packageName` included for cross-app uniqueness (260215 unified AVID fix)
 - NO bounds in the hash
 - Same AVID on Pixel 7, Galaxy Fold, tablet, portrait, landscape
 
@@ -886,7 +887,7 @@ To improve quality, use the App Trainer to create a .VOS profile.
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| AVID hash inputs | className + resourceId + text + contentDescription | Device-independent identity |
+| AVID hash inputs | packageName + className + resourceId + text + contentDescription | Cross-app unique, device-independent identity |
 | AVID hash inputs exclude | bounds, position, DPI | Portability across devices |
 | .VOS format | AVU compact wire protocol | 70% smaller than JSON, aligned with AVU ecosystem |
 | .VOS bounds | NOT included | Profiles must be device-portable |
