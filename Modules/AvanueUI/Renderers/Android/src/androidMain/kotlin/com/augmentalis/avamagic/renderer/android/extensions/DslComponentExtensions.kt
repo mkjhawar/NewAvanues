@@ -66,7 +66,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -76,7 +75,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.augmentalis.avamagic.components.core.Arrangement as DslArrangement
 import com.augmentalis.avamagic.components.core.Alignment as DslAlignment
@@ -435,10 +433,11 @@ fun ColumnComponent.RenderDsl(renderer: ComposeRenderer) {
     }
 
     val composeHorizontalAlignment = when (horizontalAlignment) {
-        DslAlignment.Start -> Alignment.Start
-        DslAlignment.End -> Alignment.End
+        DslAlignment.CenterStart -> Alignment.Start
+        DslAlignment.CenterEnd -> Alignment.End
         DslAlignment.Center -> Alignment.CenterHorizontally
-        else -> Alignment.Start
+        DslAlignment.TopCenter, DslAlignment.TopStart, DslAlignment.TopEnd -> Alignment.Start
+        DslAlignment.BottomCenter, DslAlignment.BottomStart, DslAlignment.BottomEnd -> Alignment.Start
     }
 
     Column(
@@ -470,10 +469,9 @@ fun RowComponent.RenderDsl(renderer: ComposeRenderer) {
     }
 
     val composeVerticalAlignment = when (verticalAlignment) {
-        DslAlignment.Top -> Alignment.Top
-        DslAlignment.Bottom -> Alignment.Bottom
-        DslAlignment.Center -> Alignment.CenterVertically
-        else -> Alignment.CenterVertically
+        DslAlignment.TopStart, DslAlignment.TopCenter, DslAlignment.TopEnd -> Alignment.Top
+        DslAlignment.BottomStart, DslAlignment.BottomCenter, DslAlignment.BottomEnd -> Alignment.Bottom
+        DslAlignment.CenterStart, DslAlignment.Center, DslAlignment.CenterEnd -> Alignment.CenterVertically
     }
 
     Row(
@@ -497,11 +495,14 @@ fun ContainerComponent.RenderDsl(renderer: ComposeRenderer) {
 
     val contentAlignment = when (alignment) {
         DslAlignment.Center -> Alignment.Center
-        DslAlignment.Start -> Alignment.CenterStart
-        DslAlignment.End -> Alignment.CenterEnd
-        DslAlignment.Top -> Alignment.TopCenter
-        DslAlignment.Bottom -> Alignment.BottomCenter
-        else -> Alignment.TopStart
+        DslAlignment.CenterStart -> Alignment.CenterStart
+        DslAlignment.CenterEnd -> Alignment.CenterEnd
+        DslAlignment.TopStart -> Alignment.TopStart
+        DslAlignment.TopCenter -> Alignment.TopCenter
+        DslAlignment.TopEnd -> Alignment.TopEnd
+        DslAlignment.BottomStart -> Alignment.BottomStart
+        DslAlignment.BottomCenter -> Alignment.BottomCenter
+        DslAlignment.BottomEnd -> Alignment.BottomEnd
     }
 
     Box(modifier = modifier, contentAlignment = contentAlignment) {
