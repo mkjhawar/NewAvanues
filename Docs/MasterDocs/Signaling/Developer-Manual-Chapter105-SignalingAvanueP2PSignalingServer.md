@@ -1,10 +1,13 @@
 # Developer Manual — Chapter 105: SignalingAvanue — P2P Signaling Server
 
-**Module**: AvanueCentral `src/modules/signaling/` (NestJS)
+**Module**: SmartAvanue `apps/ac-api-v2/nestjs-src/modules/signaling/` (NestJS)
+**Legacy Path**: AvanueCentral `packages/api/src/modules/signaling/` (mirrored, not authoritative)
 **Client**: NewAvanues `Modules/NetAvanue/` (KMP — Phase 4+)
 **Platforms**: Cloud (NestJS + PostgreSQL + Redis + coturn)
 **Dependencies**: LicensingModule (license validation), Redis (session state), PostgreSQL (audit/history)
+**Authoritative Repo**: SmartAvanue (`SmartAvanue-Development` branch)
 **Created**: 2026-02-22
+**Updated**: 2026-02-22 (Phase 3 complete, migrated to SmartAvanue)
 **Author**: Manoj Jhawar
 
 ---
@@ -491,7 +494,8 @@ Uses `static-auth-secret` matching `TURN_SECRET` env var. Shares credential vali
 ## 10. File Inventory
 
 ```
-packages/api/src/modules/signaling/        (18 files)
+# Authoritative location (SmartAvanue monorepo):
+apps/ac-api-v2/nestjs-src/modules/signaling/        (18 files)
 ├── enums/signaling.enums.ts                # 11 enums, RedisKeys, TTLs, TierLimits
 ├── entities/
 │   ├── device-fingerprint.entity.ts        # Device identity
@@ -502,20 +506,23 @@ packages/api/src/modules/signaling/        (18 files)
 │   ├── create-session.dto.ts               # Session creation DTO
 │   ├── join-session.dto.ts                 # Join + Rejoin + Leave DTOs
 │   ├── device-capability.dto.ts            # Capability data model
-│   └── signaling-message.dto.ts            # All message types + interfaces
+│   └── signaling-message.dto.ts            # All message types + 7 outbound event interfaces
 ├── services/
-│   ├── session.service.ts                  # Redis + PG session CRUD
-│   ├── device.service.ts                   # Device registration
+│   ├── session.service.ts                  # Redis + PG session CRUD + invite codes
+│   ├── device.service.ts                   # Device registration + Ed25519 signature verification
 │   ├── capability.service.ts               # Scoring + hub election
-│   ├── turn-credential.service.ts          # HMAC TURN credentials
+│   ├── turn-credential.service.ts          # HMAC TURN credentials for coturn
 │   ├── pairing.service.ts                  # Device pairing flow
 │   └── push-notification.service.ts        # Push token storage
-├── guards/license.guard.ts                 # License validation service
-├── signaling.gateway.ts                    # WebSocket gateway
-└── signaling.module.ts                     # NestJS module
+├── guards/license.guard.ts                 # License validation + tier mapping + Redis cache
+├── signaling.gateway.ts                    # WebSocket gateway (14 handlers)
+└── signaling.module.ts                     # NestJS module + HubModuleDecorator
 
-packages/api/src/migrations/
+apps/ac-api-v2/nestjs-src/migrations/
 └── 1740200001000-CreateSignalingTables.ts   # 4 tables migration
+
+config/
+└── turnserver.conf                          # Production coturn configuration
 ```
 
 ---
@@ -524,9 +531,9 @@ packages/api/src/migrations/
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **1** | Module scaffold, entities, migration, Redis keys, license integration | **Done** (commit `8860187`) |
-| **2** | CREATE/JOIN/REJOIN session handlers, ICE/SDP relay, hub election, grace period | **Done** (commit `6d631ed`) |
-| **3** | coturn production setup, TURN credential flow, device pairing handlers | Planned |
+| **1** | Module scaffold, entities, migration, Redis keys, license integration | **Done** (AC `8860187`, SA `500097e`) |
+| **2** | Session lifecycle handlers, ICE/SDP relay, hub election, grace period | **Done** (AC `6d631ed`, SA `500097e`) |
+| **3** | Device pairing handlers, Ed25519 signature verify, production coturn config | **Done** (AC `82a39ee`, SA `500097e`) |
 | **4-7** | NetAvanue KMP client (NewAvanues repo) | Planned |
 | **8** | RemoteCast integration | Planned |
 | **9** | Web/JS target | Planned |
@@ -539,5 +546,6 @@ packages/api/src/migrations/
 - NetAvanue Core Plan: `docs/plans/NetAvanue/NetAvanue-Plan-PeerNetworkingModule-260222-V1.md`
 - Signaling Integration Plan: `docs/plans/NetAvanue/NetAvanue-Plan-AvanueCentralSignalingIntegration-260222-V1.md`
 - Phase 1 Implementation Record: `AvanueCentral/docs/plans/Signaling-Plan-Phase1Implementation-260222-V1.md`
+- SmartAvanue Module Location: `SmartAvanue/apps/ac-api-v2/nestjs-src/modules/signaling/`
 - RemoteCast Architecture (Chapter 103): `Docs/MasterDocs/RemoteCast/`
 - HTTPAvanue v2.0 (Chapter 104): `Docs/MasterDocs/HTTPAvanue/`
