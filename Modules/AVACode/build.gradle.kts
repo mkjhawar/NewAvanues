@@ -32,6 +32,7 @@ kotlin {
                 implementation(project(":Modules:AvanueUI:Core"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
                 implementation("net.mamoe.yamlkt:yamlkt:0.13.0")
             }
         }
