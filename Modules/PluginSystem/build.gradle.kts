@@ -58,6 +58,9 @@ kotlin {
                 // Coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
+                // DateTime
+                implementation(libs.kotlinx.datetime)
+
                 // Semver for dependency resolution
                 implementation("io.github.z4kn4fein:semver:2.0.0")
             }

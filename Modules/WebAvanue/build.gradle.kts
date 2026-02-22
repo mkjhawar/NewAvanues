@@ -220,7 +220,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 29  // Raised from 26 to match VoiceOSCore dependency (API 29+ features)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
