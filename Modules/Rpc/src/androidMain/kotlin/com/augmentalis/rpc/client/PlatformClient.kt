@@ -201,7 +201,7 @@ actual class PlatformClient actual constructor(
      * The flow completes when the server closes the stream or an error occurs.
      */
     override fun receiveStream(): Flow<String> = callbackFlow {
-        val ch = channel
+        val ch = this@PlatformClient.channel
         if (ch == null) {
             close(IllegalStateException("Client not connected"))
             return@callbackFlow

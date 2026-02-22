@@ -19,7 +19,7 @@ import com.augmentalis.annotationavanue.AnnotationCanvas
 import com.augmentalis.annotationavanue.SignatureCapture
 import com.augmentalis.annotationavanue.controller.AnnotationSerializer
 import com.augmentalis.avanueui.theme.AvanueTheme
-import com.augmentalis.cameraavanue.CameraPreview
+import com.augmentalis.photoavanue.CameraPreview
 import com.augmentalis.cockpit.AndroidExternalAppResolver
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.FrameContent

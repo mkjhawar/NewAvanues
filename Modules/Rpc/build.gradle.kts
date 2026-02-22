@@ -74,6 +74,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.grpc.okhttp)
+                implementation(libs.grpc.stub)
                 implementation(libs.grpc.kotlin.stub)
                 implementation(libs.grpc.protobuf.lite)
             }

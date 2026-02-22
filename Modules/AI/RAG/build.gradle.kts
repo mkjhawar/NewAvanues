@@ -99,7 +99,11 @@ kotlin {
                 implementation("com.microsoft.onnxruntime:onnxruntime-android:1.16.3")
 
                 // PDF text extraction
-                implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+                implementation("com.tom-roush:pdfbox-android:2.0.27.0") {
+                    exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18")
+                    exclude(group = "org.bouncycastle", module = "bcpkix-jdk15to18")
+                    exclude(group = "org.bouncycastle", module = "bcutil-jdk15to18")
+                }
 
                 // HTML parsing (for HTML files and web documents)
                 implementation("org.jsoup:jsoup:1.17.1")
