@@ -1232,11 +1232,18 @@ class GoogleCloudStreamingClient(
         audioQueue.trySend(audioData)  // Non-blocking
     }
 
-    // Stop streaming
+    // Stop streaming — closes queue for this session
     fun stopStreaming() {
         audioQueue.close()
         streamJob?.cancel()
     }
+
+    // IMPORTANT (260222 fix): audioQueue MUST be rebuilt at the start of each
+    // streaming session. Google Cloud STT v2 has a ~5 min stream limit; on
+    // reconnect, a new session calls startStreaming() which must create a fresh
+    // Channel. Without this, the closed channel silently drops all audio after
+    // the first session rotation.
+    // Fix: audioQueue = Channel(Channel.UNLIMITED) at top of each session start.
 
     // Collect results
     fun getResults(): Flow<RecognitionResult> = resultFlow.asSharedFlow()

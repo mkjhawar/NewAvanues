@@ -214,8 +214,24 @@ VOS seed files defined 107+ commands across 11 categories, but originally only 4
 | **WebCommandHandler** | BROWSER | 45 web commands | IWebCommandExecutor + DOMScraperBridge | v2.1 |
 | **NoteCommandHandler** | NOTE | 48 note commands (format, dictate, navigate) | INoteController + RichTextState | v2.2 |
 | **CockpitCommandHandler** | COCKPIT | 26 cockpit commands (frames, layouts, content) | Intent broadcast to CockpitViewModel | v2.3 |
+| **ImageCommandHandler** | IMAGE | image rotate, flip, zoom, filter, gallery nav | ModuleCommandCallbacks.imageExecutor | v2.3 |
 
-Bold = new in v2.1+. All 13 handler categories are fully covered.
+Bold = new in v2.1+. All handler categories are fully covered.
+
+### Handler Phrase Collision Avoidance (260222 fix)
+
+Module-specific handlers must **prefix their phrases** with the module name to avoid being intercepted by higher-priority general handlers:
+
+| Before (collided) | After (prefixed) | Why |
+|-------------------|-------------------|-----|
+| "scroll up" (Cockpit) | "frame scroll up" | NAVIGATION handler (priority 2) intercepted before COCKPIT (priority 13) |
+| "scroll down" (Cockpit) | "frame scroll down" | Same |
+| "zoom in" (Cockpit) | "frame zoom in" | ScreenHandler (priority 7) intercepted |
+| "zoom out" (Cockpit) | "frame zoom out" | Same |
+| "rotate left" (Image) | "image rotate left" | ScreenHandler prefix-matched "rotate" |
+| "rotate right" (Image) | "image rotate right" | Same |
+
+**Rule:** When adding new handler commands, always check if a higher-priority handler already claims a prefix match on the same phrase. If so, add a module-specific prefix.
 
 ### Factory Registration
 

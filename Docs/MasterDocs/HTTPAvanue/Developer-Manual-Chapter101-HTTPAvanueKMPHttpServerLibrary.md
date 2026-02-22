@@ -291,10 +291,19 @@ if (Http2ServerHandler.isPriorKnowledgePreface(firstBytes)) {
 - PING/PONG keepalive
 - Graceful GOAWAY shutdown
 
+### HTTP/2 Settings Defaults
+
+`Http2Settings` defaults (RFC 7540 Section 6.5.2):
+- `headerTableSize = 4096` (HPACK dynamic table)
+- `enablePush = false` — server push is not implemented, so we honestly advertise this per RFC 7540 Section 8.2 (changed from `true` → `false` in 260222 fix)
+- `maxConcurrentStreams = 100`
+- `initialWindowSize = 65535` (per-stream flow control)
+- `maxFrameSize = 16384`
+
 ### Not Yet Implemented
 
 - Huffman encoding in HPACK (valid per spec — non-Huffman encoding works)
-- Server Push (PUSH_PROMISE from server)
+- Server Push (PUSH_PROMISE from server) — `enablePush = false` correctly advertises this
 - HTTP/2 over TLS (h2 with ALPN)
 - Stream prioritization (advisory, ignored per spec allowance)
 
