@@ -312,37 +312,115 @@ Manages FCM/APNS push token storage for wake-on-invite functionality. Token regi
 
 1. Client connects with `auth: { fingerprint: "fp_abc123" }` in handshake
 2. Server validates fingerprint exists and device not blocked
-3. Server tracks `fingerprint → socketId` mapping for message routing
-4. On disconnect, connection tracking is cleaned up
+3. Server tracks three in-memory maps:
+   - `connectedDevices`: fingerprint → socketId
+   - `socketToFingerprint`: socketId → fingerprint (reverse)
+   - `fingerprintToSession`: fingerprint → sessionId (which session the device is in)
+4. On disconnect, 30-second grace period starts before session removal
 
-### Phase 1 Message Handlers
+### Gateway State
 
-| Message | Handler | Description |
-|---------|---------|-------------|
-| `REGISTER_DEVICE` | `handleRegisterDevice` | Upserts device in PG, returns device ID |
-| `REGISTER_PUSH` | `handleRegisterPush` | Stores FCM/APNS token in Redis |
+| Map | Key → Value | Purpose |
+|-----|-------------|---------|
+| `connectedDevices` | fingerprint → socketId | Route messages to specific devices |
+| `socketToFingerprint` | socketId → fingerprint | Reverse lookup on disconnect |
+| `fingerprintToSession` | fingerprint → sessionId | Fast session lookup per device |
+| `disconnectTimers` | fingerprint → Timeout | Grace period timers (30s) |
 
-### Phase 2 Message Handlers (Planned)
+### Message Handlers (11 total)
 
-| Message | Direction | License Required | Description |
-|---------|-----------|-----------------|-------------|
-| `CREATE_SESSION` | C→S | Yes (host) | Create session with license check |
-| `JOIN_SESSION` | C→S | No | Join via invite code |
-| `REJOIN_SESSION` | C→S | No | Reconnect with signature |
-| `LEAVE_SESSION` | C→S | No | Leave session |
-| `ICE_CANDIDATE` | C→S→C | No | Relay ICE candidates |
-| `SDP_OFFER` | C→S→C | No | Relay SDP offers |
-| `SDP_ANSWER` | C→S→C | No | Relay SDP answers |
-| `CAPABILITY_UPDATE` | C→S | No | Update caps, trigger re-election |
-| `REQUEST_TURN` | C→S | No | Request TURN credentials |
-| `PAIR_REQUEST` | C→S | No | Initiate device pairing |
-| `PAIR_ACCEPT/REJECT` | C→S | No | Respond to pairing |
+| Message | Handler | License? | Description |
+|---------|---------|----------|-------------|
+| `REGISTER_DEVICE` | `handleRegisterDevice` | No | Upserts device in PG, returns device ID |
+| `REGISTER_PUSH` | `handleRegisterPush` | No | Stores FCM/APNS token in Redis |
+| `CREATE_SESSION` | `handleCreateSession` | **Yes** | License check → session create → score caps → TURN creds → room join |
+| `JOIN_SESSION` | `handleJoinSession` | No | Invite lookup → capacity check → add participant → hub election → broadcast |
+| `REJOIN_SESSION` | `handleRejoinSession` | No | Verify membership → cancel grace timer → drain queue → rejoin room |
+| `LEAVE_SESSION` | `handleLeaveSession` | No | Remove participant → broadcast → end session if empty |
+| `ICE_CANDIDATE` | `handleIceCandidate` | No | Relay to target peer (or queue if offline) |
+| `SDP_OFFER` | `handleSdpOffer` | No | Relay SDP offer to target peer |
+| `SDP_ANSWER` | `handleSdpAnswer` | No | Relay SDP answer to target peer |
+| `CAPABILITY_UPDATE` | `handleCapabilityUpdate` | No | Score caps → store → evaluate election → broadcast HUB_ELECTED |
+| `REQUEST_TURN` | `handleRequestTurn` | No | Issue TURN credentials if tier allows |
+
+### CREATE_SESSION Flow
+
+```
+Client                              Server
+  │ CREATE_SESSION                    │
+  │ { fingerprint, licenseToken,      │
+  │   sessionType, capabilities }     │
+  │──────────────────────────────────→│
+  │                                   │ 1. licenseGuard.validateForSession()
+  │                                   │ 2. deviceService.upsert() (if info provided)
+  │                                   │ 3. capabilityService.calculateScore()
+  │                                   │ 4. deviceService.updateCapabilities()
+  │                                   │ 5. sessionService.create() → Redis + PG
+  │                                   │ 6. sessionService.addParticipant(HOST)
+  │                                   │ 7. turnService.generate() (if tier allows)
+  │                                   │ 8. client.join(room)
+  │ SESSION_CREATED                   │
+  │ { sessionId, inviteCode,          │
+  │   hubFingerprint, turnCreds }     │
+  │←──────────────────────────────────│
+```
+
+### JOIN_SESSION Flow
+
+```
+Client B                            Server                             Client A (host)
+  │ JOIN_SESSION                      │                                   │
+  │ { inviteCode, fingerprint,        │                                   │
+  │   capabilities }                  │                                   │
+  │──────────────────────────────────→│                                   │
+  │                                   │ 1. findByInviteCode()             │
+  │                                   │ 2. Check capacity vs maxPeers     │
+  │                                   │ 3. Score + store capabilities     │
+  │                                   │ 4. addParticipant(SPOKE)          │
+  │                                   │ 5. evaluateElection()             │
+  │                                   │ 6. Generate TURN creds            │
+  │                                   │                                   │
+  │                                   │ PARTICIPANT_JOINED ──────────────→│
+  │                                   │ (if hub changed) HUB_ELECTED ───→│
+  │ SESSION_JOINED                    │                                   │
+  │ { sessionId, participants[],      │                                   │
+  │   hubFingerprint, turnCreds }     │                                   │
+  │←──────────────────────────────────│                                   │
+```
+
+### Disconnect Grace Period
+
+When a device disconnects unexpectedly:
+1. `PEER_DISCONNECTED` broadcast to session peers (with 30s grace)
+2. 30-second timer starts
+3. If device sends `REJOIN_SESSION` within 30s → timer cancelled, session continues
+4. If timer expires → `removeFromSession()` called → `PARTICIPANT_LEFT` broadcast → hub re-election if needed → session ended if empty
+
+### ICE/SDP Relay
+
+All three relay handlers (`ICE_CANDIDATE`, `SDP_OFFER`, `SDP_ANSWER`) use the shared `relayToTarget()` helper:
+- If target device is connected → `targetSocket.emit('message', { ...payload, fromFingerprint })`
+- If target device is offline → `sessionService.queueMessage()` (Redis LIST, 5-min TTL, drained on reconnect)
+
+### Outbound Event Interfaces
+
+| Interface | Trigger |
+|-----------|---------|
+| `SessionCreatedEvent` | Host creates session |
+| `SessionJoinedEvent` | Guest joins session |
+| `SessionRejoinedEvent` | Device reconnects after disconnect |
+| `ParticipantJoinedEvent` | Broadcast when someone joins |
+| `ParticipantLeftEvent` | Broadcast when someone leaves/disconnects |
+| `HubElectedEvent` | Hub changes due to capability re-scoring |
+| `PeerDisconnectedEvent` | Device disconnects (grace period started) |
 
 ### Utility Methods
 
 - `getSocketByFingerprint(fp)` — Resolve fingerprint to socket for targeted messaging
 - `isDeviceConnected(fp)` — Check if device is online
 - `getConnectedDeviceCount()` — Current connected device count
+- `relayToTarget(sessionId, toFp, msg)` — Forward message or queue if offline (private)
+- `removeFromSession(sessionId, fp, reason)` — Shared cleanup for leave + disconnect (private)
 
 ---
 
@@ -446,8 +524,8 @@ packages/api/src/migrations/
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **1** | Module scaffold, entities, migration, Redis keys, license integration | **Done** |
-| **2** | CREATE/JOIN/REJOIN session handlers, ICE/SDP relay, hub election | Planned |
+| **1** | Module scaffold, entities, migration, Redis keys, license integration | **Done** (commit `8860187`) |
+| **2** | CREATE/JOIN/REJOIN session handlers, ICE/SDP relay, hub election, grace period | **Done** (commit `6d631ed`) |
 | **3** | coturn production setup, TURN credential flow, device pairing handlers | Planned |
 | **4-7** | NetAvanue KMP client (NewAvanues repo) | Planned |
 | **8** | RemoteCast integration | Planned |
