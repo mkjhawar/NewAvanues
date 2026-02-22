@@ -65,6 +65,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -154,7 +156,10 @@ object GlassesSettingsLayout {
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
@@ -180,7 +185,8 @@ object GlassesSettingsLayout {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onModuleSelected(provider.moduleId) },
+                            .clickable { onModuleSelected(provider.moduleId) }
+                            .semantics { contentDescription = "Voice: click ${provider.displayName} Settings" },
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = AvanueTheme.colors.surfaceElevated
@@ -247,7 +253,10 @@ object GlassesSettingsLayout {
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
@@ -335,7 +344,10 @@ object GlassesSettingsLayout {
                 TopAppBar(
                     title = { Text("Settings") },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                        ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
@@ -353,7 +365,8 @@ object GlassesSettingsLayout {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
-                            .clickable { onModuleSelected(provider.moduleId) },
+                            .clickable { onModuleSelected(provider.moduleId) }
+                            .semantics { contentDescription = "Voice: click ${provider.displayName} Settings" },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = AvanueTheme.colors.surface.copy(alpha = 0.7f)
@@ -396,7 +409,10 @@ object GlassesSettingsLayout {
                 TopAppBar(
                     title = { Text(provider.displayName) },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                        ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
