@@ -194,29 +194,33 @@ class VosFileImporter(registry: IVosFileRegistryRepository, commandDao: VoiceCom
 
 ### Problem Solved
 
-VOS seed files defined 107+ commands across 11 categories, but originally only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 7 new handlers were added in v2.1, then NoteCommandHandler (v2.2) and CockpitCommandHandler (v2.3) brought the total to 13. All handler categories are fully covered.
+VOS seed files defined 107+ commands across 11 categories, but originally only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 7 new handlers were added in v2.1, then NoteCommandHandler (v2.2) and CockpitCommandHandler (v2.3) brought the total to 13. Wave 4 added AnnotationCommandHandler, ImageCommandHandler, VideoCommandHandler, CastCommandHandler, and AICommandHandler, bringing the total to **18 handlers**. All handler categories are fully covered.
 
-### Handler Coverage (13 of 13 Handlers)
+### Handler Coverage (18 Handlers)
 
 | Handler | Category | Commands | Key API | Status |
 |---------|----------|----------|---------|--------|
-| AndroidGestureHandler | GESTURE | scroll, tap, swipe, pinch | GestureDescription API | v1.0 |
-| SystemHandler | SYSTEM/NAV | back, home, recents, split screen | performGlobalAction() | v1.0 |
-| AppHandler | APP_LAUNCH | open browser/camera/gallery/etc. | Intent + PackageManager | v1.0 |
+| AndroidGestureHandler | NAVIGATION | scroll, tap, swipe, pinch | GestureDescription API | v1.0 |
+| SystemHandler | SYSTEM | back, home, recents, split screen | performGlobalAction() | v1.0 |
+| AppHandler | APP | open browser/camera/gallery/etc. | Intent + PackageManager | v1.0 |
 | AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService + IMUManager | v1.0 (IMU wiring v2.2) |
-| **MediaHandler** | MEDIA | play, pause, next, prev, volume | AudioManager + KeyEvent | v2.1 |
-| **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight | Settings.System + CameraManager | v2.1 |
-| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions (delete = selection-aware backspace, not clear-all) | v2.2 |
-| **InputHandler** | INPUT | show/hide keyboard | SoftKeyboardController | v2.1 |
-| **AppControlHandler** | APP | close app, exit, quit | GLOBAL_ACTION_BACK + HOME | v2.1 |
-| **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal | v2.1 |
-| **VoiceControlHandler** | SYSTEM | mute/wake, dictation mode switch, help, list commands | VoiceControlCallbacks + OverlayStateManager feedback | v2.4 |
+| **MediaHandler** | MEDIA | play, pause, next, prev, volume (13 cmds) | AudioManager + KeyEvent | v2.1 |
+| **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight (20 cmds) | Settings.System + CameraManager | v2.1 |
+| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete (8 cmds) | AccessibilityNodeInfo actions | v2.2 |
+| **InputHandler** | INPUT | show/hide keyboard (6 cmds) | SoftKeyboardController | v2.1 |
+| **AppControlHandler** | APP | close app, exit, quit (4 cmds) | GLOBAL_ACTION_BACK + HOME | v2.1 |
+| **ReadingHandler** | ACCESSIBILITY | read screen, stop reading (7 cmds) | TextToSpeech + tree traversal | v2.1 |
+| **VoiceControlHandler** | SYSTEM | mute/wake, dictation mode switch, help, list commands (16 cmds) | VoiceControlCallbacks + OverlayStateManager feedback | v2.4 |
 | **WebCommandHandler** | BROWSER | 45 web commands | IWebCommandExecutor + DOMScraperBridge | v2.1 |
-| **NoteCommandHandler** | NOTE | 48 note commands (format, dictate, navigate) | INoteController + RichTextState | v2.2 |
-| **CockpitCommandHandler** | COCKPIT | 26 cockpit commands (frames, layouts, content) | Intent broadcast to CockpitViewModel | v2.3 |
-| **ImageCommandHandler** | IMAGE | image rotate, flip, zoom, filter, gallery nav | ModuleCommandCallbacks.imageExecutor | v2.3 |
+| **NoteCommandHandler** | NOTE | 23 note commands (format, dictate, navigate) | INoteController + RichTextState | v2.2 |
+| **CockpitCommandHandler** | COCKPIT | 20 cockpit commands (frames, layouts, content) | Intent broadcast to CockpitViewModel | v2.3 |
+| **AnnotationCommandHandler** | ANNOTATION | 14 annotation commands (draw, colors, undo, save) | ModuleCommandCallbacks.annotationExecutor | v2.4 |
+| **ImageCommandHandler** | IMAGE | 16 image commands (rotate, flip, zoom, filter, gallery) | ModuleCommandCallbacks.imageExecutor | v2.3 |
+| **VideoCommandHandler** | VIDEO | 12 video commands (play, pause, seek, speed, fullscreen) | ModuleCommandCallbacks.videoExecutor | v2.4 |
+| **CastCommandHandler** | CAST | 5 cast commands (start, stop, connect, quality) | ModuleCommandCallbacks.castExecutor | v2.4 |
+| **AICommandHandler** | CUSTOM | 5 AI commands (summarize, chat, search, teach) | ModuleCommandCallbacks.aiExecutor | v2.4 |
 
-Bold = new in v2.1+. All handler categories are fully covered.
+Bold = new in v2.1+. All 18 handler categories are fully covered.
 
 ### Handler Phrase Collision Avoidance (260222 fix)
 
@@ -347,7 +351,7 @@ UI interaction is at the result callback boundary.
 ### 5.3 Handler Registry: Cached Flat Handler List
 
 **Before:** `HandlerRegistry.findHandler()` called `handlers.values.flatten()` on every invocation,
-allocating a new `List<IHandler>` for each voice command (13 handlers = 13-element list rebuilt
+allocating a new `List<IHandler>` for each voice command (18 handlers = 18-element list rebuilt
 on every call).
 
 **After:** `HandlerRegistry` stores a pre-computed `_cachedHandlers: List<IHandler>` built once

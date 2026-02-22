@@ -1,8 +1,9 @@
 # Developer Manual — Chapter 103: RemoteCast — Smart Glasses Bidirectional Architecture
 
 **Module:** `Modules/RemoteCast/`
-**Apps:** `Apps/Android/GlassAvanue/` (server), `Apps/Android/GlassClient/` (receiver)
+**Apps (planned):** `Apps/Android/GlassAvanue/` (server), `Apps/Android/GlassClient/` (receiver) — not yet implemented
 **Platforms:** Android (primary), iOS (planned), Desktop (sender only)
+**Status:** Architecture spec and infrastructure module. App targets are planned but not yet created.
 **Dependencies:** HTTPAvanue (WebSocket), VoiceOSCore (voice pipeline), DeviceManager (detection), AvanueUI (theme), NetAvanue (P2P signaling — Phase 8+)
 **Created:** 2026-02-21
 **Author:** Manoj Jhawar

@@ -351,7 +351,7 @@ Both `kotlin.compose` AND `compose` plugins are required for commonMain Compose 
 | 12 | `CameraPreview.kt` | androidMain | ~295 | Embeddable camera for Cockpit |
 | 13 | `AndroidProCameraController.kt` | androidMain | ~600 | Pro camera with Camera2 interop (260222: setCaptureMode fix) |
 
-**KMP Score:** 8/12 feature areas in commonMain (67% shared). Platform-specific: CameraX binding, location provider, preview surface, permission handling.
+**KMP Score:** 11 commonMain / 15 total files (73% shared). 4 androidMain files are platform-specific: CameraX binding, location provider, preview surface, pro camera.
 
 ---
 

@@ -21,7 +21,7 @@ NoteAvanue is a voice-first rich text note editor that transforms spoken words i
 - Audio recording and photo attachment support
 - SpatialVoice design language (AvanueTheme)
 
-**KMP Score:** 11 commonMain files / 17 total = 65% shared code.
+**KMP Score:** 11 commonMain files / 16 total = 69% shared code.
 
 ---
 
