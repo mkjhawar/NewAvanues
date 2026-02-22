@@ -291,6 +291,18 @@ The Foundation module's `build.gradle.kts` targets:
 
 **Dependencies:** Only `kotlinx-coroutines-core` (commonMain). No external deps needed for iOS (platform.Foundation, platform.Security are Kotlin/Native stdlib) or Desktop (JDK stdlib).
 
+**Conditional iOS Pattern (ALL modules):** Every KMP module that declares iOS targets uses the same guard:
+
+```kotlin
+val enableIos = project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+    gradle.startParameter.taskNames.any {
+        it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true)
+    }
+if (enableIos) { iosX64(); iosArm64(); iosSimulatorArm64() }
+```
+
+This applies to Foundation, VoiceOSCore, Database, AVID, SpeechRecognition, Logging, and the AvanuesShared umbrella module. Omitting this guard from any module in the dependency chain causes Gradle variant resolution failures during Android Studio sync (the consumer requests `ios_simulator_arm64`/`native` variants that the unconditional module can't provide).
+
 ---
 
 ## 8.5 Test Suite Expansion (260222)

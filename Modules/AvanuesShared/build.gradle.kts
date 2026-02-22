@@ -26,6 +26,12 @@ plugins {
     kotlin("native.cocoapods")
 }
 
+// iOS targets only compiled when explicitly requested — matches all dependency modules' pattern
+val enableIos = project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+    gradle.startParameter.taskNames.any {
+        it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true)
+    }
+
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
@@ -40,31 +46,33 @@ kotlin {
         }
     }
 
-    // iOS targets
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    // iOS targets - conditional guard defined above as top-level val
+    if (enableIos) {
+        iosX64()
+        iosArm64()
+        iosSimulatorArm64()
 
-    cocoapods {
-        summary = "Avanues Shared KMP Framework"
-        homepage = "https://avanues.com"
-        version = "1.0.0"
-        ios.deploymentTarget = "16.0"
-        name = "AvanuesShared"
-        framework {
-            baseName = "AvanuesShared"
-            isStatic = true
-            // Export all modules so Swift can access their types directly
-            export(project(":Modules:VoiceOSCore"))
-            export(project(":Modules:Database"))
-            export(project(":Modules:Foundation"))
-            export(project(":Modules:AVID"))
-            export(project(":Modules:SpeechRecognition"))
-            export(project(":Modules:Logging"))
-            // AI/NLU deferred to Phase 4 — requires 9 missing iosMain actual declarations
-            // export(project(":Modules:AI:NLU"))
+        cocoapods {
+            summary = "Avanues Shared KMP Framework"
+            homepage = "https://avanues.com"
+            version = "1.0.0"
+            ios.deploymentTarget = "16.0"
+            name = "AvanuesShared"
+            framework {
+                baseName = "AvanuesShared"
+                isStatic = true
+                // Export all modules so Swift can access their types directly
+                export(project(":Modules:VoiceOSCore"))
+                export(project(":Modules:Database"))
+                export(project(":Modules:Foundation"))
+                export(project(":Modules:AVID"))
+                export(project(":Modules:SpeechRecognition"))
+                export(project(":Modules:Logging"))
+                // AI/NLU deferred to Phase 4 — requires 9 missing iosMain actual declarations
+                // export(project(":Modules:AI:NLU"))
+            }
+            // Pod dependencies (none - all native Kotlin)
         }
-        // Pod dependencies (none - all native Kotlin)
     }
 
     sourceSets {
@@ -109,28 +117,30 @@ kotlin {
             }
         }
 
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
-            dependencies {
-                implementation(libs.sqldelight.native.driver)
-                implementation(libs.ktor.client.darwin)
+        if (enableIos) {
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+                dependencies {
+                    implementation(libs.sqldelight.native.driver)
+                    implementation(libs.ktor.client.darwin)
+                }
             }
-        }
 
-        val iosX64Test by getting
-        val iosArm64Test by getting
-        val iosSimulatorArm64Test by getting
-        val iosTest by creating {
-            dependsOn(commonTest)
-            iosX64Test.dependsOn(this)
-            iosArm64Test.dependsOn(this)
-            iosSimulatorArm64Test.dependsOn(this)
+            val iosX64Test by getting
+            val iosArm64Test by getting
+            val iosSimulatorArm64Test by getting
+            val iosTest by creating {
+                dependsOn(commonTest)
+                iosX64Test.dependsOn(this)
+                iosArm64Test.dependsOn(this)
+                iosSimulatorArm64Test.dependsOn(this)
+            }
         }
     }
 }
