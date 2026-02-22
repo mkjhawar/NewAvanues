@@ -160,6 +160,7 @@ kotlin {
                 implementation(libs.junit)
                 implementation(libs.robolectric)
                 implementation(libs.sqldelight.sqlite.driver)
+                implementation("androidx.test:core:1.5.0")
             }
         }
 
@@ -226,6 +227,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")

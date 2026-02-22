@@ -3,7 +3,7 @@ package com.augmentalis.webavanue
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.cash.sqldelight.db.SqlDriver
-import com.augmentalis.webavanue.BrowserDatabase
+import com.augmentalis.webavanue.data.db.BrowserDatabase
 import com.augmentalis.webavanue.BrowserRepositoryImpl
 import com.augmentalis.webavanue.Tab
 import com.augmentalis.webavanue.createAndroidDriver

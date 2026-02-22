@@ -1,11 +1,13 @@
 package com.augmentalis.avamagic.ipc.universal
 
+import com.augmentalis.avamagic.ipc.AIQueryMessage
+import com.augmentalis.avamagic.ipc.VoiceCommandMessage
 import kotlin.test.*
 
 /**
  * Comprehensive test suite for UniversalFileParser
  *
- * Tests all file formats: .ava, .vos, .avc, .avw, .avn, .avs
+ * Tests all file formats: .ava, .vos, .avc, .awb, .ami
  */
 class UniversalFileParserTest {
 
@@ -111,18 +113,18 @@ class UniversalFileParserTest {
     }
 
     @Test
-    fun `parse AVW file format`() {
+    fun `parse AWB file format`() {
         val content = """
             # Avanues Universal Format v1.0
-            # Type: AVW
-            # Extension: .avw
+            # Type: AWB
+            # Extension: .awb
             ---
             schema: avu-1.0
             version: 1.0.0
             locale: en-US
             project: webavanue
             metadata:
-              file: browser.avw
+              file: browser.awb
               category: browser_control
               count: 3
             ---
@@ -134,25 +136,25 @@ class UniversalFileParserTest {
 
         val file = UniversalFileParser.parse(content)
 
-        assertEquals(FileType.AVW, file.type)
-        assertEquals(".avw", file.extension)
+        assertEquals(FileType.AWB, file.type)
+        assertEquals(".awb", file.extension)
         assertEquals("webavanue", file.project)
         assertEquals(3, file.entries.size)
     }
 
     @Test
-    fun `parse AVN file format`() {
+    fun `parse AMI file format`() {
         val content = """
             # Avanues Universal Format v1.0
-            # Type: AVN
-            # Extension: .avn
+            # Type: AMI
+            # Extension: .ami
             ---
             schema: avu-1.0
             version: 1.0.0
             locale: en-US
             project: newavanue
             metadata:
-              file: platform.avn
+              file: platform.ami
               category: platform
               count: 2
             ---
@@ -163,25 +165,25 @@ class UniversalFileParserTest {
 
         val file = UniversalFileParser.parse(content)
 
-        assertEquals(FileType.AVN, file.type)
-        assertEquals(".avn", file.extension)
+        assertEquals(FileType.AMI, file.type)
+        assertEquals(".ami", file.extension)
         assertEquals("newavanue", file.project)
         assertEquals(2, file.entries.size)
     }
 
     @Test
-    fun `parse AVS file format`() {
+    fun `parse AMI file format with UI components`() {
         val content = """
             # Avanues Universal Format v1.0
-            # Type: AVS
-            # Extension: .avs
+            # Type: AMI
+            # Extension: .ami
             ---
             schema: avu-1.0
             version: 1.0.0
             locale: en-US
             project: avanues
             metadata:
-              file: ui-components.avs
+              file: ui-components.ami
               category: ui_component
               count: 1
             ---
@@ -191,8 +193,8 @@ class UniversalFileParserTest {
 
         val file = UniversalFileParser.parse(content)
 
-        assertEquals(FileType.AVS, file.type)
-        assertEquals(".avs", file.extension)
+        assertEquals(FileType.AMI, file.type)
+        assertEquals(".ami", file.extension)
         assertEquals("avanues", file.project)
         assertEquals(1, file.entries.size)
     }

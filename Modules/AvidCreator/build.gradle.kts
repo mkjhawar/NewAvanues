@@ -111,6 +111,9 @@ kotlin {
                 implementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
                 implementation("androidx.arch.core:core-testing:2.2.0")
                 implementation(libs.kotlinx.coroutines.test)
+                implementation("androidx.test:core:1.5.0")
+                implementation("androidx.test.ext:junit:1.1.5")
+                implementation("org.robolectric:robolectric:4.11.1")
             }
         }
 
@@ -157,6 +160,7 @@ android {
 
     testOptions {
         unitTests {
+            isIncludeAndroidResources = true
             all {
                 it.jvmArgs("-Dnet.bytebuddy.experimental=true")
             }

@@ -259,7 +259,7 @@ class BatchDeduplicationPerformanceTest {
         // Test individual operations (simulated)
         val individualStart = System.currentTimeMillis()
         for ((uuid, alias) in uuidAliasMap) {
-            aliasManager.setAliasWithDeduplication(uuid, alias)
+            aliasManager.setAlias(uuid, alias)
         }
         val individualElapsed = System.currentTimeMillis() - individualStart
 
