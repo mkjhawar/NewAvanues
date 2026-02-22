@@ -273,13 +273,13 @@ Pervasive Rule 3 violations. **30+ files** across:
 | F1 | VoiceOSCore | `handlerSupportsApp()` always returns true | `IntentDispatcher.kt:213` |
 | F2 | VoiceOSCore | `calculateAverageFPS()` hardcoded to 60.0f | `HUDManager.kt:644-647` |
 | F3 | VoiceOSCore | `parseOrientationData()` always returns zero-orientation | `SpatialRenderer.kt:247-256` |
-| F4 | VoiceOSCore | `calibrateSpatialMapping()` returns fake success | `HUDManager.kt:517-529` |
+| F4 | VoiceOSCore | ~~`calibrateSpatialMapping()` returns fake success~~ **FIXED 260222** — validates points, computes quality from accuracy+IMU, sets centroid+rotation | `HUDManager.kt:536` |
 | F5 | VoiceOSCore | IMU data hardcoded to zeros in HUDManager | `HUDManager.kt:363-378` |
 | F6 | VoiceOSCore | `PreferenceLearner.updatePriorities()` is logging-only no-op | `PreferenceLearner.kt:298-320` |
 | F7 | VoiceOSCore | `autoResolveConflicts()` always returns false | `DynamicCommandRegistry.kt:580-587` |
 | F8 | VoiceOSCore | Voice Test uses random hardcoded command | `CommandViewModel.kt:142-172` |
-| F9 | DeviceManager | `scanBluetoothDevices()` returns hardcoded fake data | `DeviceViewModel.kt:464` |
-| F10 | DeviceManager | `scanWiFiNetworks()` returns hardcoded fake data | `DeviceViewModel.kt:492` |
+| F9 | DeviceManager | ~~`scanBluetoothDevices()` returns hardcoded fake data~~ **FIXED 260222** — wired to BluetoothManager.startDiscovery() + discoveredDevices StateFlow | `DeviceViewModel.kt:463` |
+| F10 | DeviceManager | ~~`scanWiFiNetworks()` returns hardcoded fake data~~ **FIXED 260222** — wired to WiFiManager.startScan() + scanResults StateFlow | `DeviceViewModel.kt:512` |
 | F11 | DeviceManager | `ComplementaryFilter`/`KalmanFilter` return identity quaternion | `SensorFusionManager.kt` |
 | F12 | AvidCreator | `mockElements`/`mockHistory` production mock data | `AvidViewModel.kt` |
 | F13 | AvidCreator | `delay(500)` artificial loading simulation | `AvidViewModel.kt` |
@@ -307,7 +307,7 @@ Pervasive Rule 3 violations. **30+ files** across:
 | 7 | P3 | Theme Violations | 30+ | 2-3 | **DONE** (`f8fba223` + `269cab66`) — 124 violations fixed in Modules + active apps; legacy apps skipped; ThemeBuilder annotated (needs dep) |
 | 8 | P3 | AI Attribution | 53 | 0.5 | **DONE** (260221, `2b6cd3c8` + `0bb87e3f`) |
 | 9 | P3 | Resource Leaks | 12 | 2 | **DONE** (260221, `e241919c` + `3190442d`) — all 12 fixed |
-| 10 | P3 | Hardcoded Stubs | 19 | 3 | **16/19 DONE** (`e241919c` + `66f85a43`) — F4 calibration math, F9 BT scan, F10 WiFi scan deferred (need hardware APIs) |
+| 10 | P3 | Hardcoded Stubs | 19 | 3 | **19/19 DONE** (`e241919c` + `66f85a43` + 260222) — F4 real calibration, F9 real BT scan, F10 real WiFi scan |
 | | | **TOTAL** | **~185** | **~25** | **10/10 COMPLETE** |
 
 ---

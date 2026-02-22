@@ -24,6 +24,7 @@ import platform.Foundation.NSProcessInfo
  * @param language BCP-47 language code (e.g., "en", "es")
  * @param translateToEnglish Whether to use Whisper's translation feature
  * @param numThreads Number of inference threads (0 = auto)
+ * @param vadSensitivity VAD sensitivity: higher = more sensitive to speech onset (0.0-1.0)
  * @param silenceThresholdMs Silence duration before VAD finalizes a chunk
  * @param minSpeechDurationMs Minimum utterance length to transcribe
  * @param maxChunkDurationMs Maximum chunk duration before forced transcription
@@ -33,6 +34,7 @@ data class IosWhisperConfig(
     val language: String = "en",
     val translateToEnglish: Boolean = false,
     val numThreads: Int = 0,
+    val vadSensitivity: Float = 0.6f,
     val silenceThresholdMs: Int = 700,
     val minSpeechDurationMs: Int = 300,
     val maxChunkDurationMs: Int = 30_000
@@ -156,6 +158,9 @@ data class IosWhisperConfig(
      * Validate the configuration.
      */
     fun validate(): Result<Unit> {
+        if (vadSensitivity !in 0f..1f) {
+            return Result.failure(IllegalArgumentException("vadSensitivity must be 0.0-1.0"))
+        }
         if (language.isBlank()) {
             return Result.failure(IllegalArgumentException("Language cannot be blank"))
         }

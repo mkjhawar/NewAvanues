@@ -17,6 +17,9 @@ import com.augmentalis.speechrecognition.logDebug
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.logWarn
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -250,13 +253,25 @@ class IosWhisperAudio {
         }
     }
 
+    // Cached FIR anti-aliasing filter coefficients (computed once per sample rate pair)
+    private var cachedFilterCoeffs: FloatArray? = null
+    private var cachedFilterFromRate: Int = 0
+
     /**
-     * Simple downsampling via linear interpolation.
-     * For production quality, consider using AVAudioConverter or vDSP.
+     * Downsample with anti-aliasing FIR low-pass filter.
+     * Applies a windowed sinc filter before linear interpolation to prevent
+     * frequencies above the target Nyquist from aliasing into the output.
      */
     private fun downsample(input: FloatArray, fromRate: Int, toRate: Int): FloatArray {
         if (fromRate == toRate) return input
 
+        // Get or compute FIR coefficients for this sample rate pair
+        val coeffs = getAntiAliasingFilter(fromRate, toRate)
+
+        // Apply anti-aliasing low-pass filter
+        val filtered = applyFirFilter(input, coeffs)
+
+        // Linear interpolation on filtered signal
         val ratio = fromRate.toDouble() / toRate.toDouble()
         val outputSize = (input.size / ratio).toInt()
         val output = FloatArray(outputSize)
@@ -266,11 +281,72 @@ class IosWhisperAudio {
             val srcIndexInt = srcIndex.toInt()
             val frac = (srcIndex - srcIndexInt).toFloat()
 
-            output[i] = if (srcIndexInt + 1 < input.size) {
-                input[srcIndexInt] * (1f - frac) + input[srcIndexInt + 1] * frac
+            output[i] = if (srcIndexInt + 1 < filtered.size) {
+                filtered[srcIndexInt] * (1f - frac) + filtered[srcIndexInt + 1] * frac
+            } else if (srcIndexInt < filtered.size) {
+                filtered[srcIndexInt]
             } else {
-                input[srcIndexInt]
+                0f
             }
+        }
+
+        return output
+    }
+
+    /**
+     * Get cached or compute FIR anti-aliasing filter coefficients.
+     * Uses a 15-tap windowed sinc filter with Hamming window.
+     * Cutoff at target Nyquist frequency (toRate / 2) relative to input rate.
+     */
+    private fun getAntiAliasingFilter(fromRate: Int, toRate: Int): FloatArray {
+        if (cachedFilterCoeffs != null && cachedFilterFromRate == fromRate) {
+            return cachedFilterCoeffs!!
+        }
+
+        // Cutoff ratio: target Nyquist / source Nyquist
+        val cutoffRatio = toRate.toFloat() / fromRate.toFloat()
+        val numTaps = 15
+        val half = numTaps / 2
+        val coeffs = FloatArray(numTaps)
+        var sum = 0f
+
+        for (i in 0 until numTaps) {
+            val n = i - half
+            coeffs[i] = if (n == 0) {
+                cutoffRatio
+            } else {
+                val x = n.toFloat() * PI.toFloat()
+                sin(cutoffRatio * x) / x
+            }
+            // Hamming window
+            coeffs[i] *= (0.54f - 0.46f * cos(2f * PI.toFloat() * i / (numTaps - 1)))
+            sum += coeffs[i]
+        }
+
+        // Normalize so filter has unity gain at DC
+        for (i in 0 until numTaps) coeffs[i] /= sum
+
+        cachedFilterCoeffs = coeffs
+        cachedFilterFromRate = fromRate
+        return coeffs
+    }
+
+    /**
+     * Apply FIR filter to input signal via convolution.
+     */
+    private fun applyFirFilter(input: FloatArray, coeffs: FloatArray): FloatArray {
+        val half = coeffs.size / 2
+        val output = FloatArray(input.size)
+
+        for (i in input.indices) {
+            var acc = 0f
+            for (j in coeffs.indices) {
+                val idx = i - half + j
+                if (idx in input.indices) {
+                    acc += input[idx] * coeffs[j]
+                }
+            }
+            output[i] = acc
         }
 
         return output

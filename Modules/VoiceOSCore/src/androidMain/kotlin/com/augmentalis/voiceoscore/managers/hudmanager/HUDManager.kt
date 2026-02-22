@@ -527,15 +527,65 @@ class HUDManager constructor(
     }
     
     /**
-     * Calibrate spatial mapping
+     * Calibrate spatial mapping using reference points and live IMU data.
+     *
+     * Validates calibration input, checks IMU availability, computes tracking
+     * quality from point accuracies and sensor data, then updates spatial state.
+     * Requires at least 3 verified calibration points with non-zero accuracy.
      */
-    @Suppress("UNUSED_PARAMETER")
     fun calibrateSpatialMapping(calibrationPoints: List<CalibrationPoint>): Boolean {
         return try {
-            // Perform calibration logic
+            // Validate minimum calibration points
+            val verifiedPoints = calibrationPoints.filter { it.isVerified }
+            if (verifiedPoints.size < 3) {
+                _errorMessage.value = "Calibration requires at least 3 verified points (got ${verifiedPoints.size})"
+                return false
+            }
+
+            // Validate all points have reasonable accuracy
+            val pointsWithAccuracy = verifiedPoints.filter { it.accuracy > 0f }
+            if (pointsWithAccuracy.isEmpty()) {
+                _errorMessage.value = "Calibration points have no accuracy data"
+                return false
+            }
+
+            // Check IMU availability for head tracking baseline
+            val currentOrientation = imuManager.getCurrentOrientation()
+            val hasIMU = currentOrientation != null
+
+            // Compute tracking quality from calibration point accuracies.
+            // Accuracy is per-point [0..1]; we weight by point count confidence.
+            val meanAccuracy = pointsWithAccuracy.map { it.accuracy }.average().toFloat()
+            val countConfidence = (pointsWithAccuracy.size.toFloat() / 10f).coerceAtMost(1f)
+            val imuBonus = if (hasIMU) 0.1f else 0f
+
+            // Final quality: weighted combination clamped to [0, 1]
+            val trackingQuality = (meanAccuracy * 0.6f + countConfidence * 0.3f + imuBonus).coerceIn(0f, 1f)
+
+            // Compute centroid of calibration points for head position baseline
+            val centroid = Vector3D(
+                x = pointsWithAccuracy.map { it.position.x }.average().toFloat(),
+                y = pointsWithAccuracy.map { it.position.y }.average().toFloat(),
+                z = pointsWithAccuracy.map { it.position.z }.average().toFloat()
+            )
+
+            // Derive head rotation from IMU if available
+            val headRotation = if (currentOrientation != null) {
+                Vector3D(
+                    x = currentOrientation.beta,  // pitch (radians)
+                    y = currentOrientation.gamma,  // yaw (radians)
+                    z = currentOrientation.alpha   // roll (radians)
+                )
+            } else {
+                getCurrentSpatialData().headRotation
+            }
+
             updateSpatialData(getCurrentSpatialData().copy(
                 isCalibrated = true,
-                trackingQuality = 0.95f
+                trackingQuality = trackingQuality,
+                headPosition = centroid,
+                headRotation = headRotation,
+                lastUpdate = System.currentTimeMillis()
             ))
             true
         } catch (e: Exception) {

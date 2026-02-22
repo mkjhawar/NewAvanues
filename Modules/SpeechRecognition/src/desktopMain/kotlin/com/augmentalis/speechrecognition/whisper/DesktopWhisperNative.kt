@@ -168,14 +168,14 @@ object DesktopWhisperNative {
 
     /**
      * Get the average token probability for a segment as confidence [0,1].
-     * Falls back to DEFAULT_CONFIDENCE if the native method isn't linked.
+     * Falls back to CONFIDENCE_UNAVAILABLE if the native method isn't linked.
      */
     fun getSegmentConfidence(contextPtr: Long, segmentIndex: Int): Float {
-        if (contextPtr == 0L) return DEFAULT_CONFIDENCE
+        if (contextPtr == 0L) return CONFIDENCE_UNAVAILABLE
         return try {
             synchronized(this) {
                 val tokenCount = nativeGetTextSegmentTokenCount(contextPtr, segmentIndex)
-                if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+                if (tokenCount <= 0) return CONFIDENCE_UNAVAILABLE
                 var probSum = 0f
                 for (t in 0 until tokenCount) {
                     probSum += nativeGetTextSegmentTokenProb(contextPtr, segmentIndex, t)
@@ -183,7 +183,7 @@ object DesktopWhisperNative {
                 probSum / tokenCount
             }
         } catch (e: UnsatisfiedLinkError) {
-            DEFAULT_CONFIDENCE
+            CONFIDENCE_UNAVAILABLE
         }
     }
 
@@ -219,6 +219,7 @@ object DesktopWhisperNative {
             val segments = ArrayList<TranscriptionSegment>(segCount)
             val text = StringBuilder()
             var totalConfidence = 0f
+            var hasRealConfidence = false
 
             for (i in 0 until segCount) {
                 val segText = nativeGetTextSegment(contextPtr, i)
@@ -226,13 +227,17 @@ object DesktopWhisperNative {
                 val t1 = nativeGetTextSegmentT1(contextPtr, i)
 
                 val segConfidence = getSegmentConfidenceUnsafe(contextPtr, i)
+                val effectiveConfidence = if (segConfidence == CONFIDENCE_UNAVAILABLE) 0f else segConfidence
+                if (segConfidence != CONFIDENCE_UNAVAILABLE) hasRealConfidence = true
 
-                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10, segConfidence))
+                segments.add(TranscriptionSegment(segText.trim(), t0 * 10, t1 * 10, effectiveConfidence))
                 text.append(segText)
-                totalConfidence += segConfidence
+                totalConfidence += effectiveConfidence
             }
 
-            val avgConfidence = if (segCount > 0) totalConfidence / segCount else 0f
+            val avgConfidence = if (!hasRealConfidence) 0f
+                else if (segCount > 0) totalConfidence / segCount
+                else 0f
             val detectedLang = getDetectedLanguageUnsafe(contextPtr)
 
             TranscriptionResult(
@@ -248,14 +253,14 @@ object DesktopWhisperNative {
     private fun getSegmentConfidenceUnsafe(contextPtr: Long, segmentIndex: Int): Float {
         return try {
             val tokenCount = nativeGetTextSegmentTokenCount(contextPtr, segmentIndex)
-            if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+            if (tokenCount <= 0) return CONFIDENCE_UNAVAILABLE
             var probSum = 0f
             for (t in 0 until tokenCount) {
                 probSum += nativeGetTextSegmentTokenProb(contextPtr, segmentIndex, t)
             }
             probSum / tokenCount
         } catch (e: UnsatisfiedLinkError) {
-            DEFAULT_CONFIDENCE
+            CONFIDENCE_UNAVAILABLE
         }
     }
 
@@ -267,5 +272,6 @@ object DesktopWhisperNative {
         }
     }
 
-    private const val DEFAULT_CONFIDENCE = 0.85f
+    /** Sentinel value indicating confidence is unavailable (native methods not linked) */
+    const val CONFIDENCE_UNAVAILABLE = -1f
 }

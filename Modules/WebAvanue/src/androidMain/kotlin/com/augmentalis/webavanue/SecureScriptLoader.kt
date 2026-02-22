@@ -69,7 +69,7 @@ class SecureScriptLoader private constructor(private val context: Context) {
         }
 
         private fun generateIv(seed: String): ByteArray {
-            val digest = MessageDigest.getInstance("MD5")
+            val digest = MessageDigest.getInstance("SHA-256")
             return digest.digest(seed.toByteArray(Charsets.UTF_8)).copyOf(IV_SIZE)
         }
     }
@@ -128,11 +128,11 @@ class SecureScriptLoader private constructor(private val context: Context) {
     }
 
     /**
-     * Derive IV from device properties.
+     * Derive IV from device properties using SHA-256 (truncated to 16 bytes).
      */
     private fun deriveIv(): ByteArray {
         val ivSource = "${context.packageName}:${Build.FINGERPRINT}"
-        val digest = MessageDigest.getInstance("MD5")
+        val digest = MessageDigest.getInstance("SHA-256")
         return digest.digest(ivSource.toByteArray(Charsets.UTF_8)).copyOf(IV_SIZE)
     }
 

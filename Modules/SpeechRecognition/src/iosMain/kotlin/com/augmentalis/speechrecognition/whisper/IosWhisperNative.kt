@@ -34,7 +34,8 @@ import platform.Foundation.timeIntervalSince1970
 object IosWhisperNative {
 
     private const val TAG = "IosWhisperNative"
-    private const val DEFAULT_CONFIDENCE = 0.85f
+    /** Sentinel value indicating confidence is unavailable (native methods not linked) */
+    const val CONFIDENCE_UNAVAILABLE = -1f
 
     private val lock = SynchronizedObject()
 
@@ -157,6 +158,7 @@ object IosWhisperNative {
                 val segments = ArrayList<TranscriptionSegment>(segCount)
                 val text = StringBuilder()
                 var totalConfidence = 0f
+                var hasRealConfidence = false
 
                 for (i in 0 until segCount) {
                     val segText = com.augmentalis.speechrecognition.native.whisper.whisper_bridge_segment_text(nativePtr, i)
@@ -165,16 +167,22 @@ object IosWhisperNative {
                     val t1 = com.augmentalis.speechrecognition.native.whisper.whisper_bridge_segment_t1(nativePtr, i)
 
                     val segConfidence = getSegmentConfidenceUnsafe(nativePtr, i)
+                    val effectiveConfidence = if (segConfidence == CONFIDENCE_UNAVAILABLE) 0f else segConfidence
+                    if (segConfidence != CONFIDENCE_UNAVAILABLE) hasRealConfidence = true
 
-                    segments.add(TranscriptionSegment(segText, t0 * 10, t1 * 10, segConfidence))
+                    segments.add(TranscriptionSegment(segText, t0 * 10, t1 * 10, effectiveConfidence))
                     if (segText.isNotEmpty()) {
                         text.append(segText)
                         text.append(" ")
                     }
-                    totalConfidence += segConfidence
+                    totalConfidence += effectiveConfidence
                 }
 
-                val avgConfidence = if (segCount > 0) totalConfidence / segCount else 0f
+                // Report 0 confidence when token probabilities aren't available,
+                // letting the ConfidenceScorer classify this as REJECT/unknown
+                val avgConfidence = if (!hasRealConfidence) 0f
+                    else if (segCount > 0) totalConfidence / segCount
+                    else 0f
                 val detectedLang = com.augmentalis.speechrecognition.native.whisper.whisper_bridge_detected_language(nativePtr)
                     ?.toKString()
 
@@ -198,14 +206,14 @@ object IosWhisperNative {
     private fun getSegmentConfidenceUnsafe(contextPtr: Any?, segmentIndex: Int): Float {
         return try {
             val tokenCount = com.augmentalis.speechrecognition.native.whisper.whisper_bridge_segment_token_count(contextPtr, segmentIndex)
-            if (tokenCount <= 0) return DEFAULT_CONFIDENCE
+            if (tokenCount <= 0) return CONFIDENCE_UNAVAILABLE
             var probSum = 0f
             for (t in 0 until tokenCount) {
                 probSum += com.augmentalis.speechrecognition.native.whisper.whisper_bridge_segment_token_prob(contextPtr, segmentIndex, t)
             }
             probSum / tokenCount
         } catch (e: Exception) {
-            DEFAULT_CONFIDENCE
+            CONFIDENCE_UNAVAILABLE
         }
     }
 

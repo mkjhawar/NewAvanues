@@ -303,6 +303,7 @@ class DesktopWhisperEngine {
         // Step 3: Initialize VAD (from commonMain)
         vad = WhisperVAD(
             speechThreshold = 0f, // auto-calibrate
+            vadSensitivity = config.vadSensitivity,
             silenceTimeoutMs = config.silenceThresholdMs,
             minSpeechDurationMs = config.minSpeechDurationMs,
             maxSpeechDurationMs = config.maxChunkDurationMs,
@@ -470,10 +471,19 @@ class DesktopWhisperEngine {
                 )
             }
 
+            // Classify confidence using same thresholds as ConfidenceScorer
+            // (HIGH >0.85, MEDIUM 0.70-0.85, LOW 0.50-0.70, REJECT <0.50)
+            val confidenceLevel = when {
+                result.confidence >= 0.85f -> "HIGH"
+                result.confidence >= 0.70f -> "MEDIUM"
+                result.confidence >= 0.50f -> "LOW"
+                else -> "REJECT"
+            }
+
             val recognitionResult = RecognitionResult(
                 text = result.text,
                 originalText = result.text,
-                confidence = result.confidence,
+                confidence = result.confidence.coerceIn(0f, 1f),
                 isPartial = false,
                 isFinal = true,
                 engine = ENGINE_NAME,
@@ -486,7 +496,9 @@ class DesktopWhisperEngine {
                     "segmentCount" to result.segments.size,
                     "detectedLanguage" to (result.detectedLanguage ?: config.language),
                     "modelSize" to config.modelSize.name,
-                    "platform" to "desktop"
+                    "platform" to "desktop",
+                    "confidence_level" to confidenceLevel,
+                    "scoring_method" to "WHISPER"
                 )
             )
 

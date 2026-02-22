@@ -7,6 +7,20 @@
  *
  * Tests configuration validation, factory mapping from SpeechConfig,
  * URL building, and auth mode inference.
+ *
+ * IMPORTANT — validation short-circuit order in GoogleCloudConfig.validate():
+ *   1. projectId blank
+ *   2. language blank
+ *   3. API_KEY with no apiKey
+ *   4. requestTimeoutMs < 1000
+ *   5. connectTimeoutMs < 1000
+ *   6. maxRetries out of [0, 10]
+ *   7. silenceThresholdMs out of [100, 5000]
+ *
+ * All tests that verify rules 2, 4-7 MUST use authMode = FIREBASE_AUTH so
+ * that rule 3 (apiKey check) does not short-circuit before the intended rule
+ * is reached. Tests that rely on the default API_KEY + null apiKey will
+ * still produce isFailure, but for the wrong reason — hiding real bugs.
  */
 package com.augmentalis.speechrecognition.googlecloud
 
@@ -200,7 +214,7 @@ class GoogleCloudConfigTest {
     // ── Validation ───────────────────────────────────────────────
 
     @Test
-    fun `validate passes for minimal valid config`() {
+    fun `validate passes for minimal valid config with FIREBASE_AUTH`() {
         val config = GoogleCloudConfig(
             projectId = "valid-project",
             authMode = GoogleCloudAuthMode.FIREBASE_AUTH
@@ -220,6 +234,7 @@ class GoogleCloudConfigTest {
 
     @Test
     fun `validate fails for blank projectId`() {
+        // projectId check is first in the chain, so authMode does not matter here
         val config = GoogleCloudConfig(projectId = "")
         val result = config.validate()
         assertTrue(result.isFailure)
@@ -228,8 +243,17 @@ class GoogleCloudConfigTest {
 
     @Test
     fun `validate fails for blank language`() {
-        val config = GoogleCloudConfig(projectId = "proj", language = "")
-        assertTrue(config.validate().isFailure)
+        // Use FIREBASE_AUTH so the API key check does not short-circuit before
+        // the language check (language is second in validation order).
+        val config = GoogleCloudConfig(
+            projectId = "proj",
+            language = "",
+            authMode = GoogleCloudAuthMode.FIREBASE_AUTH
+        )
+        val result = config.validate()
+        assertTrue(result.isFailure)
+        // Actual message: "Language code cannot be blank"
+        assertTrue(result.exceptionOrNull()?.message?.contains("Language code") == true)
     }
 
     @Test
@@ -256,50 +280,122 @@ class GoogleCloudConfigTest {
 
     @Test
     fun `validate fails for request timeout below 1000ms`() {
-        val config = GoogleCloudConfig(projectId = "proj", requestTimeoutMs = 500)
-        assertTrue(config.validate().isFailure)
+        // FIREBASE_AUTH: bypasses API key check so timeout rule is evaluated.
+        val config = GoogleCloudConfig(
+            projectId = "proj",
+            authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+            requestTimeoutMs = 500
+        )
+        val result = config.validate()
+        assertTrue(result.isFailure)
+        // Actual message: "Request timeout must be at least 1000ms"
+        assertTrue(result.exceptionOrNull()?.message?.contains("Request timeout") == true)
     }
 
     @Test
     fun `validate fails for connect timeout below 1000ms`() {
-        val config = GoogleCloudConfig(projectId = "proj", connectTimeoutMs = 999)
-        assertTrue(config.validate().isFailure)
+        // FIREBASE_AUTH: bypasses API key check so connect timeout rule is evaluated.
+        val config = GoogleCloudConfig(
+            projectId = "proj",
+            authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+            connectTimeoutMs = 999
+        )
+        val result = config.validate()
+        assertTrue(result.isFailure)
+        // Actual message: "Connect timeout must be at least 1000ms"
+        assertTrue(result.exceptionOrNull()?.message?.contains("Connect timeout") == true)
     }
 
     @Test
     fun `validate fails for negative max retries`() {
-        val config = GoogleCloudConfig(projectId = "proj", maxRetries = -1)
-        assertTrue(config.validate().isFailure)
+        // FIREBASE_AUTH: bypasses API key check so maxRetries rule is evaluated.
+        val config = GoogleCloudConfig(
+            projectId = "proj",
+            authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+            maxRetries = -1
+        )
+        val result = config.validate()
+        assertTrue(result.isFailure)
+        // Actual message: "Max retries must be 0-10"
+        assertTrue(result.exceptionOrNull()?.message?.contains("Max retries") == true)
     }
 
     @Test
     fun `validate fails for max retries above 10`() {
-        val config = GoogleCloudConfig(projectId = "proj", maxRetries = 11)
-        assertTrue(config.validate().isFailure)
+        // FIREBASE_AUTH: bypasses API key check so maxRetries rule is evaluated.
+        val config = GoogleCloudConfig(
+            projectId = "proj",
+            authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+            maxRetries = 11
+        )
+        val result = config.validate()
+        assertTrue(result.isFailure)
+        // Actual message: "Max retries must be 0-10"
+        assertTrue(result.exceptionOrNull()?.message?.contains("Max retries") == true)
     }
 
     @Test
     fun `validate passes for max retries at boundaries`() {
-        assertTrue(GoogleCloudConfig(projectId = "proj", maxRetries = 0, authMode = GoogleCloudAuthMode.FIREBASE_AUTH).validate().isSuccess)
-        assertTrue(GoogleCloudConfig(projectId = "proj", maxRetries = 10, authMode = GoogleCloudAuthMode.FIREBASE_AUTH).validate().isSuccess)
+        assertTrue(
+            GoogleCloudConfig(
+                projectId = "proj",
+                authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+                maxRetries = 0
+            ).validate().isSuccess
+        )
+        assertTrue(
+            GoogleCloudConfig(
+                projectId = "proj",
+                authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+                maxRetries = 10
+            ).validate().isSuccess
+        )
     }
 
     @Test
     fun `validate fails for silence threshold below 100`() {
-        val config = GoogleCloudConfig(projectId = "proj", silenceThresholdMs = 50)
-        assertTrue(config.validate().isFailure)
+        // FIREBASE_AUTH: bypasses API key check so silenceThresholdMs rule is evaluated.
+        val config = GoogleCloudConfig(
+            projectId = "proj",
+            authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+            silenceThresholdMs = 50
+        )
+        val result = config.validate()
+        assertTrue(result.isFailure)
+        // Actual message: "Silence threshold must be 100-5000ms"
+        assertTrue(result.exceptionOrNull()?.message?.contains("Silence threshold") == true)
     }
 
     @Test
     fun `validate fails for silence threshold above 5000`() {
-        val config = GoogleCloudConfig(projectId = "proj", silenceThresholdMs = 6000)
-        assertTrue(config.validate().isFailure)
+        // FIREBASE_AUTH: bypasses API key check so silenceThresholdMs rule is evaluated.
+        val config = GoogleCloudConfig(
+            projectId = "proj",
+            authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+            silenceThresholdMs = 6000
+        )
+        val result = config.validate()
+        assertTrue(result.isFailure)
+        // Actual message: "Silence threshold must be 100-5000ms"
+        assertTrue(result.exceptionOrNull()?.message?.contains("Silence threshold") == true)
     }
 
     @Test
     fun `validate passes for silence threshold at boundaries`() {
-        assertTrue(GoogleCloudConfig(projectId = "proj", silenceThresholdMs = 100, authMode = GoogleCloudAuthMode.FIREBASE_AUTH).validate().isSuccess)
-        assertTrue(GoogleCloudConfig(projectId = "proj", silenceThresholdMs = 5000, authMode = GoogleCloudAuthMode.FIREBASE_AUTH).validate().isSuccess)
+        assertTrue(
+            GoogleCloudConfig(
+                projectId = "proj",
+                authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+                silenceThresholdMs = 100
+            ).validate().isSuccess
+        )
+        assertTrue(
+            GoogleCloudConfig(
+                projectId = "proj",
+                authMode = GoogleCloudAuthMode.FIREBASE_AUTH,
+                silenceThresholdMs = 5000
+            ).validate().isSuccess
+        )
     }
 
     // ── Enum Coverage ────────────────────────────────────────────
