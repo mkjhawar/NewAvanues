@@ -75,8 +75,10 @@ class GoogleCloudStreamingClient(
     private val gson = Gson()
     private val isStreaming = AtomicBoolean(false)
 
-    // Audio queue: mic thread produces, HTTP stream thread consumes
-    private val audioQueue = Channel<ByteArray>(Channel.UNLIMITED)
+    // Audio queue: mic thread produces, HTTP stream thread consumes.
+    // Declared as var because each streaming session rebuilds a fresh channel —
+    // a closed channel cannot be reused after stopStreaming() or session rotation.
+    private var audioQueue = Channel<ByteArray>(Channel.UNLIMITED)
 
     // Result flow
     private val _resultFlow = MutableSharedFlow<RecognitionResult>(replay = 1)
@@ -195,6 +197,12 @@ class GoogleCloudStreamingClient(
      * Opens the HTTP/2 connection, sends config, streams audio, reads results.
      */
     private suspend fun performStreamSession(speechMode: String) {
+        // Rebuild the audio queue for this session. The previous session's channel
+        // is closed by stopStreaming() or by the 4:50-min rotation in writeTo().
+        // A closed Channel cannot receive new items, so we must replace it before
+        // any sendAudioChunk() calls arrive for this new session.
+        audioQueue = Channel(Channel.UNLIMITED)
+
         val token = getAuthToken()
         val url = buildStreamingUrl()
 
@@ -407,9 +415,6 @@ class GoogleCloudStreamingClient(
             .coerceAtMost(RECONNECT_MAX_DELAY_MS)
         Log.i(TAG, "Reconnecting in ${delayMs}ms (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
         delay(delayMs)
-
-        // Recreate audio queue for fresh stream
-        // (old queue may be closed from previous session)
         return true
     }
 

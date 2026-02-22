@@ -2,7 +2,6 @@
  * HandlerResult.kt - Result type for handler execution
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-06
  *
  * Rich result type for handler execution with feedback support.

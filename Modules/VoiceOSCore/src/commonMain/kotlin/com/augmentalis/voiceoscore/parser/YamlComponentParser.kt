@@ -5,8 +5,6 @@
  * Converts YAML structure to ComponentDefinition instances.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2026-01-06
  * Refactored: 2026-01-08 (SRP extraction from ComponentFactory.kt)
  */

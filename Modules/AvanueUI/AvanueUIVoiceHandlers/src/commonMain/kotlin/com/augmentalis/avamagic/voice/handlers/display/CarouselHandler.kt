@@ -3,7 +3,6 @@
  *
  * Created: 2026-01-27 PST
  * Last Modified: 2026-01-28 PST
- * Author: VOS4 Development Team
  * Version: 2.0.0
  *
  * Purpose: Voice command handler for carousel/slider UI components

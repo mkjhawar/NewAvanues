@@ -3,7 +3,6 @@
  *
  * Created: 2026-01-27 23:00 PST
  * Last Modified: 2026-01-28 12:00 PST
- * Author: VOS4 Development Team
  * Version: 2.0.0
  *
  * Purpose: Voice command handler for navigation drawer operations

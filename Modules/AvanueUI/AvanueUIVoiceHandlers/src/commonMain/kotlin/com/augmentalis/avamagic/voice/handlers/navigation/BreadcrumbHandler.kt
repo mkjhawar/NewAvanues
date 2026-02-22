@@ -2,7 +2,6 @@
  * BreadcrumbHandler.kt - Voice handler for Breadcrumb navigation interactions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-28
  *
  * Purpose: Voice-driven breadcrumb navigation with hierarchical path traversal

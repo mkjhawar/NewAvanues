@@ -57,20 +57,6 @@
     <!-- WiFi control for voice commands (pre-Android 10 direct toggle) -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
-    <!-- System settings modification for brightness/rotation voice commands -->
-    <uses-permission android:name="android.permission.WRITE_SETTINGS"
-        tools:ignore="ProtectedPermissions" />
-
-    <!-- Bluetooth control for voice commands -->
-    <uses-permission android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
-    <!-- WiFi control for voice commands (pre-Android 10 direct toggle) -->
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -125,6 +111,33 @@
                 <data android:scheme="https" />
             </intent-filter>
         </activity>
+
+        <!-- VoiceAvanue launcher alias — voice-first entry point -->
+        <activity-alias
+            android:name=".VoiceAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="VoiceAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- WebAvanue launcher alias — browser entry point -->
+        <activity-alias
+            android:name=".WebAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="WebAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="launch_mode" android:value="webavanue" />
+        </activity-alias>
 
         <!-- Accessibility Service for VoiceOS -->
         <service
@@ -181,7 +194,7 @@
         <!-- Boot Receiver -->
         <receiver
             android:name=".service.BootReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />

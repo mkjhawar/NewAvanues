@@ -2,7 +2,6 @@
  * StepperHandler.kt - Voice handler for Stepper/Spinner/NumberPicker interactions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-28
  *
  * Purpose: Voice-driven numeric stepper control with absolute and relative value adjustments

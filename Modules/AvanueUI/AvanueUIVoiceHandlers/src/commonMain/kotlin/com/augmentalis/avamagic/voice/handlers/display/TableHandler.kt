@@ -3,7 +3,6 @@
  *
  * Created: 2026-01-27 00:00 PST
  * Last Modified: 2026-01-28 00:00 PST
- * Author: VOS4 Development Team
  * Version: 2.0.0
  *
  * Purpose: Voice command handler for DataGrid/Table navigation and manipulation

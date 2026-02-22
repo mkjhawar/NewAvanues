@@ -2,7 +2,6 @@
  * AvatarHandler.kt - Voice handler for Avatar/Profile image interactions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-28
  *
  * Purpose: Voice-driven avatar control for profile images and user representations

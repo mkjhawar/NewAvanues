@@ -84,6 +84,13 @@ class BrowserVoiceOSCallback(
     private val commandGenerator = VoiceCommandGenerator()
     private val commandGeneratorLock = Any()
 
+    // Stores the filtered match list from the most recent disambiguation prompt.
+    // Indexed by selectDisambiguationOption() so that user selection "1" maps to
+    // the first candidate in the disambiguation list, NOT to the first command in
+    // the full 500+ command list. Cleared after the user picks or cancels.
+    @Volatile
+    private var lastDisambiguationMatches: List<VoiceCommandGenerator.MatchResult> = emptyList()
+
     // JavaScript executor for web command execution (set by platform layer)
     @Volatile
     private var jsExecutor: IJavaScriptExecutor? = null
@@ -733,8 +740,12 @@ class BrowserVoiceOSCallback(
                 executeCommand(matches[0].command)
             }
             else -> {
-                // Multiple matches - need disambiguation
-                val options = matches.take(5).mapIndexed { index, match ->
+                // Multiple matches - need disambiguation.
+                // Save the trimmed candidate list so selectDisambiguationOption()
+                // can index into it instead of the full command list.
+                val candidates = matches.take(5)
+                lastDisambiguationMatches = candidates
+                val options = candidates.mapIndexed { index, match ->
                     DisambiguationOption(
                         index = index + 1,
                         text = match.command.fullText,
@@ -760,11 +771,15 @@ class BrowserVoiceOSCallback(
 
     /**
      * Select a disambiguation option and execute it.
+     *
+     * [index] is 1-based and refers to the candidate list shown in the most recent
+     * disambiguation prompt (up to 5 entries), NOT to the full command list.
      */
     suspend fun selectDisambiguationOption(index: Int) {
-        val matches = getAllCommands()
-        if (index in 1..matches.size) {
-            val command = matches[index - 1]
+        val candidates = lastDisambiguationMatches
+        if (index in 1..candidates.size) {
+            val command = candidates[index - 1].command
+            lastDisambiguationMatches = emptyList()
             executeCommand(command)
         }
     }

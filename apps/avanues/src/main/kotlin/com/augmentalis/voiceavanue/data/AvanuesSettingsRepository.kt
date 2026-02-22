@@ -122,7 +122,7 @@ class AvanuesSettingsRepository @Inject constructor(
             vosSftpRemotePath = prefs[KEY_VOS_SFTP_REMOTE_PATH] ?: "/vos",
             vosSftpKeyPath = prefs[KEY_VOS_SFTP_KEY_PATH] ?: "",
             vosLastSyncTime = prefs[KEY_VOS_LAST_SYNC_TIME],
-            vosSftpHostKeyMode = prefs[KEY_VOS_SFTP_HOST_KEY_MODE] ?: "no",
+            vosSftpHostKeyMode = prefs[KEY_VOS_SFTP_HOST_KEY_MODE] ?: "strict",
             vosAutoSyncEnabled = prefs[KEY_VOS_AUTO_SYNC_ENABLED] ?: false,
             vosSyncIntervalHours = prefs[KEY_VOS_SYNC_INTERVAL_HOURS] ?: 4
         )

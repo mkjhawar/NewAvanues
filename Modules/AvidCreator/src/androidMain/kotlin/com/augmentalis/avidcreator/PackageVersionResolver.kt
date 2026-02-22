@@ -3,7 +3,6 @@
  * Path: libraries/AvidCreator/src/main/java/com/augmentalis/uuidcreator/thirdparty/PackageVersionResolver.kt
  *
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-10-08
  *
  * Resolves Android app version information for UUID namespace isolation

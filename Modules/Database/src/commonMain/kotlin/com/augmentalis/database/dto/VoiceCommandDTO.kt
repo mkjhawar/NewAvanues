@@ -1,5 +1,4 @@
 // Author: Manoj Jhawar
-// Code-Reviewed-By: CCA
 
 package com.augmentalis.database.dto
 

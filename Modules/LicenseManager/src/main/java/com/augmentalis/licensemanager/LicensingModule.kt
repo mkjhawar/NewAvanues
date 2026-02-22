@@ -2,7 +2,6 @@
  * LicensingModule.kt - Direct implementation licensing manager
  * 
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-08-22
  */
 

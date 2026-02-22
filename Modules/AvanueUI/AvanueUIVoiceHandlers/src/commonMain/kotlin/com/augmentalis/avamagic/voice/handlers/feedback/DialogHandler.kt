@@ -2,7 +2,6 @@
  * DialogHandler.kt - Handles confirmation dialog interactions via voice
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-27
  *
  * Voice handler for confirmation dialogs and modal interactions.

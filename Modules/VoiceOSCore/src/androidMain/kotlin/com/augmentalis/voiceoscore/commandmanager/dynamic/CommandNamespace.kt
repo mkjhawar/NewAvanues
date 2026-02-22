@@ -5,7 +5,6 @@
  * Provides namespace-based isolation and scoping for commands
  *
  * @since VOS4 Week 4
- * @author VOS4 Development Team
  */
 
 package com.augmentalis.voiceoscore.commandmanager.dynamic

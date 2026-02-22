@@ -92,7 +92,7 @@ class DeveloperPreferencesRepository(
             endOfSpeechDelayMs = prefs[DeveloperPreferencesKeys.END_OF_SPEECH_DELAY_MS] ?: DeveloperSettings.DEFAULT_END_OF_SPEECH_DELAY_MS,
             partialResultIntervalMs = prefs[DeveloperPreferencesKeys.PARTIAL_RESULT_INTERVAL_MS] ?: DeveloperSettings.DEFAULT_PARTIAL_RESULT_INTERVAL_MS,
             confidenceThreshold = prefs[DeveloperPreferencesKeys.CONFIDENCE_THRESHOLD] ?: DeveloperSettings.DEFAULT_CONFIDENCE_THRESHOLD,
-            debugMode = prefs[DeveloperPreferencesKeys.DEBUG_MODE] ?: true,
+            debugMode = prefs[DeveloperPreferencesKeys.DEBUG_MODE] ?: false,
             verboseLogging = prefs[DeveloperPreferencesKeys.VERBOSE_LOGGING] ?: false,
             debugOverlay = prefs[DeveloperPreferencesKeys.DEBUG_OVERLAY] ?: false,
             scannerVerbosity = prefs[DeveloperPreferencesKeys.SCANNER_VERBOSITY] ?: 0,

@@ -2,7 +2,6 @@
  * ActionCategory.kt - Categories of action handlers
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-06
  *
  * Categorizes action handlers for priority-based dispatch.

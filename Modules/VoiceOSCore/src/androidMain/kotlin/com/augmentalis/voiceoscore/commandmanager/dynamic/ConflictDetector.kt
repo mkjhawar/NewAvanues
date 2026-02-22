@@ -5,7 +5,6 @@
  * Detects conflicts between commands and suggests resolutions
  *
  * @since VOS4 Week 4
- * @author VOS4 Development Team
  */
 
 package com.augmentalis.voiceoscore.commandmanager.dynamic

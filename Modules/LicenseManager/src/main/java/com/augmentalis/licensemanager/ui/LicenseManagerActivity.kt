@@ -2,7 +2,6 @@
  * LicenseManagerActivity.kt - Main UI for License Management
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * 
  * Provides comprehensive license management interface with glassmorphism design

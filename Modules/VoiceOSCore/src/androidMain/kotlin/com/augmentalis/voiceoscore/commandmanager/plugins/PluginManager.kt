@@ -13,7 +13,6 @@
  * LOC: ~1500 lines (core implementation)
  *
  * @since VOS4 Phase 4.1
- * @author VOS4 Development Team
  */
 
 package com.augmentalis.voiceoscore.commandmanager.plugins

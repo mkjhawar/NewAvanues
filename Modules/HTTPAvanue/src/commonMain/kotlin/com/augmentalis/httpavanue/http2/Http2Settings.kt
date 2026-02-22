@@ -5,7 +5,7 @@ package com.augmentalis.httpavanue.http2
  */
 data class Http2Settings(
     val headerTableSize: Int = 4096,
-    val enablePush: Boolean = true,
+    val enablePush: Boolean = false,
     val maxConcurrentStreams: Int = 100,
     val initialWindowSize: Int = 65535,
     val maxFrameSize: Int = 16384,

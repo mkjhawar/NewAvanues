@@ -3,7 +3,6 @@
  * Path: libraries/AvidCreator/src/main/java/com/augmentalis/avidcreator/database/repository/SQLDelightAvidRepositoryAdapter.kt
  *
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-11-25
  *
  * Repository adapter that bridges AvidCreator models to SQLDelight database.

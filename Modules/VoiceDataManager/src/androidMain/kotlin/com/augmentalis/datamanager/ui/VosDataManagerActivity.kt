@@ -2,7 +2,6 @@
  * VosDataManagerActivity.kt - Main UI for VOS Data Manager
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * Updated: 2026-01-28 - Migrated to KMP structure
  *

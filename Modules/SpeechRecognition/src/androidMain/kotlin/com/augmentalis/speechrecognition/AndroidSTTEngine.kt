@@ -3,7 +3,6 @@
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-01-27
  * Updated: 2026-01-18 - Migrated to KMP androidMain
  *

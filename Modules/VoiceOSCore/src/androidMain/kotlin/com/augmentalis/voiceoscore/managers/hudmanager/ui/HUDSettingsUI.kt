@@ -3,7 +3,6 @@
  * Path: /managers/HUDManager/src/main/java/com/augmentalis/hudmanager/ui/HUDSettingsUI.kt
  * 
  * Created: 2025-01-24
- * Author: VOS4 Development Team
  * Version: 1.0.0
  * 
  * Purpose: Compose UI for HUD settings configuration

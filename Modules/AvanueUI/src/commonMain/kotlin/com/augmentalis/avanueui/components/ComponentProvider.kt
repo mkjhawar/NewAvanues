@@ -2,7 +2,6 @@
  * ComponentProvider.kt - Abstraction layer for UI component implementations
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * Updated: 2026-01-19 (Migrated to AvaUI/Foundation)
  *

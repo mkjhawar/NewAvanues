@@ -41,6 +41,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +58,7 @@ import com.augmentalis.speechrecognition.whisper.LocalModelInfo
 import com.augmentalis.speechrecognition.whisper.ModelDownloadState
 import com.augmentalis.speechrecognition.whisper.WhisperModelManager
 import com.augmentalis.speechrecognition.whisper.WhisperModelSize
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Full-screen model management UI.
@@ -80,6 +81,7 @@ fun WhisperModelDownloadScreen(
     val recommended = remember { modelManager.recommendModel() }
     val downloadedModels = remember { modelManager.getDownloadedModels() }
     val availableStorageMB = remember { modelManager.getAvailableStorageMB() }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
@@ -166,7 +168,7 @@ fun WhisperModelDownloadScreen(
                     isRecommended = isRecommended,
                     isDownloading = isDownloading,
                     localInfo = downloadedModels.firstOrNull { it.modelSize == modelSize },
-                    onDownload = { /* trigger from ViewModel/coroutine scope */ },
+                    onDownload = { scope.launch { modelManager.downloadModel(modelSize) } },
                     onDelete = { modelManager.deleteModel(modelSize) },
                     onSelect = { onModelReady(modelSize) }
                 )
