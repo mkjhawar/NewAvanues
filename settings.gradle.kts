@@ -146,6 +146,7 @@ include(":Modules:PhotoAvanue")              // KMP camera + video capture (Came
 include(":Modules:RemoteCast")              // KMP screen casting/sharing (MediaProjection + ReplayKit)
 include(":Modules:HTTPAvanue")             // KMP HTTP/1.1 + HTTP/2 server, WebSocket, middleware (NanoHTTPD-inspired)
 include(":Modules:AnnotationAvanue")        // KMP whiteboard/signature/drawing canvas
+include(":Modules:NetAvanue")              // KMP P2P networking: signaling, capabilities, pairing (AvanueCentral client)
 
 // Rpc - Cross-platform RPC module
 include(":Modules:Rpc")                  // Root module with KMP + Wire
