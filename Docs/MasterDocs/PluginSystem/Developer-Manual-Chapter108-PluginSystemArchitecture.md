@@ -968,6 +968,41 @@ val handlers = registry.getHandlers()  // includes MyCustomHandler
 
 ---
 
+## Kotlin 2.1.0 K2 Compiler Compatibility
+
+The PluginSystem uses KMP expect/actual classes extensively for platform abstraction. Kotlin 2.1.0's K2 compiler introduced stricter requirements that affect this module:
+
+### Explicit Constructor Declarations
+
+K2 no longer synthesizes implicit default constructors for `expect class` declarations. All expect classes that are instantiated from common code must have explicit constructor declarations:
+
+```kotlin
+// Before (Kotlin <2.1.0) — implicit default constructor
+expect class FileIO {
+    fun readFileAsString(path: String): String
+}
+
+// After (Kotlin 2.1.0+) — explicit constructor required
+expect class FileIO() {
+    fun readFileAsString(path: String): String
+}
+```
+
+**Affected expect classes** (all updated 2026-02-23):
+
+| Class | Location | Purpose |
+|-------|----------|---------|
+| `FileIO` | `platform/FileIO.kt` | File system operations |
+| `ZipExtractor` | `platform/ZipExtractor.kt` | ZIP archive extraction |
+| `SignatureVerifier` | `security/SignatureVerifier.kt` | Cryptographic signature verification |
+| `PluginClassLoader` | `platform/PluginClassLoader.kt` | AVU DSL plugin loading |
+
+### Compiler Flag
+
+The module's `build.gradle.kts` includes `-Xexpect-actual-classes` in `compilerOptions.freeCompilerArgs` to enable full expect/actual class support with K2.
+
+---
+
 ## Summary
 
 The PluginSystem provides a secure, extensible framework for dynamic plugin loading across Android, iOS, and desktop platforms. Its 3-layer security model (signature verification, permission storage, sandbox isolation), comprehensive lifecycle management, asset system, and multi-format manifest support (YAML + AVU DSL) enable enterprise-grade plugin distribution while maintaining platform safety and user privacy.
@@ -981,4 +1016,4 @@ Author: Manoj Jhawar
 Chapter: 108
 Module: PluginSystem
 Created: 2026-02-22
-Last Updated: 2026-02-22
+Last Updated: 2026-02-23
