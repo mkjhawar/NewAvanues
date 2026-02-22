@@ -92,6 +92,9 @@ kotlin {
                 // Hilt
                 implementation(libs.hilt.android)
 
+                // LLM module (ApiKeyManager, LLMResult)
+                implementation(project(":Modules:AI:LLM"))
+
                 // TVM Runtime (local)
                 implementation(files("libs/tvm4j_core.jar"))
 

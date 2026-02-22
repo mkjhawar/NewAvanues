@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.library)
 }
 
@@ -43,8 +44,11 @@ kotlin {
                 // Kotlinx coroutines for async memory operations
                 implementation(libs.kotlinx.coroutines.core)
 
+                // Serialization for disk persistence
+                implementation(libs.kotlinx.serialization.json)
+
                 // DateTime for timestamps
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation(libs.kotlinx.datetime)
             }
         }
 
