@@ -58,7 +58,7 @@ kotlin {
 
 android {
     namespace = "com.avanueui.renderer.android"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26

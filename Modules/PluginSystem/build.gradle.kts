@@ -152,7 +152,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.magiccode.plugins"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 29  // Match VoiceOSCore requirement

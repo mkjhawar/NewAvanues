@@ -77,7 +77,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.license"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26

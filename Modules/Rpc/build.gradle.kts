@@ -106,7 +106,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.rpc"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24

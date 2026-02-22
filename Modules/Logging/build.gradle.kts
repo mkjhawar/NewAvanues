@@ -86,7 +86,7 @@ kotlin {
 
 android {
     namespace = "com.avanues.logging"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24

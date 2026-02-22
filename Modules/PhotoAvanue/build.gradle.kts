@@ -92,7 +92,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.photoavanue"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig { minSdk = 29 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

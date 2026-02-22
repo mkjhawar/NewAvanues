@@ -150,7 +150,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.avidcreator"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 29

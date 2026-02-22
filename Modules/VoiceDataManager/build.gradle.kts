@@ -77,7 +77,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.datamanager"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 29

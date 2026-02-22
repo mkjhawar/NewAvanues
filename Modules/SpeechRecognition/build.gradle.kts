@@ -242,7 +242,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.speechrecognition"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26

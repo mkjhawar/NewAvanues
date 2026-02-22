@@ -58,7 +58,7 @@ kotlin {
 
 android {
     namespace = "com.avanueui.components.input"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24

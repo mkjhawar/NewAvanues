@@ -26,7 +26,7 @@ if (googleServicesFile.exists()) {
 
 android {
     namespace = "com.augmentalis.ava"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.augmentalis.ava"

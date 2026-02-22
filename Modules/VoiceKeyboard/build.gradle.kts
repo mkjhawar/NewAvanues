@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.voicekeyboard"
-    compileSdk = 34  // Match project standard
+    compileSdk = 35  // Match project standard
 
     defaultConfig {
         minSdk = 29  // Android 10 (Q) - Project minimum

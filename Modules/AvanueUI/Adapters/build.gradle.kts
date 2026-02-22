@@ -88,7 +88,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.avanues.avamagic.components.adapters"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24

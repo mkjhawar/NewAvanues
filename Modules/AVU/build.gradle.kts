@@ -93,7 +93,7 @@ kotlin {
 
 android {
     namespace = "com.avanues.avu"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26

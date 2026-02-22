@@ -135,7 +135,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.chat"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)

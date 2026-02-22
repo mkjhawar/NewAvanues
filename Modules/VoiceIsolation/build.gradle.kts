@@ -104,7 +104,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.voiceisolation"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26

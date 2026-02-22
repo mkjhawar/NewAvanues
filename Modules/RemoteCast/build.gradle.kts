@@ -78,7 +78,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.remotecast"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig { minSdk = 29 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

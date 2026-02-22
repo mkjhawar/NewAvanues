@@ -95,7 +95,7 @@ kotlin {
 
 android {
     namespace = "com.avanueui.voice.handlers"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
