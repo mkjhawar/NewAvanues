@@ -38,6 +38,7 @@ kotlin {
                 api(project(":Modules:Foundation"))
                 api(project(":Modules:Logging"))
                 api(project(":Modules:HTTPAvanue"))
+                api(project(":Modules:NetAvanue"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
             }

@@ -51,7 +51,7 @@ import kotlinx.serialization.json.Json
 class CastWebSocketServer(
     private val port: Int = DEFAULT_PORT,
     private val scope: CoroutineScope,
-) {
+) : CastTransport {
     private val logger = LoggerFactory.getLogger("CastWSServer")
 
     private var httpServer: HttpServer? = null
@@ -59,10 +59,10 @@ class CastWebSocketServer(
     private val connectedClients = mutableListOf<WebSocket>()
 
     private val _isRunning = MutableStateFlow(false)
-    val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
+    override val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
 
     private val _clientConnected = MutableStateFlow(false)
-    val clientConnected: StateFlow<Boolean> = _clientConnected.asStateFlow()
+    override val clientConnected: StateFlow<Boolean> = _clientConnected.asStateFlow()
 
     private var frameCount = 0L
     private var startTimeMs = 0L
@@ -70,7 +70,7 @@ class CastWebSocketServer(
     /**
      * Starts the HTTP + WebSocket server. Safe to call multiple times.
      */
-    fun start() {
+    override fun start() {
         if (_isRunning.value) return
 
         val config = ServerConfig(port = port, http2Enabled = false)
@@ -113,7 +113,7 @@ class CastWebSocketServer(
      *
      * If no clients are connected, the frame is silently dropped.
      */
-    suspend fun sendFrame(frameData: CastFrameData) {
+    override suspend fun sendFrame(frameData: CastFrameData) {
         val clients = clientMutex.withLock { connectedClients.toList() }
         if (clients.isEmpty()) return
 
@@ -145,7 +145,7 @@ class CastWebSocketServer(
     /**
      * Stops the server and disconnects all clients.
      */
-    suspend fun stop() {
+    override suspend fun stop() {
         clientMutex.withLock {
             connectedClients.forEach { ws ->
                 try { ws.close() } catch (_: Exception) {}
