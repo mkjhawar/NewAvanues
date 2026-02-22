@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 
 /**
  * VoiceOS callback implementation for WebAvanue browser.
@@ -134,7 +135,7 @@ class BrowserVoiceOSCallback(
     private val sessionCache = mutableMapOf<String, CachedPage>()
 
     override fun onDOMScraped(result: DOMScrapeResult) {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val urlHash = computeUrlHash(result.url)
 
         // Cooldown + hash guard: if last scrape was < 2 seconds ago AND
@@ -198,7 +199,7 @@ class BrowserVoiceOSCallback(
             phrases = phrases,
             elementCount = result.elementCount,
             commandCount = count,
-            cachedAt = System.currentTimeMillis()
+            cachedAt = Clock.System.now().toEpochMilliseconds()
         )
         evictSessionCacheIfNeeded()
 
@@ -254,7 +255,7 @@ class BrowserVoiceOSCallback(
                 isWhitelisted = _isWhitelistedDomain.value
             )
 
-            println("VoiceOS: Session cache HIT for $url ($count commands, cached ${(System.currentTimeMillis() - cached.cachedAt) / 1000}s ago)")
+            println("VoiceOS: Session cache HIT for $url ($count commands, cached ${(Clock.System.now().toEpochMilliseconds() - cached.cachedAt) / 1000}s ago)")
 
             // Auto-clear the "from cache" indicator after a short delay
             scope.launch {
@@ -310,7 +311,7 @@ class BrowserVoiceOSCallback(
         if (_isWhitelistedDomain.value && whitelistRepository != null) {
             scope.launch {
                 val domain = _currentDomain.value
-                whitelistRepository.recordVisit(domain, System.currentTimeMillis())
+                whitelistRepository.recordVisit(domain, Clock.System.now().toEpochMilliseconds())
             }
         }
 
@@ -334,7 +335,7 @@ class BrowserVoiceOSCallback(
             webCommandRepository.incrementUsageByHash(
                 command.vosId,
                 domain,
-                System.currentTimeMillis()
+                Clock.System.now().toEpochMilliseconds()
             )
         }
 
@@ -428,7 +429,7 @@ class BrowserVoiceOSCallback(
 
         val domain = _currentDomain.value
         val url = result.url
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
 
         // Get URL pattern (path without query params)
         val urlPattern = extractUrlPattern(url)
@@ -475,7 +476,7 @@ class BrowserVoiceOSCallback(
      */
     private suspend fun persistWebsiteToDb(result: DOMScrapeResult, urlHash: String, commandCount: Int) {
         val repo = scrapedWebsiteRepository ?: return
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val existing = repo.getByUrlHash(urlHash)
 
         if (existing != null) {
@@ -526,7 +527,7 @@ class BrowserVoiceOSCallback(
 
         // Restore phrases from DB — these are interim until the fresh scrape arrives
         val phrases = savedCommands.map { it.commandText }
-        websiteRepo.updateAccessMetadata(urlHash, System.currentTimeMillis(), website.accessCount + 1)
+        websiteRepo.updateAccessMetadata(urlHash, Clock.System.now().toEpochMilliseconds(), website.accessCount + 1)
 
         _commandCount.value = savedCommands.size
         _activeWebPhrases.value = phrases

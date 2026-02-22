@@ -66,7 +66,7 @@ class DownloadViewModel(
                                 status = progress.status,
                                 filepath = progress.localPath,
                                 completedAt = if (progress.isComplete) kotlinx.datetime.Clock.System.now() else download.completedAt,
-                                lastProgressUpdate = System.currentTimeMillis()
+                                lastProgressUpdate = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                             )
 
                             if (download.status != progress.status) {

@@ -1,5 +1,7 @@
 package com.augmentalis.avacode.workflows
 
+import kotlinx.datetime.Clock
+
 /**
  * Workflow persistence for saving and restoring workflow state.
  *
@@ -27,7 +29,7 @@ object WorkflowPersistence {
                     "action" to transition.action.name
                 )
             },
-            "saved_at" to System.currentTimeMillis()
+            "saved_at" to Clock.System.now().toEpochMilliseconds()
         )
     }
 
@@ -90,7 +92,7 @@ object WorkflowPersistence {
             workflowId = instance.workflow.id,
             stepIndex = instance.currentStepIndex,
             data = instance.data.toMap(),
-            timestamp = System.currentTimeMillis()
+            timestamp = Clock.System.now().toEpochMilliseconds()
         )
     }
 

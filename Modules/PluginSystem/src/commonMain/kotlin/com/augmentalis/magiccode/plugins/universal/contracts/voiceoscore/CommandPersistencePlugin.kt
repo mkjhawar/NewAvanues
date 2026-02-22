@@ -14,6 +14,7 @@ import com.augmentalis.magiccode.plugins.universal.UniversalPlugin
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.CommandActionType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.Clock
 
 /**
  * Command Persistence Plugin contract for command storage.
@@ -374,7 +375,7 @@ sealed class CommandChangeEvent {
     data class Upserted(
         val command: QuantizedCommand,
         val isNew: Boolean,
-        override val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long = Clock.System.now().toEpochMilliseconds()
     ) : CommandChangeEvent()
 
     /**
@@ -383,7 +384,7 @@ sealed class CommandChangeEvent {
     data class Deleted(
         val avid: String,
         val packageName: String?,
-        override val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long = Clock.System.now().toEpochMilliseconds()
     ) : CommandChangeEvent()
 
     /**
@@ -394,7 +395,7 @@ sealed class CommandChangeEvent {
         val updatedCount: Int,
         val deletedCount: Int,
         val packageName: String?,
-        override val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long = Clock.System.now().toEpochMilliseconds()
     ) : CommandChangeEvent()
 
     /**
@@ -402,7 +403,7 @@ sealed class CommandChangeEvent {
      */
     data class Cleared(
         val packageName: String?,
-        override val timestamp: Long = System.currentTimeMillis()
+        override val timestamp: Long = Clock.System.now().toEpochMilliseconds()
     ) : CommandChangeEvent()
 }
 

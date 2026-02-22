@@ -3,6 +3,7 @@ package com.augmentalis.magiccode.plugins.assets
 import com.augmentalis.magiccode.plugins.core.PluginLog
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.Clock
 
 /**
  * Thread-safe cache for resolved plugin assets with LRU eviction.
@@ -113,7 +114,7 @@ class AssetCache(private val maxCapacity: Int = 100) {
 
             cache[uri] = CacheEntry(
                 handle = handle,
-                timestamp = System.currentTimeMillis()
+                timestamp = Clock.System.now().toEpochMilliseconds()
             )
             PluginLog.d(TAG, "Cached asset: $uri")
         }
@@ -282,7 +283,7 @@ class AssetCache(private val maxCapacity: Int = 100) {
         }
 
         val oldestTimestamp = cache.values.minOfOrNull { it.timestamp } ?: return 0
-        return System.currentTimeMillis() - oldestTimestamp
+        return Clock.System.now().toEpochMilliseconds() - oldestTimestamp
     }
 
     /**

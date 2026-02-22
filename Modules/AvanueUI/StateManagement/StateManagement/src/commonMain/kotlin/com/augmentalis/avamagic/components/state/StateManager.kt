@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.datetime.Clock
 
 /**
  * Base interface for reactive state management.
@@ -93,7 +94,7 @@ fun <T> MutableState<T>.asReadOnly(): State<T> {
  */
 data class StateSnapshot<T>(
     val value: T,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = Clock.System.now().toEpochMilliseconds()
 )
 
 /**

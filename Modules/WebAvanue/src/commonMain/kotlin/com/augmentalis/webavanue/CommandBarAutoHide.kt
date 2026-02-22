@@ -2,6 +2,7 @@ package com.augmentalis.webavanue
 
 import androidx.compose.runtime.*
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
 
 /**
  * CommandBarAutoHide - Manages auto-hide behavior for command bar
@@ -38,7 +39,7 @@ fun rememberCommandBarAutoHide(
             delay(delayMs)
             // Only hide if no interaction occurred during delay
             if (state.lastInteractionTime == 0L ||
-                (System.currentTimeMillis() - state.lastInteractionTime) >= delayMs) {
+                (Clock.System.now().toEpochMilliseconds() - state.lastInteractionTime) >= delayMs) {
                 onHide()
             }
         }
@@ -60,7 +61,7 @@ class CommandBarAutoHideState {
      * Call this when user interacts with command bar to reset timer
      */
     fun recordInteraction() {
-        lastInteractionTime = System.currentTimeMillis()
+        lastInteractionTime = Clock.System.now().toEpochMilliseconds()
     }
 
     /**

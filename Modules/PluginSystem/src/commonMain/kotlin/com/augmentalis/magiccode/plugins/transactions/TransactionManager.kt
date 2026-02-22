@@ -4,6 +4,7 @@ import com.augmentalis.magiccode.plugins.core.*
 import com.augmentalis.magiccode.plugins.platform.FileIO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.Clock
 
 /**
  * Transaction manager for atomic plugin operations.
@@ -110,7 +111,7 @@ class TransactionManager(
                 transactionId = transactionId,
                 pluginId = pluginId,
                 type = type,
-                timestamp = System.currentTimeMillis(),
+                timestamp = Clock.System.now().toEpochMilliseconds(),
                 state = currentState,
                 filesystemSnapshot = filesystemSnapshot,
                 registrySnapshot = registrySnapshot,
@@ -459,7 +460,7 @@ class TransactionManager(
      * Generate unique transaction ID.
      */
     private fun generateTransactionId(pluginId: String, type: TransactionType): String {
-        return "${pluginId}_${type.name}_${System.currentTimeMillis()}"
+        return "${pluginId}_${type.name}_${Clock.System.now().toEpochMilliseconds()}"
     }
 
     /**
@@ -489,7 +490,7 @@ class TransactionManager(
      * @return Number of checkpoints cleaned up
      */
     suspend fun cleanupStaleCheckpoints(maxAgeMs: Long = 3600000L): Int {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val staleCheckpoints = mutableListOf<Checkpoint>()
 
         mutex.withLock {
