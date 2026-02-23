@@ -14,16 +14,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cockpit.model.CockpitFrame
+import com.augmentalis.cockpit.model.DashboardState
 import com.augmentalis.cockpit.model.LayoutMode
 
 /**
  * Layout engine that switches rendering strategy based on the active [LayoutMode].
  * Each mode arranges the given frames differently within the available space.
  *
- * Supports 13 layout modes including the original 10 plus:
+ * Supports 14 layout modes:
+ * - [LayoutMode.DASHBOARD]: Home/launcher view with module tiles and recent sessions
  * - [LayoutMode.CAROUSEL]: Swipe-through with 3D perspective scaling
  * - [LayoutMode.SPATIAL_DICE]: 4 corners + 1 center (dice-5 pattern)
  * - [LayoutMode.GALLERY]: Media-only filtered responsive grid
+ * - Plus 10 frame-based layouts (Freeform, Grid, Split, Cockpit, etc.)
  *
  * @param layoutMode Current layout mode for the session.
  * @param frames All frames in the session (sorted by z-order for freeform).
@@ -35,6 +38,10 @@ import com.augmentalis.cockpit.model.LayoutMode
  * @param onFrameMinimize Called when user minimizes a frame.
  * @param onFrameMaximize Called when user maximizes/restores a frame.
  * @param frameContent Composable slot that renders the actual content for a given frame.
+ * @param dashboardState State for Dashboard mode (recent sessions, modules, templates).
+ * @param onModuleClick Called when a module tile is clicked in Dashboard mode.
+ * @param onSessionClick Called when a recent session card is clicked in Dashboard mode.
+ * @param onTemplateClick Called when a template tile is clicked in Dashboard mode.
  * @param modifier Layout modifier.
  */
 @Composable
@@ -49,11 +56,23 @@ fun LayoutEngine(
     onFrameMinimize: (String) -> Unit,
     onFrameMaximize: (String) -> Unit,
     frameContent: @Composable (CockpitFrame) -> Unit,
+    dashboardState: DashboardState = DashboardState(),
+    onModuleClick: (String) -> Unit = {},
+    onSessionClick: (String) -> Unit = {},
+    onTemplateClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val visibleFrames = frames.filter { it.state.isVisible && !it.state.isMinimized }
 
     when (layoutMode) {
+        LayoutMode.DASHBOARD -> DashboardLayout(
+            dashboardState = dashboardState,
+            onModuleClick = onModuleClick,
+            onSessionClick = onSessionClick,
+            onTemplateClick = onTemplateClick,
+            modifier = modifier
+        )
+
         LayoutMode.FREEFORM -> FreeformLayout(
             frames = frames,
             selectedFrameId = selectedFrameId,

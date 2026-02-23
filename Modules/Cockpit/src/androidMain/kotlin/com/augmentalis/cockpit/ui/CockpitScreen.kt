@@ -46,6 +46,7 @@ fun CockpitScreen(
     val frames by viewModel.frames.collectAsState()
     val selectedFrameId by viewModel.selectedFrameId.collectAsState()
     val layoutMode by viewModel.layoutMode.collectAsState()
+    val dashboardState by viewModel.dashboardState.collectAsState()
 
     // Device-adaptive layout filtering
     val displayProfile = AvanueTheme.displayProfile
@@ -110,6 +111,10 @@ fun CockpitScreen(
         },
         spatialController = spatialController,
         availableLayoutModes = availableModes,
+        dashboardState = dashboardState,
+        onModuleClick = { viewModel.launchModule(it) },
+        onSessionClick = { viewModel.resumeSession(it) },
+        onTemplateClick = { viewModel.launchTemplate(it) },
         modifier = modifier
     )
 }
@@ -182,8 +187,8 @@ private fun executeCockpitCommand(
             HandlerResult.success("Switched to workflow layout")
         }
         CommandActionType.LAYOUT_PICKER -> {
-            // Cycle through available layout modes
-            val modes = LayoutMode.entries
+            // Cycle through frame-based layout modes (skip DASHBOARD — it's a separate home view)
+            val modes = LayoutMode.FRAME_LAYOUTS.toList()
             val currentIndex = modes.indexOf(viewModel.layoutMode.value)
             val nextMode = modes[(currentIndex + 1) % modes.size]
             viewModel.setLayoutMode(nextMode)

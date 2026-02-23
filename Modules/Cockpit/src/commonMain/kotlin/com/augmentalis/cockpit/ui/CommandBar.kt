@@ -288,6 +288,7 @@ fun layoutModeIcon(mode: LayoutMode): ImageVector = when (mode) {
  * Human-readable label for each layout mode.
  */
 fun layoutModeLabel(mode: LayoutMode): String = when (mode) {
+    LayoutMode.DASHBOARD -> "Dashboard"
     LayoutMode.FREEFORM -> "Freeform"
     LayoutMode.GRID -> "Grid"
     LayoutMode.SPLIT_LEFT -> "Split Left"

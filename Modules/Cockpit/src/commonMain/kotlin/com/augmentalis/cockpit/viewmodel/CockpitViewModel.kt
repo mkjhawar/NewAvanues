@@ -1,8 +1,11 @@
 package com.augmentalis.cockpit.viewmodel
 
 import com.augmentalis.cockpit.CockpitConstants
+import com.augmentalis.cockpit.model.BuiltInTemplates
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.CockpitSession
+import com.augmentalis.cockpit.model.DashboardModuleRegistry
+import com.augmentalis.cockpit.model.DashboardState
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.FrameState
 import com.augmentalis.cockpit.model.LayoutMode
@@ -15,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlin.random.Random
@@ -59,19 +63,35 @@ class CockpitViewModel(
     private var autoSaveJob: Job? = null
     private var nextZOrder = 0
 
+    private val _dashboardState = MutableStateFlow(DashboardState())
+    val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
+
+    init {
+        // Derive dashboard state from sessions + active session
+        scope.launch {
+            combine(_sessions, _activeSession) { sessions, active ->
+                DashboardState(
+                    recentSessions = sessions.take(8),
+                    availableModules = DashboardModuleRegistry.allModules,
+                    activeSession = active,
+                    templates = BuiltInTemplates.ALL,
+                    isLoading = false
+                )
+            }.collect { _dashboardState.value = it }
+        }
+    }
+
     /**
-     * Initialize by loading existing sessions or creating a default one.
+     * Initialize by loading existing sessions and showing the Dashboard.
+     * The Dashboard is the home view; the user selects a session from there
+     * or launches a new module.
      */
     fun initialize() {
         scope.launch {
             val existingSessions = repository.getSessions()
             _sessions.value = existingSessions
-
-            val defaultSession = existingSessions.firstOrNull { it.isDefault }
-                ?: existingSessions.firstOrNull()
-                ?: createSession("Quick View", isDefault = true)
-
-            loadSession(defaultSession.id)
+            // Start on the Dashboard — no session loaded yet
+            _layoutMode.value = LayoutMode.DASHBOARD
         }
     }
 
@@ -309,6 +329,97 @@ class CockpitViewModel(
                 }
             }
         }
+    }
+
+    // ── Dashboard Operations ──────────────────────────────────────────
+
+    /**
+     * Launch a module from the Dashboard — creates a new session named after
+     * the module, adds a single frame with the corresponding content type,
+     * and switches to FULLSCREEN layout.
+     */
+    fun launchModule(moduleId: String) {
+        val module = DashboardModuleRegistry.findById(moduleId) ?: return
+        scope.launch {
+            val session = createSession(module.displayName)
+            loadSession(session.id)
+
+            val content = contentForType(module.contentType)
+            if (content != null) {
+                addFrame(content, module.displayName)
+            }
+            setLayoutMode(LayoutMode.FULLSCREEN)
+        }
+    }
+
+    /**
+     * Resume a session from the Dashboard by loading it and switching
+     * to its stored layout mode.
+     */
+    fun resumeSession(sessionId: String) {
+        scope.launch {
+            loadSession(sessionId)
+        }
+    }
+
+    /**
+     * Launch a session from a template — creates a new session with the
+     * template's layout mode and pre-configured frames.
+     */
+    fun launchTemplate(templateId: String) {
+        val template = BuiltInTemplates.ALL.firstOrNull { it.id == templateId } ?: return
+        scope.launch {
+            val session = createSession(template.name)
+            loadSession(session.id)
+            setLayoutMode(template.layoutMode)
+
+            for (def in template.frameDefinitions) {
+                val content = contentForType(def.contentType)
+                if (content != null) {
+                    addFrame(content, def.title)
+                }
+            }
+        }
+    }
+
+    /**
+     * Navigate back to the Dashboard — saves the current session and
+     * switches to DASHBOARD layout mode.
+     */
+    fun returnToDashboard() {
+        scope.launch {
+            save()
+            _activeSession.value = null
+            _frames.value = emptyList()
+            _selectedFrameId.value = null
+            _layoutMode.value = LayoutMode.DASHBOARD
+            // Refresh session list for dashboard display
+            _sessions.value = repository.getSessions()
+        }
+    }
+
+    /**
+     * Map a content type string to its corresponding [FrameContent] instance.
+     */
+    private fun contentForType(contentType: String): FrameContent? = when (contentType) {
+        FrameContent.TYPE_WEB, "web" -> FrameContent.Web()
+        FrameContent.TYPE_PDF, "pdf" -> FrameContent.Pdf()
+        FrameContent.TYPE_IMAGE, "image" -> FrameContent.Image()
+        FrameContent.TYPE_VIDEO, "video" -> FrameContent.Video()
+        FrameContent.TYPE_NOTE, "note" -> FrameContent.Note()
+        FrameContent.TYPE_CAMERA, "camera" -> FrameContent.Camera()
+        FrameContent.TYPE_VOICE_NOTE, "voice_note" -> FrameContent.VoiceNote()
+        FrameContent.TYPE_FORM, "form" -> FrameContent.Form()
+        FrameContent.TYPE_VOICE, "voice" -> FrameContent.Voice()
+        FrameContent.TYPE_MAP, "map" -> FrameContent.Map()
+        FrameContent.TYPE_WHITEBOARD, "whiteboard" -> FrameContent.Whiteboard()
+        FrameContent.TYPE_TERMINAL, "terminal" -> FrameContent.Terminal()
+        FrameContent.TYPE_AI_SUMMARY, "ai_summary" -> FrameContent.AiSummary()
+        FrameContent.TYPE_SCREEN_CAST, "screencast", "screen_cast" -> FrameContent.ScreenCast()
+        FrameContent.TYPE_WIDGET, "widget" -> FrameContent.Widget()
+        FrameContent.TYPE_EXTERNAL_APP, "external_app" -> FrameContent.ExternalApp()
+        "cursor" -> null // Cursor control is handled via VoiceOSCore, not a frame content
+        else -> null
     }
 
     /**

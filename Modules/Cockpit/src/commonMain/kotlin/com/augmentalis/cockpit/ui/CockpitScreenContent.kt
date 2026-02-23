@@ -33,8 +33,11 @@ import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cockpit.model.CommandBarState
 import com.augmentalis.cockpit.model.CockpitFrame
+import com.augmentalis.cockpit.model.DashboardState
 import com.augmentalis.cockpit.model.FrameContent
+import com.augmentalis.avanueui.display.GlassDisplayMode
 import com.augmentalis.cockpit.model.LayoutMode
+import com.augmentalis.cockpit.spatial.PseudoSpatialController
 import com.augmentalis.cockpit.spatial.SpatialViewportController
 
 /**
@@ -66,7 +69,13 @@ fun CockpitScreenContent(
     onAddFrame: (FrameContent, String) -> Unit,
     frameContent: @Composable (CockpitFrame) -> Unit,
     spatialController: SpatialViewportController? = null,
+    pseudoSpatialController: PseudoSpatialController? = null,
+    glassDisplayMode: GlassDisplayMode = GlassDisplayMode.FLAT_SCREEN,
     availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
+    dashboardState: DashboardState = DashboardState(),
+    onModuleClick: (String) -> Unit = {},
+    onSessionClick: (String) -> Unit = {},
+    onTemplateClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -118,7 +127,16 @@ fun CockpitScreenContent(
         )
 
         // Main content area
-        if (frames.isEmpty()) {
+        if (layoutMode == LayoutMode.DASHBOARD) {
+            // Dashboard takes over the full content area — no frames rendered
+            DashboardLayout(
+                dashboardState = dashboardState,
+                onModuleClick = onModuleClick,
+                onSessionClick = onSessionClick,
+                onTemplateClick = onTemplateClick,
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            )
+        } else if (frames.isEmpty()) {
             EmptySessionView(
                 onAddFrame = { commandBarState = CommandBarState.ADD_FRAME },
                 modifier = Modifier.weight(1f).fillMaxWidth()
@@ -126,27 +144,11 @@ fun CockpitScreenContent(
         } else {
             val layoutModifier = Modifier.weight(1f).fillMaxWidth()
             val isSpatial = layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null
+            val isPseudoSpatial = pseudoSpatialController != null &&
+                glassDisplayMode == GlassDisplayMode.FLAT_SCREEN
 
-            if (isSpatial) {
-                SpatialCanvas(
-                    controller = spatialController!!,
-                    modifier = layoutModifier
-                ) {
-                    LayoutEngine(
-                        layoutMode = layoutMode,
-                        frames = frames,
-                        selectedFrameId = selectedFrameId,
-                        onFrameSelected = onFrameSelected,
-                        onFrameMoved = onFrameMoved,
-                        onFrameResized = onFrameResized,
-                        onFrameClose = onFrameClose,
-                        onFrameMinimize = onFrameMinimize,
-                        onFrameMaximize = onFrameMaximize,
-                        frameContent = frameContent,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            } else {
+            // Layout rendering content (shared across all wrapping modes)
+            val layoutContent: @Composable () -> Unit = {
                 LayoutEngine(
                     layoutMode = layoutMode,
                     frames = frames,
@@ -158,6 +160,46 @@ fun CockpitScreenContent(
                     onFrameMinimize = onFrameMinimize,
                     onFrameMaximize = onFrameMaximize,
                     frameContent = frameContent,
+                    dashboardState = dashboardState,
+                    onModuleClick = onModuleClick,
+                    onSessionClick = onSessionClick,
+                    onTemplateClick = onTemplateClick,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            if (isSpatial) {
+                // Glass/headset: true spatial viewport panning via head tracking
+                SpatialCanvas(
+                    controller = spatialController!!,
+                    modifier = layoutModifier
+                ) {
+                    layoutContent()
+                }
+            } else if (isPseudoSpatial) {
+                // Flat screen: parallax depth illusion with gyroscope + HUD aesthetic
+                PseudoSpatialCanvas(
+                    controller = pseudoSpatialController!!,
+                    modifier = layoutModifier,
+                    foregroundContent = layoutContent
+                )
+            } else {
+                // No spatial effects — render layout directly
+                LayoutEngine(
+                    layoutMode = layoutMode,
+                    frames = frames,
+                    selectedFrameId = selectedFrameId,
+                    onFrameSelected = onFrameSelected,
+                    onFrameMoved = onFrameMoved,
+                    onFrameResized = onFrameResized,
+                    onFrameClose = onFrameClose,
+                    onFrameMinimize = onFrameMinimize,
+                    onFrameMaximize = onFrameMaximize,
+                    frameContent = frameContent,
+                    dashboardState = dashboardState,
+                    onModuleClick = onModuleClick,
+                    onSessionClick = onSessionClick,
+                    onTemplateClick = onTemplateClick,
                     modifier = layoutModifier
                 )
             }
