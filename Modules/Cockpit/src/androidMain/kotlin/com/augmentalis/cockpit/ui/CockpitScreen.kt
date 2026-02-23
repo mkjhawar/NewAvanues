@@ -13,7 +13,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import android.util.Log
+import com.augmentalis.avanueui.theme.AppearanceMode
+import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.theme.MaterialMode
 import com.augmentalis.cockpit.content.ContentRenderer
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.LayoutMode
@@ -50,6 +53,7 @@ fun CockpitScreen(
     val selectedFrameId by viewModel.selectedFrameId.collectAsState()
     val layoutMode by viewModel.layoutMode.collectAsState()
     val dashboardState by viewModel.dashboardState.collectAsState()
+    val backgroundSceneState by viewModel.backgroundScene.collectAsState()
 
     // Device-adaptive layout filtering
     val displayProfile = AvanueTheme.displayProfile
@@ -122,7 +126,16 @@ fun CockpitScreen(
             )
         },
         spatialController = spatialController,
-        backgroundScene = BackgroundScene.GRADIENT,
+        backgroundScene = backgroundSceneState,
+        currentPalette = AvanueColorPalette.DEFAULT,
+        currentMaterial = MaterialMode.DEFAULT,
+        currentAppearance = AppearanceMode.DEFAULT,
+        currentPresetId = null,
+        onPaletteChanged = {},
+        onMaterialChanged = {},
+        onAppearanceChanged = {},
+        onPresetApplied = {},
+        onBackgroundSceneChanged = { viewModel.setBackgroundScene(it) },
         availableLayoutModes = availableModes,
         dashboardState = dashboardState,
         onModuleClick = { viewModel.launchModule(it) },

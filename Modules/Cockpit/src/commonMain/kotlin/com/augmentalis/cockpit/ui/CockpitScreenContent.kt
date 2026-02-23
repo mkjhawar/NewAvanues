@@ -30,7 +30,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.augmentalis.avanueui.theme.AppearanceMode
+import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.theme.MaterialMode
+import com.augmentalis.avanueui.theme.ThemePreset
 import com.augmentalis.cockpit.model.CommandBarState
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.DashboardState
@@ -74,6 +78,15 @@ fun CockpitScreenContent(
     pseudoSpatialController: PseudoSpatialController? = null,
     glassDisplayMode: GlassDisplayMode = GlassDisplayMode.FLAT_SCREEN,
     backgroundScene: BackgroundScene = BackgroundScene.GRADIENT,
+    currentPalette: AvanueColorPalette = AvanueColorPalette.DEFAULT,
+    currentMaterial: MaterialMode = MaterialMode.DEFAULT,
+    currentAppearance: AppearanceMode = AppearanceMode.DEFAULT,
+    currentPresetId: String? = null,
+    onPaletteChanged: (AvanueColorPalette) -> Unit = {},
+    onMaterialChanged: (MaterialMode) -> Unit = {},
+    onAppearanceChanged: (AppearanceMode) -> Unit = {},
+    onPresetApplied: (ThemePreset) -> Unit = {},
+    onBackgroundSceneChanged: (BackgroundScene) -> Unit = {},
     availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
     dashboardState: DashboardState = DashboardState(),
     onModuleClick: (String) -> Unit = {},
@@ -86,6 +99,7 @@ fun CockpitScreenContent(
 ) {
     val colors = AvanueTheme.colors
     var commandBarState by remember { mutableStateOf(CommandBarState.MAIN) }
+    var showThemePanel by remember { mutableStateOf(false) }
 
     // Auto-switch command bar to content-specific state when frame selection changes
     val selectedFrame = frames.firstOrNull { it.id == selectedFrameId }
@@ -130,7 +144,7 @@ fun CockpitScreenContent(
             },
             actions = {
                 if (layoutMode == LayoutMode.DASHBOARD) {
-                    IconButton(onClick = onNavigateToSettings) {
+                    IconButton(onClick = { showThemePanel = !showThemePanel }) {
                         Icon(
                             Icons.Default.Settings,
                             contentDescription = "Voice: click Settings",
@@ -249,6 +263,24 @@ fun CockpitScreenContent(
             availableLayoutModes = availableLayoutModes
         )
     } // end Column
+
+        // Theme settings panel overlay
+        if (showThemePanel) {
+            ThemeSettingsPanel(
+                currentPalette = currentPalette,
+                currentMaterial = currentMaterial,
+                currentAppearance = currentAppearance,
+                currentPresetId = currentPresetId,
+                currentBackgroundScene = backgroundScene,
+                onPaletteChanged = onPaletteChanged,
+                onMaterialChanged = onMaterialChanged,
+                onAppearanceChanged = onAppearanceChanged,
+                onPresetApplied = onPresetApplied,
+                onBackgroundSceneChanged = onBackgroundSceneChanged,
+                onDismiss = { showThemePanel = false },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     } // end Box
 }
 

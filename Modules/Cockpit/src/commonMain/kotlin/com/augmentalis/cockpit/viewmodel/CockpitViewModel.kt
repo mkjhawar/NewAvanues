@@ -2,6 +2,7 @@ package com.augmentalis.cockpit.viewmodel
 
 import com.augmentalis.cockpit.CockpitConstants
 import com.augmentalis.cockpit.model.BuiltInTemplates
+import com.augmentalis.cockpit.ui.BackgroundScene
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.CockpitSession
 import com.augmentalis.cockpit.model.DashboardModuleRegistry
@@ -68,6 +69,9 @@ class CockpitViewModel(
     private var activeLoadJob: Job? = null
     private var dashboardCollectionJob: Job? = null
     private var nextZOrder = 0
+
+    private val _backgroundScene = MutableStateFlow(BackgroundScene.GRADIENT)
+    val backgroundScene: StateFlow<BackgroundScene> = _backgroundScene.asStateFlow()
 
     private val _dashboardState = MutableStateFlow(DashboardState())
     val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
@@ -460,6 +464,13 @@ class CockpitViewModel(
             // Refresh session list for dashboard display
             _sessions.value = repository.getSessions()
         }
+    }
+
+    /**
+     * Set the background scene for the Cockpit display.
+     */
+    fun setBackgroundScene(scene: BackgroundScene) {
+        _backgroundScene.value = scene
     }
 
     /**
