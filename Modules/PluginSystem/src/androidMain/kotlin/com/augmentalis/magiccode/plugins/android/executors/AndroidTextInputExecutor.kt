@@ -26,6 +26,8 @@ import com.augmentalis.magiccode.plugins.builtin.TextInputExecutor
  *
  * @param serviceRegistry Registry to retrieve AccessibilityService from
  */
+// recycle() deprecated API 34+ (no-op on 34+, still needed for minSdk 29)
+@Suppress("DEPRECATION")
 class AndroidTextInputExecutor(
     private val serviceRegistry: ServiceRegistry
 ) : TextInputExecutor {

@@ -34,6 +34,8 @@ import kotlin.coroutines.resume
  *
  * @param serviceRegistry Registry to retrieve AccessibilityService from
  */
+// recycle() deprecated API 34+ (no-op on 34+, still needed for minSdk 29)
+@Suppress("DEPRECATION")
 class AndroidUIInteractionExecutor(
     private val serviceRegistry: ServiceRegistry
 ) : UIInteractionExecutor {
@@ -550,7 +552,3 @@ class AndroidUIInteractionExecutor(
         private const val DOUBLE_CLICK_INTERVAL_MS = 100L
     }
 }
-
-// Extension properties for Bounds
-private val Bounds.centerX: Int get() = (left + right) / 2
-private val Bounds.centerY: Int get() = (top + bottom) / 2

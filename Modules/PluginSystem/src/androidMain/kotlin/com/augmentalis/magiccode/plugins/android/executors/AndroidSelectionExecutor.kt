@@ -30,6 +30,8 @@ import kotlinx.coroutines.withContext
  *
  * @param serviceRegistry Registry to retrieve AccessibilityService from
  */
+// recycle() deprecated API 34+ (no-op on 34+, still needed for minSdk 29)
+@Suppress("DEPRECATION")
 class AndroidSelectionExecutor(
     private val serviceRegistry: ServiceRegistry
 ) : ISelectionExecutor {

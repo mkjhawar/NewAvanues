@@ -1,3 +1,5 @@
+@file:OptIn(FlowPreview::class)
+
 /**
  * LiveDataFlowBridge.kt - Bridge utilities for LiveData to Flow conversion
  *
@@ -20,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
