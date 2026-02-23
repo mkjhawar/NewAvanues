@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,13 +43,13 @@ import com.augmentalis.cockpit.spatial.SpatialViewportController
 /**
  * Cross-platform Cockpit screen shell.
  *
- * Contains the SpatialVoice background gradient, TopAppBar, LayoutEngine,
- * and CommandBar. Platform-specific content rendering is injected via the
- * [frameContent] composable lambda parameter.
+ * Layers a [BackgroundSceneRenderer] behind the content Column containing
+ * TopAppBar, LayoutEngine, and CommandBar. The [backgroundScene] parameter
+ * selects between gradient, starfield, scanline grid, or transparent.
  *
- * This composable lives in commonMain — it uses only Compose Multiplatform
- * APIs and AvanueUI tokens. The Android app-level code calls this and
- * passes its ContentRenderer as [frameContent].
+ * Platform-specific content rendering is injected via the [frameContent]
+ * composable lambda parameter. This composable lives in commonMain — it
+ * uses only Compose Multiplatform APIs and AvanueUI tokens.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +73,7 @@ fun CockpitScreenContent(
     spatialController: SpatialViewportController? = null,
     pseudoSpatialController: PseudoSpatialController? = null,
     glassDisplayMode: GlassDisplayMode = GlassDisplayMode.FLAT_SCREEN,
+    backgroundScene: BackgroundScene = BackgroundScene.GRADIENT,
     availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
     dashboardState: DashboardState = DashboardState(),
     onModuleClick: (String) -> Unit = {},
@@ -95,19 +95,17 @@ fun CockpitScreenContent(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        colors.background,
-                        colors.surface.copy(alpha = 0.6f),
-                        colors.background
-                    )
-                )
-            )
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
+        // Background scene layer
+        BackgroundSceneRenderer(
+            scene = backgroundScene,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Content layer
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
         // Top app bar — context-aware navigation + settings access
         TopAppBar(
             navigationIcon = {
@@ -250,7 +248,8 @@ fun CockpitScreenContent(
             },
             availableLayoutModes = availableLayoutModes
         )
-    }
+    } // end Column
+    } // end Box
 }
 
 /**

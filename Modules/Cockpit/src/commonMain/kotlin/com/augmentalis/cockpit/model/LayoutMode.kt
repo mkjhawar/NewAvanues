@@ -20,6 +20,7 @@ import kotlinx.serialization.Serializable
  * - CAROUSEL: Curved 3D swipe-through with perspective scaling
  * - SPATIAL_DICE: 4 corners + 1 center (dice-5 pattern)
  * - GALLERY: Media-only filtered grid (image, video, camera, screen cast)
+ * - TRIPTYCH: Three-panel book spread — side wings angled inward, center elevated
  */
 @Serializable
 enum class LayoutMode {
@@ -36,7 +37,8 @@ enum class LayoutMode {
     ROW,
     CAROUSEL,
     SPATIAL_DICE,
-    GALLERY;
+    GALLERY,
+    TRIPTYCH;
 
     companion object {
         /** Default layout for active sessions with frames */

@@ -23,11 +23,12 @@ import com.augmentalis.cockpit.model.LayoutMode
  * Layout engine that switches rendering strategy based on the active [LayoutMode].
  * Each mode arranges the given frames differently within the available space.
  *
- * Supports 14 layout modes:
+ * Supports 15 layout modes:
  * - [LayoutMode.DASHBOARD]: Home/launcher view with module tiles and recent sessions
  * - [LayoutMode.CAROUSEL]: Swipe-through with 3D perspective scaling
  * - [LayoutMode.SPATIAL_DICE]: 4 corners + 1 center (dice-5 pattern)
  * - [LayoutMode.GALLERY]: Media-only filtered responsive grid
+ * - [LayoutMode.TRIPTYCH]: Three-panel book spread with angled side wings
  * - Plus 10 frame-based layouts (Freeform, Grid, Split, Cockpit, etc.)
  *
  * @param layoutMode Current layout mode for the session.
@@ -205,6 +206,17 @@ fun LayoutEngine(
         )
 
         LayoutMode.GALLERY -> GalleryLayout(
+            frames = visibleFrames,
+            selectedFrameId = selectedFrameId,
+            onFrameSelected = onFrameSelected,
+            onFrameClose = onFrameClose,
+            onFrameMinimize = onFrameMinimize,
+            onFrameMaximize = onFrameMaximize,
+            frameContent = frameContent,
+            modifier = modifier
+        )
+
+        LayoutMode.TRIPTYCH -> TriptychLayout(
             frames = visibleFrames,
             selectedFrameId = selectedFrameId,
             onFrameSelected = onFrameSelected,

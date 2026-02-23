@@ -283,6 +283,7 @@ fun layoutModeIcon(mode: LayoutMode): ImageVector = when (mode) {
     LayoutMode.CAROUSEL -> Icons.Default.ViewCarousel
     LayoutMode.SPATIAL_DICE -> Icons.Default.Casino
     LayoutMode.GALLERY -> Icons.Default.PhotoLibrary
+    LayoutMode.TRIPTYCH -> Icons.Default.ViewColumn
 }
 
 /**
@@ -303,6 +304,7 @@ fun layoutModeLabel(mode: LayoutMode): String = when (mode) {
     LayoutMode.CAROUSEL -> "Carousel"
     LayoutMode.SPATIAL_DICE -> "Dice-5"
     LayoutMode.GALLERY -> "Gallery"
+    LayoutMode.TRIPTYCH -> "Triptych"
 }
 
 /**

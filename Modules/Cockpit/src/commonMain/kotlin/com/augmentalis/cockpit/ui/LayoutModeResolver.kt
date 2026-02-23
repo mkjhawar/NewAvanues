@@ -74,6 +74,9 @@ object LayoutModeResolver {
 
         // Gallery works everywhere with adaptive columns
         LayoutMode.GALLERY -> true
+
+        // Triptych needs enough width for 3 panels
+        LayoutMode.TRIPTYCH -> profile != DisplayProfile.GLASS_MICRO
     }
 
     /**
@@ -128,6 +131,8 @@ object LayoutModeResolver {
         }
 
         LayoutMode.SPATIAL_DICE -> 5 // Fixed: 4 corners + 1 center
+
+        LayoutMode.TRIPTYCH -> 3 // Fixed: left + center + right
     }
 
     /**

@@ -122,6 +122,7 @@ fun CockpitScreen(
             )
         },
         spatialController = spatialController,
+        backgroundScene = BackgroundScene.GRADIENT,
         availableLayoutModes = availableModes,
         dashboardState = dashboardState,
         onModuleClick = { viewModel.launchModule(it) },
