@@ -5,6 +5,12 @@ plugins {
     id("kotlin-parcelize")
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 android {
     namespace = "com.augmentalis.voicekeyboard"
     compileSdk = 35  // Match project standard
@@ -14,7 +20,7 @@ android {
         // Note: targetSdk and versionCode/versionName removed for library modules
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         // Version info for library
         buildConfigField("String", "MODULE_VERSION", "\"1.0.0\"")
         buildConfigField("String", "MODULE_NAME", "\"VoiceKeyboard\"")
@@ -29,14 +35,10 @@ android {
             )
         }
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-    
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
     
     buildFeatures {
