@@ -23,6 +23,12 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
+    // JS target (browser + Node.js)
+    js(IR) {
+        browser()
+        nodejs()
+    }
+
     // Desktop (JVM) Target
     jvm("desktop") {
         compilerOptions {
@@ -74,6 +80,11 @@ kotlin {
 
         val desktopTest by getting {
             dependsOn(commonTest)
+        }
+
+        // JS source sets
+        val jsMain by getting {
+            dependsOn(commonMain)
         }
     }
 }

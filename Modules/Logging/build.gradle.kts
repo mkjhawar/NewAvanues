@@ -33,6 +33,12 @@ kotlin {
             baseName = "AvanuesLogging"
         }
     }
+    // JS target (browser + Node.js)
+    js(IR) {
+        browser()
+        nodejs()
+    }
+
     // Desktop/JVM target
     jvm("desktop") {
         compilerOptions {
@@ -66,6 +72,9 @@ kotlin {
             iosSimulatorArm64Main.dependsOn(this)
         }
         val desktopMain by getting {
+            dependsOn(commonMain)
+        }
+        val jsMain by getting {
             dependsOn(commonMain)
         }
     }

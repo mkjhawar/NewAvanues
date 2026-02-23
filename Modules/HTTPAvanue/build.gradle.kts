@@ -31,6 +31,11 @@ kotlin {
         }
     }
 
+    js(IR) {
+        browser()
+        nodejs()
+    }
+
     listOf(
         iosArm64(),
         iosSimulatorArm64(),
@@ -87,6 +92,10 @@ kotlin {
             dependsOn(commonMain)
             iosArm64Main.dependsOn(this)
             iosSimulatorArm64Main.dependsOn(this)
+        }
+
+        val jsMain by getting {
+            dependsOn(commonMain)
         }
     }
 }
