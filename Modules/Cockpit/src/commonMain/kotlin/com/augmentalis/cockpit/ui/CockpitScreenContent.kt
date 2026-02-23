@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +60,8 @@ fun CockpitScreenContent(
     selectedFrameId: String?,
     layoutMode: LayoutMode,
     onNavigateBack: () -> Unit,
+    onReturnToDashboard: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     onFrameSelected: (String) -> Unit,
     onFrameMoved: (String, Float, Float) -> Unit,
     onFrameResized: (String, Float, Float) -> Unit,
@@ -102,24 +105,38 @@ fun CockpitScreenContent(
                 )
             )
     ) {
-        // Top app bar — simplified (layout picker moved to CommandBar)
+        // Top app bar — context-aware navigation + settings access
         TopAppBar(
             navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = colors.textPrimary
-                    )
+                if (layoutMode != LayoutMode.DASHBOARD) {
+                    // In a session: back arrow returns to Dashboard
+                    IconButton(onClick = onReturnToDashboard) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voice: click Back",
+                            tint = colors.textPrimary
+                        )
+                    }
                 }
             },
             title = {
                 Text(
-                    text = sessionName,
+                    text = if (layoutMode == LayoutMode.DASHBOARD) "Avanues" else sessionName,
                     color = colors.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp
                 )
+            },
+            actions = {
+                if (layoutMode == LayoutMode.DASHBOARD) {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Voice: click Settings",
+                            tint = colors.textPrimary.copy(alpha = 0.7f)
+                        )
+                    }
+                }
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent
@@ -185,23 +202,9 @@ fun CockpitScreenContent(
                 )
             } else {
                 // No spatial effects — render layout directly
-                LayoutEngine(
-                    layoutMode = layoutMode,
-                    frames = frames,
-                    selectedFrameId = selectedFrameId,
-                    onFrameSelected = onFrameSelected,
-                    onFrameMoved = onFrameMoved,
-                    onFrameResized = onFrameResized,
-                    onFrameClose = onFrameClose,
-                    onFrameMinimize = onFrameMinimize,
-                    onFrameMaximize = onFrameMaximize,
-                    frameContent = frameContent,
-                    dashboardState = dashboardState,
-                    onModuleClick = onModuleClick,
-                    onSessionClick = onSessionClick,
-                    onTemplateClick = onTemplateClick,
-                    modifier = layoutModifier
-                )
+                Box(modifier = layoutModifier) {
+                    layoutContent()
+                }
             }
         }
 

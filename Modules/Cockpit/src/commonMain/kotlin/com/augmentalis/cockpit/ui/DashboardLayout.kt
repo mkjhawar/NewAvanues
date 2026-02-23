@@ -22,8 +22,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -292,11 +303,8 @@ private fun ModuleTile(
                     .background(accentColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
-                // Use a generic icon since Material Icons don't have a direct
-                // string-to-icon mapper in Compose. The iconName is stored for
-                // platform-specific rendering (Android can resolve via Resources).
                 Icon(
-                    Icons.Default.Add,
+                    moduleIcon(module.iconName),
                     contentDescription = null,
                     tint = accentColor,
                     modifier = Modifier.size(20.dp)
@@ -325,6 +333,24 @@ private fun ModuleTile(
             )
         }
     }
+}
+
+/**
+ * Maps a module's [iconName] string to a Material [ImageVector].
+ * Falls back to [Icons.Default.Add] for unknown icon names.
+ */
+private fun moduleIcon(iconName: String): ImageVector = when (iconName) {
+    "mic" -> Icons.Default.Mic
+    "language" -> Icons.Default.Language
+    "mouse" -> Icons.Default.TouchApp
+    "picture_as_pdf" -> Icons.Default.PictureAsPdf
+    "image" -> Icons.Default.Image
+    "videocam" -> Icons.Default.Videocam
+    "edit_note" -> Icons.Default.EditNote
+    "photo_camera" -> Icons.Default.PhotoCamera
+    "cast" -> Icons.Default.Cast
+    "draw" -> Icons.Default.Brush
+    else -> Icons.Default.Add
 }
 
 /**

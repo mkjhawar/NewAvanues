@@ -97,18 +97,26 @@ class CockpitViewModel(
 
     /**
      * Load a session and its frames from persistence.
+     * Public API — fires and forgets. Use [loadSessionInternal] when you need
+     * to await completion within an existing coroutine (e.g. launchModule).
      */
     fun loadSession(sessionId: String) {
-        scope.launch {
-            val session = repository.getSession(sessionId) ?: return@launch
-            val sessionFrames = repository.getFrames(sessionId)
+        scope.launch { loadSessionInternal(sessionId) }
+    }
 
-            _activeSession.value = session
-            _frames.value = sessionFrames
-            _layoutMode.value = session.layoutMode
-            _selectedFrameId.value = session.selectedFrameId ?: sessionFrames.firstOrNull()?.id
-            nextZOrder = (sessionFrames.maxOfOrNull { it.state.zOrder } ?: 0) + 1
-        }
+    /**
+     * Suspend version of session loading — awaits until session state is fully
+     * populated. Must be called from a coroutine (scope.launch or another suspend fun).
+     */
+    private suspend fun loadSessionInternal(sessionId: String) {
+        val session = repository.getSession(sessionId) ?: return
+        val sessionFrames = repository.getFrames(sessionId)
+
+        _activeSession.value = session
+        _frames.value = sessionFrames
+        _layoutMode.value = session.layoutMode
+        _selectedFrameId.value = session.selectedFrameId ?: sessionFrames.firstOrNull()?.id
+        nextZOrder = (sessionFrames.maxOfOrNull { it.state.zOrder } ?: 0) + 1
     }
 
     /**
@@ -322,10 +330,10 @@ class CockpitViewModel(
             if (_activeSession.value?.id == sessionId) {
                 val remaining = _sessions.value
                 if (remaining.isNotEmpty()) {
-                    loadSession(remaining.first().id)
+                    loadSessionInternal(remaining.first().id)
                 } else {
                     val newSession = createSession("Quick View", isDefault = true)
-                    loadSession(newSession.id)
+                    loadSessionInternal(newSession.id)
                 }
             }
         }
@@ -342,13 +350,16 @@ class CockpitViewModel(
         val module = DashboardModuleRegistry.findById(moduleId) ?: return
         scope.launch {
             val session = createSession(module.displayName)
-            loadSession(session.id)
+            loadSessionInternal(session.id)
 
             val content = contentForType(module.contentType)
             if (content != null) {
                 addFrame(content, module.displayName)
+                setLayoutMode(LayoutMode.FULLSCREEN)
             }
-            setLayoutMode(LayoutMode.FULLSCREEN)
+            // Non-frame modules (e.g. "cursor") skip frame creation —
+            // the session exists but remains on Dashboard or triggers
+            // a special navigation via onSpecialModuleLaunch flow.
         }
     }
 
@@ -358,7 +369,7 @@ class CockpitViewModel(
      */
     fun resumeSession(sessionId: String) {
         scope.launch {
-            loadSession(sessionId)
+            loadSessionInternal(sessionId)
         }
     }
 
@@ -370,7 +381,7 @@ class CockpitViewModel(
         val template = BuiltInTemplates.ALL.firstOrNull { it.id == templateId } ?: return
         scope.launch {
             val session = createSession(template.name)
-            loadSession(session.id)
+            loadSessionInternal(session.id)
             setLayoutMode(template.layoutMode)
 
             for (def in template.frameDefinitions) {

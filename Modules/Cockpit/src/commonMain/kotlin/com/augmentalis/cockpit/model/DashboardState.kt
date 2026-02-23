@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
  * State for the Cockpit Dashboard (launcher/home view).
  * Shown when no session is active or user navigates "home".
  */
+@Serializable
 data class DashboardState(
     val recentSessions: List<CockpitSession> = emptyList(),
     val availableModules: List<DashboardModule> = emptyList(),
@@ -24,7 +25,7 @@ data class DashboardModule(
     val subtitle: String,
     val iconName: String,
     val contentType: String,
-    val accentColorHex: Long = 0xFF2196F3
+    val accentColorHex: Long = 0xFF2196F3L
 )
 
 /**
@@ -65,7 +66,7 @@ object DashboardModuleRegistry {
             subtitle = "PDF viewer",
             iconName = "picture_as_pdf",
             contentType = "pdf",
-            accentColorHex = 0xFFE53935
+            accentColorHex = 0xFFE53935L
         ),
         DashboardModule(
             id = "imageavanue",
@@ -73,7 +74,7 @@ object DashboardModuleRegistry {
             subtitle = "Image viewer",
             iconName = "image",
             contentType = "image",
-            accentColorHex = 0xFF43A047
+            accentColorHex = 0xFF43A047L
         ),
         DashboardModule(
             id = "videoavanue",
@@ -81,7 +82,7 @@ object DashboardModuleRegistry {
             subtitle = "Video player",
             iconName = "videocam",
             contentType = "video",
-            accentColorHex = 0xFFE91E63
+            accentColorHex = 0xFFE91E63L
         ),
         DashboardModule(
             id = "noteavanue",
@@ -89,7 +90,7 @@ object DashboardModuleRegistry {
             subtitle = "Rich notes",
             iconName = "edit_note",
             contentType = "note",
-            accentColorHex = 0xFFFFA726
+            accentColorHex = 0xFFFFA726L
         ),
         DashboardModule(
             id = "photoavanue",
@@ -97,7 +98,7 @@ object DashboardModuleRegistry {
             subtitle = "Camera",
             iconName = "photo_camera",
             contentType = "camera",
-            accentColorHex = 0xFF7E57C2
+            accentColorHex = 0xFF7E57C2L
         ),
         DashboardModule(
             id = "remotecast",
@@ -105,7 +106,7 @@ object DashboardModuleRegistry {
             subtitle = "Screen cast",
             iconName = "cast",
             contentType = "screencast",
-            accentColorHex = 0xFF26C6DA
+            accentColorHex = 0xFF26C6DAL
         ),
         DashboardModule(
             id = "annotationavanue",
@@ -113,7 +114,7 @@ object DashboardModuleRegistry {
             subtitle = "Whiteboard",
             iconName = "draw",
             contentType = "whiteboard",
-            accentColorHex = 0xFFEF5350
+            accentColorHex = 0xFFEF5350L
         )
     )
 

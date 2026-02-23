@@ -15,11 +15,15 @@ import kotlinx.coroutines.launch
  * this controller creates a parallax depth illusion on phones/tablets by shifting
  * content layers at different rates based on gyroscope input.
  *
- * Layer system:
- * - Background (0.3x): subtle ambient movement, 12dp max offset
- * - Mid-ground (0.6x): session cards, secondary content, 8dp max offset
- * - Foreground (1.0x): module tiles, active content, 4dp max offset
+ * Layer system (maxOffset values are the actual maximum pixel displacement):
+ * - Background (conceptual speed 0.3x): subtle ambient movement, 12dp max offset
+ * - Mid-ground (conceptual speed 0.6x): session cards, secondary content, 8dp max offset
+ * - Foreground (conceptual speed 1.0x): module tiles, active content, 4dp max offset
  * - HUD (0x): status bar, command bar, locked in place (no movement)
+ *
+ * The multiplier values describe how users conceptually think about each layer's
+ * relative speed. The maxOffset values are the ACTUAL maximum pixel displacement
+ * per layer — they are NOT further scaled by the multipliers.
  *
  * The controller also provides subtle card tilt (3 degrees max) for
  * a pseudo-3D perspective effect on foreground elements.
@@ -94,32 +98,32 @@ class PseudoSpatialController {
         _state.value = ParallaxState(
             backgroundOffsetX = lerp(
                 current.backgroundOffsetX,
-                normalizedX * maxBackgroundOffset * backgroundMultiplier,
+                normalizedX * maxBackgroundOffset,
                 smoothing
             ),
             backgroundOffsetY = lerp(
                 current.backgroundOffsetY,
-                normalizedY * maxBackgroundOffset * backgroundMultiplier,
+                normalizedY * maxBackgroundOffset,
                 smoothing
             ),
             midgroundOffsetX = lerp(
                 current.midgroundOffsetX,
-                normalizedX * maxMidgroundOffset * midgroundMultiplier,
+                normalizedX * maxMidgroundOffset,
                 smoothing
             ),
             midgroundOffsetY = lerp(
                 current.midgroundOffsetY,
-                normalizedY * maxMidgroundOffset * midgroundMultiplier,
+                normalizedY * maxMidgroundOffset,
                 smoothing
             ),
             foregroundOffsetX = lerp(
                 current.foregroundOffsetX,
-                normalizedX * maxForegroundOffset * foregroundMultiplier,
+                normalizedX * maxForegroundOffset,
                 smoothing
             ),
             foregroundOffsetY = lerp(
                 current.foregroundOffsetY,
-                normalizedY * maxForegroundOffset * foregroundMultiplier,
+                normalizedY * maxForegroundOffset,
                 smoothing
             ),
             cardRotationY = lerp(

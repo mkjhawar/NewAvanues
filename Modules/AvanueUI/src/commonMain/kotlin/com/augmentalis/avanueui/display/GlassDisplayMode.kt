@@ -4,8 +4,8 @@ package com.augmentalis.avanueui.display
  * Determines rendering strategy based on display hardware type.
  *
  * - FLAT_SCREEN: Standard LCD/OLED (phones, tablets) — PseudoSpatial rendering, appearance-aware colors
- * - SEE_THROUGH: Optical waveguide (Vuzix M4000, RealWear) — True Spatial, colorsXR (additive-optimized)
- * - OPAQUE_GLASS: Micro-display (Vuzix Blade, XReal Air) — Spatial, standard dark theme
+ * - SEE_THROUGH: Optical waveguide (Vuzix M4000, Vuzix Blade 2) — True Spatial, colorsXR (additive-optimized)
+ * - OPAQUE_GLASS: Micro-display (RealWear Navigator, Rokid Max, XReal Air) — Spatial, standard dark theme
  */
 enum class GlassDisplayMode {
     FLAT_SCREEN,

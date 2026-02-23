@@ -40,6 +40,7 @@ private const val TAG = "CockpitScreen"
 fun CockpitScreen(
     viewModel: CockpitViewModel,
     onNavigateBack: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val session by viewModel.activeSession.collectAsState()
@@ -93,6 +94,8 @@ fun CockpitScreen(
         selectedFrameId = selectedFrameId,
         layoutMode = layoutMode,
         onNavigateBack = onNavigateBack,
+        onReturnToDashboard = { viewModel.returnToDashboard() },
+        onNavigateToSettings = onNavigateToSettings,
         onFrameSelected = { viewModel.selectFrame(it) },
         onFrameMoved = { id, x, y -> viewModel.moveFrame(id, x, y) },
         onFrameResized = { id, w, h -> viewModel.resizeFrame(id, w, h) },

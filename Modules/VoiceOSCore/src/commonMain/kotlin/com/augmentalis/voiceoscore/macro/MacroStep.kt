@@ -7,20 +7,20 @@ import kotlinx.serialization.Serializable
  *
  * Macros compose steps from two systems:
  * - VoiceAction: Dispatches through VoiceOSCore's ActionCoordinator (gestures, system controls, module commands)
- * - Intent: Dispatches through IntentActionRegistry (launch apps, communicate, navigate)
+ * - IntentStep: Dispatches through IntentActionRegistry (launch apps, communicate, navigate)
  * - Delay: Pauses between steps
  * - Conditional: Branches based on runtime conditions
  *
  * Example macro "Start Field Inspection":
  * ```
  * listOf(
- *     MacroStep.Intent("open_app", mapOf("appName" to "com.augmentalis.avanues")),
+ *     MacroStep.IntentStep("open_app", mapOf("appName" to "com.augmentalis.avanues")),
  *     MacroStep.Delay(1000),
  *     MacroStep.VoiceAction("open cockpit"),
  *     MacroStep.VoiceAction("add camera frame"),
  *     MacroStep.VoiceAction("add note frame"),
  *     MacroStep.VoiceAction("layout split left"),
- *     MacroStep.Intent("get_directions", mapOf("location" to "job site"))
+ *     MacroStep.IntentStep("get_directions", mapOf("location" to "job site"))
  * )
  * ```
  *
@@ -49,7 +49,7 @@ sealed class MacroStep {
      * @param entities Pre-defined entity values (bypasses NLU extraction since macro knows the values)
      */
     @Serializable
-    data class Intent(
+    data class IntentStep(
         val intentId: String,
         val entities: Map<String, String> = emptyMap()
     ) : MacroStep()
