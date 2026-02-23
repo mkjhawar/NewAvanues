@@ -7,23 +7,22 @@ import org.junit.jupiter.api.Assertions.*
 import io.mockk.*
 
 /**
- * Unit tests for MagicUIWorkspaceService
+ * Unit tests for AvanueUIWorkspaceService
  */
-class MagicUIWorkspaceServiceTest {
+class AvanueUIWorkspaceServiceTest {
 
-    private lateinit var service: MagicUIWorkspaceService
+    private lateinit var service: AvanueUIWorkspaceService
     private lateinit var mockClient: org.eclipse.lsp4j.services.LanguageClient
 
     @BeforeEach
     fun setup() {
-        service = MagicUIWorkspaceService()
+        service = AvanueUIWorkspaceService()
         mockClient = mockk(relaxed = true)
         service.connect(mockClient)
     }
 
     @Test
-    fun `executeCommand with magicui generateTheme should return theme output`() {
-        // Given
+    fun `executeCommand with avanueui generateTheme should return theme output`() {
         val themeJson = """
             {
                 "name": "TestTheme",
@@ -32,217 +31,157 @@ class MagicUIWorkspaceServiceTest {
         """.trimIndent()
 
         val params = ExecuteCommandParams().apply {
-            command = "magicui.generateTheme"
+            command = "avanueui.generateTheme"
             arguments = listOf("dsl", themeJson)
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertEquals(true, result["success"])
         assertNotNull(result["output"])
         assertEquals("TestTheme", result["themeName"])
     }
 
     @Test
-    fun `executeCommand with magicui generateTheme and yaml format should return yaml`() {
-        // Given
-        val themeJson = """
-            {
-                "name": "YamlTheme"
-            }
-        """.trimIndent()
+    fun `executeCommand with avanueui generateTheme and yaml format should return yaml`() {
+        val themeJson = """{ "name": "YamlTheme" }""".trimIndent()
 
         val params = ExecuteCommandParams().apply {
-            command = "magicui.generateTheme"
+            command = "avanueui.generateTheme"
             arguments = listOf("yaml", themeJson)
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertEquals(true, result["success"])
         assertEquals("yaml", result["format"])
         assertTrue((result["output"] as String).startsWith("#"))
     }
 
     @Test
-    fun `executeCommand with magicui generateTheme and json format should return json`() {
-        // Given
-        val themeJson = """
-            {
-                "name": "JsonTheme"
-            }
-        """.trimIndent()
+    fun `executeCommand with avanueui generateTheme and json format should return json`() {
+        val themeJson = """{ "name": "JsonTheme" }""".trimIndent()
 
         val params = ExecuteCommandParams().apply {
-            command = "magicui.generateTheme"
+            command = "avanueui.generateTheme"
             arguments = listOf("json", themeJson)
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertEquals(true, result["success"])
         assertEquals("json", result["format"])
         assertTrue((result["output"] as String).startsWith("{"))
     }
 
     @Test
-    fun `executeCommand with magicui generateTheme and css format should return css`() {
-        // Given
-        val themeJson = """
-            {
-                "name": "CssTheme"
-            }
-        """.trimIndent()
+    fun `executeCommand with avanueui generateTheme and css format should return css`() {
+        val themeJson = """{ "name": "CssTheme" }""".trimIndent()
 
         val params = ExecuteCommandParams().apply {
-            command = "magicui.generateTheme"
+            command = "avanueui.generateTheme"
             arguments = listOf("css", themeJson)
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertEquals(true, result["success"])
         assertEquals("css", result["format"])
         assertTrue((result["output"] as String).startsWith("/*"))
     }
 
     @Test
-    fun `executeCommand with magicui generateTheme missing arguments should return error`() {
-        // Given
+    fun `executeCommand with avanueui generateTheme missing arguments should return error`() {
         val params = ExecuteCommandParams().apply {
-            command = "magicui.generateTheme"
-            arguments = listOf("dsl") // Missing themeJson
+            command = "avanueui.generateTheme"
+            arguments = listOf("dsl")
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertEquals(false, result["success"])
         assertNotNull(result["error"])
     }
 
     @Test
-    fun `executeCommand with magicui validateComponent should return validation result`() {
-        // Given
+    fun `executeCommand with avanueui validateComponent should return validation result`() {
         val params = ExecuteCommandParams().apply {
-            command = "magicui.validateComponent"
+            command = "avanueui.validateComponent"
             arguments = emptyList()
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertEquals(true, result["success"])
         assertEquals(true, result["valid"])
     }
 
     @Test
-    fun `executeCommand with magicui formatDocument should return success`() {
-        // Given
+    fun `executeCommand with avanueui formatDocument should return success`() {
         val params = ExecuteCommandParams().apply {
-            command = "magicui.formatDocument"
-            arguments = listOf("file:///test.magic.yaml")
+            command = "avanueui.formatDocument"
+            arguments = listOf("file:///test.avanueui.yaml")
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertEquals(true, result["success"])
         assertEquals(true, result["formatted"])
     }
 
     @Test
-    fun `executeCommand with magicui generateCode should return placeholder`() {
-        // Given
+    fun `executeCommand with avanueui generateCode should return placeholder`() {
         val params = ExecuteCommandParams().apply {
-            command = "magicui.generateCode"
+            command = "avanueui.generateCode"
             arguments = listOf("kotlin", "Button: text: Test")
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertEquals(true, result["success"])
         assertNotNull(result["output"])
     }
 
     @Test
     fun `executeCommand with unknown command should return error`() {
-        // Given
         val params = ExecuteCommandParams().apply {
-            command = "magicui.unknownCommand"
+            command = "avanueui.unknownCommand"
             arguments = emptyList()
         }
 
-        // When
         val result = service.executeCommand(params).get() as Map<*, *>
 
-        // Then
         assertNotNull(result["error"])
         assertTrue((result["error"] as String).contains("Unknown command"))
     }
 
     @Test
-    fun `didChangeConfiguration should log configuration change`() {
-        // Given
+    fun `didChangeConfiguration should not throw`() {
         val params = DidChangeConfigurationParams().apply {
-            settings = mapOf("magicui" to mapOf("enabled" to true))
+            settings = mapOf("avanueui" to mapOf("enabled" to true))
         }
-
-        // When/Then - Should not throw
-        assertDoesNotThrow {
-            service.didChangeConfiguration(params)
-        }
+        assertDoesNotThrow { service.didChangeConfiguration(params) }
     }
 
     @Test
-    fun `didChangeWatchedFiles should log file changes`() {
-        // Given
+    fun `didChangeWatchedFiles should not throw`() {
         val params = DidChangeWatchedFilesParams().apply {
-            changes = listOf(
-                FileEvent().apply {
-                    uri = "file:///test.magic.yaml"
-                    type = FileChangeType.Changed
-                }
-            )
+            changes = listOf(FileEvent().apply {
+                uri = "file:///test.avanueui.yaml"
+                type = FileChangeType.Changed
+            })
         }
-
-        // When/Then - Should not throw
-        assertDoesNotThrow {
-            service.didChangeWatchedFiles(params)
-        }
+        assertDoesNotThrow { service.didChangeWatchedFiles(params) }
     }
 
     @Test
-    fun `didChangeWorkspaceFolders should log folder changes`() {
-        // Given
+    fun `didChangeWorkspaceFolders should not throw`() {
         val params = DidChangeWorkspaceFoldersParams().apply {
             event = WorkspaceFoldersChangeEvent().apply {
-                added = listOf(
-                    WorkspaceFolder().apply {
-                        uri = "file:///workspace"
-                        name = "Test Workspace"
-                    }
-                )
+                added = listOf(WorkspaceFolder().apply { uri = "file:///workspace"; name = "Test Workspace" })
                 removed = emptyList()
             }
         }
-
-        // When/Then - Should not throw
-        assertDoesNotThrow {
-            service.didChangeWorkspaceFolders(params)
-        }
+        assertDoesNotThrow { service.didChangeWorkspaceFolders(params) }
     }
 }

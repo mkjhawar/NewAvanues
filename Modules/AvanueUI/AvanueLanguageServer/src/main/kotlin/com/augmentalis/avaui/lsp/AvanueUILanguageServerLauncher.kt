@@ -9,19 +9,17 @@ import java.util.concurrent.Executors
 import kotlin.system.exitProcess
 
 /**
- * Main entry point for MagicUI Language Server
- *
- * Launches the LSP server and connects to the client via stdio
+ * Main entry point for AvanueUI Language Server.
+ * Launches the LSP server and connects to the client via stdio.
  */
-object MagicUILanguageServerLauncher {
-    private val logger = LoggerFactory.getLogger(MagicUILanguageServerLauncher::class.java)
+object AvanueUILanguageServerLauncher {
+    private val logger = LoggerFactory.getLogger(AvanueUILanguageServerLauncher::class.java)
 
     @JvmStatic
     fun main(args: Array<String>) {
-        logger.info("Starting MagicUI Language Server...")
+        logger.info("Starting AvanueUI Language Server...")
 
         try {
-            // Parse command line arguments
             val useStdio = args.isEmpty() || args.contains("--stdio")
             val port = args.find { it.startsWith("--port=") }?.substringAfter("=")?.toIntOrNull()
 
@@ -39,13 +37,10 @@ object MagicUILanguageServerLauncher {
         }
     }
 
-    /**
-     * Launch server using stdio communication (default, recommended for IDE integrations)
-     */
     private fun launchStdioServer(input: InputStream, output: OutputStream) {
         logger.info("Launching Language Server with stdio...")
 
-        val server = MagicUILanguageServer()
+        val server = AvanueUILanguageServer()
         val launcher = Launcher.Builder<LanguageClient>()
             .setLocalService(server)
             .setRemoteInterface(LanguageClient::class.java)
@@ -54,18 +49,13 @@ object MagicUILanguageServerLauncher {
             .setExecutorService(Executors.newCachedThreadPool())
             .create()
 
-        // Connect client to server
         val client = launcher.remoteProxy
         server.connect(client)
 
-        // Start listening
         logger.info("Language Server listening on stdio")
         launcher.startListening().get()
     }
 
-    /**
-     * Launch server using socket communication (for testing/debugging)
-     */
     private fun launchSocketServer(port: Int) {
         logger.info("Socket server not implemented yet. Use --stdio instead.")
         exitProcess(1)

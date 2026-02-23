@@ -10,15 +10,15 @@ import {
 let client: LanguageClient;
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('MagicUI Language Server extension activated');
+    console.log('AvanueUI Language Server extension activated');
 
     // Get JAR path from configuration
-    const config = vscode.workspace.getConfiguration('magicui');
+    const config = vscode.workspace.getConfiguration('avanueui');
     const jarPath = config.get<string>('server.jarPath');
 
     if (!jarPath) {
         vscode.window.showErrorMessage(
-            'MagicUI Language Server JAR path not configured. Please set magicui.server.jarPath in settings.'
+            'AvanueUI Language Server JAR path not configured. Please set avanueui.server.jarPath in settings.'
         );
         return;
     }
@@ -30,24 +30,27 @@ export function activate(context: vscode.ExtensionContext) {
         transport: TransportKind.stdio
     };
 
-    // Client options: define file patterns for MagicUI files
+    // Client options: define file patterns for AvanueUI files (new + legacy)
     const clientOptions: LanguageClientOptions = {
         documentSelector: [
-            { scheme: 'file', language: 'magicui-yaml' },
-            { scheme: 'file', language: 'magicui-json' },
+            { scheme: 'file', language: 'avanueui-yaml' },
+            { scheme: 'file', language: 'avanueui-json' },
+            { scheme: 'file', pattern: '**/*.avanueui.yaml' },
+            { scheme: 'file', pattern: '**/*.avanueui.json' },
+            { scheme: 'file', pattern: '**/*.avanueui' },
             { scheme: 'file', pattern: '**/*.magic.yaml' },
             { scheme: 'file', pattern: '**/*.magic.json' },
             { scheme: 'file', pattern: '**/*.magicui' }
         ],
         synchronize: {
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.magic.{yaml,json}')
+            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{avanueui,magic}.{yaml,json}')
         }
     };
 
     // Create and start the language client
     client = new LanguageClient(
-        'magicui-lsp',
-        'MagicUI Language Server',
+        'avanueui-lsp',
+        'AvanueUI Language Server',
         serverOptions,
         clientOptions
     );
@@ -55,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Start the client (this will also launch the server)
     client.start();
 
-    console.log('MagicUI Language Server client started');
+    console.log('AvanueUI Language Server client started');
 }
 
 export function deactivate(): Thenable<void> | undefined {

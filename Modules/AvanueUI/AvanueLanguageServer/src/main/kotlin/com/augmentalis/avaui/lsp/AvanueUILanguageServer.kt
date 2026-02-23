@@ -7,77 +7,58 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 
 /**
- * MagicUI Language Server implementation
+ * AvanueUI Language Server implementation
  *
- * Implements the Language Server Protocol for MagicUI DSL files
- * Supports: .magic.yaml, .magic.json, .magicui files
+ * Implements the Language Server Protocol for AvanueUI DSL files.
+ * Supports: .avanueui.yaml, .avanueui.json, .avanueui (and legacy .magic.yaml, .magic.json, .magicui)
  */
-class MagicUILanguageServer : LanguageServer, LanguageClientAware {
+class AvanueUILanguageServer : LanguageServer, LanguageClientAware {
 
-    private val logger = LoggerFactory.getLogger(MagicUILanguageServer::class.java)
+    private val logger = LoggerFactory.getLogger(AvanueUILanguageServer::class.java)
 
-    private val textDocumentService = MagicUITextDocumentService()
-    private val workspaceService = MagicUIWorkspaceService()
+    private val textDocumentService = AvanueUITextDocumentService()
+    private val workspaceService = AvanueUIWorkspaceService()
 
     private var client: LanguageClient? = null
     private var clientCapabilities: ClientCapabilities? = null
 
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
-        logger.info("Initializing Language Server for workspace: ${params.rootUri}")
-
+        val workspaceUri = params.workspaceFolders?.firstOrNull()?.uri
+            ?: @Suppress("DEPRECATION") params.rootUri
+        logger.info("Initializing Language Server for workspace: $workspaceUri")
         clientCapabilities = params.capabilities
 
-        // Define server capabilities
         val serverCapabilities = ServerCapabilities().apply {
-            // Text document sync
             textDocumentSync = Either.forLeft(TextDocumentSyncKind.Incremental)
-
-            // Completion support
             completionProvider = CompletionOptions().apply {
                 resolveProvider = true
                 triggerCharacters = listOf(".", ":", "-", " ")
             }
-
-            // Hover support
             hoverProvider = Either.forLeft(true)
-
-            // Definition support (go-to-definition)
             definitionProvider = Either.forLeft(true)
-
-            // Diagnostic support (error checking)
             diagnosticProvider = DiagnosticRegistrationOptions()
-
-            // Document formatting
             documentFormattingProvider = Either.forLeft(true)
-
-            // Code actions
             codeActionProvider = Either.forLeft(true)
-
-            // Execute command support (custom commands)
             executeCommandProvider = ExecuteCommandOptions().apply {
                 commands = listOf(
-                    "magicui.generateTheme",
-                    "magicui.validateComponent",
-                    "magicui.formatDocument",
-                    "magicui.generateCode"
+                    "avanueui.generateTheme",
+                    "avanueui.validateComponent",
+                    "avanueui.formatDocument",
+                    "avanueui.generateCode"
                 )
             }
         }
 
         val serverInfo = ServerInfo().apply {
-            name = "MagicUI Language Server"
-            version = "1.0.0"
+            name = "AvanueUI Language Server"
+            version = "2.0.0"
         }
 
-        return CompletableFuture.completedFuture(
-            InitializeResult(serverCapabilities, serverInfo)
-        )
+        return CompletableFuture.completedFuture(InitializeResult(serverCapabilities, serverInfo))
     }
 
     override fun initialized(params: InitializedParams) {
         logger.info("Language Server initialized successfully")
-
-        // Log workspace folders
         workspaceService.workspaceFolders?.forEach { folder ->
             logger.info("Workspace folder: ${folder.uri}")
         }
@@ -93,13 +74,9 @@ class MagicUILanguageServer : LanguageServer, LanguageClientAware {
         System.exit(0)
     }
 
-    override fun getTextDocumentService(): TextDocumentService {
-        return textDocumentService
-    }
+    override fun getTextDocumentService(): TextDocumentService = textDocumentService
 
-    override fun getWorkspaceService(): WorkspaceService {
-        return workspaceService
-    }
+    override fun getWorkspaceService(): WorkspaceService = workspaceService
 
     override fun connect(client: LanguageClient) {
         this.client = client
@@ -108,8 +85,5 @@ class MagicUILanguageServer : LanguageServer, LanguageClientAware {
         logger.info("Connected to language client")
     }
 
-    /**
-     * Get client capabilities
-     */
     fun getClientCapabilities(): ClientCapabilities? = clientCapabilities
 }
