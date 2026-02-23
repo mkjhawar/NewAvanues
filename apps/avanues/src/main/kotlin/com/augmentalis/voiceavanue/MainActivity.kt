@@ -233,7 +233,8 @@ fun AvanuesApp(
             val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { /* no-op, this is home */ }
+                onNavigateBack = { /* no-op, this is home */ },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
 
@@ -309,7 +310,8 @@ fun AvanuesApp(
             val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
 
@@ -323,7 +325,8 @@ fun AvanuesApp(
             }
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
 
@@ -334,7 +337,8 @@ fun AvanuesApp(
             }
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
 
@@ -345,7 +349,8 @@ fun AvanuesApp(
             }
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
 
@@ -356,7 +361,8 @@ fun AvanuesApp(
             }
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
 
@@ -367,7 +373,8 @@ fun AvanuesApp(
             }
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
 
@@ -378,7 +385,8 @@ fun AvanuesApp(
             }
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
 
@@ -389,7 +397,8 @@ fun AvanuesApp(
             }
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
             )
         }
     }

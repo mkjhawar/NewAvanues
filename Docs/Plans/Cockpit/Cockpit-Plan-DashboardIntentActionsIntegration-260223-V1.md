@@ -87,7 +87,7 @@ VoiceOSCore  IntentActions
 | `MathCalculator.kt` | Pure Kotlin math parser (arithmetic, trig, logs, percentages) |
 | `CalculationResult.kt` | Data class — pure Kotlin |
 
-### 0D. Refactor 24 Intent Handlers to IIntentAction Interface
+### 0D. Refactor 26 Intent Handlers to IIntentAction Interface
 
 **Refactor in-place in `Modules/IntentActions/src/androidMain/kotlin/com/augmentalis/intentactions/actions/`**:
 
@@ -95,11 +95,11 @@ VoiceOSCore  IntentActions
 |----------|--------------------------------------------------|-------|
 | COMMUNICATION | SendEmailAction, SendTextAction, MakeCallAction | 3 |
 | NAVIGATION | GetDirectionsAction, FindNearbyAction, ShowTrafficAction, ShareLocationAction, SaveLocationAction | 5 |
-| PRODUCTIVITY | SetAlarmAction, SetTimerAction, CreateReminderAction, CreateCalendarEventAction, AddTodoAction, CreateNoteAction, CheckCalendarAction | 7 |
-| SEARCH | WebSearchAction (DuckDuckGo), NavigateURLAction, CalculateAction | 3 |
+| PRODUCTIVITY | SetAlarmAction, SetTimerAction, CreateReminderAction, CreateCalendarEventAction, AddTodoAction, CreateNoteAction, CheckCalendarAction, GetTimeAction | 8 |
+| SEARCH | WebSearchAction (DuckDuckGo), NavigateURLAction, CalculateAction, GetWeatherAction | 4 |
 | MEDIA_LAUNCH | PlayVideoAction (YouTube), ResumeMusicAction, OpenBrowserAction, OpenAppAction | 4 |
 | SYSTEM_SETTINGS | OpenSettingsAction (+ subsection variants: security, connection, sound, display, about) | 2 |
-| **Total** | | **24** |
+| **Total** | | **26** |
 
 Each `IIntentAction` impl uses `PlatformContext` (expect/actual for Activity) to launch Android Intents.
 
@@ -111,7 +111,7 @@ Each `IIntentAction` impl uses `PlatformContext` (expect/actual for Activity) to
 - IntentAction → feed to `IntentActionRegistry.execute()`
 
 **Modified file**: `Modules/AI/NLU/src/androidMain/.../AndroidIntentClassifier.kt`
-- Wire `IntentActionRegistry` initialization with all 24 actions
+- Wire `IntentActionRegistry` initialization with all 26 actions
 - Expose `IntentActionRegistry` for macro executor injection
 
 ### 0F. MacroStep Model (VoiceOSCore commonMain)
@@ -279,7 +279,7 @@ sealed class MacroStep {
 | `Modules/AI/NLU/src/commonMain/.../extractors/*.kt` (6 files) | 0B |
 | `Modules/AI/NLU/src/commonMain/.../math/MathCalculator.kt` | 0C |
 | `Modules/AI/NLU/src/commonMain/.../math/CalculationResult.kt` | 0C |
-| `Modules/AI/NLU/src/androidMain/.../intent/actions/*.kt` (24 files) | 0D |
+| `Modules/AI/NLU/src/androidMain/.../intent/actions/*.kt` (26 files) | 0D |
 | `Modules/VoiceOSCore/src/commonMain/.../macro/MacroStep.kt` | 0F |
 
 ### New Files (Phases 1-7)
@@ -338,7 +338,7 @@ sealed class MacroStep {
 | Commit | Scope |
 |--------|-------|
 | Phase 0A-0C | IntentAction framework + entity extractors + math (commonMain) |
-| Phase 0D-0E | 24 intent handlers + NLU wiring (androidMain) |
+| Phase 0D-0E | 26 intent handlers + NLU wiring (androidMain) |
 | Phase 0F-0G | MacroStep model + Actions deprecation |
 | Phase 1 | Review report + Chapter 110 + settings cleanup |
 | Phase 2 | Cockpit Dashboard foundation (model + viewmodel + layout) |

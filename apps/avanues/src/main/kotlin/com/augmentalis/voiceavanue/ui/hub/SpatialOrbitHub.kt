@@ -91,7 +91,7 @@ import kotlin.math.sin
  * Each module node is a clickable circle with icon + label below.
  */
 @Deprecated(
-    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Cockpit plan at Docs/Plans/Cockpit/",
     level = DeprecationLevel.WARNING
 )
 @Composable

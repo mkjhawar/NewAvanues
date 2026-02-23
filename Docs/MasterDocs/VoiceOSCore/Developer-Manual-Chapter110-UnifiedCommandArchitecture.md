@@ -259,7 +259,7 @@ object IntentActionRegistry {
 }
 ```
 
-### Registered IntentActions (24)
+### Registered IntentActions (26)
 
 | Intent ID | Category | Required Entities | Android Implementation |
 |-----------|----------|-------------------|----------------------|
@@ -278,9 +278,11 @@ object IntentActionRegistry {
 | `add_todo` | PRODUCTIVITY | message | Notes/todo intent |
 | `create_note` | PRODUCTIVITY | message | Notes intent |
 | `check_calendar` | PRODUCTIVITY | — | Calendar view intent |
+| `get_time` | PRODUCTIVITY | — | `AlarmClock.ACTION_SHOW_ALARMS` |
 | `search_web` | SEARCH | query | Browser with search URL |
 | `navigate_url` | SEARCH | url | `ACTION_VIEW` with URI |
 | `calculate` | SEARCH | query | MathCalculator (local, no intent) |
+| `get_weather` | SEARCH | query | Weather app/browser fallback |
 | `play_video` | MEDIA_LAUNCH | query | YouTube app/browser |
 | `resume_music` | MEDIA_LAUNCH | — | Music app launch |
 | `open_browser` | MEDIA_LAUNCH | — | `ACTION_VIEW` |
@@ -315,8 +317,8 @@ suspend fun classifyAndRoute(utterance: String): CommandRoute {
     return when {
         voiceMatch.confidence > 0.8 -> CommandRoute.VoiceCommand(voiceMatch.phrase, voiceMatch.confidence)
         intentMatch.confidence > 0.8 -> CommandRoute.IntentAction(intentMatch.intentId, extractEntities(utterance))
-        voiceMatch.confidence > intentMatch.confidence -> CommandRoute.VoiceCommand(...)
-        else -> CommandRoute.IntentAction(...)
+        voiceMatch.confidence > intentMatch.confidence -> CommandRoute.VoiceCommand(voiceMatch.phrase, voiceMatch.confidence)
+        else -> CommandRoute.IntentAction(intentMatch.intentId, extractEntities(utterance))
     }
 }
 ```
@@ -361,7 +363,7 @@ Macros can compose steps from both VoiceOSCore and IntentActions, enabling power
 // Modules/VoiceOSCore/src/commonMain/.../macro/MacroStep.kt
 sealed class MacroStep {
     data class VoiceAction(val command: String) : MacroStep()
-    data class Intent(val intentId: String, val entities: Map<String, String>) : MacroStep()
+    data class IntentStep(val intentId: String, val entities: Map<String, String>) : MacroStep()
     data class Delay(val ms: Long) : MacroStep()
     data class Conditional(val check: String, val thenSteps: List<MacroStep>, val elseSteps: List<MacroStep> = emptyList()) : MacroStep()
 }
@@ -371,13 +373,13 @@ sealed class MacroStep {
 
 ```kotlin
 val fieldInspection = listOf(
-    MacroStep.Intent("open_app", mapOf("query" to "com.augmentalis.avanues")),
+    MacroStep.IntentStep("open_app", mapOf("query" to "com.augmentalis.avanues")),
     MacroStep.Delay(1000),
     MacroStep.VoiceAction("open cockpit"),
     MacroStep.VoiceAction("add camera frame"),
     MacroStep.VoiceAction("add note frame"),
     MacroStep.VoiceAction("layout split left"),
-    MacroStep.Intent("get_directions", mapOf("location" to "job site")),
+    MacroStep.IntentStep("get_directions", mapOf("location" to "job site")),
 )
 ```
 
@@ -396,7 +398,7 @@ class MacroExecutor(
                     val result = actionCoordinator.processVoiceCommand(step.command, 1.0f)
                     StepResult(step, result.success)
                 }
-                is MacroStep.Intent -> {
+                is MacroStep.IntentStep -> {
                     val entities = ExtractedEntities.fromMap(step.entities)
                     val result = intentRegistry.execute(step.intentId, platformContext, entities)
                     StepResult(step, result is IntentResult.Success)
@@ -406,10 +408,10 @@ class MacroExecutor(
                     StepResult(step, true)
                 }
                 is MacroStep.Conditional -> {
-                    // Evaluate condition and branch
                     val conditionMet = evaluateCondition(step.check)
                     val branch = if (conditionMet) step.thenSteps else step.elseSteps
-                    execute(branch).also { StepResult(step, true) }
+                    val branchResults = execute(branch)
+                    StepResult(step, branchResults.all { it.success }, "Ran ${branchResults.size} steps")
                 }
             }
         }

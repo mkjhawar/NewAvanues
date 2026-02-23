@@ -137,7 +137,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <meta-data android:name="launch_mode" android:value="webavanue" />
         </activity-alias>
 
         <!-- PDFAvanue launcher alias — document viewer entry point -->

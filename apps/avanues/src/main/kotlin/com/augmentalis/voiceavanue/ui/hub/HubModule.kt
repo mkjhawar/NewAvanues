@@ -30,7 +30,7 @@ import com.augmentalis.voiceavanue.AvanueMode
  * CONTENT modules are the 7 content viewers on the outer orbit.
  */
 @Deprecated(
-    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Cockpit plan at Docs/Plans/Cockpit/",
     level = DeprecationLevel.WARNING
 )
 enum class OrbitTier { CORE, CONTENT }
@@ -40,7 +40,7 @@ enum class OrbitTier { CORE, CONTENT }
  * Each module maps to a visual node on one of the two orbit rings.
  */
 @Deprecated(
-    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Cockpit plan at Docs/Plans/Cockpit/",
     level = DeprecationLevel.WARNING
 )
 data class HubModule(
@@ -65,7 +65,7 @@ data class HubModule(
  * Each "Avanue" is a destination — an avenue to explore.
  */
 @Deprecated(
-    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Cockpit plan at Docs/Plans/Cockpit/",
     level = DeprecationLevel.WARNING
 )
 object HubModuleRegistry {
@@ -172,7 +172,7 @@ object HubModuleRegistry {
  * Core and content modules may share colors since they're on different orbits.
  */
 @Deprecated(
-    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Cockpit plan at Docs/Plans/Cockpit/",
     level = DeprecationLevel.WARNING
 )
 @Composable

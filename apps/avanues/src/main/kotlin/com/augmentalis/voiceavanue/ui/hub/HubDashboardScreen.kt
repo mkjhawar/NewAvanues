@@ -23,7 +23,7 @@ import androidx.compose.runtime.Composable
  * from the clicked [HubModule]. The caller (NavHost) handles actual navigation.
  */
 @Deprecated(
-    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Cockpit plan at Docs/Plans/Cockpit/",
     level = DeprecationLevel.WARNING
 )
 @Composable

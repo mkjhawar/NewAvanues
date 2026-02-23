@@ -208,6 +208,8 @@ The NewAvanues repository contains **41 module directories** with **44 entries i
 
 ## 5. Command Dispatch Architecture: Actions vs VoiceOSCore
 
+> **HISTORICAL** — This section describes the pre-migration architecture (before the Actions -> IntentActions unification). For the current architecture, see Section 1 (Executive Summary) and Chapter 110.
+
 ### Two Separate Pipelines
 
 ```
