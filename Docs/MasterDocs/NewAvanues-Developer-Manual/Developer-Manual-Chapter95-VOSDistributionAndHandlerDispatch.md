@@ -158,7 +158,7 @@ Key operations:
 | Segment | Example | Source |
 |---------|---------|--------|
 | AppName | `Avanues` | App display name or package short name |
-| AppVersion | `V1.0.0` | App `versionName` from build config |
+| AppVersion | `V1.0.0` | The **application's own version** from its manifest (`PackageInfo.versionName`). This is the manufacturer's release version (e.g., Avanues 1.0.0, Chrome 120.0.6099), NOT the VOS format version or internal revision number. |
 | Locale | `en-US` | Device locale at export time |
 | Timestamp | `260223T1430` | YYMMDD + T + HHMM (compact) |
 | Type | `.app.vos` / `.web.vos` | Static app commands vs scraped web |
@@ -186,7 +186,7 @@ Avanues_V1.0.0_en-US_Export_260223T1430.json
 - **Version visible at a glance** — no need to open the file or query the DB to know which version it is
 - **Sortable by timestamp** — chronological ordering in any file browser
 - **Locale in filename** — unambiguous when files from multiple locales sit in the same folder
-- **AppVersion tracks compatibility** — a V2.0.0 VOS file may have new commands not supported by V1.x apps
+- **AppVersion tracks compatibility** — this is the application's own release version (from `PackageInfo.versionName`), not the VOS format version. A VOS file exported from Avanues V2.0.0 may contain commands for UI elements that don't exist in V1.x, making the app version the key compatibility indicator
 
 **Version tracking still in DB:** The `VosFileRegistry` continues to track internal revision numbers (`version` column) for dedup and sync. The filename convention is for human readability and file management; the DB tracks the machine-readable provenance chain.
 
