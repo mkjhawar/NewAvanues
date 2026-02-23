@@ -17,6 +17,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.augmentalis.magiccode.plugins.android.ServiceRegistry
 import com.augmentalis.magiccode.plugins.builtin.NavigationPluginExecutor
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 /**
@@ -151,10 +152,11 @@ class AndroidNavigationExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val scrollable = findScrollableNode(child)
-            child.recycle()
-            if (scrollable != null) {
-                return scrollable
+            try {
+                val scrollable = findScrollableNode(child)
+                if (scrollable != null) return scrollable
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -174,10 +176,11 @@ class AndroidNavigationExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val scrollable = findHorizontalScrollableNode(child)
-            child.recycle()
-            if (scrollable != null) {
-                return scrollable
+            try {
+                val scrollable = findHorizontalScrollableNode(child)
+                if (scrollable != null) return scrollable
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -225,24 +228,27 @@ class AndroidNavigationExecutor(
             .addStroke(GestureDescription.StrokeDescription(path, 0, SWIPE_DURATION_MS))
             .build()
 
-        return suspendCancellableCoroutine { continuation ->
-            val callback = object : AccessibilityService.GestureResultCallback() {
-                override fun onCompleted(gestureDescription: GestureDescription?) {
-                    continuation.resume(true)
+        return withTimeoutOrNull(GESTURE_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                val callback = object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription?) {
+                        continuation.resume(true)
+                    }
+
+                    override fun onCancelled(gestureDescription: GestureDescription?) {
+                        continuation.resume(false)
+                    }
                 }
 
-                override fun onCancelled(gestureDescription: GestureDescription?) {
+                if (!service.dispatchGesture(gesture, callback, null)) {
                     continuation.resume(false)
                 }
             }
-
-            if (!service.dispatchGesture(gesture, callback, null)) {
-                continuation.resume(false)
-            }
-        }
+        } ?: false
     }
 
     companion object {
         private const val SWIPE_DURATION_MS = 300L
+        private const val GESTURE_TIMEOUT_MS = 5000L
     }
 }

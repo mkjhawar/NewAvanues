@@ -191,10 +191,11 @@ class AndroidSelectionExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findFocusedEditableNode(child)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findFocusedEditableNode(child)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null

@@ -213,10 +213,11 @@ class AndroidTextInputExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findFocusedEditableNode(child)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findFocusedEditableNode(child)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -229,10 +230,11 @@ class AndroidTextInputExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findFirstEditableNode(child)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findFirstEditableNode(child)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -256,10 +258,11 @@ class AndroidTextInputExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findSearchField(child)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findSearchField(child)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null
