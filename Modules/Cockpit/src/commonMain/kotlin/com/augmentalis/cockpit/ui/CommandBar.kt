@@ -270,6 +270,7 @@ private fun CommandChip(
  * Icon for each layout mode — used in CommandBar and layout picker.
  */
 fun layoutModeIcon(mode: LayoutMode): ImageVector = when (mode) {
+    LayoutMode.DASHBOARD -> Icons.Default.Dashboard
     LayoutMode.FREEFORM -> Icons.Default.Dashboard
     LayoutMode.GRID -> Icons.Default.GridView
     LayoutMode.SPLIT_LEFT, LayoutMode.SPLIT_RIGHT -> Icons.Default.Splitscreen

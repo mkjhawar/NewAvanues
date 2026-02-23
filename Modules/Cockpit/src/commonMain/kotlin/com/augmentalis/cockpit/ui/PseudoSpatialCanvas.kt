@@ -59,7 +59,7 @@ fun PseudoSpatialCanvas(
         // Layer 0: Scanline grid overlay (background decoration)
         if (showScanlines) {
             ScanlineGrid(
-                color = AvanueTheme.colors.onBackground.copy(alpha = 0.05f),
+                color = AvanueTheme.colors.textPrimary.copy(alpha = 0.05f),
                 spacingDp = 48f
             )
         }

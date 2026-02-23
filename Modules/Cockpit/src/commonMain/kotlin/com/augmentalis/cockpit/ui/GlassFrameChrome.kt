@@ -83,7 +83,7 @@ private fun GlassTitleStrip(
     val textColor = if (isSelected) {
         AvanueTheme.colors.primary
     } else {
-        AvanueTheme.colors.onSurface.copy(alpha = 0.7f)
+        AvanueTheme.colors.textSecondary
     }
 
     Row(
@@ -158,7 +158,7 @@ fun PeekPanel(
         Text(
             text = title,
             style = haloTextStyle(
-                color = AvanueTheme.colors.onSurface.copy(alpha = 0.5f),
+                color = AvanueTheme.colors.textTertiary,
                 fontSize = 10
             ),
             maxLines = 1,
@@ -195,7 +195,7 @@ fun GlassStatusStrip(
         Text(
             text = "Frame ${activeFrameIndex + 1}/$frameCount",
             style = haloTextStyle(
-                color = AvanueTheme.colors.onSurface.copy(alpha = 0.5f),
+                color = AvanueTheme.colors.textTertiary,
                 fontSize = 11
             )
         )
