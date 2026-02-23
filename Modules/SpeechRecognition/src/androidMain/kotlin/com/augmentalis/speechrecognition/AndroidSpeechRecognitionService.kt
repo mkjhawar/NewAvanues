@@ -38,7 +38,7 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
         private const val TAG = "AndroidSpeechService"
 
         // Context holder for engine initialization
-        private var appContext: Context? = null
+        @Volatile private var appContext: Context? = null
 
         /**
          * Set the application context (call from Application.onCreate())
@@ -107,12 +107,24 @@ class AndroidSpeechRecognitionService : SpeechRecognitionService {
                 SpeechEngine.ANDROID_STT -> initializeAndroidSTT(context, config)
                 SpeechEngine.VOSK -> {
                     // TODO: Implement when VoskEngine is migrated
-                    logInfo(TAG, "Vosk engine not yet migrated, using Android STT fallback")
+                    logInfo(TAG, "VOSK engine not yet migrated to KMP — falling back to Android STT")
+                    _errorFlow.tryEmit(SpeechError(
+                        code = SpeechError.ERROR_NOT_AVAILABLE,
+                        message = "VOSK not yet migrated to KMP SpeechRecognition module — using Android STT fallback",
+                        isRecoverable = true,
+                        suggestedAction = SpeechError.Action.LOG_AND_REPORT
+                    ))
                     initializeAndroidSTT(context, config.copy(engine = SpeechEngine.ANDROID_STT))
                 }
                 SpeechEngine.VIVOKA -> {
                     // TODO: Implement when VivokaEngine is migrated
-                    logInfo(TAG, "Vivoka engine not yet migrated, using Android STT fallback")
+                    logInfo(TAG, "Vivoka engine not yet migrated to KMP — falling back to Android STT")
+                    _errorFlow.tryEmit(SpeechError(
+                        code = SpeechError.ERROR_NOT_AVAILABLE,
+                        message = "Vivoka not yet migrated to KMP SpeechRecognition module — using Android STT fallback",
+                        isRecoverable = true,
+                        suggestedAction = SpeechError.Action.LOG_AND_REPORT
+                    ))
                     initializeAndroidSTT(context, config.copy(engine = SpeechEngine.ANDROID_STT))
                 }
                 SpeechEngine.WHISPER -> initializeWhisper(context, config)

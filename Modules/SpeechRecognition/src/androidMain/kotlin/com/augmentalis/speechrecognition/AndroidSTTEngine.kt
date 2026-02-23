@@ -190,7 +190,12 @@ class AndroidSTTEngine(private val context: Context) {
     fun isListening(): Boolean = if (::recognizer.isInitialized) recognizer.isListening() else false
 
     /**
-     * Change speech mode
+     * Changes the speech recognition mode asynchronously.
+     *
+     * IMPORTANT: This method launches a coroutine and returns before the mode change completes.
+     * Callers should observe the config state to confirm the mode has switched before calling
+     * startListening(). Internal callers (stopDictation) handle this via sequential coroutine
+     * execution within the same scope.
      */
     fun changeMode(mode: SpeechMode): Boolean {
         config.setSpeechMode(mode)
@@ -464,13 +469,23 @@ class AndroidSTTEngine(private val context: Context) {
         timeoutJob?.cancel()
         mainHandler.removeCallbacks(silenceCheckRunnable)
 
-        // Destroy recognizer on main thread BEFORE cancelling scope.
-        // SpeechRecognizer.destroy() must run on the same Looper it was created on.
-        // Uses a standalone scope since recognizer.destroy() is suspend and the
-        // engine's own scope is about to be cancelled.
+        // Destroy recognizer synchronously before cancelling scope.
+        // AndroidSTTRecognizer.destroy() is suspend (uses withContext(Main) internally).
+        // runBlocking ensures cleanup completes before we proceed — no leaked scope.
+        // This is safe from IO/background threads. From Main, Dispatchers.Main.immediate
+        // avoids re-dispatch so withContext(Main) inside recognizer.destroy() won't deadlock.
         if (::recognizer.isInitialized) {
-            CoroutineScope(Dispatchers.Main.immediate + SupervisorJob()).launch {
-                recognizer.destroy()
+            try {
+                val dispatcher = if (Looper.myLooper() == Looper.getMainLooper()) {
+                    Dispatchers.Main.immediate
+                } else {
+                    Dispatchers.IO
+                }
+                kotlinx.coroutines.runBlocking(dispatcher) {
+                    recognizer.destroy()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error destroying recognizer: ${e.message}")
             }
         }
 

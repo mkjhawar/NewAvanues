@@ -156,7 +156,7 @@ fun WhisperModelDownloadScreen(
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(WhisperModelSize.entries.toList()) { modelSize ->
+            items(WhisperModelSize.entries.toList(), key = { it.name }) { modelSize ->
                 val isDownloaded = downloadedModels.any { it.modelSize == modelSize }
                 val isRecommended = modelSize == recommended
                 val isDownloading = downloadState is ModelDownloadState.Downloading &&

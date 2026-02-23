@@ -10,6 +10,13 @@ package com.augmentalis.speechrecognition
 
 /**
  * Recognition modes that determine how speech is processed.
+ *
+ * Note: VoiceOSCore has its own SpeechMode enum with additional values
+ * (MUTED, COMBINED_COMMAND) that are VoiceOSCore-layer concepts.
+ * MUTED maps to STATIC_COMMAND at this layer — grammar filtering
+ * is handled by VoiceOSCore.setSpeechMode(), not by the engine.
+ *
+ * @see com.augmentalis.voiceoscore.speech.SpeechMode for the VoiceOSCore variant
  */
 enum class SpeechMode {
     /**
