@@ -126,44 +126,44 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
 
     suspend fun insert(command: VoiceCommandEntity): Long = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        val hasTargeting = command.resourceId != null || command.elementHash != null || command.className != null
-        if (hasTargeting) {
-            queries.insertCommandWithTargeting(
-                command_id = command.id,
-                locale = command.locale,
-                trigger_phrase = command.primaryText,
-                synonyms = command.synonyms,
-                action = command.resolvedAction,
-                description = command.description,
-                category = command.category,
-                domain = command.domain,
-                priority = command.priority.toLong(),
-                is_fallback = if (command.isFallback) 1L else 0L,
-                is_enabled = 1L,
-                element_hash = command.elementHash,
-                resource_id = command.resourceId,
-                class_name = command.className,
-                created_at = command.createdAt,
-                updated_at = now
-            )
-        } else {
-            queries.insertCommandFull(
-                command_id = command.id,
-                locale = command.locale,
-                trigger_phrase = command.primaryText,
-                synonyms = command.synonyms,
-                action = command.resolvedAction,
-                description = command.description,
-                category = command.category,
-                domain = command.domain,
-                priority = command.priority.toLong(),
-                is_fallback = if (command.isFallback) 1L else 0L,
-                is_enabled = 1L,
-                created_at = command.createdAt,
-                updated_at = now
-            )
-        }
         queries.transactionWithResult {
+            val hasTargeting = command.resourceId != null || command.elementHash != null || command.className != null
+            if (hasTargeting) {
+                queries.insertCommandWithTargeting(
+                    command_id = command.id,
+                    locale = command.locale,
+                    trigger_phrase = command.primaryText,
+                    synonyms = command.synonyms,
+                    action = command.resolvedAction,
+                    description = command.description,
+                    category = command.category,
+                    domain = command.domain,
+                    priority = command.priority.toLong(),
+                    is_fallback = if (command.isFallback) 1L else 0L,
+                    is_enabled = 1L,
+                    element_hash = command.elementHash,
+                    resource_id = command.resourceId,
+                    class_name = command.className,
+                    created_at = command.createdAt,
+                    updated_at = now
+                )
+            } else {
+                queries.insertCommandFull(
+                    command_id = command.id,
+                    locale = command.locale,
+                    trigger_phrase = command.primaryText,
+                    synonyms = command.synonyms,
+                    action = command.resolvedAction,
+                    description = command.description,
+                    category = command.category,
+                    domain = command.domain,
+                    priority = command.priority.toLong(),
+                    is_fallback = if (command.isFallback) 1L else 0L,
+                    is_enabled = 1L,
+                    created_at = command.createdAt,
+                    updated_at = now
+                )
+            }
             queries.lastInsertRowId().executeAsOne()
         }
     }
@@ -342,16 +342,6 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
 
     suspend fun getCommandsForApp(locale: String = "en-US"): List<VoiceCommandEntity> = withContext(Dispatchers.IO) {
         queries.getCommandsForApp(locale).executeAsList().map { it.toEntity() }
-    }
-
-    suspend fun getScreensForApp(packageName: String): List<String> {
-        // Placeholder - schema extension needed
-        return emptyList()
-    }
-
-    suspend fun getCommandsForScreen(packageName: String, screenName: String, locale: String = "en-US"): List<VoiceCommandEntity> {
-        // Placeholder - schema extension needed
-        return emptyList()
     }
 
     // ==================== EXTENSION ====================

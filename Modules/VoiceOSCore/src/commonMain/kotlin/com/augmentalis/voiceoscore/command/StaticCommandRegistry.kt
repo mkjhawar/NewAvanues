@@ -224,7 +224,7 @@ data class StaticCommand(
     val id: String = "",
 
     /**
-     * Alternative phrases that trigger this command
+     * Phrases that trigger this command (must have at least one).
      */
     val phrases: List<String>,
 
@@ -256,6 +256,10 @@ data class StaticCommand(
      */
     val domain: String = "app"
 ) {
+    init {
+        require(phrases.isNotEmpty()) { "StaticCommand '$id' must have at least one phrase" }
+    }
+
     /**
      * Primary phrase (first in list)
      */

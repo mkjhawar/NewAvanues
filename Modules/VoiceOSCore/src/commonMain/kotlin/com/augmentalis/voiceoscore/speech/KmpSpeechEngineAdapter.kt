@@ -225,7 +225,7 @@ class KmpSpeechEngineAdapter(
         return when (mode) {
             SpeechMode.STATIC_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND
             SpeechMode.DYNAMIC_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.DYNAMIC_COMMAND
-            SpeechMode.COMBINED_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.HYBRID
+            SpeechMode.COMBINED_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND  // Combined logic handled by VoiceOSCore coordinator; engine uses restricted grammar
             SpeechMode.DICTATION -> com.augmentalis.speechrecognition.SpeechMode.DICTATION
             SpeechMode.FREE_SPEECH -> com.augmentalis.speechrecognition.SpeechMode.FREE_SPEECH
             SpeechMode.MUTED -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND  // Muted = restricted wake-only grammar

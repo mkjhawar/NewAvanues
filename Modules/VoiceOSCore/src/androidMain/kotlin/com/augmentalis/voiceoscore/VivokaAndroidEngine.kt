@@ -164,7 +164,7 @@ class VivokaAndroidEngine(
             mode = when (config.mode) {
                 SpeechMode.STATIC_COMMAND -> SRSpeechMode.STATIC_COMMAND
                 SpeechMode.DYNAMIC_COMMAND -> SRSpeechMode.DYNAMIC_COMMAND
-                SpeechMode.COMBINED_COMMAND -> SRSpeechMode.DYNAMIC_COMMAND  // No combined in SR, use dynamic
+                SpeechMode.COMBINED_COMMAND -> SRSpeechMode.STATIC_COMMAND  // Combined logic handled by VoiceOSCore coordinator; engine uses restricted grammar
                 SpeechMode.DICTATION -> SRSpeechMode.DICTATION
                 SpeechMode.FREE_SPEECH -> SRSpeechMode.FREE_SPEECH
                 SpeechMode.MUTED -> SRSpeechMode.STATIC_COMMAND  // Muted = restricted wake-only grammar

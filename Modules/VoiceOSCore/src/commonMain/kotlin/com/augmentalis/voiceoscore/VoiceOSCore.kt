@@ -160,12 +160,12 @@ class VoiceOSCore private constructor(
                 try {
                     val count = staticCommandPersistence.populateIfNeeded()
                     if (count > 0) {
-                        println("[VoiceOSCore] Populated $count static commands to database")
+                        LoggingUtils.d("Populated $count static commands to database", TAG)
                     } else {
-                        println("[VoiceOSCore] Static commands already in database")
+                        LoggingUtils.d("Static commands already in database", TAG)
                     }
                 } catch (e: Exception) {
-                    println("[VoiceOSCore] Static command persistence error: ${e.message}")
+                    LoggingUtils.w("Static command persistence error: ${e.message}", TAG, e)
                     // Continue without persistence - static commands still work in memory
                 }
             }
@@ -176,7 +176,7 @@ class VoiceOSCore private constructor(
             if (configuration.synonymsEnabled && activeSynonymProvider != null) {
                 CommandMatcher.synonymProvider = activeSynonymProvider
                 CommandMatcher.defaultLanguage = configuration.effectiveSynonymLanguage()
-                println("[VoiceOSCore] Synonym provider initialized for ${configuration.effectiveSynonymLanguage()}")
+                LoggingUtils.d("Synonym provider initialized for ${configuration.effectiveSynonymLanguage()}", TAG)
             }
 
             stateManager.transition(ServiceState.Initializing(0.5f, "Initializing speech engine"))
@@ -195,7 +195,7 @@ class VoiceOSCore private constructor(
                     val initResult = speechEngine?.initialize(config)
                     if (initResult?.isFailure == true) {
                         // Log error but don't fail - voice is optional
-                        println("[VoiceOSCore] Speech engine initialization failed: ${initResult.exceptionOrNull()?.message}")
+                        LoggingUtils.w("Speech engine initialization failed: ${initResult.exceptionOrNull()?.message}", TAG)
                     }
 
                     // Register static commands and handler phrases with speech engine for voice recognition
@@ -217,13 +217,13 @@ class VoiceOSCore private constructor(
                             if (allPhrases.isNotEmpty()) {
                                 val updateResult = speechEngine?.updateCommands(allPhrases)
                                 if (updateResult?.isSuccess == true) {
-                                    println("[VoiceOSCore] Registered ${allPhrases.size} phrases with speech engine (${staticPhrases.size} static, ${handlerPhrases.size} from handlers)")
+                                    LoggingUtils.i("Registered ${allPhrases.size} phrases with speech engine (${staticPhrases.size} static, ${handlerPhrases.size} from handlers)", TAG)
                                 } else {
-                                    println("[VoiceOSCore] Failed to register commands with speech engine: ${updateResult?.exceptionOrNull()?.message}")
+                                    LoggingUtils.w("Failed to register commands with speech engine: ${updateResult?.exceptionOrNull()?.message}", TAG)
                                 }
                             }
                         } catch (e: Exception) {
-                            println("[VoiceOSCore] Error registering commands: ${e.message}")
+                            LoggingUtils.w("Error registering commands: ${e.message}", TAG, e)
                             // Continue - commands can still be processed, just not speech-recognized
                         }
                     }
@@ -233,10 +233,10 @@ class VoiceOSCore private constructor(
                         speechEngine?.startListening()
                     }
                 } else {
-                    println("[VoiceOSCore] Speech engine creation failed: ${engineResult.exceptionOrNull()?.message}")
+                    LoggingUtils.w("Speech engine creation failed: ${engineResult.exceptionOrNull()?.message}", TAG)
                 }
             } catch (e: Exception) {
-                println("[VoiceOSCore] Speech engine setup failed: ${e.message}")
+                LoggingUtils.w("Speech engine setup failed: ${e.message}", TAG, e)
                 // Continue without speech - handlers still work
             }
 
@@ -401,11 +401,10 @@ class VoiceOSCore private constructor(
                     engine.updateCommands(exitCommands)
                 } else {
                     // Defensive fallback: load wake commands from registry
-                    val fallbackWake = StaticCommandRegistry.findById("voice_wake")
-                        ?.let { listOf(it.primaryPhrase) + it.phrases.drop(1) }
+                    val fallbackWake = StaticCommandRegistry.findById("voice_wake")?.phrases
                         ?: listOf("wake up voice", "start listening", "voice on")
                     engine.updateCommands(fallbackWake)
-                    println("[VoiceOSCore] MUTED with no exitCommands — auto-loaded ${fallbackWake.size} wake commands")
+                    LoggingUtils.d("MUTED with no exitCommands — auto-loaded ${fallbackWake.size} wake commands", TAG)
                 }
             }
             mode == SpeechMode.DICTATION -> {
@@ -415,11 +414,10 @@ class VoiceOSCore private constructor(
                     engine.updateCommands(exitCommands)
                 } else {
                     // Defensive fallback: load stop-dictation commands from registry
-                    val fallbackExit = StaticCommandRegistry.findById("voice_dict_stop")
-                        ?.let { listOf(it.primaryPhrase) + it.phrases.drop(1) }
+                    val fallbackExit = StaticCommandRegistry.findById("voice_dict_stop")?.phrases
                         ?: listOf("stop dictation", "end dictation", "command mode")
                     engine.updateCommands(fallbackExit)
-                    println("[VoiceOSCore] DICTATION with no exitCommands — auto-loaded ${fallbackExit.size} exit commands")
+                    LoggingUtils.d("DICTATION with no exitCommands — auto-loaded ${fallbackExit.size} exit commands", TAG)
                 }
             }
             mode.usesCommandMatching() -> {
@@ -802,6 +800,7 @@ class VoiceOSCore private constructor(
     }
 
     companion object {
+        private const val TAG = "VoiceOSCore"
         const val VERSION = "1.0.0"
         const val MODULE_NAME = "VoiceOSCore"
 

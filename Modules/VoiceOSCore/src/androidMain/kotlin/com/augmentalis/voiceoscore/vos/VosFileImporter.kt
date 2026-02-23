@@ -211,8 +211,8 @@ class VosFileImporter(
                 return fileName.removeSuffix(".web.vos")
             }
         }
-        // Fall back to locale (app domain) or domain (web domain)
-        return if (parsedDomain == "web") locale else locale
+        // Fall back to domain name for web files, locale for app files
+        return if (parsedDomain == "web") parsedDomain else locale
     }
 
     /**

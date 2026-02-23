@@ -43,7 +43,7 @@ object CapabilityScorer {
         batteryPercent = dto.batteryPercent ?: 0,
         isCharging = dto.isCharging ?: false,
         bandwidthMbps = dto.bandwidthMbps ?: 0,
-        deviceType = dto.deviceType,
+        deviceType = dto.deviceType ?: "UNKNOWN",
         networkType = dto.networkType ?: NetworkType.UNKNOWN,
         screenWidth = dto.screenWidth ?: 0,
         codecCount = dto.supportedCodecs?.size ?: 0,

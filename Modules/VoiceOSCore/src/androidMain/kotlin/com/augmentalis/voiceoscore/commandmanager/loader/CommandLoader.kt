@@ -25,6 +25,7 @@ import com.augmentalis.voiceoscore.commandmanager.database.sqldelight.DatabaseVe
 import com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
 import com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandEntity
 import java.io.FileNotFoundException
+import com.augmentalis.voiceoscore.loader.StaticCommandPersistenceImpl
 import java.util.Locale
 
 /**
@@ -73,7 +74,7 @@ class CommandLoader(
 
             // 0. CHECK if database already loaded with correct version
             val existingVersion = versionDao.getVersion()
-            val requiredVersion = "3.2" // v3.2: added ann/img/vid/cast/ai categories + action mappings
+            val requiredVersion = StaticCommandPersistenceImpl.VOS_DB_VERSION
 
             if (existingVersion != null && existingVersion.jsonVersion == requiredVersion) {
                 val commandCount = commandDao.getCommandCount(FALLBACK_LOCALE)

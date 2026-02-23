@@ -218,8 +218,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                         // Check if this is an exit command (e.g., "stop dictation")
                                         val isExitCommand = StaticCommandRegistry.findById("voice_dict_stop")
                                             ?.let { cmd ->
-                                                val exitPhrases = listOf(cmd.triggerPhrase) + cmd.synonyms
-                                                exitPhrases.any { it.equals(result.text, ignoreCase = true) }
+                                                cmd.phrases.any { phrase -> phrase.equals(result.text, ignoreCase = true) }
                                             } ?: false
 
                                         if (isExitCommand) {
@@ -320,8 +319,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                 // Build locale-aware wake commands from StaticCommandRegistry
                                 // so the user can say "wake up voice" (or localized equivalent)
                                 // while muted. Fallback to English if registry not loaded.
-                                val wakeCommands = StaticCommandRegistry.findById("voice_wake")
-                                    ?.let { cmd -> listOf(cmd.triggerPhrase) + cmd.synonyms }
+                                val wakeCommands = StaticCommandRegistry.findById("voice_wake")?.phrases
                                     ?: listOf("wake up voice", "start listening", "voice on")
 
                                 core?.setSpeechMode(SpeechMode.MUTED, exitCommands = wakeCommands)
@@ -353,8 +351,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         serviceScope.launch {
                             try {
                                 // Build locale-aware exit commands from StaticCommandRegistry
-                                val exitCommands = StaticCommandRegistry.findById("voice_dict_stop")
-                                    ?.let { cmd -> listOf(cmd.triggerPhrase) + cmd.synonyms }
+                                val exitCommands = StaticCommandRegistry.findById("voice_dict_stop")?.phrases
                                     ?: listOf("stop dictation", "end dictation", "command mode")
 
                                 core?.setSpeechMode(SpeechMode.DICTATION, exitCommands = exitCommands)
