@@ -535,8 +535,8 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
                         CursorOverlayService.getInstance()?.let { cursorService ->
                             cursorService.updateConfig(config)
-                            // Ensure ClickDispatcher is set so "cursor click" voice command works
-                            cursorService.setClickDispatcher(AccessibilityClickDispatcher())
+                            // ClickDispatcher is wired by wireCursorDependencies() when cursor
+                            // is first enabled — no need to re-wire on every settings change
                         }
                     }
                 }
@@ -673,6 +673,12 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         webCommandCollectorJob?.cancel()
         webCommandCollectorJob = null
         BrowserVoiceOSCallback.clearActiveWebPhrases()
+
+        // Stop IMU tracking for any active cursor consumers before service teardown
+        try {
+            IMUManager.getInstance(applicationContext).stopIMUTracking("cursor_voice")
+            IMUManager.getInstance(applicationContext).stopIMUTracking("cursor_settings")
+        } catch (_: Exception) { /* best-effort cleanup */ }
 
         // Cancel cursor settings collection
         cursorSettingsJob?.cancel()

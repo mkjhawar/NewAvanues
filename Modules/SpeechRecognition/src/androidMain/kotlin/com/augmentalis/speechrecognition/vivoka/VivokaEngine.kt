@@ -43,6 +43,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -763,9 +764,17 @@ class VivokaEngine(
      * where startListening() must NOT run until the grammar is ready.
      */
     suspend fun setDynamicCommandsAwait(commands: List<String>): Boolean {
-        // Wait for any in-progress compilation to finish
-        while (!isSettingDynamicCommands.compareAndSet(false, true)) {
-            delay(50) // yield, let the current compilation finish
+        // Wait for any in-progress compilation to finish (with timeout to prevent
+        // indefinite blocking if the VSDK hangs during grammar compilation)
+        val acquired = withTimeoutOrNull(5_000L) {
+            while (!isSettingDynamicCommands.compareAndSet(false, true)) {
+                delay(50) // yield, let the current compilation finish
+            }
+            true
+        }
+        if (acquired == null) {
+            Log.w(TAG, "setDynamicCommandsAwait: timed out waiting for compilation lock (5s)")
+            return false
         }
         try {
             Log.d(TAG, "setDynamicCommandsAwait: ${commands.size} commands")
@@ -906,7 +915,7 @@ class VivokaEngine(
      * Handle mode switches with model management
      */
     private suspend fun handleModeSwitch(mode: Any) {
-        Log.d(TAG, "handleModeSwitch = $mode , extra = $ ")
+        Log.d(TAG, "handleModeSwitch = $mode")
         when (mode.toString()) {
             "FREE_SPEECH_START", "FREE_SPEECH_RUNNING" -> {
                 // Switch to dictation model

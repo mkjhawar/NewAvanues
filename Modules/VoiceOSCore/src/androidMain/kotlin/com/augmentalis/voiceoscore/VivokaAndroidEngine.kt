@@ -321,8 +321,11 @@ class VivokaAndroidEngine(
                 return Result.success(Unit)
             }
 
-            vivokaEngine?.setDynamicCommandsAwait(commands)
-            lastCommandsHash.set(newHash)
+            val compiled = vivokaEngine?.setDynamicCommandsAwait(commands) ?: true
+            // Only cache hash if compilation succeeded, so next call retries on failure
+            if (compiled) {
+                lastCommandsHash.set(newHash)
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
