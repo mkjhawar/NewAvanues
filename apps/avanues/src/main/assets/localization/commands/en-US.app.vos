@@ -40,6 +40,10 @@ voice_num_auto|numbers auto|numbers automatic,auto numbers|Show numbers only for
 voice_cursor_show|show cursor|cursor on,enable cursor|Show the voice cursor overlay
 voice_cursor_hide|hide cursor|cursor off,disable cursor|Hide the voice cursor overlay
 voice_cursor_click|cursor click|click here|Click at cursor position
+voice_cursor_up|cursor up|move cursor up|Move cursor up
+voice_cursor_down|cursor down|move cursor down|Move cursor down
+voice_cursor_left|cursor left|move cursor left|Move cursor left
+voice_cursor_right|cursor right|move cursor right|Move cursor right
 acc_click|click|tap,press|Click/tap on a named or numbered element
 acc_long_click|long press|long click,press and hold,hold|Long press on element
 acc_zoom_in|zoom in|magnify,enlarge|Zoom in

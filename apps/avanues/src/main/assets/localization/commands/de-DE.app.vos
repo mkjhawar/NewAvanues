@@ -40,6 +40,10 @@ voice_num_auto|Nummern automatisch|Nummern auto,automatische Nummern|Nummern nur
 voice_cursor_show|Cursor zeigen|Cursor an,Cursor einschalten,Zeiger zeigen|Sprach-Cursor-Overlay anzeigen
 voice_cursor_hide|Cursor verstecken|Cursor aus,Cursor ausschalten,Zeiger verstecken|Sprach-Cursor-Overlay ausblenden
 voice_cursor_click|Cursor klicken|hier klicken,klick hier|An Cursorposition klicken
+voice_cursor_up|Cursor hoch|Cursor nach oben|Cursor nach oben bewegen
+voice_cursor_down|Cursor runter|Cursor nach unten|Cursor nach unten bewegen
+voice_cursor_left|Cursor links|Cursor nach links|Cursor nach links bewegen
+voice_cursor_right|Cursor rechts|Cursor nach rechts|Cursor nach rechts bewegen
 acc_click|klicken|tippen,druecken|Auf ein benanntes oder nummeriertes Element klicken
 acc_long_click|lang druecken|langer Druck,gedrueckt halten,halten|Langen Druck auf Element ausfuehren
 acc_zoom_in|reinzoomen|vergroessern,naeher ran,zoom rein|Hineinzoomen

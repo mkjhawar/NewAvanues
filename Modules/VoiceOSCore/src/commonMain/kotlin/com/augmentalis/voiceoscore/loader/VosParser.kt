@@ -140,6 +140,10 @@ object VosParser {
         "voice_cursor_show" to "CURSOR_SHOW",
         "voice_cursor_hide" to "CURSOR_HIDE",
         "voice_cursor_click" to "CURSOR_CLICK",
+        "voice_cursor_up" to "CURSOR_UP",
+        "voice_cursor_down" to "CURSOR_DOWN",
+        "voice_cursor_left" to "CURSOR_LEFT",
+        "voice_cursor_right" to "CURSOR_RIGHT",
         // ── Accessibility ──
         "acc_click" to "CLICK",
         "acc_long_click" to "LONG_CLICK",

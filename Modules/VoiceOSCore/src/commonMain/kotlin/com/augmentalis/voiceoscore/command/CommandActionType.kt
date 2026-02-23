@@ -229,6 +229,18 @@ enum class CommandActionType {
     /** Cursor click at current position */
     CURSOR_CLICK,
 
+    /** Move cursor up */
+    CURSOR_UP,
+
+    /** Move cursor down */
+    CURSOR_DOWN,
+
+    /** Move cursor left */
+    CURSOR_LEFT,
+
+    /** Move cursor right */
+    CURSOR_RIGHT,
+
     // ═══════════════════════════════════════════════════════════════════
     // Reading/TTS Actions
     // ═══════════════════════════════════════════════════════════════════
@@ -877,7 +889,8 @@ enum class CommandActionType {
      * Check if this is a cursor action
      */
     fun isCursorAction(): Boolean = this in listOf(
-        CURSOR_SHOW, CURSOR_HIDE, CURSOR_CLICK
+        CURSOR_SHOW, CURSOR_HIDE, CURSOR_CLICK,
+        CURSOR_UP, CURSOR_DOWN, CURSOR_LEFT, CURSOR_RIGHT
     )
 
     /**
