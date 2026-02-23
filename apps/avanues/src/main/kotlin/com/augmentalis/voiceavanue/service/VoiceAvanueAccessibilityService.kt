@@ -191,7 +191,12 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 }
 
                 // Bridge: Collect speech recognition results → route to command execution
-                // Without this, Vivoka emits recognized commands but nobody processes them
+                // Without this, Vivoka emits recognized commands but nobody processes them.
+                //
+                // Mode-aware routing:
+                // - COMBINED/STATIC/DYNAMIC: route to processVoiceCommand() (normal)
+                // - MUTED: only wake commands pass through (defense-in-depth — grammar already restricted)
+                // - DICTATION: non-exit text injected into focused input field; exit commands route normally
                 val confidenceThreshold = devSettings.confidenceThreshold
                 speechCollectorJob?.cancel()
                 speechCollectorJob = serviceScope.launch {
@@ -200,7 +205,41 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         ?.collect { result ->
                             if (result.isFinal && result.text.isNotBlank() && result.confidence >= confidenceThreshold) {
                                 Log.d(TAG, "Voice recognized: '${result.text}' (conf: ${result.confidence})")
-                                processVoiceCommand(result.text, result.confidence)
+
+                                val currentMode = voiceOSCore?.speechMode
+                                when (currentMode) {
+                                    SpeechMode.MUTED -> {
+                                        // In MUTED mode, only wake commands should arrive (grammar is restricted).
+                                        // Route them to processVoiceCommand so VoiceControlHandler triggers onWakeVoice.
+                                        Log.d(TAG, "MUTED mode — routing wake command: '${result.text}'")
+                                        processVoiceCommand(result.text, result.confidence)
+                                    }
+                                    SpeechMode.DICTATION -> {
+                                        // Check if this is an exit command (e.g., "stop dictation")
+                                        val isExitCommand = StaticCommandRegistry.findById("voice_dict_stop")
+                                            ?.let { cmd ->
+                                                val exitPhrases = listOf(cmd.triggerPhrase) + cmd.synonyms
+                                                exitPhrases.any { it.equals(result.text, ignoreCase = true) }
+                                            } ?: false
+
+                                        if (isExitCommand) {
+                                            Log.d(TAG, "DICTATION exit command detected: '${result.text}'")
+                                            processVoiceCommand(result.text, result.confidence)
+                                        } else {
+                                            // Inject recognized text into focused input field
+                                            Log.d(TAG, "DICTATION text injection: '${result.text}'")
+                                            injectDictationText(result.text)
+                                        }
+                                    }
+                                    null -> {
+                                        // VoiceOSCore not initialized yet — ignore speech results
+                                        Log.w(TAG, "VoiceOSCore not initialized, ignoring speech result: '${result.text}'")
+                                    }
+                                    else -> {
+                                        // Normal command mode — route all recognized speech to command processing
+                                        processVoiceCommand(result.text, result.confidence)
+                                    }
+                                }
                             }
                         }
                 }
@@ -278,8 +317,15 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         OverlayStateManager.showFeedback("Voice Muted")
                         serviceScope.launch {
                             try {
-                                core?.stopListening()
-                                Log.i(TAG, "Voice muted via callback")
+                                // Build locale-aware wake commands from StaticCommandRegistry
+                                // so the user can say "wake up voice" (or localized equivalent)
+                                // while muted. Fallback to English if registry not loaded.
+                                val wakeCommands = StaticCommandRegistry.findById("voice_wake")
+                                    ?.let { cmd -> listOf(cmd.triggerPhrase) + cmd.synonyms }
+                                    ?: listOf("wake up voice", "start listening", "voice on")
+
+                                core?.setSpeechMode(SpeechMode.MUTED, exitCommands = wakeCommands)
+                                Log.i(TAG, "Voice muted via MUTED mode (wake commands: ${wakeCommands.size})")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to mute voice", e)
                             }
@@ -290,8 +336,9 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         OverlayStateManager.showFeedback("Voice Activated")
                         serviceScope.launch {
                             try {
-                                val result = core?.startListening()
-                                Log.i(TAG, "Voice wake via callback: success=${result?.isSuccess}")
+                                // Restore full command grammar by switching back to COMBINED_COMMAND
+                                core?.setSpeechMode(SpeechMode.COMBINED_COMMAND)
+                                Log.i(TAG, "Voice woke via setSpeechMode(COMBINED_COMMAND)")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to wake voice", e)
                             }
@@ -299,18 +346,19 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         true
                     }
                     VoiceControlCallbacks.onStartDictation = {
-                        // Switch to dictation mode with minimal exit grammar.
+                        // Switch to dictation mode with locale-aware exit grammar.
                         // The speech engine stays active but only recognizes exit commands
-                        // ("stop dictation", "end dictation", "command mode") so the user
-                        // can return to command mode via voice instead of needing a button.
+                        // so the user can return to command mode via voice.
                         OverlayStateManager.showFeedback("Dictation Mode")
                         serviceScope.launch {
                             try {
-                                core?.setSpeechMode(
-                                    SpeechMode.DICTATION,
-                                    exitCommands = listOf("stop dictation", "end dictation", "command mode")
-                                )
-                                Log.i(TAG, "Dictation mode: switched to DICTATION with exit grammar")
+                                // Build locale-aware exit commands from StaticCommandRegistry
+                                val exitCommands = StaticCommandRegistry.findById("voice_dict_stop")
+                                    ?.let { cmd -> listOf(cmd.triggerPhrase) + cmd.synonyms }
+                                    ?: listOf("stop dictation", "end dictation", "command mode")
+
+                                core?.setSpeechMode(SpeechMode.DICTATION, exitCommands = exitCommands)
+                                Log.i(TAG, "Dictation mode: switched with ${exitCommands.size} exit commands")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to start dictation", e)
                             }
@@ -483,6 +531,52 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 Log.i(TAG, "VoiceOSCore initialized with dev settings: engine=${devSettings.sttEngine}, lang=${devSettings.voiceLanguage}, confidence=${devSettings.confidenceThreshold}")
             } catch (e: Exception) {
                 Log.e(TAG, "Initialization failed", e)
+            }
+        }
+    }
+
+    /**
+     * Inject dictation text into the currently focused input field.
+     * Uses AccessibilityNodeInfo.ACTION_SET_TEXT to append recognized speech.
+     */
+    @Suppress("DEPRECATION") // AccessibilityNodeInfo.recycle() deprecated in API 34+ but needed for compat
+    private fun injectDictationText(text: String) {
+        var focusedNode: android.view.accessibility.AccessibilityNodeInfo? = null
+        try {
+            focusedNode = rootInActiveWindow?.findFocus(
+                android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT
+            )
+            if (focusedNode == null) {
+                Log.w(TAG, "Dictation: no focused input field — cannot inject text")
+                OverlayStateManager.showFeedback("No text field focused")
+                return
+            }
+
+            // Append to existing text (with space separator)
+            val existingText = focusedNode.text?.toString() ?: ""
+            val newText = if (existingText.isNotEmpty()) "$existingText $text" else text
+
+            val args = android.os.Bundle().apply {
+                putCharSequence(
+                    android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                    newText
+                )
+            }
+            val success = focusedNode.performAction(
+                android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT,
+                args
+            )
+            if (success) {
+                Log.d(TAG, "Dictation: injected '${text}' into focused field")
+            } else {
+                Log.w(TAG, "Dictation: ACTION_SET_TEXT failed")
+                OverlayStateManager.showFeedback("Text injection failed")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Dictation text injection error", e)
+        } finally {
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                focusedNode?.recycle()
             }
         }
     }

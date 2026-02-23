@@ -97,6 +97,19 @@ class VoiceOSCore private constructor(
     var onSystemAction: ((String) -> Unit)? = null
 
     /**
+     * Current speech mode — tracks the active recognition mode (COMBINED_COMMAND, DICTATION, MUTED, etc.)
+     * Used by the accessibility service to gate command execution (e.g., suppress commands in MUTED mode).
+     */
+    @Volatile
+    private var currentSpeechMode: SpeechMode = SpeechMode.COMBINED_COMMAND
+
+    /**
+     * Public accessor for the current speech mode.
+     * VoiceOSAccessibilityService reads this to implement mute guard and dictation routing.
+     */
+    val speechMode: SpeechMode get() = currentSpeechMode
+
+    /**
      * Current speech configuration (set during init, updated during mode switch).
      * Used by setSpeechMode() to build new config without losing existing settings.
      */
@@ -371,40 +384,80 @@ class VoiceOSCore private constructor(
         // Stop current recognition
         engine.stopListening()
 
+        // Track the active mode
+        currentSpeechMode = mode
+
         // Reconfigure the engine for the new mode
         val newConfig = currentSpeechConfig.withMode(mode)
         currentSpeechConfig = newConfig
         engine.updateConfiguration(newConfig)
 
-        if (mode == SpeechMode.DICTATION && exitCommands.isNotEmpty()) {
-            // In dictation mode, only register exit commands so the user
-            // can say "stop dictation" to return to command mode
-            engine.updateCommands(exitCommands)
-        } else if (mode.usesCommandMatching()) {
-            // Restore full command grammar
-            val staticPhrases = staticCommandPersistence?.getAllPhrases()
-                ?: StaticCommandRegistry.allPhrases()
-            val dynamicPhrases = coordinator.getDynamicCommands().map { it.phrase }
-            val fullGrammar = buildSet {
-                addAll(staticPhrases)
-                addAll(appHandlerPhrases)
-                addAll(dynamicPhrases)
-                addAll(webCommandPhrases)
+        when {
+            mode == SpeechMode.MUTED -> {
+                // Muted mode: engine stays alive with ONLY wake commands in grammar.
+                // This allows the user to say "wake up voice" to unmute while all
+                // other speech is ignored at both grammar and guard levels.
+                if (exitCommands.isNotEmpty()) {
+                    engine.updateCommands(exitCommands)
+                } else {
+                    // Defensive fallback: load wake commands from registry
+                    val fallbackWake = StaticCommandRegistry.findById("voice_wake")
+                        ?.let { listOf(it.triggerPhrase) + it.synonyms }
+                        ?: listOf("wake up voice", "start listening", "voice on")
+                    engine.updateCommands(fallbackWake)
+                    println("[VoiceOSCore] MUTED with no exitCommands — auto-loaded ${fallbackWake.size} wake commands")
+                }
             }
-            engine.updateCommands(fullGrammar.toList())
-            allRegisteredCommands.clear()
-            allRegisteredCommands.addAll(fullGrammar)
+            mode == SpeechMode.DICTATION -> {
+                // In dictation mode, only register exit commands so the user
+                // can say "stop dictation" to return to command mode
+                if (exitCommands.isNotEmpty()) {
+                    engine.updateCommands(exitCommands)
+                } else {
+                    // Defensive fallback: load stop-dictation commands from registry
+                    val fallbackExit = StaticCommandRegistry.findById("voice_dict_stop")
+                        ?.let { listOf(it.triggerPhrase) + it.synonyms }
+                        ?: listOf("stop dictation", "end dictation", "command mode")
+                    engine.updateCommands(fallbackExit)
+                    println("[VoiceOSCore] DICTATION with no exitCommands — auto-loaded ${fallbackExit.size} exit commands")
+                }
+            }
+            mode.usesCommandMatching() -> {
+                // Restore full command grammar
+                val staticPhrases = staticCommandPersistence?.getAllPhrases()
+                    ?: StaticCommandRegistry.allPhrases()
+                val dynamicPhrases = coordinator.getDynamicCommands().map { it.phrase }
+                val fullGrammar = buildSet {
+                    addAll(staticPhrases)
+                    addAll(appHandlerPhrases)
+                    addAll(dynamicPhrases)
+                    addAll(webCommandPhrases)
+                }
+                engine.updateCommands(fullGrammar.toList())
+                allRegisteredCommands.clear()
+                allRegisteredCommands.addAll(fullGrammar)
+            }
         }
 
         // Restart recognition with new configuration
         val result = engine.startListening()
         if (result.isSuccess) {
-            stateManager.transition(
-                ServiceState.Listening(
-                    speechEngine = configuration.speechEngine,
-                    wakeWordEnabled = configuration.enableWakeWord
+            if (mode == SpeechMode.MUTED) {
+                // Transition to Ready (not Listening) so UI shows muted state
+                stateManager.transition(
+                    ServiceState.Ready(
+                        speechEngineActive = true,
+                        handlerCount = coordinator.getAllSupportedActions().size
+                    )
                 )
-            )
+            } else {
+                stateManager.transition(
+                    ServiceState.Listening(
+                        speechEngine = configuration.speechEngine,
+                        wakeWordEnabled = configuration.enableWakeWord
+                    )
+                )
+            }
         }
 
         println("[VoiceOSCore] Speech mode switched to $mode (exit commands: ${exitCommands.size})")
