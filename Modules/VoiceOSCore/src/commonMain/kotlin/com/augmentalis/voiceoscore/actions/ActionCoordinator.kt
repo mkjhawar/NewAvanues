@@ -375,6 +375,10 @@ class ActionCoordinator(
             CommandActionType.CURSOR_SHOW -> "show cursor"
             CommandActionType.CURSOR_HIDE -> "hide cursor"
             CommandActionType.CURSOR_CLICK -> "cursor click"
+            CommandActionType.CURSOR_UP -> "cursor up"
+            CommandActionType.CURSOR_DOWN -> "cursor down"
+            CommandActionType.CURSOR_LEFT -> "cursor left"
+            CommandActionType.CURSOR_RIGHT -> "cursor right"
 
             // Reading/TTS actions
             CommandActionType.READ_SCREEN -> "read screen"
@@ -547,6 +551,15 @@ class ActionCoordinator(
     private fun extractVerbAndTarget(voiceInput: String): Pair<String?, String?> {
         val normalized = voiceInput.lowercase().trim()
 
+        // Check static commands FIRST, BEFORE verb extraction.
+        // This prevents compound commands like "select all" from being split into
+        // verb="select" + target="all". "select all" is a static command (text_select_all)
+        // that should route directly to TextHandler, not through verb+target path.
+        val staticCommand = StaticCommandRegistry.findByPhrase(normalized)
+        if (staticCommand != null) {
+            return Pair(null, null)  // It's a static command — skip verb extraction
+        }
+
         // Try to match action verbs (longest first to match "long press" before "press").
         // actionVerbs from LocalizedVerbProvider is pre-sorted by length descending.
         for (verb in actionVerbs) {
@@ -556,14 +569,8 @@ class ActionCoordinator(
             }
         }
 
-        // No verb found - could be just the target ("4") or a static command ("scroll down")
-        // Check if it looks like a target (not a known static command phrase)
-        val staticCommand = StaticCommandRegistry.findByPhrase(normalized)
-        return if (staticCommand != null) {
-            Pair(null, null)  // It's a static command
-        } else {
-            Pair(null, normalized)  // It's just the target (e.g., "4", "Submit")
-        }
+        // No verb found - it's just the target (e.g., "4", "Submit")
+        return Pair(null, normalized)
     }
 
     /**
