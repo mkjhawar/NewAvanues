@@ -1,0 +1,481 @@
+/* ============================================================
+   Cockpit Browser — glass.css
+   Material mode effects: Glass, Water, Cupertino, MountainView
+   ============================================================ */
+
+/* ================================================================
+   MODE: GLASS
+   Frosted-glass translucency with backdrop-filter blur.
+   ================================================================ */
+
+.mode-glass .av-surface {
+  background: color-mix(in srgb, var(--av-surface) 15%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-medium));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-medium));
+  border: var(--av-glass-border-default) solid var(--av-border);
+}
+
+.mode-glass .av-surface-elevated {
+  background: color-mix(in srgb, var(--av-surface-elevated) 20%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-heavy));
+  border: var(--av-glass-border-default) solid var(--av-border);
+}
+
+.mode-glass .av-surface-light {
+  background: color-mix(in srgb, var(--av-surface) 10%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-light));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-light));
+  border: var(--av-glass-border-subtle) solid var(--av-border-subtle);
+}
+
+.mode-glass .frame-window {
+  background: color-mix(in srgb, var(--av-surface) 12%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-heavy));
+  border: var(--av-glass-border-default) solid var(--av-border);
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--av-glass-glow) 15%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--av-glass-tint) 8%, transparent);
+}
+
+.mode-glass .frame-window.selected {
+  border-color: var(--av-primary);
+  box-shadow:
+    0 0 30px color-mix(in srgb, var(--av-glass-glow) 25%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--av-glass-tint) 12%, transparent);
+}
+
+.mode-glass .frame-header {
+  background: color-mix(in srgb, var(--av-surface-elevated) 20%, transparent);
+  border-bottom: var(--av-glass-border-subtle) solid var(--av-border-subtle);
+}
+
+.mode-glass .command-bar {
+  background: color-mix(in srgb, var(--av-surface) 15%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-heavy));
+  border-top: var(--av-glass-border-default) solid var(--av-border);
+}
+
+.mode-glass .cmd-chip {
+  background: color-mix(in srgb, var(--av-surface-elevated) 25%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-light));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-light));
+  border: var(--av-glass-border-subtle) solid var(--av-border);
+}
+
+.mode-glass .cmd-chip:hover {
+  background: color-mix(in srgb, var(--av-primary) 20%, transparent);
+  border-color: var(--av-primary);
+}
+
+.mode-glass .dashboard-tile {
+  background: color-mix(in srgb, var(--av-surface) 12%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-medium));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-medium));
+  border: var(--av-glass-border-default) solid var(--av-border);
+}
+
+.mode-glass .dashboard-tile:hover {
+  background: color-mix(in srgb, var(--av-surface) 20%, transparent);
+  border-color: var(--av-primary);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--av-glass-glow) 20%, transparent);
+}
+
+.mode-glass .top-bar {
+  background: color-mix(in srgb, var(--av-surface) 10%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-medium));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-medium));
+  border-bottom: var(--av-glass-border-subtle) solid var(--av-border-subtle);
+}
+
+.mode-glass .status-bar {
+  background: color-mix(in srgb, var(--av-surface) 10%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-light));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-light));
+}
+
+.mode-glass .theme-panel {
+  background: color-mix(in srgb, var(--av-surface) 15%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-heavy));
+  border: var(--av-glass-border-default) solid var(--av-border);
+}
+
+.mode-glass .recent-card {
+  background: color-mix(in srgb, var(--av-surface) 12%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-light));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-light));
+  border: var(--av-glass-border-subtle) solid var(--av-border-subtle);
+}
+
+.mode-glass .recent-card:hover {
+  border-color: var(--av-primary);
+}
+
+.mode-glass .tab-strip-item {
+  background: color-mix(in srgb, var(--av-surface) 10%, transparent);
+  backdrop-filter: blur(var(--av-glass-blur-light));
+  -webkit-backdrop-filter: blur(var(--av-glass-blur-light));
+}
+
+.mode-glass .tab-strip-item.active {
+  background: color-mix(in srgb, var(--av-primary) 20%, transparent);
+  border-color: var(--av-primary);
+}
+
+/* ================================================================
+   MODE: WATER
+   Subtle caustic animations, refraction-like borders, shimmer.
+   ================================================================ */
+
+.mode-water .av-surface,
+.mode-water .frame-window,
+.mode-water .dashboard-tile,
+.mode-water .command-bar,
+.mode-water .top-bar,
+.mode-water .theme-panel,
+.mode-water .recent-card {
+  position: relative;
+}
+
+.mode-water .av-surface {
+  background: var(--av-surface);
+  border: 1px solid var(--av-border);
+}
+
+.mode-water .av-surface-elevated {
+  background: var(--av-surface-elevated);
+  border: 1px solid var(--av-border);
+}
+
+.mode-water .frame-window {
+  background: var(--av-surface);
+  border: 1px solid var(--av-border);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.15),
+    inset 0 1px 0 color-mix(in srgb, var(--av-primary) 6%, transparent);
+  overflow: hidden;
+}
+
+.mode-water .frame-window::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--av-primary) 4%, transparent) 0%,
+      transparent 40%,
+      color-mix(in srgb, var(--av-secondary) 3%, transparent) 70%,
+      transparent 100%
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mode-water .frame-window.selected {
+  border-color: var(--av-primary);
+  box-shadow:
+    0 2px 12px color-mix(in srgb, var(--av-primary) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--av-primary) 10%, transparent);
+}
+
+.mode-water .frame-header {
+  background: var(--av-surface-elevated);
+  border-bottom: 1px solid var(--av-border-subtle);
+  position: relative;
+  z-index: 1;
+}
+
+/* shimmer highlight that drifts across water surfaces */
+@keyframes water-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.mode-water .dashboard-tile {
+  background: var(--av-surface);
+  border: 1px solid var(--av-border);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background-image:
+    linear-gradient(
+      110deg,
+      transparent 30%,
+      color-mix(in srgb, var(--av-primary) 5%, transparent) 50%,
+      transparent 70%
+    );
+  background-size: 200% 100%;
+}
+
+.mode-water .dashboard-tile:hover {
+  border-color: var(--av-primary);
+  animation: water-shimmer 2s ease-in-out;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--av-primary) 15%, transparent);
+}
+
+.mode-water .command-bar {
+  background: var(--av-surface);
+  border-top: 1px solid var(--av-border);
+  box-shadow: 0 -1px 6px rgba(0,0,0,0.08);
+}
+
+.mode-water .cmd-chip {
+  background: var(--av-surface-elevated);
+  border: 1px solid var(--av-border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.mode-water .cmd-chip:hover {
+  background: color-mix(in srgb, var(--av-primary) 12%, var(--av-surface-elevated));
+  border-color: var(--av-primary);
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--av-primary) 20%, transparent);
+}
+
+.mode-water .top-bar {
+  background: var(--av-surface);
+  border-bottom: 1px solid var(--av-border-subtle);
+}
+
+.mode-water .status-bar {
+  background: var(--av-surface);
+}
+
+.mode-water .theme-panel {
+  background: var(--av-surface);
+  border: 1px solid var(--av-border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.mode-water .recent-card {
+  background: var(--av-surface);
+  border: 1px solid var(--av-border-subtle);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.mode-water .recent-card:hover {
+  border-color: var(--av-primary);
+}
+
+.mode-water .tab-strip-item {
+  background: var(--av-surface);
+  border: 1px solid var(--av-border-subtle);
+}
+
+.mode-water .tab-strip-item.active {
+  background: color-mix(in srgb, var(--av-primary) 10%, var(--av-surface));
+  border-color: var(--av-primary);
+}
+
+/* ================================================================
+   MODE: CUPERTINO
+   0 elevation, 12px corners, 0.33px hairline borders, flat look.
+   ================================================================ */
+
+.mode-cupertino .av-surface {
+  background: var(--av-surface);
+  border: 0.33px solid var(--av-border);
+  border-radius: 12px;
+}
+
+.mode-cupertino .av-surface-elevated {
+  background: var(--av-surface-elevated);
+  border: 0.33px solid var(--av-border);
+  border-radius: 12px;
+}
+
+.mode-cupertino .frame-window {
+  background: var(--av-surface);
+  border: 0.33px solid var(--av-border);
+  border-radius: 12px;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.mode-cupertino .frame-window.selected {
+  border-color: var(--av-primary);
+  box-shadow: none;
+}
+
+.mode-cupertino .frame-header {
+  background: var(--av-surface-elevated);
+  border-bottom: 0.33px solid var(--av-border-subtle);
+}
+
+.mode-cupertino .command-bar {
+  background: var(--av-surface);
+  border-top: 0.33px solid var(--av-border);
+  box-shadow: none;
+}
+
+.mode-cupertino .cmd-chip {
+  background: var(--av-surface-elevated);
+  border: 0.33px solid var(--av-border);
+  border-radius: 20px;
+}
+
+.mode-cupertino .cmd-chip:hover {
+  background: color-mix(in srgb, var(--av-primary) 10%, var(--av-surface-elevated));
+  border-color: var(--av-primary);
+}
+
+.mode-cupertino .dashboard-tile {
+  background: var(--av-surface);
+  border: 0.33px solid var(--av-border);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.mode-cupertino .dashboard-tile:hover {
+  border-color: var(--av-primary);
+  background: color-mix(in srgb, var(--av-primary) 5%, var(--av-surface));
+}
+
+.mode-cupertino .top-bar {
+  background: var(--av-surface);
+  border-bottom: 0.33px solid var(--av-border);
+}
+
+.mode-cupertino .status-bar {
+  background: var(--av-surface);
+  border-top: 0.33px solid var(--av-border-subtle);
+}
+
+.mode-cupertino .theme-panel {
+  background: var(--av-surface);
+  border: 0.33px solid var(--av-border);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.mode-cupertino .recent-card {
+  background: var(--av-surface);
+  border: 0.33px solid var(--av-border);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.mode-cupertino .recent-card:hover {
+  border-color: var(--av-primary);
+}
+
+.mode-cupertino .tab-strip-item {
+  background: var(--av-surface);
+  border: 0.33px solid var(--av-border-subtle);
+  border-radius: 8px;
+}
+
+.mode-cupertino .tab-strip-item.active {
+  background: color-mix(in srgb, var(--av-primary) 10%, var(--av-surface));
+  border-color: var(--av-primary);
+}
+
+/* ================================================================
+   MODE: MOUNTAINVIEW (Material Design 3)
+   Standard elevation shadows, M3 shape scale, tonal surface colors.
+   ================================================================ */
+
+.mode-mountainview .av-surface {
+  background: var(--av-surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15);
+}
+
+.mode-mountainview .av-surface-elevated {
+  background: var(--av-surface-elevated);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 8px 3px rgba(0,0,0,0.15);
+}
+
+.mode-mountainview .frame-window {
+  background: var(--av-surface);
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3), 0 6px 10px 4px rgba(0,0,0,0.15);
+  overflow: hidden;
+  border: none;
+}
+
+.mode-mountainview .frame-window.selected {
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.3),
+    0 6px 10px 4px rgba(0,0,0,0.15),
+    0 0 0 2px var(--av-primary);
+}
+
+.mode-mountainview .frame-header {
+  background: var(--av-surface-elevated);
+  border-bottom: none;
+}
+
+.mode-mountainview .command-bar {
+  background: var(--av-surface-elevated);
+  border-top: none;
+  box-shadow: 0 -1px 3px rgba(0,0,0,0.3), 0 -4px 8px 3px rgba(0,0,0,0.15);
+}
+
+.mode-mountainview .cmd-chip {
+  background: color-mix(in srgb, var(--av-primary) 12%, var(--av-surface));
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  color: var(--av-primary);
+  font-weight: 500;
+}
+
+.mode-mountainview .cmd-chip:hover {
+  background: color-mix(in srgb, var(--av-primary) 20%, var(--av-surface));
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 2px 6px 2px rgba(0,0,0,0.15);
+}
+
+.mode-mountainview .dashboard-tile {
+  background: var(--av-surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15);
+  border: none;
+}
+
+.mode-mountainview .dashboard-tile:hover {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 8px 3px rgba(0,0,0,0.15);
+  background: color-mix(in srgb, var(--av-primary) 5%, var(--av-surface));
+}
+
+.mode-mountainview .top-bar {
+  background: var(--av-surface);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  border-bottom: none;
+}
+
+.mode-mountainview .status-bar {
+  background: var(--av-surface-elevated);
+}
+
+.mode-mountainview .theme-panel {
+  background: var(--av-surface-elevated);
+  border-radius: 16px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 8px 16px 6px rgba(0,0,0,0.15);
+  border: none;
+}
+
+.mode-mountainview .recent-card {
+  background: var(--av-surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15);
+  border: none;
+}
+
+.mode-mountainview .recent-card:hover {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 8px 3px rgba(0,0,0,0.15);
+}
+
+.mode-mountainview .tab-strip-item {
+  background: var(--av-surface);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  border: none;
+}
+
+.mode-mountainview .tab-strip-item.active {
+  background: color-mix(in srgb, var(--av-primary) 12%, var(--av-surface));
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}

@@ -1,0 +1,198 @@
+/* ============================================================
+   Cockpit Browser — layouts.css
+   Layout mode styles: GRID, FULLSCREEN, SPLIT_LEFT, ROW
+   ============================================================ */
+
+/* ---- shared frame area ---- */
+
+.frame-area {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  position: relative;
+}
+
+/* ================================================================
+   LAYOUT: GRID
+   CSS Grid, auto-fit columns (min 300px), centered, equal-size.
+   ================================================================ */
+
+.layout-grid .frame-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.layout-grid .frame-window {
+  min-height: 250px;
+}
+
+/* ================================================================
+   LAYOUT: FULLSCREEN
+   Single selected frame takes 100%, tab strip for others.
+   ================================================================ */
+
+.layout-fullscreen .frame-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-fullscreen .tab-strip {
+  display: flex;
+  gap: 6px;
+  padding: 6px 0;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.layout-fullscreen .tab-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.layout-fullscreen .tab-strip::-webkit-scrollbar-thumb {
+  background: var(--av-border);
+  border-radius: 2px;
+}
+
+.tab-strip-item {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--av-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--av-border-subtle);
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tab-strip-item:hover {
+  color: var(--av-text-primary);
+  border-color: var(--av-border);
+}
+
+.tab-strip-item.active {
+  color: var(--av-primary);
+  font-weight: 500;
+}
+
+.tab-strip-item .tab-icon {
+  font-size: 12px;
+}
+
+.layout-fullscreen .fullscreen-frame-container {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.layout-fullscreen .fullscreen-frame-container .frame-window {
+  flex: 1;
+}
+
+/* hide non-selected frames in fullscreen mode — handled by JS visibility */
+
+/* ================================================================
+   LAYOUT: SPLIT_LEFT
+   60/40 split. Left = selected frame. Right = stacked remaining.
+   ================================================================ */
+
+.layout-split .frame-area {
+  display: flex;
+  gap: 12px;
+}
+
+.layout-split .split-primary {
+  flex: 0 0 60%;
+  display: flex;
+}
+
+.layout-split .split-primary .frame-window {
+  flex: 1;
+}
+
+.layout-split .split-secondary {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.layout-split .split-secondary .frame-window {
+  min-height: 150px;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   LAYOUT: ROW
+   Horizontal flex row, equal width frames.
+   ================================================================ */
+
+.layout-row .frame-area {
+  display: flex;
+  gap: 12px;
+}
+
+.layout-row .frame-window {
+  flex: 1;
+  min-width: 200px;
+  min-height: 250px;
+}
+
+/* ================================================================
+   Minimized frames
+   Collapsed to just the header bar (title visible).
+   ================================================================ */
+
+.frame-window.minimized {
+  min-height: unset !important;
+  height: auto !important;
+}
+
+.frame-window.minimized .frame-content {
+  display: none;
+}
+
+/* ================================================================
+   Responsive adjustments
+   ================================================================ */
+
+@media (max-width: 768px) {
+  .layout-grid .frame-area {
+    grid-template-columns: 1fr;
+  }
+
+  .layout-split .frame-area {
+    flex-direction: column;
+  }
+
+  .layout-split .split-primary {
+    flex: 0 0 auto;
+  }
+
+  .layout-row .frame-area {
+    flex-direction: column;
+  }
+
+  .layout-row .frame-window {
+    min-width: unset;
+  }
+}
+
+@media (max-width: 480px) {
+  .frame-area {
+    padding: 8px;
+  }
+
+  .layout-grid .frame-area {
+    gap: 8px;
+  }
+}

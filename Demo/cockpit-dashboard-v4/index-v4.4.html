@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cockpit Dashboard v4.5 — Polished Triptych + Cockpit</title>
+<title>Cockpit Dashboard v4.4 — Two-Level Hub + Triptych</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -385,16 +385,16 @@
   /* ── Layout: triptych — 3-panel cockpit for landscape ── */
   .triptych-container {
     display: flex; width: 100%; height: 100%;
-    perspective: 900px; align-items: stretch;
-    padding: 6px 4px; gap: 5px;
+    perspective: 1000px; align-items: stretch;
+    padding: 4px; gap: 4px;
   }
   .triptych-panel {
     flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 8px 6px; position: relative; z-index: 2;
+    align-items: center; justify-content: flex-start;
+    padding: 10px 8px 8px; position: relative; z-index: 2;
     transition: transform 0.4s ease;
     min-width: 0; overflow-y: auto; overflow-x: hidden;
-    background: var(--glass-bg); border-radius: 14px;
+    background: var(--glass-bg); border-radius: 12px;
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(var(--glass-blur, 20px));
     -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
@@ -402,42 +402,34 @@
   .triptych-panel::-webkit-scrollbar { width: 2px; }
   .triptych-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
   .triptych-panel-left {
-    transform: rotateY(16deg); transform-origin: right center;
-    flex: 0.82;
-    box-shadow: inset -10px 0 24px rgba(0,0,0,0.2), 0 2px 12px rgba(0,0,0,0.15);
-    border-right: 1px solid rgba(255,255,255,0.04);
+    transform: rotateY(14deg); transform-origin: right center;
+    flex: 0.85;
+    box-shadow: inset -8px 0 20px rgba(0,0,0,0.15);
   }
   .triptych-panel-center {
-    transform: rotateY(0deg) translateZ(14px); flex: 1.5;
-    justify-content: space-between; z-index: 3;
-    box-shadow: 0 4px 36px rgba(0,0,0,0.3);
-    border-left: 1px solid rgba(255,255,255,0.06);
-    border-right: 1px solid rgba(255,255,255,0.06);
+    transform: rotateY(0deg) translateZ(10px); flex: 1.4;
+    justify-content: flex-start; z-index: 3;
+    box-shadow: 0 0 30px rgba(0,0,0,0.2);
   }
   .triptych-panel-right {
-    transform: rotateY(-16deg); transform-origin: left center;
-    flex: 0.82;
-    box-shadow: inset 10px 0 24px rgba(0,0,0,0.2), 0 2px 12px rgba(0,0,0,0.15);
-    border-left: 1px solid rgba(255,255,255,0.04);
+    transform: rotateY(-14deg); transform-origin: left center;
+    flex: 0.85;
+    box-shadow: inset 8px 0 20px rgba(0,0,0,0.15);
   }
-  /* Panel header label */
   .triptych-panel-label {
-    font-size: 8px; font-weight: 800; color: var(--primary);
-    text-transform: uppercase; letter-spacing: 2.5px;
-    margin-bottom: 6px; text-align: center; width: 100%;
-    padding-bottom: 5px;
+    font-size: 9px; font-weight: 700; color: var(--primary);
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 10px; text-align: center; width: 100%;
+    padding-bottom: 6px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
-    flex-shrink: 0;
   }
-  /* Side panel item list — vertical, compact */
   .triptych-items {
-    display: flex; flex-direction: column; gap: 1px;
-    align-items: stretch; width: 100%; flex: 1;
-    justify-content: center;
+    display: flex; flex-direction: column; gap: 2px;
+    align-items: stretch; width: 100%;
   }
   .triptych-items .cat-node, .triptych-items .mod-node {
     flex-direction: row; gap: 8px; align-items: center;
-    padding: 5px 8px; border-radius: 8px;
+    padding: 4px 6px; border-radius: 8px;
     transition: background 0.15s ease;
   }
   .triptych-items .cat-node:hover, .triptych-items .mod-node:hover {
@@ -448,46 +440,31 @@
     font-weight: 500; color: var(--text-primary);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  /* Triptych center — title area */
+  /* Triptych center title */
   .triptych-title {
-    text-align: center; padding: 0 0 4px; flex-shrink: 0;
+    text-align: center; padding: 2px 0 8px;
   }
-  .triptych-title .dash-title { font-size: 14px; font-weight: 700; }
-  .triptych-title .dash-subtitle { font-size: 8px; opacity: 0.6; }
-  /* Triptych center — category card row */
+  .triptych-title .dash-title { font-size: 14px; }
+  .triptych-title .dash-subtitle { font-size: 8px; }
+  /* Triptych center category cards */
   .triptych-center-cats {
-    display: flex; gap: 10px; justify-content: center;
-    flex-shrink: 0; padding: 4px 0;
+    display: flex; gap: 12px; justify-content: center;
+    margin-bottom: 8px;
   }
   .triptych-center-card {
     display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 10px 18px; border-radius: 12px;
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 16px; border-radius: 10px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
     cursor: pointer; transition: all 0.2s ease;
   }
   .triptych-center-card:hover {
-    background: rgba(255,255,255,0.08); transform: translateY(-2px);
-    border-color: var(--primary-glow);
+    background: rgba(255,255,255,0.08); transform: translateY(-1px);
   }
-  /* Triptych center — status info row */
-  .triptych-status {
-    display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;
-    flex-shrink: 0; padding: 2px 0;
-  }
-  .triptych-status-item {
-    display: flex; align-items: center; gap: 4px;
-    padding: 3px 10px; border-radius: 8px;
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
-    font-size: 9px; color: var(--text-secondary);
-  }
-  .triptych-status-icon { font-size: 11px; }
-  .triptych-status-val { font-weight: 600; color: var(--text-primary); }
-  /* Triptych center — sessions row */
+  /* Triptych center sessions — compact grid of small buttons */
   .triptych-sessions {
     display: flex; flex-wrap: wrap; gap: 4px;
-    justify-content: center; width: 100%;
+    justify-content: center; width: 100%; margin-top: auto;
     padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);
-    flex-shrink: 0;
   }
   .triptych-sess-btn {
     display: flex; align-items: center; gap: 4px;
@@ -505,36 +482,20 @@
     display: inline-flex; align-items: center; justify-content: center;
     background: var(--primary); color: #fff; font-weight: 700;
   }
-  /* Triptych right panel — app grid */
+  /* Triptych right panel grid */
   .triptych-grid {
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: 2px; width: 100%; flex: 1;
-    align-content: center;
+    gap: 3px; width: 100%;
   }
   .triptych-grid .mod-node {
     flex-direction: column !important; gap: 2px !important;
-    padding: 5px 3px !important; text-align: center;
+    padding: 6px 4px !important; text-align: center;
     justify-content: center;
   }
   .triptych-grid .mod-label {
-    text-align: center !important; font-size: 8px !important;
+    text-align: center !important; font-size: 9px !important;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     width: 100%;
-  }
-  /* Triptych cockpit window frame edges — enhances 3D depth illusion */
-  .triptych-edge {
-    position: absolute; top: 0; bottom: 0; width: 6px; z-index: 10;
-    pointer-events: none;
-  }
-  .triptych-edge-left {
-    right: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04));
-    border-right: 1px solid rgba(255,255,255,0.06);
-  }
-  .triptych-edge-right {
-    left: 0;
-    background: linear-gradient(270deg, transparent, rgba(255,255,255,0.04));
-    border-left: 1px solid rgba(255,255,255,0.06);
   }
 
   /* ══════════════════════════════════════════
@@ -997,7 +958,7 @@
 
       <div class="dash-header">
         <div class="dash-title">Cockpit</div>
-        <div class="dash-subtitle">Two-Level Hub &mdash; v4.5</div>
+        <div class="dash-subtitle">Two-Level Hub &mdash; v4.4</div>
       </div>
 
       <div class="hub-area" id="hubArea">
@@ -1327,14 +1288,11 @@ function applyNeuColors() {
 
 function applySessionsVisibility() {
   const bar = document.querySelector('.sessions-bar');
-  const footer = document.querySelector('.hud-footer');
   const isGlass = currentDevice === 'realwear' || currentDevice === 'glass-micro';
-  if (!settings.showSessions || isGlass || triptychActive) {
+  if (!settings.showSessions || isGlass) {
     bar.style.display = 'none';
-    if (triptychActive && footer) footer.style.display = 'none';
   } else {
     bar.style.display = '';
-    if (footer) footer.style.display = '';
   }
 }
 
@@ -1662,25 +1620,21 @@ function renderTriptych() {
   const hubArea = document.getElementById('hubArea');
   const sessBar = document.querySelector('.sessions-bar');
   const header = document.querySelector('.dash-header');
-  const footer = document.querySelector('.hud-footer');
 
   hubArea.style.display = 'none';
   sessBar.style.display = 'none';
   header.style.display = 'none';
-  footer.style.display = 'none';
 
   const old = document.getElementById('triptychContainer');
   if (old) old.remove();
 
-  // Responsive sizing based on device
+  // Compact sizes for triptych — smaller than normal layouts
   const dev = DEVICES[currentDevice];
   const minDim = Math.min(dev.w, dev.h);
-  const maxDim = Math.max(dev.w, dev.h);
-  const dotSize = Math.max(24, Math.round(minDim / 16));
-  const fSize = Math.max(10, Math.round(minDim / 30));
-  const gridDotSize = Math.max(22, Math.round(minDim / 18));
-  const gridFSize = Math.max(9, Math.round(minDim / 34));
-  const isCompact = minDim < 500;
+  const dotSize = Math.max(28, Math.round(minDim / 14));
+  const fSize = Math.max(12, Math.round(minDim / 26));
+  const gridDotSize = Math.max(24, Math.round(minDim / 16));
+  const gridFSize = Math.max(11, Math.round(minDim / 30));
 
   const leftCats = CATEGORIES.filter(c => ['controls','web'].includes(c.id));
   const rightCats = CATEGORIES.filter(c => ['media','creation','templates'].includes(c.id));
@@ -1701,6 +1655,21 @@ function renderTriptych() {
     return div;
   }
 
+  function makeCompactCatNode(cat, size, fs) {
+    const color = getComputedColor(cat.colorVar);
+    const div = document.createElement('div');
+    div.className = 'cat-node';
+    div.style.cssText = 'opacity:1; animation:none;';
+    div.onclick = () => showToast(cat.icon, cat.name, cat.modules.length + ' modules');
+    div.innerHTML =
+      '<div class="cat-dot" style="background:' + color + '18; color:' + color +
+        '; width:' + size + 'px; height:' + size + 'px; font-size:' + fs + 'px;">' + cat.icon +
+        '<span class="cat-count" style="background:' + color + ';">' + cat.modules.length + '</span>' +
+      '</div>' +
+      '<div class="cat-label">' + cat.name + '</div>';
+    return div;
+  }
+
   const container = document.createElement('div');
   container.id = 'triptychContainer';
   container.className = 'triptych-container';
@@ -1709,13 +1678,7 @@ function renderTriptych() {
   // ── LEFT PANEL — Controls (list with small icons) ──
   const leftPanel = document.createElement('div');
   leftPanel.className = 'triptych-panel triptych-panel-left';
-  leftPanel.innerHTML = '<div class="triptych-panel-label">\u2699 Controls</div>';
-
-  // Add window frame edge to left panel
-  const leftEdge = document.createElement('div');
-  leftEdge.className = 'triptych-edge triptych-edge-left';
-  leftPanel.appendChild(leftEdge);
-
+  leftPanel.innerHTML = '<div class="triptych-panel-label">\u2699\uFE0F Controls</div>';
   const leftItems = document.createElement('div');
   leftItems.className = 'triptych-items';
   leftCats.forEach(cat => {
@@ -1723,17 +1686,17 @@ function renderTriptych() {
   });
   leftPanel.appendChild(leftItems);
 
-  // ── CENTER PANEL — Title + Cards + Status + Sessions ──
+  // ── CENTER PANEL — Title + Tasks/Favorites cards + Compact Sessions ──
   const centerPanel = document.createElement('div');
   centerPanel.className = 'triptych-panel triptych-panel-center';
 
   // Title
   const titleDiv = document.createElement('div');
   titleDiv.className = 'triptych-title';
-  titleDiv.innerHTML = '<div class="dash-title">Cockpit</div><div class="dash-subtitle">Where Avanues Meet</div>';
+  titleDiv.innerHTML = '<div class="dash-title">Cockpit</div><div class="dash-subtitle">Triptych View</div>';
   centerPanel.appendChild(titleDiv);
 
-  // Center categories as cards (Tasks + Favorites)
+  // Center categories as cards
   const centerCards = document.createElement('div');
   centerCards.className = 'triptych-center-cats';
   centerCats.forEach(cat => {
@@ -1741,38 +1704,22 @@ function renderTriptych() {
     const card = document.createElement('div');
     card.className = 'triptych-center-card';
     card.onclick = () => showToast(cat.icon, cat.name, cat.modules.length + ' modules');
-    const cardDot = isCompact ? dotSize : dotSize + 6;
-    const cardFont = isCompact ? fSize : fSize + 3;
     card.innerHTML =
       '<div class="cat-dot" style="background:' + color + '18; color:' + color +
-        '; width:' + cardDot + 'px; height:' + cardDot + 'px; font-size:' + cardFont + 'px;">' +
+        '; width:' + (dotSize + 8) + 'px; height:' + (dotSize + 8) + 'px; font-size:' + (fSize + 4) + 'px;">' +
         cat.icon + '<span class="cat-count" style="background:' + color + ';">' + cat.modules.length + '</span>' +
       '</div><div style="font-size:10px; color:var(--text-primary); font-weight:500;">' + cat.name + '</div>';
     centerCards.appendChild(card);
   });
   centerPanel.appendChild(centerCards);
 
-  // Status info row — fills the center space with useful dashboard data
-  const statusRow = document.createElement('div');
-  statusRow.className = 'triptych-status';
-  const statusItems = [
-    { icon: '\u{1F4F1}', label: 'Modules', val: '7' },
-    { icon: '\u{1F3AE}', label: 'Controls', val: '5' },
-    { icon: '\u{1F4CA}', label: 'Sessions', val: String(SESSIONS.length) },
-    { icon: '\u23F1', label: 'Uptime', val: '4h' }
-  ];
-  statusItems.forEach(si => {
-    const item = document.createElement('div');
-    item.className = 'triptych-status-item';
-    item.innerHTML =
-      '<span class="triptych-status-icon">' + si.icon + '</span>' +
-      '<span class="triptych-status-val">' + si.val + '</span>' +
-      '<span>' + si.label + '</span>';
-    statusRow.appendChild(item);
-  });
-  centerPanel.appendChild(statusRow);
+  // Compact session buttons — wrapping row of small icon+label chips
+  const sessLabel = document.createElement('div');
+  sessLabel.className = 'triptych-panel-label';
+  sessLabel.style.cssText = 'margin-top:auto; margin-bottom:4px;';
+  sessLabel.textContent = 'Sessions';
+  centerPanel.appendChild(sessLabel);
 
-  // Session chips — compact row at bottom
   const sessDiv = document.createElement('div');
   sessDiv.className = 'triptych-sessions';
   SESSIONS.forEach(s => {
@@ -1788,22 +1735,10 @@ function renderTriptych() {
   });
   centerPanel.appendChild(sessDiv);
 
-  // Footer line
-  const footerLine = document.createElement('div');
-  footerLine.style.cssText = 'font-size:7px; color:var(--text-muted); text-align:center; padding-top:3px; flex-shrink:0;';
-  footerLine.textContent = 'VoiceOS\u00AE \u2022 Cockpit v4';
-  centerPanel.appendChild(footerLine);
-
   // ── RIGHT PANEL — Apps (2-column grid of compact icons) ──
   const rightPanel = document.createElement('div');
   rightPanel.className = 'triptych-panel triptych-panel-right';
   rightPanel.innerHTML = '<div class="triptych-panel-label">\u{1F4F1} Apps</div>';
-
-  // Add window frame edge to right panel
-  const rightEdge = document.createElement('div');
-  rightEdge.className = 'triptych-edge triptych-edge-right';
-  rightPanel.appendChild(rightEdge);
-
   const rightGrid = document.createElement('div');
   rightGrid.className = 'triptych-grid';
   rightCats.forEach(cat => {
@@ -1826,7 +1761,6 @@ function restoreFromTriptych() {
   document.getElementById('hubArea').style.display = '';
   document.querySelector('.sessions-bar').style.display = '';
   document.querySelector('.dash-header').style.display = '';
-  document.querySelector('.hud-footer').style.display = '';
 }
 
 // ── Toast ──
