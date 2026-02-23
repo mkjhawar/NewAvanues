@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.cockpit.ui.ContentAction
 import kotlinx.coroutines.flow.SharedFlow
@@ -112,20 +114,64 @@ fun ContentRenderer(
                 )
             }
 
-            is FrameContent.Image -> ImageViewer(
-                uri = content.uri,
-                modifier = Modifier.fillMaxSize()
-            )
+            is FrameContent.Image -> {
+                val zoom = remember { mutableFloatStateOf(1f) }
+                val rotation = remember { mutableFloatStateOf(0f) }
 
-            is FrameContent.Video -> VideoPlayer(
-                uri = content.uri,
-                autoPlay = content.isPlaying,
-                initialPositionMs = content.playbackPositionMs,
-                onPositionChanged = { posMs ->
-                    onContentStateChanged(frame.id, content.copy(playbackPositionMs = posMs))
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                if (contentActionFlow != null) {
+                    LaunchedEffect(contentActionFlow) {
+                        contentActionFlow.collect { action ->
+                            when (action) {
+                                ContentAction.IMAGE_ZOOM_IN -> zoom.floatValue = (zoom.floatValue * 1.25f).coerceAtMost(5f)
+                                ContentAction.IMAGE_ZOOM_OUT -> zoom.floatValue = (zoom.floatValue / 1.25f).coerceAtLeast(0.2f)
+                                ContentAction.IMAGE_ROTATE -> rotation.floatValue = (rotation.floatValue + 90f) % 360f
+                                else -> { /* Not an image action */ }
+                            }
+                        }
+                    }
+                }
+
+                ImageViewer(
+                    uri = content.uri,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = zoom.floatValue
+                            scaleY = zoom.floatValue
+                            rotationZ = rotation.floatValue
+                        }
+                )
+            }
+
+            is FrameContent.Video -> {
+                val isPlaying = remember { mutableStateOf(content.isPlaying) }
+
+                if (contentActionFlow != null) {
+                    LaunchedEffect(contentActionFlow) {
+                        contentActionFlow.collect { action ->
+                            when (action) {
+                                ContentAction.VIDEO_PLAY_PAUSE -> isPlaying.value = !isPlaying.value
+                                ContentAction.VIDEO_REWIND -> {
+                                    val newPos = (content.playbackPositionMs - 10_000L).coerceAtLeast(0L)
+                                    onContentStateChanged(frame.id, content.copy(playbackPositionMs = newPos))
+                                }
+                                ContentAction.VIDEO_FULLSCREEN -> { /* Layout concern — no-op at content level */ }
+                                else -> { /* Not a video action */ }
+                            }
+                        }
+                    }
+                }
+
+                VideoPlayer(
+                    uri = content.uri,
+                    autoPlay = isPlaying.value,
+                    initialPositionMs = content.playbackPositionMs,
+                    onPositionChanged = { posMs ->
+                        onContentStateChanged(frame.id, content.copy(playbackPositionMs = posMs))
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             is FrameContent.Note -> NoteEditor(
                 initialTitle = frame.title,
@@ -384,7 +430,15 @@ private fun MapContentRenderer(
                 settings.useWideViewPort = true
                 settings.builtInZoomControls = true
                 settings.displayZoomControls = false
-                webViewClient = android.webkit.WebViewClient()
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun shouldOverrideUrlLoading(
+                        view: android.webkit.WebView?,
+                        request: android.webkit.WebResourceRequest?
+                    ): Boolean {
+                        val host = request?.url?.host ?: return true
+                        return !host.endsWith("openstreetmap.org")
+                    }
+                }
                 loadUrl(mapUrl)
             }
         },
