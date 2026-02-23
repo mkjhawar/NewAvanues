@@ -12,18 +12,12 @@ plugins {
     alias(libs.plugins.dokka)
 }
 
-// Dokka Configuration
-tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+// Dokka v2 Configuration
+dokka {
     moduleName.set("WebAvanue")
     moduleVersion.set("4.0.0-alpha")
-
-    dokkaSourceSets {
-        configureEach {
-            includeNonPublic.set(false)
-            skipEmptyPackages.set(true)
-            skipDeprecated.set(false)
-            reportUndocumented.set(true)
-        }
+    dokkaSourceSets.configureEach {
+        suppressGeneratedFiles.set(true)
     }
 }
 

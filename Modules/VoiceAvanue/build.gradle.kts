@@ -269,8 +269,8 @@ sqldelight {
     }
 }
 
-// Dokka Configuration
-tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+// Dokka v2 Configuration
+dokka {
     moduleName.set("VoiceAvanue")
     moduleVersion.set("1.0.0-alpha")
 }

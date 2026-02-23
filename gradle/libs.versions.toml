@@ -78,7 +78,7 @@ mockk = "1.13.9"  # Updated from 1.13.8
 leakcanary = "2.12"
 
 # Documentation
-dokka = "1.9.10"
+dokka = "2.0.0"
 
 # Ktor (HTTP client for KMP)
 ktor = "2.3.7"
