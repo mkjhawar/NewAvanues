@@ -25,7 +25,8 @@ object GetWeatherAction : IIntentAction {
     override val category = IntentCategory.SEARCH
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Checking weather")
 

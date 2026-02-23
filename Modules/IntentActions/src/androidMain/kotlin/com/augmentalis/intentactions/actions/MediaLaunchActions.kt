@@ -24,7 +24,8 @@ object PlayVideoAction : IIntentAction {
     override val category = IntentCategory.MEDIA_LAUNCH
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         Log.d(TAG, "Playing video ${entities.toSafeString()}")
 
         val query = entities.query
@@ -85,7 +86,8 @@ object ResumeMusicAction : IIntentAction {
     override val category = IntentCategory.MEDIA_LAUNCH
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Resuming music")
 
@@ -148,7 +150,8 @@ object OpenBrowserAction : IIntentAction {
     override val category = IntentCategory.MEDIA_LAUNCH
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Opening browser")
 
@@ -233,7 +236,8 @@ object OpenAppAction : IIntentAction {
     override val category = IntentCategory.MEDIA_LAUNCH
     override val requiredEntities = listOf(EntityType.APP_NAME)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Opening app ${entities.toSafeString()}")
 
@@ -247,7 +251,7 @@ object OpenAppAction : IIntentAction {
 
             Log.d(TAG, "Looking for app: '$appName'")
 
-            val packageName = findPackageName(context, appName)
+            val packageName = findPackageName(platformCtx, appName)
 
             if (packageName == null) {
                 Log.w(TAG, "App not found: $appName")
@@ -262,7 +266,7 @@ object OpenAppAction : IIntentAction {
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(launchIntent)
 
-                val displayName = getAppDisplayName(context, packageName)
+                val displayName = getAppDisplayName(platformCtx, packageName)
                 Log.i(TAG, "Launched app: $packageName ($displayName)")
                 IntentResult.Success(message = "Opening $displayName")
             } else {
@@ -280,12 +284,13 @@ object OpenAppAction : IIntentAction {
         }
     }
 
-    private fun findPackageName(context: PlatformContext, appName: String): String? {
+    private fun findPackageName(platformCtx: PlatformContext, appName: String): String? {
+        val context = platformCtx.android
         val lowerName = appName.lowercase().trim()
 
         // Check known mappings first
         APP_PACKAGES[lowerName]?.let { pkg ->
-            if (isPackageInstalled(context, pkg)) return pkg
+            if (isPackageInstalled(platformCtx, pkg)) return pkg
         }
 
         // Search installed apps by label
@@ -302,23 +307,24 @@ object OpenAppAction : IIntentAction {
         // Try partial matches in mappings
         for ((name, pkg) in APP_PACKAGES) {
             if (name.contains(lowerName) || lowerName.contains(name)) {
-                if (isPackageInstalled(context, pkg)) return pkg
+                if (isPackageInstalled(platformCtx, pkg)) return pkg
             }
         }
 
         return null
     }
 
-    private fun isPackageInstalled(context: PlatformContext, packageName: String): Boolean {
+    private fun isPackageInstalled(platformCtx: PlatformContext, packageName: String): Boolean {
         return try {
-            context.packageManager.getPackageInfo(packageName, 0)
+            platformCtx.android.packageManager.getPackageInfo(packageName, 0)
             true
         } catch (e: PackageManager.NameNotFoundException) {
             false
         }
     }
 
-    private fun getAppDisplayName(context: PlatformContext, packageName: String): String {
+    private fun getAppDisplayName(platformCtx: PlatformContext, packageName: String): String {
+        val context = platformCtx.android
         return try {
             val appInfo = context.packageManager.getApplicationInfo(packageName, 0)
             context.packageManager.getApplicationLabel(appInfo).toString()

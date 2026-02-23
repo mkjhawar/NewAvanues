@@ -28,7 +28,8 @@ object WebSearchAction : IIntentAction {
     override val category = IntentCategory.SEARCH
     override val requiredEntities = listOf(EntityType.QUERY)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Searching web ${entities.toSafeString()}")
 
@@ -59,12 +60,12 @@ object WebSearchAction : IIntentAction {
 
                 is SearchResult.NoResults -> {
                     Log.w(TAG, "No results for '$query', falling back to browser")
-                    executeBrowserSearch(context, query)
+                    executeBrowserSearch(platformCtx, query)
                 }
 
                 is SearchResult.Error -> {
                     Log.e(TAG, "Search error: ${searchResult.message}, falling back to browser")
-                    executeBrowserSearch(context, query)
+                    executeBrowserSearch(platformCtx, query)
                 }
             }
         } catch (e: Exception) {
@@ -76,7 +77,8 @@ object WebSearchAction : IIntentAction {
         }
     }
 
-    private fun executeBrowserSearch(context: PlatformContext, query: String): IntentResult {
+    private fun executeBrowserSearch(platformCtx: PlatformContext, query: String): IntentResult {
+        val context = platformCtx.android
         return try {
             val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
                 putExtra(SearchManager.QUERY, query)
@@ -125,7 +127,8 @@ object NavigateURLAction : IIntentAction {
     override val category = IntentCategory.SEARCH
     override val requiredEntities = listOf(EntityType.URL)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Navigating to URL ${entities.toSafeString()}")
 
@@ -167,7 +170,7 @@ object CalculateAction : IIntentAction {
     override val category = IntentCategory.SEARCH
     override val requiredEntities = listOf(EntityType.QUERY)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
             Log.d(TAG, "Calculating ${entities.toSafeString()}")
 

@@ -25,7 +25,8 @@ object SetAlarmAction : IIntentAction {
     override val category = IntentCategory.PRODUCTIVITY
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Launching alarm creation")
 
@@ -75,7 +76,8 @@ object SetTimerAction : IIntentAction {
         Regex("set (?:timer|countdown) (?:for )?([0-9]+) ?hours?", RegexOption.IGNORE_CASE)
     )
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Setting timer ${entities.toSafeString()}")
 
@@ -173,7 +175,8 @@ object CreateReminderAction : IIntentAction {
     override val category = IntentCategory.PRODUCTIVITY
     override val requiredEntities = listOf(EntityType.QUERY)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Creating reminder ${entities.toSafeString()}")
 
@@ -238,7 +241,8 @@ object CreateCalendarEventAction : IIntentAction {
     override val category = IntentCategory.PRODUCTIVITY
     override val requiredEntities = listOf(EntityType.QUERY)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Creating calendar event ${entities.toSafeString()}")
 
@@ -283,7 +287,8 @@ object AddTodoAction : IIntentAction {
     override val category = IntentCategory.PRODUCTIVITY
     override val requiredEntities = listOf(EntityType.QUERY)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Adding todo ${entities.toSafeString()}")
 
@@ -343,7 +348,8 @@ object CreateNoteAction : IIntentAction {
     override val category = IntentCategory.PRODUCTIVITY
     override val requiredEntities = listOf(EntityType.QUERY)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Creating note ${entities.toSafeString()}")
 
@@ -406,7 +412,8 @@ object CheckCalendarAction : IIntentAction {
     override val category = IntentCategory.PRODUCTIVITY
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Opening calendar")
 
@@ -456,7 +463,7 @@ object GetTimeAction : IIntentAction {
     override val category = IntentCategory.PRODUCTIVITY
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
             Log.d(TAG, "Getting current time")
 

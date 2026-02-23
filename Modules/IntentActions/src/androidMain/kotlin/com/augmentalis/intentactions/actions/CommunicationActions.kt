@@ -24,7 +24,8 @@ object SendEmailAction : IIntentAction {
     override val category = IntentCategory.COMMUNICATION
     override val requiredEntities = listOf(EntityType.RECIPIENT)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Sending email ${entities.toSafeString()}")
 
@@ -82,7 +83,8 @@ object SendTextAction : IIntentAction {
     override val category = IntentCategory.COMMUNICATION
     override val requiredEntities = listOf(EntityType.RECIPIENT)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Sending text ${entities.toSafeString()}")
 
@@ -137,7 +139,8 @@ object MakeCallAction : IIntentAction {
     override val category = IntentCategory.COMMUNICATION
     override val requiredEntities = listOf(EntityType.RECIPIENT)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Making call ${entities.toSafeString()}")
 

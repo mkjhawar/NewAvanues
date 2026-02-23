@@ -23,7 +23,8 @@ object OpenSettingsAction : IIntentAction {
     override val category = IntentCategory.SYSTEM_SETTINGS
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Opening settings ${entities.toSafeString()}")
 
@@ -119,7 +120,8 @@ object OpenSettingsSubsectionAction : IIntentAction {
         "language" to Settings.ACTION_LOCALE_SETTINGS
     )
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Opening settings subsection ${entities.toSafeString()}")
 
@@ -133,7 +135,7 @@ object OpenSettingsSubsectionAction : IIntentAction {
 
             // Try quick settings panel first
             if (subsection == "quick" || subsection == "quick settings" || subsection == "quick_settings") {
-                return openQuickSettings(context)
+                return openQuickSettings(platformCtx)
             }
 
             // Find the matching settings action
@@ -164,7 +166,8 @@ object OpenSettingsSubsectionAction : IIntentAction {
         }
     }
 
-    private fun openQuickSettings(context: PlatformContext): IntentResult {
+    private fun openQuickSettings(platformCtx: PlatformContext): IntentResult {
+        val context = platformCtx.android
         return try {
             val statusBarService = context.getSystemService("statusbar")
             val statusBarManager = Class.forName("android.app.StatusBarManager")

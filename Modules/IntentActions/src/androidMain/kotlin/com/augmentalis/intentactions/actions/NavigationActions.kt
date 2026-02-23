@@ -20,7 +20,8 @@ object GetDirectionsAction : IIntentAction {
     override val category = IntentCategory.NAVIGATION
     override val requiredEntities = listOf(EntityType.LOCATION)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Getting directions ${entities.toSafeString()}")
 
@@ -62,7 +63,8 @@ object FindNearbyAction : IIntentAction {
     override val category = IntentCategory.NAVIGATION
     override val requiredEntities = listOf(EntityType.QUERY)
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Finding nearby ${entities.toSafeString()}")
 
@@ -104,7 +106,8 @@ object ShowTrafficAction : IIntentAction {
     override val category = IntentCategory.NAVIGATION
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Showing traffic")
 
@@ -138,7 +141,8 @@ object ShareLocationAction : IIntentAction {
     override val category = IntentCategory.NAVIGATION
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Sharing location")
 
@@ -172,7 +176,8 @@ object SaveLocationAction : IIntentAction {
     override val category = IntentCategory.NAVIGATION
     override val requiredEntities = emptyList<EntityType>()
 
-    override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
+    override suspend fun execute(platformCtx: PlatformContext, entities: ExtractedEntities): IntentResult {
+        val context = platformCtx.android
         return try {
             Log.d(TAG, "Saving location")
 
