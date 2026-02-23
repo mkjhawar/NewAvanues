@@ -544,6 +544,78 @@ class CockpitViewModelTest {
         vm.dispose()
     }
 
+    // ── Rename Frame ─────────────────────────────────────────────────────
+
+    @Test
+    fun `renameFrame updates frame title`() = runTest {
+        val repo = FakeCockpitRepository()
+        val vm = CockpitViewModel(repo, UnconfinedTestDispatcher(testScheduler))
+        vm.launchModule("webavanue")
+        val frameId = vm.frames.value.first().id
+
+        vm.renameFrame(frameId, "Renamed Title")
+
+        assertEquals("Renamed Title", vm.frames.value.first().title)
+        vm.dispose()
+    }
+
+    @Test
+    fun `renameFrame with unknown id does nothing`() = runTest {
+        val repo = FakeCockpitRepository()
+        val vm = CockpitViewModel(repo, UnconfinedTestDispatcher(testScheduler))
+        vm.launchModule("webavanue")
+        val originalTitle = vm.frames.value.first().title
+
+        vm.renameFrame("nonexistent", "New Title")
+
+        assertEquals(originalTitle, vm.frames.value.first().title)
+        vm.dispose()
+    }
+
+    // ── Reorder Frame ───────────────────────────────────────────────────
+
+    @Test
+    fun `reorderFrame moves frame forward by delta`() = runTest {
+        val repo = FakeCockpitRepository()
+        val vm = CockpitViewModel(repo, UnconfinedTestDispatcher(testScheduler))
+        vm.launchModule("webavanue")
+        vm.addFrame(FrameContent.Note(), "Note")
+        vm.addFrame(FrameContent.Pdf(), "PDF")
+        val firstId = vm.frames.value[0].id
+
+        vm.reorderFrame(firstId, 2) // move from index 0 to index 2
+
+        assertEquals(firstId, vm.frames.value[2].id)
+        vm.dispose()
+    }
+
+    @Test
+    fun `reorderFrame clamps to valid range`() = runTest {
+        val repo = FakeCockpitRepository()
+        val vm = CockpitViewModel(repo, UnconfinedTestDispatcher(testScheduler))
+        vm.launchModule("webavanue")
+        vm.addFrame(FrameContent.Note(), "Note")
+        val lastId = vm.frames.value.last().id
+
+        vm.reorderFrame(lastId, 100) // way past end
+
+        assertEquals(lastId, vm.frames.value.last().id) // still last
+        vm.dispose()
+    }
+
+    @Test
+    fun `reorderFrame with unknown id does nothing`() = runTest {
+        val repo = FakeCockpitRepository()
+        val vm = CockpitViewModel(repo, UnconfinedTestDispatcher(testScheduler))
+        vm.launchModule("webavanue")
+        val framesBefore = vm.frames.value
+
+        vm.reorderFrame("nonexistent", 1)
+
+        assertEquals(framesBefore, vm.frames.value)
+        vm.dispose()
+    }
+
     // ── Rename Session ─────────────────────────────────────────────────────
 
     @Test
@@ -566,6 +638,22 @@ class CockpitViewModelTest {
         vm.renameSession("No Effect")
 
         assertNull(vm.activeSession.value)
+        vm.dispose()
+    }
+
+    @Test
+    fun `deleteSession when last session creates Quick View fallback`() = runTest {
+        val repo = FakeCockpitRepository()
+        val vm = CockpitViewModel(repo, UnconfinedTestDispatcher(testScheduler))
+        vm.launchModule("webavanue")
+        val sessionId = vm.activeSession.value!!.id
+        // Only one session exists
+
+        vm.deleteSession(sessionId)
+
+        // Should create a "Quick View" fallback session
+        assertNotNull(vm.activeSession.value)
+        assertEquals("Quick View", vm.activeSession.value!!.name)
         vm.dispose()
     }
 

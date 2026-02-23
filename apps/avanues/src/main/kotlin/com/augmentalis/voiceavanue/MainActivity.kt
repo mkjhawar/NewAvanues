@@ -347,8 +347,10 @@ private fun NavGraphBuilder.moduleDirectRoute(
 ) {
     composable(mode.route) {
         val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
-        LaunchedEffect(Unit) {
-            cockpitEntry.cockpitViewModel.launchModule(moduleId)
+        LaunchedEffect(moduleId) {
+            if (cockpitEntry.cockpitViewModel.activeSession.value == null) {
+                cockpitEntry.cockpitViewModel.launchModule(moduleId)
+            }
         }
         CockpitScreen(
             viewModel = cockpitEntry.cockpitViewModel,

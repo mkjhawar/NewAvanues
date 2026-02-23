@@ -33,4 +33,9 @@ class CockpitEntryViewModel @Inject constructor(
     val cockpitViewModel = CockpitViewModel(repository = repository).also {
         it.initialize()
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        cockpitViewModel.dispose()
+    }
 }

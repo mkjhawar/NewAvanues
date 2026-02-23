@@ -192,11 +192,13 @@ class CockpitViewModel(
      * Remove a frame from the active session.
      */
     fun removeFrame(frameId: String) {
+        autoSaveJob?.cancel() // Prevent in-flight auto-save from re-inserting deleted frame
         _frames.value = _frames.value.filter { it.id != frameId }
         if (_selectedFrameId.value == frameId) {
             _selectedFrameId.value = _frames.value.lastOrNull()?.id
         }
         scope.launch { repository.deleteFrame(frameId) }
+        scheduleAutoSave()
     }
 
     /**
