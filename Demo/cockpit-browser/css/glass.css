@@ -479,3 +479,61 @@
   background: color-mix(in srgb, var(--av-primary) 12%, var(--av-surface));
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
+
+/* ================================================================
+   PSEUDO-SPATIAL DEPTH EFFECTS
+   Parallax layers + card tilt + depth shadows
+   ================================================================ */
+
+/* Viewport perspective container */
+.pseudo-spatial-active {
+  perspective: 800px;
+  perspective-origin: 50% 50%;
+}
+
+/* Parallax layer transitions */
+[data-parallax-layer] {
+  will-change: transform;
+  transition: transform 0.08s ease-out;
+}
+
+/* Card tilt on hover */
+.pseudo-spatial-active .frame-window {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  transform-style: preserve-3d;
+}
+
+.pseudo-spatial-active .frame-window:hover {
+  z-index: 10;
+}
+
+/* Depth shadow enhancement for spatial mode */
+.pseudo-spatial-active .frame-window {
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.pseudo-spatial-active .frame-window:hover {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Scanline grid overlay for HUD aesthetic */
+.pseudo-spatial-active::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background:
+    repeating-linear-gradient(
+      transparent 0px,
+      transparent 3px,
+      rgba(255, 255, 255, 0.015) 3px,
+      rgba(255, 255, 255, 0.015) 4px
+    );
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+}

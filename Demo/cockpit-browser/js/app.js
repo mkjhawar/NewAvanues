@@ -29,6 +29,14 @@ import {
 import { setLayout, renderLayout, LAYOUT_MODES } from './layout-engine.js';
 import { renderCommandBar } from './command-bar.js';
 import { renderDashboard } from './dashboard.js';
+import { initPseudoSpatial, setPseudoSpatialEnabled } from './pseudo-spatial.js';
+import {
+  initDB,
+  saveSession,
+  loadSession,
+  saveAppState,
+  loadAppState,
+} from './persistence.js';
 
 /* ================================================================
    STATE
@@ -37,10 +45,13 @@ import { renderDashboard } from './dashboard.js';
 const state = {
   view: 'dashboard',
   sessionName: 'Cockpit',
+  sessionId: null,
+  sessionCreatedAt: null,
   frames: [],
   selectedFrameId: null,
   layoutMode: 'grid',
   commandBarState: 'main',
+  pseudoSpatial: true,  /* PseudoSpatial parallax enabled by default */
   theme: {
     palette: 'hydra',
     appearance: 'dark',
@@ -62,6 +73,44 @@ let $themePanelOverlay;
 let $themePanel;
 
 /* ================================================================
+   PERSISTENCE — debounced auto-save
+   ================================================================ */
+
+let saveTimer = null;
+
+/**
+ * Schedule a debounced save of the current session state to IndexedDB.
+ * Called after every render. The 500ms debounce prevents excessive writes
+ * during rapid state changes (e.g. resizing, quick frame adds).
+ */
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    if (state.view === 'session' && state.frames.length > 0) {
+      const session = {
+        id: state.sessionId || crypto.randomUUID(),
+        name: state.sessionName,
+        frames: state.frames.map(f => ({
+          id: f.id,
+          title: f.title,
+          contentType: f.contentType,
+          minimized: f.minimized,
+          maximized: f.maximized,
+        })),
+        selectedFrameId: state.selectedFrameId,
+        layoutMode: state.layoutMode,
+        createdAt: state.sessionCreatedAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      state.sessionId = session.id;
+      state.sessionCreatedAt = session.createdAt;
+      await saveSession(session);
+      await saveAppState('currentSessionId', session.id);
+    }
+  }, 500);
+}
+
+/* ================================================================
    RENDER
    ================================================================ */
 
@@ -71,6 +120,41 @@ function render() {
   renderStatusBar();
   renderCommandBarUI();
   renderThemePanel();
+  applyParallaxLayers();
+  scheduleSave();
+}
+
+/**
+ * Assign data-parallax-layer attributes to DOM elements for PseudoSpatial.
+ * Layer 0 = background (deepest parallax), Layer 1 = mid-ground (frames),
+ * Layer 2 = foreground (active frame content), Layer 3 = HUD (locked).
+ */
+function applyParallaxLayers() {
+  /* Layer 3 (HUD, no movement): top bar, status bar, command bar */
+  const topBar = document.querySelector('.top-bar');
+  if (topBar) topBar.setAttribute('data-parallax-layer', '3');
+
+  if ($statusBar) $statusBar.setAttribute('data-parallax-layer', '3');
+  if ($commandBar) $commandBar.setAttribute('data-parallax-layer', '3');
+
+  /* Layer 0 (background, deepest parallax): content wrapper background */
+  if ($contentWrapper) $contentWrapper.setAttribute('data-parallax-layer', '0');
+
+  /* Layer 1 (mid-ground): frame area containers, session-view */
+  const frameAreas = document.querySelectorAll('.frame-area');
+  frameAreas.forEach(function(el) {
+    el.setAttribute('data-parallax-layer', '1');
+  });
+
+  /* Layer 1 also: dashboard tiles container */
+  const dashboardGrid = document.querySelector('.dashboard-grid');
+  if (dashboardGrid) dashboardGrid.setAttribute('data-parallax-layer', '1');
+
+  /* Layer 2 (foreground): individual frame windows (active content) */
+  const frameWindows = document.querySelectorAll('.frame-window');
+  frameWindows.forEach(function(el) {
+    el.setAttribute('data-parallax-layer', '2');
+  });
 }
 
 /* ---- Top Bar ---- */
@@ -386,6 +470,8 @@ function bindFrameActions(container) {
 function openModuleSession(mod) {
   state.view = 'session';
   state.sessionName = mod.name;
+  state.sessionId = null;
+  state.sessionCreatedAt = null;
   state.frames = [];
   state.selectedFrameId = null;
   state.layoutMode = 'grid';
@@ -397,6 +483,8 @@ function openModuleSession(mod) {
 function openRecentSession(session) {
   state.view = 'session';
   state.sessionName = session.title;
+  state.sessionId = null;
+  state.sessionCreatedAt = null;
   state.frames = [];
   state.selectedFrameId = null;
   state.layoutMode = 'grid';
@@ -413,6 +501,8 @@ function openRecentSession(session) {
 function openTemplate(tmpl) {
   state.view = 'session';
   state.sessionName = tmpl.name;
+  state.sessionId = null;
+  state.sessionCreatedAt = null;
   state.frames = [];
   state.selectedFrameId = null;
   state.layoutMode = tmpl.frames.length <= 2 ? 'split' : 'grid';
@@ -425,9 +515,15 @@ function openTemplate(tmpl) {
 function goToDashboard() {
   state.view = 'dashboard';
   state.sessionName = 'Cockpit';
+  state.sessionId = null;
+  state.sessionCreatedAt = null;
   state.frames = [];
   state.selectedFrameId = null;
   state.commandBarState = 'main';
+
+  /* clear the active session pointer so reload goes to dashboard */
+  saveAppState('currentSessionId', null).catch(() => {});
+
   render();
 }
 
@@ -435,7 +531,7 @@ function goToDashboard() {
    INIT
    ================================================================ */
 
-function init() {
+async function init() {
   /* cache DOM refs */
   $topBarBack = document.getElementById('topBarBack');
   $topBarTitle = document.getElementById('topBarTitle');
@@ -447,6 +543,30 @@ function init() {
 
   /* init theme engine */
   initThemeEngine(state);
+
+  /* init PseudoSpatial parallax */
+  initPseudoSpatial(state.pseudoSpatial);
+
+  /* ---- Restore session from IndexedDB ---- */
+  try {
+    await initDB();
+    const entry = await loadAppState('currentSessionId');
+    const lastSessionId = entry ? entry.value : null;
+    if (lastSessionId) {
+      const session = await loadSession(lastSessionId);
+      if (session && session.frames && session.frames.length > 0) {
+        state.view = 'session';
+        state.sessionId = session.id;
+        state.sessionName = session.name;
+        state.frames = session.frames;
+        state.selectedFrameId = session.selectedFrameId;
+        state.layoutMode = session.layoutMode || 'grid';
+        state.sessionCreatedAt = session.createdAt;
+      }
+    }
+  } catch (e) {
+    console.warn('[Cockpit] IndexedDB restore failed:', e);
+  }
 
   /* top bar back button */
   $topBarBack.addEventListener('click', goToDashboard);
