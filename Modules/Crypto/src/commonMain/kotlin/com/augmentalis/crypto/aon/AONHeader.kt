@@ -81,15 +81,32 @@ data class AONHeader(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is AONHeader) return false
-        return modelId == other.modelId &&
+        return magic.contentEquals(other.magic) &&
                 formatVersion == other.formatVersion &&
-                modelVersion == other.modelVersion
+                signature.contentEquals(other.signature) &&
+                modelId == other.modelId &&
+                modelVersion == other.modelVersion &&
+                createdTimestamp == other.createdTimestamp &&
+                expiryTimestamp == other.expiryTimestamp &&
+                licenseTier == other.licenseTier &&
+                platformFlags == other.platformFlags &&
+                encryptionScheme == other.encryptionScheme &&
+                ivNonce.contentEquals(other.ivNonce) &&
+                onnxDataOffset == other.onnxDataOffset &&
+                onnxDataSize == other.onnxDataSize &&
+                onnxSHA256Truncated.contentEquals(other.onnxSHA256Truncated)
     }
 
     override fun hashCode(): Int {
-        var result = modelId.hashCode()
+        var result = magic.contentHashCode()
         result = 31 * result + formatVersion
+        result = 31 * result + signature.contentHashCode()
+        result = 31 * result + modelId.hashCode()
         result = 31 * result + modelVersion
+        result = 31 * result + createdTimestamp.hashCode()
+        result = 31 * result + expiryTimestamp.hashCode()
+        result = 31 * result + licenseTier.hashCode()
+        result = 31 * result + onnxDataSize.hashCode()
         return result
     }
 }

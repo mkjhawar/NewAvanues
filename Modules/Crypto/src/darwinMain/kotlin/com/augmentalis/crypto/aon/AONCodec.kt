@@ -51,8 +51,9 @@ actual object AONCodec {
                 return AONVerifyResult(false, false, false, false, false, modelId, licenseTier, errors)
             }
 
-            // Extract ONNX payload
-            val payloadEnd = AONFormat.HEADER_SIZE + header.onnxDataSize.toInt()
+            // Extract ONNX payload (safe conversion from Long to Int)
+            val onnxSize = AONFormat.safeOnnxDataSize(header.onnxDataSize)
+            val payloadEnd = AONFormat.HEADER_SIZE + onnxSize
             if (aonData.size < payloadEnd + AONFormat.FOOTER_SIZE) {
                 errors.add("File truncated")
                 return AONVerifyResult(false, false, false, false, false, modelId, licenseTier, errors)
@@ -114,7 +115,8 @@ actual object AONCodec {
         }
 
         val header = parseHeader(aonData)
-        val payloadEnd = AONFormat.HEADER_SIZE + header.onnxDataSize.toInt()
+        val onnxSize = AONFormat.safeOnnxDataSize(header.onnxDataSize)
+        val payloadEnd = AONFormat.HEADER_SIZE + onnxSize
         val onnxData = aonData.copyOfRange(AONFormat.HEADER_SIZE, payloadEnd)
 
         if (header.encryptionScheme == AONFormat.ENCRYPTION_AES_256_GCM) {
@@ -152,7 +154,7 @@ actual object AONCodec {
         val signInput = headerForSigning + onnxHash
         val computed = CryptoDigest.hmacSha256(hmacKey, signInput)
         val expected = computed + computed // 64 bytes
-        return expected.contentEquals(storedSignature)
+        return AONFormat.constantTimeEquals(expected, storedSignature)
     }
 
     private suspend fun verifyIdentity(header: AONHeader, appIdentifier: String?): Boolean {
@@ -161,6 +163,6 @@ actual object AONCodec {
         val identity = appIdentifier ?: PlatformIdentity.getAppIdentifier()
         val identityHash = CryptoDigest.md5(identity.encodeToByteArray())
 
-        return header.allowedPackages.any { it.contentEquals(identityHash) }
+        return header.allowedPackages.any { AONFormat.constantTimeEquals(it, identityHash) }
     }
 }

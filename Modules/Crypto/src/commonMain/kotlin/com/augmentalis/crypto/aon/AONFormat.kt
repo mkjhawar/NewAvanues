@@ -164,19 +164,53 @@ object AONFormat {
         src.copyInto(dst, dstOffset, srcOffset, srcOffset + length)
     }
 
-    /** Extract a null-terminated ASCII string from a byte array */
+    /** Extract a null-terminated ASCII string from a byte array with bounds checking */
     fun extractString(src: ByteArray, offset: Int, maxLen: Int): String {
+        if (offset < 0 || offset + maxLen > src.size) return ""
         val end = (offset until (offset + maxLen)).firstOrNull { src[it] == 0.toByte() }
             ?: (offset + maxLen)
         return src.decodeToString(offset, end)
     }
 
-    /** Write a null-padded ASCII string into a byte array */
+    /** Write a null-padded ASCII string into a byte array, zeroing residual bytes */
     fun putString(dst: ByteArray, offset: Int, value: String, maxLen: Int) {
+        if (offset < 0 || offset + maxLen > dst.size) return
         val bytes = value.encodeToByteArray()
         val copyLen = minOf(bytes.size, maxLen)
         bytes.copyInto(dst, offset, 0, copyLen)
-        // Remaining bytes are already 0 in a fresh array
+        // Zero residual bytes to prevent stale data
+        for (i in copyLen until maxLen) {
+            dst[offset + i] = 0
+        }
+    }
+
+    /**
+     * Constant-time byte array comparison to prevent timing oracle attacks.
+     *
+     * Unlike contentEquals(), this always compares ALL bytes regardless of
+     * mismatches, so an attacker cannot determine how many bytes matched
+     * from the response time.
+     */
+    fun constantTimeEquals(a: ByteArray, b: ByteArray): Boolean {
+        if (a.size != b.size) return false
+        var result = 0
+        for (i in a.indices) {
+            result = result or (a[i].toInt() xor b[i].toInt())
+        }
+        return result == 0
+    }
+
+    /**
+     * Validate that an ONNX data size from the header is safe for .toInt() conversion.
+     * Returns the size as Int, or throws [AONSecurityException] if it would overflow.
+     */
+    fun safeOnnxDataSize(size: Long): Int {
+        if (size < 0 || size > Int.MAX_VALUE) {
+            throw AONSecurityException(
+                "ONNX data size out of range: $size (max ${Int.MAX_VALUE})"
+            )
+        }
+        return size.toInt()
     }
 
     // ─── HMAC Key (Obfuscated) ───────────────────────────────

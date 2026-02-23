@@ -5,11 +5,11 @@
 
 package com.augmentalis.crypto.aon
 
+import com.augmentalis.crypto.JsBufferUtils
 import com.augmentalis.crypto.digest.CryptoDigest
 import com.augmentalis.crypto.identity.PlatformIdentity
 import kotlinx.coroutines.await
 import org.khronos.webgl.ArrayBuffer
-import org.khronos.webgl.Uint8Array
 import kotlin.js.Date
 import kotlin.js.Promise
 
@@ -26,9 +26,7 @@ import kotlin.js.Promise
  */
 actual object AONCodec {
 
-    private val isNodeJs: Boolean = js(
-        "typeof process !== 'undefined' && typeof process.versions !== 'undefined' && typeof process.versions.node !== 'undefined'"
-    ) as Boolean
+    private val isNodeJs: Boolean get() = JsBufferUtils.isNodeJs
 
     actual suspend fun verify(aonData: ByteArray, appIdentifier: String?): AONVerifyResult {
         val errors = mutableListOf<String>()
@@ -63,8 +61,9 @@ actual object AONCodec {
                 return AONVerifyResult(false, false, false, false, false, modelId, licenseTier, errors)
             }
 
-            // Extract ONNX payload
-            val payloadEnd = AONFormat.HEADER_SIZE + header.onnxDataSize.toInt()
+            // Extract ONNX payload (safe conversion from Long to Int)
+            val onnxSize = AONFormat.safeOnnxDataSize(header.onnxDataSize)
+            val payloadEnd = AONFormat.HEADER_SIZE + onnxSize
             if (aonData.size < payloadEnd + AONFormat.FOOTER_SIZE) {
                 errors.add("File truncated: expected ${payloadEnd + AONFormat.FOOTER_SIZE}, got ${aonData.size}")
                 return AONVerifyResult(false, false, false, false, false, modelId, licenseTier, errors)
@@ -131,9 +130,10 @@ actual object AONCodec {
             )
         }
 
-        // Extract payload
+        // Extract payload (safe Long→Int conversion)
         val header = parseHeader(aonData)
-        val payloadEnd = AONFormat.HEADER_SIZE + header.onnxDataSize.toInt()
+        val onnxSize = AONFormat.safeOnnxDataSize(header.onnxDataSize)
+        val payloadEnd = AONFormat.HEADER_SIZE + onnxSize
         val onnxData = aonData.copyOfRange(AONFormat.HEADER_SIZE, payloadEnd)
 
         // Decrypt if encrypted
@@ -185,7 +185,7 @@ actual object AONCodec {
 
         // The stored signature is 64 bytes (HMAC-SHA256 doubled: 32 + 32)
         val expected = computed + computed
-        return expected.contentEquals(storedSignature)
+        return AONFormat.constantTimeEquals(expected, storedSignature)
     }
 
     /**
@@ -198,7 +198,7 @@ actual object AONCodec {
         val identityHash = CryptoDigest.md5(identity.encodeToByteArray())
 
         return header.allowedPackages.any { pkg ->
-            pkg.contentEquals(identityHash)
+            AONFormat.constantTimeEquals(pkg, identityHash)
         }
     }
 
@@ -229,16 +229,20 @@ actual object AONCodec {
         val ciphertext = encryptedData.copyOfRange(0, encryptedData.size - tagLength)
         val authTag = encryptedData.copyOfRange(encryptedData.size - tagLength, encryptedData.size)
 
-        val decipher = crypto.createDecipheriv("aes-256-gcm", toNodeBuffer(keyBytes), toNodeBuffer(iv))
-        decipher.setAuthTag(toNodeBuffer(authTag))
+        val decipher = crypto.createDecipheriv(
+            "aes-256-gcm",
+            JsBufferUtils.toNodeBuffer(keyBytes),
+            JsBufferUtils.toNodeBuffer(iv)
+        )
+        decipher.setAuthTag(JsBufferUtils.toNodeBuffer(authTag))
 
-        val decrypted1 = decipher.update(toNodeBuffer(ciphertext))
+        val decrypted1 = decipher.update(JsBufferUtils.toNodeBuffer(ciphertext))
         val decrypted2 = decipher.final()
 
         // Concatenate result buffers
         val buffer = js("Buffer")
         val result = buffer.concat(js("[ decrypted1, decrypted2 ]"))
-        return fromNodeBuffer(result)
+        return JsBufferUtils.fromNodeBuffer(result)
     }
 
     private suspend fun decryptAesGcmBrowser(encryptedData: ByteArray, ivNonce: ByteArray): ByteArray {
@@ -247,7 +251,7 @@ actual object AONCodec {
         val iv = ivNonce.copyOf(12)
 
         // Import AES-GCM key (non-extractable)
-        val keyBuffer = toArrayBuffer(keyData)
+        val keyBuffer = JsBufferUtils.toArrayBuffer(keyData)
         val cryptoKey: dynamic = (subtle.importKey(
             "raw",
             keyBuffer,
@@ -256,8 +260,8 @@ actual object AONCodec {
             js("['decrypt']")
         ) as Promise<dynamic>).await()
 
-        val dataBuffer = toArrayBuffer(encryptedData)
-        val ivBuffer = toArrayBuffer(iv)
+        val dataBuffer = JsBufferUtils.toArrayBuffer(encryptedData)
+        val ivBuffer = JsBufferUtils.toArrayBuffer(iv)
 
         val result: ArrayBuffer = (subtle.decrypt(
             js("({name: 'AES-GCM', iv: ivBuffer})"),
@@ -265,7 +269,7 @@ actual object AONCodec {
             dataBuffer
         ) as Promise<ArrayBuffer>).await()
 
-        return fromArrayBuffer(result)
+        return JsBufferUtils.fromArrayBuffer(result)
     }
 
     // ─── Key Management ───────────────────────────────────────
@@ -293,9 +297,9 @@ actual object AONCodec {
     private fun sha256SyncNode(data: ByteArray): ByteArray {
         val crypto = js("require('crypto')")
         val hash = crypto.createHash("sha256")
-        hash.update(toNodeBuffer(data))
+        hash.update(JsBufferUtils.toNodeBuffer(data))
         val result = hash.digest()
-        return fromNodeBuffer(result)
+        return JsBufferUtils.fromNodeBuffer(result)
     }
 
     /**
@@ -404,30 +408,4 @@ actual object AONCodec {
     // Kotlin/JS doesn't have Int.rotateRight, so we implement it
     private fun Int.rotateRight(n: Int): Int = (this ushr n) or (this shl (32 - n))
 
-    // ─── Buffer Conversion ───────────────────────────────────
-
-    private fun toArrayBuffer(data: ByteArray): ArrayBuffer {
-        val uint8 = Uint8Array(data.size)
-        for (i in data.indices) {
-            uint8.asDynamic()[i] = data[i]
-        }
-        return uint8.buffer
-    }
-
-    private fun fromArrayBuffer(buffer: ArrayBuffer): ByteArray {
-        val uint8 = Uint8Array(buffer)
-        return ByteArray(uint8.length) { i ->
-            (uint8.asDynamic()[i] as Int).toByte()
-        }
-    }
-
-    private fun toNodeBuffer(data: ByteArray): dynamic {
-        val buffer = js("Buffer")
-        return buffer.from(data.toTypedArray())
-    }
-
-    private fun fromNodeBuffer(buf: dynamic): ByteArray {
-        val length = buf.length as Int
-        return ByteArray(length) { i -> (buf[i] as Number).toByte() }
-    }
 }

@@ -36,9 +36,15 @@ expect object AONCodec {
      * Performs full verification pipeline before returning the payload.
      * Throws [AONSecurityException] if any check fails.
      *
-     * @param aonData Raw AON file bytes (header + payload + footer)
+     * **Backward compatibility**: If [aonData] does not start with AON magic
+     * bytes (`AVA-AON\x01`), the data is returned as-is without verification.
+     * This allows the same code path to handle both `.AON` wrapped files and
+     * legacy raw `.onnx` files.
+     *
+     * @param aonData Raw AON file bytes (header + payload + footer), or raw ONNX bytes
      * @param appIdentifier Optional app identity override.
      * @return Raw ONNX model bytes ready for inference
+     * @throws AONSecurityException if AON verification fails
      */
     suspend fun unwrap(aonData: ByteArray, appIdentifier: String? = null): ByteArray
 

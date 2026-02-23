@@ -7,10 +7,9 @@
 
 package com.augmentalis.crypto.digest
 
+import com.augmentalis.crypto.JsBufferUtils
 import kotlinx.coroutines.await
 import org.khronos.webgl.ArrayBuffer
-import org.khronos.webgl.Int8Array
-import org.khronos.webgl.Uint8Array
 import kotlin.js.Promise
 
 /**
@@ -26,9 +25,7 @@ import kotlin.js.Promise
  */
 actual object CryptoDigest {
 
-    private val isNodeJs: Boolean = js(
-        "typeof process !== 'undefined' && typeof process.versions !== 'undefined' && typeof process.versions.node !== 'undefined'"
-    ) as Boolean
+    private val isNodeJs: Boolean get() = JsBufferUtils.isNodeJs
 
     actual suspend fun sha256(data: ByteArray): ByteArray {
         return if (isNodeJs) {
@@ -58,51 +55,43 @@ actual object CryptoDigest {
         }
     }
 
-    actual fun crc32(data: ByteArray): Int {
-        return computeCrc32(data)
-    }
+    actual fun crc32(data: ByteArray): Int = Crc32.compute(data)
 
-    actual fun crc32(vararg chunks: ByteArray): Int {
-        var crc = 0xFFFFFFFF.toUInt()
-        for (chunk in chunks) {
-            crc = updateCrc32(crc, chunk)
-        }
-        return (crc xor 0xFFFFFFFF.toUInt()).toInt()
-    }
+    actual fun crc32(vararg chunks: ByteArray): Int = Crc32.compute(*chunks)
 
     // ─── Node.js Implementation (synchronous) ───────────────
 
     private fun sha256Node(data: ByteArray): ByteArray {
         val crypto = js("require('crypto')")
         val hash = crypto.createHash("sha256")
-        hash.update(toNodeBuffer(data))
+        hash.update(JsBufferUtils.toNodeBuffer(data))
         val result = hash.digest()
-        return fromNodeBuffer(result)
+        return JsBufferUtils.fromNodeBuffer(result)
     }
 
     private fun md5Node(data: ByteArray): ByteArray {
         val crypto = js("require('crypto')")
         val hash = crypto.createHash("md5")
-        hash.update(toNodeBuffer(data))
+        hash.update(JsBufferUtils.toNodeBuffer(data))
         val result = hash.digest()
-        return fromNodeBuffer(result)
+        return JsBufferUtils.fromNodeBuffer(result)
     }
 
     private fun hmacSha256Node(key: ByteArray, data: ByteArray): ByteArray {
         val crypto = js("require('crypto')")
-        val hmac = crypto.createHmac("sha256", toNodeBuffer(key))
-        hmac.update(toNodeBuffer(data))
+        val hmac = crypto.createHmac("sha256", JsBufferUtils.toNodeBuffer(key))
+        hmac.update(JsBufferUtils.toNodeBuffer(data))
         val result = hmac.digest()
-        return fromNodeBuffer(result)
+        return JsBufferUtils.fromNodeBuffer(result)
     }
 
     // ─── Browser Implementation (async crypto.subtle) ───────
 
     private suspend fun sha256Browser(data: ByteArray): ByteArray {
         val subtle = js("crypto.subtle")
-        val buffer = toArrayBuffer(data)
+        val buffer = JsBufferUtils.toArrayBuffer(data)
         val result: ArrayBuffer = (subtle.digest("SHA-256", buffer) as Promise<ArrayBuffer>).await()
-        return fromArrayBuffer(result)
+        return JsBufferUtils.fromArrayBuffer(result)
     }
 
     private suspend fun md5Browser(data: ByteArray): ByteArray {
@@ -112,7 +101,7 @@ actual object CryptoDigest {
 
     private suspend fun hmacSha256Browser(key: ByteArray, data: ByteArray): ByteArray {
         val subtle = js("crypto.subtle")
-        val keyBuffer = toArrayBuffer(key)
+        val keyBuffer = JsBufferUtils.toArrayBuffer(key)
 
         // Import key as non-extractable (strongest browser protection)
         val cryptoKey: dynamic = (subtle.importKey(
@@ -123,36 +112,9 @@ actual object CryptoDigest {
             js("['sign']")
         ) as Promise<dynamic>).await()
 
-        val dataBuffer = toArrayBuffer(data)
+        val dataBuffer = JsBufferUtils.toArrayBuffer(data)
         val result: ArrayBuffer = (subtle.sign("HMAC", cryptoKey, dataBuffer) as Promise<ArrayBuffer>).await()
-        return fromArrayBuffer(result)
-    }
-
-    // ─── Buffer Conversion ───────────────────────────────────
-
-    private fun toArrayBuffer(data: ByteArray): ArrayBuffer {
-        val uint8 = Uint8Array(data.size)
-        for (i in data.indices) {
-            uint8.asDynamic()[i] = data[i]
-        }
-        return uint8.buffer
-    }
-
-    private fun fromArrayBuffer(buffer: ArrayBuffer): ByteArray {
-        val uint8 = Uint8Array(buffer)
-        return ByteArray(uint8.length) { i ->
-            (uint8.asDynamic()[i] as Int).toByte()
-        }
-    }
-
-    private fun toNodeBuffer(data: ByteArray): dynamic {
-        val buffer = js("Buffer")
-        return buffer.from(data.toTypedArray())
-    }
-
-    private fun fromNodeBuffer(buf: dynamic): ByteArray {
-        val length = buf.length as Int
-        return ByteArray(length) { i -> (buf[i] as Number).toByte() }
+        return JsBufferUtils.fromArrayBuffer(result)
     }
 
     // ─── Pure Kotlin MD5 (browser fallback) ──────────────────
@@ -247,28 +209,4 @@ actual object CryptoDigest {
         return result
     }
 
-    // ─── CRC32 (pure Kotlin, same as iOS) ────────────────────
-
-    private val CRC32_TABLE = UIntArray(256) { i ->
-        var crc = i.toUInt()
-        repeat(8) {
-            crc = if (crc and 1u != 0u) (crc shr 1) xor 0xEDB88320u else crc shr 1
-        }
-        crc
-    }
-
-    private fun computeCrc32(data: ByteArray): Int {
-        var crc = 0xFFFFFFFF.toUInt()
-        crc = updateCrc32(crc, data)
-        return (crc xor 0xFFFFFFFF.toUInt()).toInt()
-    }
-
-    private fun updateCrc32(initial: UInt, data: ByteArray): UInt {
-        var crc = initial
-        for (byte in data) {
-            val index = ((crc xor byte.toUInt()) and 0xFFu).toInt()
-            crc = (crc shr 8) xor CRC32_TABLE[index]
-        }
-        return crc
-    }
 }

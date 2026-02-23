@@ -60,13 +60,19 @@ data class AONFooter(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is AONFooter) return false
-        return fileSize == other.fileSize &&
+        return headerHash.contentEquals(other.headerHash) &&
+                onnxHash.contentEquals(other.onnxHash) &&
+                footerMagic.contentEquals(other.footerMagic) &&
+                fileSize == other.fileSize &&
                 checksumCRC32 == other.checksumCRC32 &&
-                buildNumber == other.buildNumber
+                buildNumber == other.buildNumber &&
+                creatorSignature == other.creatorSignature
     }
 
     override fun hashCode(): Int {
-        var result = fileSize.hashCode()
+        var result = headerHash.contentHashCode()
+        result = 31 * result + onnxHash.contentHashCode()
+        result = 31 * result + fileSize.hashCode()
         result = 31 * result + checksumCRC32
         result = 31 * result + buildNumber
         return result
