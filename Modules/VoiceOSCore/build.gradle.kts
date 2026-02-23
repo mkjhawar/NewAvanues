@@ -110,7 +110,7 @@ kotlin {
                 implementation(project(":Modules:AvanueUI"))
 
                 // Compose
-                implementation(project.dependencies.platform(libs.compose.bom.get()))
+                implementation(project.dependencies.platform(libs.compose.bom))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
                 implementation(libs.compose.runtime.livedata)

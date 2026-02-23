@@ -54,7 +54,7 @@ kotlin {
             dependencies {
                 implementation(project(":Modules:AvanueUI"))
                 implementation(libs.androidx.core.ktx)
-                implementation(project.dependencies.platform(libs.compose.bom.get()))
+                implementation(project.dependencies.platform(libs.compose.bom))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
                 implementation(libs.compose.material.icons.extended)

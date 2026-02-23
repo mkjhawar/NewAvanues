@@ -5,12 +5,6 @@ plugins {
     id("kotlin-parcelize")
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-}
-
 android {
     namespace = "com.augmentalis.voicekeyboard"
     compileSdk = 35  // Match project standard
@@ -40,7 +34,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    
+
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+
     buildFeatures {
         buildConfig = true
         compose = true
@@ -63,7 +61,7 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     
     // Compose - Using project's forced BOM version
-    implementation(project.dependencies.platform(libs.compose.bom.get()))
+    implementation(platform(libs.compose.bom))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")

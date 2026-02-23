@@ -93,7 +93,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     
     // Compose BOM — version managed via catalog
-    val composeBom = platform(libs.compose.bom.get())
+    val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
 
     implementation("androidx.compose.ui:ui")

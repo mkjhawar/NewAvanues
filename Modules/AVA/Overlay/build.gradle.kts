@@ -68,7 +68,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // Compose
-    implementation(project.dependencies.platform(libs.compose.bom.get()))
+    implementation(project.dependencies.platform(libs.compose.bom))
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")

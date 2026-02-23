@@ -5,12 +5,6 @@ plugins {
     id("kotlin-parcelize")
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-}
-
 android {
     namespace = "com.augmentalis.licensemanager"
     compileSdk = 35
@@ -35,6 +29,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
     
     testOptions {
@@ -63,7 +61,7 @@ dependencies {
     implementation(project(":Modules:AvanueUI"))
 
     // Compose BOM
-    implementation(project.dependencies.platform(libs.compose.bom.get()))
+    implementation(platform(libs.compose.bom))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
