@@ -87,7 +87,7 @@ object VosParser {
     // ═══════════════════════════════════════════════════════════════════
 
     /** Maps action_id prefix to CommandCategory name. */
-    val CATEGORY_MAP: Map<String, String> = mapOf(
+    internal val CATEGORY_MAP: Map<String, String> = mapOf(
         // App domain prefixes
         "nav" to "NAVIGATION",
         "media" to "MEDIA",
@@ -112,7 +112,7 @@ object VosParser {
     )
 
     /** Maps action_id to CommandActionType name. */
-    val ACTION_MAP: Map<String, String> = mapOf(
+    internal val ACTION_MAP: Map<String, String> = mapOf(
         // ── Navigation ──
         "nav_back" to "BACK",
         "nav_home" to "HOME",

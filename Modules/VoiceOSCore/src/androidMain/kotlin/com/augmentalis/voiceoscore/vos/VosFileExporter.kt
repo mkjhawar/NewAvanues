@@ -65,7 +65,7 @@ class VosFileExporter(
         val vosJson = buildVosJson(
             locale = locale,
             domain = domain,
-            fallback = if (locale == "en-US") "en-US" else "en-US",
+            fallback = "en-US",
             commands = commands
         )
 
