@@ -32,6 +32,12 @@ kotlin {
         }
     }
 
+    // Web/JS target
+    js(IR) {
+        browser()
+        nodejs()
+    }
+
     sourceSets {
         // Common code (pure Kotlin, no platform dependencies)
         val commonMain by getting {

@@ -40,6 +40,12 @@ kotlin {
         }
     }
 
+    // Web/JS target
+    js(IR) {
+        browser()
+        nodejs()
+    }
+
     sourceSets {
         // Common code (pure domain models and repository interfaces)
         val commonMain by getting {
