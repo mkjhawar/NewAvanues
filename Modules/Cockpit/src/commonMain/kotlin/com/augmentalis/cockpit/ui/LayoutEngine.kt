@@ -1,5 +1,6 @@
 package com.augmentalis.cockpit.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.theme.AvanueTheme
@@ -60,6 +62,9 @@ fun LayoutEngine(
     onModuleClick: (String) -> Unit = {},
     onSessionClick: (String) -> Unit = {},
     onTemplateClick: (String) -> Unit = {},
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val visibleFrames = frames.filter { it.state.isVisible && !it.state.isMinimized }
@@ -157,6 +162,9 @@ fun LayoutEngine(
             onFrameClose = onFrameClose,
             onFrameMinimize = onFrameMinimize,
             onFrameMaximize = onFrameMaximize,
+            onStepRenamed = onStepRenamed,
+            onStepReordered = onStepReordered,
+            onStepDeleted = onStepDeleted,
             frameContent = frameContent,
             modifier = modifier
         )
@@ -260,11 +268,13 @@ private fun GridLayout(
         else -> 3
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columnCount),
-        modifier = modifier.fillMaxSize().padding(4.dp)
-    ) {
-        items(frames, key = { it.id }) { frame ->
+    // Single frame: center both horizontally and vertically
+    if (frames.size == 1) {
+        Box(
+            modifier = modifier.fillMaxSize().padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val frame = frames[0]
             FrameWindow(
                 frame = frame,
                 isSelected = frame.id == selectedFrameId,
@@ -275,14 +285,40 @@ private fun GridLayout(
                 onMinimize = { onFrameMinimize(frame.id) },
                 onMaximize = { onFrameMaximize(frame.id) },
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.8f)
+                    .fillMaxSize(0.8f)
                     .padding(4.dp)
-                    .then(
-                        if (frames.size <= 2) Modifier.fillMaxSize()
-                        else Modifier
-                    )
             ) {
                 frameContent(frame)
+            }
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columnCount),
+            modifier = modifier.fillMaxSize().padding(4.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Center
+        ) {
+            items(frames, key = { it.id }) { frame ->
+                FrameWindow(
+                    frame = frame,
+                    isSelected = frame.id == selectedFrameId,
+                    isDraggable = false,
+                    isResizable = false,
+                    onSelect = { onFrameSelected(frame.id) },
+                    onClose = { onFrameClose(frame.id) },
+                    onMinimize = { onFrameMinimize(frame.id) },
+                    onMaximize = { onFrameMaximize(frame.id) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp)
+                        .then(
+                            if (frames.size <= 2) Modifier.fillMaxSize()
+                            else Modifier
+                        )
+                ) {
+                    frameContent(frame)
+                }
             }
         }
     }
@@ -326,7 +362,10 @@ private fun SplitLayout(
                 modifier = primaryMod
             ) { frameContent(primaryFrame) }
 
-            Column(modifier = secondaryMod) {
+            Column(
+                modifier = secondaryMod,
+                verticalArrangement = Arrangement.Center
+            ) {
                 secondaryFrames.forEach { frame ->
                     FrameWindow(
                         frame = frame,
@@ -343,7 +382,10 @@ private fun SplitLayout(
             }
         } else {
             // Secondary on left
-            Column(modifier = secondaryMod) {
+            Column(
+                modifier = secondaryMod,
+                verticalArrangement = Arrangement.Center
+            ) {
                 secondaryFrames.forEach { frame ->
                     FrameWindow(
                         frame = frame,
@@ -393,7 +435,10 @@ private fun FlightDeckLayout(
 ) {
     if (frames.isEmpty()) return
 
-    Column(modifier = modifier.fillMaxSize().padding(4.dp)) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         when {
             frames.size == 1 -> {
                 val frame = frames[0]
@@ -411,7 +456,10 @@ private fun FlightDeckLayout(
             }
 
             frames.size == 2 -> {
-                Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     frames.forEach { frame ->
                         DeckFrameWindow(
                             frame = frame,
@@ -432,7 +480,10 @@ private fun FlightDeckLayout(
                 val mainFrames = frames.take(2)
                 val bottomFrames = frames.drop(2)
 
-                Row(modifier = Modifier.weight(0.65f).fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.weight(0.65f).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     mainFrames.forEach { frame ->
                         DeckFrameWindow(
                             frame = frame,
@@ -448,7 +499,10 @@ private fun FlightDeckLayout(
                     }
                 }
 
-                Row(modifier = Modifier.weight(0.35f).fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.weight(0.35f).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     bottomFrames.forEach { frame ->
                         DeckFrameWindow(
                             frame = frame,
@@ -482,7 +536,10 @@ private fun FlightDeckLayout(
                     modifier = Modifier.weight(0.18f).fillMaxWidth().padding(2.dp)
                 )
 
-                Row(modifier = Modifier.weight(0.52f).fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.weight(0.52f).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     mainFrames.forEach { frame ->
                         DeckFrameWindow(
                             frame = frame,
@@ -499,7 +556,10 @@ private fun FlightDeckLayout(
                 }
 
                 if (bottomFrames.isNotEmpty()) {
-                    Row(modifier = Modifier.weight(0.30f).fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.weight(0.30f).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
                         bottomFrames.forEach { frame ->
                             DeckFrameWindow(
                                 frame = frame,
@@ -540,7 +600,10 @@ private fun TPanelLayout(
     val primaryFrame = frames.firstOrNull { it.id == selectedFrameId } ?: frames.first()
     val secondaryFrames = frames.filter { it.id != primaryFrame.id }
 
-    Column(modifier = modifier.fillMaxSize().padding(4.dp)) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         val primaryWeight = if (secondaryFrames.isEmpty()) 1f else 0.6f
         FrameWindow(
             frame = primaryFrame,
@@ -555,7 +618,10 @@ private fun TPanelLayout(
         ) { frameContent(primaryFrame) }
 
         if (secondaryFrames.isNotEmpty()) {
-            Row(modifier = Modifier.weight(0.4f).fillMaxWidth()) {
+            Row(
+                modifier = Modifier.weight(0.4f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
                 secondaryFrames.forEach { frame ->
                     FrameWindow(
                         frame = frame,
@@ -595,7 +661,10 @@ private fun MosaicLayout(
     val others = frames.filter { it.id != primaryFrame.id }
 
     if (others.isEmpty()) {
-        Box(modifier = modifier.fillMaxSize().padding(4.dp)) {
+        Box(
+            modifier = modifier.fillMaxSize().padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
             FrameWindow(
                 frame = primaryFrame,
                 isSelected = true,
@@ -609,7 +678,10 @@ private fun MosaicLayout(
             ) { frameContent(primaryFrame) }
         }
     } else {
-        Row(modifier = modifier.fillMaxSize().padding(4.dp)) {
+        Row(
+            modifier = modifier.fillMaxSize().padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             FrameWindow(
                 frame = primaryFrame,
                 isSelected = true,
@@ -622,7 +694,10 @@ private fun MosaicLayout(
                 modifier = Modifier.weight(1f).fillMaxSize().padding(2.dp)
             ) { frameContent(primaryFrame) }
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
                 others.forEach { frame ->
                     FrameWindow(
                         frame = frame,
@@ -670,7 +745,11 @@ private fun RowLayout(
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier = modifier.fillMaxSize().padding(4.dp)) {
+    Row(
+        modifier = modifier.fillMaxSize().padding(4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         frames.forEach { frame ->
             FrameWindow(
                 frame = frame,

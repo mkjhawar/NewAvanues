@@ -10,6 +10,7 @@ import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.FrameState
 import com.augmentalis.cockpit.model.LayoutMode
 import com.augmentalis.cockpit.repository.ICockpitRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,14 +41,14 @@ import kotlin.random.Random
  * Android apps wrap this in an AndroidX ViewModel or Hilt-injected scope.
  */
 class CockpitViewModel(
-    private val repository: ICockpitRepository
+    private val repository: ICockpitRepository,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
     private val viewModelJob = SupervisorJob()
-    // Dispatchers.Main is not available on all KMP targets (e.g. Desktop JVM without a main
-    // dispatcher library). Dispatchers.Default is safe on all platforms and the ViewModel does not
-    // drive UI directly — it exposes StateFlows that platform UI layers collect on their own
-    // main/UI dispatcher.
-    private val scope = CoroutineScope(viewModelJob + Dispatchers.Default)
+    // Dispatchers.Default is safe on all KMP targets and the ViewModel does not drive UI directly
+    // — it exposes StateFlows that platform UI layers collect on their own main/UI dispatcher.
+    // Tests can inject a TestDispatcher for deterministic execution.
+    private val scope = CoroutineScope(viewModelJob + dispatcher)
     private val _activeSession = MutableStateFlow<CockpitSession?>(null)
     val activeSession: StateFlow<CockpitSession?> = _activeSession.asStateFlow()
 
@@ -64,6 +65,8 @@ class CockpitViewModel(
     val sessions: StateFlow<List<CockpitSession>> = _sessions.asStateFlow()
 
     private var autoSaveJob: Job? = null
+    private var activeLoadJob: Job? = null
+    private var dashboardCollectionJob: Job? = null
     private var nextZOrder = 0
 
     private val _dashboardState = MutableStateFlow(DashboardState())
@@ -76,7 +79,7 @@ class CockpitViewModel(
 
     init {
         // Derive dashboard state from sessions + active session
-        scope.launch {
+        dashboardCollectionJob = scope.launch {
             combine(_sessions, _activeSession) { sessions, active ->
                 DashboardState(
                     recentSessions = sessions.take(8),
@@ -109,7 +112,8 @@ class CockpitViewModel(
      * to await completion within an existing coroutine (e.g. launchModule).
      */
     fun loadSession(sessionId: String) {
-        scope.launch { loadSessionInternal(sessionId) }
+        activeLoadJob?.cancel()
+        activeLoadJob = scope.launch { loadSessionInternal(sessionId) }
     }
 
     /**
@@ -331,7 +335,8 @@ class CockpitViewModel(
      * Delete a session and all its frames.
      */
     fun deleteSession(sessionId: String) {
-        scope.launch {
+        activeLoadJob?.cancel()
+        activeLoadJob = scope.launch {
             repository.deleteSession(sessionId)
             _sessions.value = repository.getSessions()
 
@@ -345,6 +350,41 @@ class CockpitViewModel(
                 }
             }
         }
+    }
+
+    // ── Workflow CRUD ─────────────────────────────────────────────────
+
+    /**
+     * Rename a frame's title (used in workflow step editing).
+     */
+    fun renameFrame(frameId: String, newTitle: String) {
+        _frames.value = _frames.value.map { frame ->
+            if (frame.id == frameId) {
+                frame.copy(
+                    title = newTitle,
+                    updatedAt = Clock.System.now().toString()
+                )
+            } else frame
+        }
+        scheduleAutoSave()
+    }
+
+    /**
+     * Reorder a frame by moving it [delta] positions in the list.
+     * Positive delta moves toward the end, negative toward the start.
+     */
+    fun reorderFrame(frameId: String, delta: Int) {
+        val currentFrames = _frames.value.toMutableList()
+        val currentIndex = currentFrames.indexOfFirst { it.id == frameId }
+        if (currentIndex < 0) return
+
+        val newIndex = (currentIndex + delta).coerceIn(0, currentFrames.lastIndex)
+        if (newIndex == currentIndex) return
+
+        val frame = currentFrames.removeAt(currentIndex)
+        currentFrames.add(newIndex, frame)
+        _frames.value = currentFrames
+        scheduleAutoSave()
     }
 
     // ── Dashboard Operations ──────────────────────────────────────────
@@ -363,7 +403,8 @@ class CockpitViewModel(
             _specialModuleLaunch.tryEmit(moduleId)
             return
         }
-        scope.launch {
+        activeLoadJob?.cancel()
+        activeLoadJob = scope.launch {
             val session = createSession(module.displayName)
             loadSessionInternal(session.id)
             addFrame(content, module.displayName)
@@ -376,7 +417,8 @@ class CockpitViewModel(
      * to its stored layout mode.
      */
     fun resumeSession(sessionId: String) {
-        scope.launch {
+        activeLoadJob?.cancel()
+        activeLoadJob = scope.launch {
             loadSessionInternal(sessionId)
         }
     }
@@ -387,7 +429,8 @@ class CockpitViewModel(
      */
     fun launchTemplate(templateId: String) {
         val template = BuiltInTemplates.ALL.firstOrNull { it.id == templateId } ?: return
-        scope.launch {
+        activeLoadJob?.cancel()
+        activeLoadJob = scope.launch {
             val session = createSession(template.name)
             loadSessionInternal(session.id)
             setLayoutMode(template.layoutMode)
@@ -481,6 +524,8 @@ class CockpitViewModel(
      */
     fun dispose() {
         autoSaveJob?.cancel()
+        activeLoadJob?.cancel()
+        dashboardCollectionJob?.cancel()
         viewModelJob.cancel()
     }
 

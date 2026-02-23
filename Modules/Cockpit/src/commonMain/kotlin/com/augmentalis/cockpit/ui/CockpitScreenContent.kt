@@ -79,6 +79,9 @@ fun CockpitScreenContent(
     onModuleClick: (String) -> Unit = {},
     onSessionClick: (String) -> Unit = {},
     onTemplateClick: (String) -> Unit = {},
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -181,6 +184,9 @@ fun CockpitScreenContent(
                     onModuleClick = onModuleClick,
                     onSessionClick = onSessionClick,
                     onTemplateClick = onTemplateClick,
+                    onStepRenamed = onStepRenamed,
+                    onStepReordered = onStepReordered,
+                    onStepDeleted = onStepDeleted,
                     modifier = Modifier.fillMaxSize()
                 )
             }

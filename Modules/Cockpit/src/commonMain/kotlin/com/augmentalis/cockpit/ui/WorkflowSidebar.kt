@@ -22,8 +22,15 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,7 +43,10 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,6 +95,9 @@ enum class StepState {
  * @param onFrameClose Callback when user closes a frame via traffic lights
  * @param onFrameMinimize Callback when user minimizes a frame
  * @param onFrameMaximize Callback when user maximizes/restores a frame
+ * @param onStepRenamed Callback when step title is edited (frameId, newTitle)
+ * @param onStepReordered Callback when step is moved up/down (frameId, delta: -1 or +1)
+ * @param onStepDeleted Callback when step is removed (frameId)
  * @param frameContent Composable lambda that renders the active frame's content
  */
 @Composable
@@ -96,6 +109,9 @@ fun WorkflowSidebar(
     onFrameClose: (String) -> Unit = {},
     onFrameMinimize: (String) -> Unit = {},
     onFrameMaximize: (String) -> Unit = {},
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -115,6 +131,9 @@ fun WorkflowSidebar(
                 onFrameClose = onFrameClose,
                 onFrameMinimize = onFrameMinimize,
                 onFrameMaximize = onFrameMaximize,
+                onStepRenamed = onStepRenamed,
+                onStepReordered = onStepReordered,
+                onStepDeleted = onStepDeleted,
                 frameContent = frameContent,
                 modifier = modifier
             )
@@ -127,6 +146,9 @@ fun WorkflowSidebar(
                 onFrameClose = onFrameClose,
                 onFrameMinimize = onFrameMinimize,
                 onFrameMaximize = onFrameMaximize,
+                onStepRenamed = onStepRenamed,
+                onStepReordered = onStepReordered,
+                onStepDeleted = onStepDeleted,
                 frameContent = frameContent,
                 modifier = modifier
             )
@@ -142,6 +164,9 @@ fun WorkflowSidebar(
                 onFrameClose = onFrameClose,
                 onFrameMinimize = onFrameMinimize,
                 onFrameMaximize = onFrameMaximize,
+                onStepRenamed = onStepRenamed,
+                onStepReordered = onStepReordered,
+                onStepDeleted = onStepDeleted,
                 frameContent = frameContent,
                 modifier = modifier
             )
@@ -154,6 +179,9 @@ fun WorkflowSidebar(
                 onFrameClose = onFrameClose,
                 onFrameMinimize = onFrameMinimize,
                 onFrameMaximize = onFrameMaximize,
+                onStepRenamed = onStepRenamed,
+                onStepReordered = onStepReordered,
+                onStepDeleted = onStepDeleted,
                 frameContent = frameContent,
                 modifier = modifier
             )
@@ -176,6 +204,9 @@ private fun WorkflowTabletLayout(
     onFrameClose: (String) -> Unit,
     onFrameMinimize: (String) -> Unit,
     onFrameMaximize: (String) -> Unit,
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -187,6 +218,9 @@ private fun WorkflowTabletLayout(
             frames = frames,
             activeIndex = activeIndex,
             onStepSelected = onStepSelected,
+            onStepRenamed = onStepRenamed,
+            onStepReordered = onStepReordered,
+            onStepDeleted = onStepDeleted,
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(0.3f)
@@ -242,6 +276,9 @@ private fun WorkflowTriPanelLayout(
     onFrameClose: (String) -> Unit,
     onFrameMinimize: (String) -> Unit,
     onFrameMaximize: (String) -> Unit,
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -253,6 +290,9 @@ private fun WorkflowTriPanelLayout(
             frames = frames.filter { it.panelRole != PanelRole.AUXILIARY },
             activeIndex = activeIndex,
             onStepSelected = onStepSelected,
+            onStepRenamed = onStepRenamed,
+            onStepReordered = onStepReordered,
+            onStepDeleted = onStepDeleted,
             modifier = Modifier
                 .fillMaxHeight()
                 .weight(0.2f)
@@ -315,6 +355,9 @@ private fun WorkflowPhoneLayout(
     onFrameClose: (String) -> Unit,
     onFrameMinimize: (String) -> Unit,
     onFrameMaximize: (String) -> Unit,
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -346,6 +389,9 @@ private fun WorkflowPhoneLayout(
                 frames = frames,
                 activeIndex = activeIndex,
                 onStepSelected = onStepSelected,
+                onStepRenamed = onStepRenamed,
+                onStepReordered = onStepReordered,
+                onStepDeleted = onStepDeleted,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
@@ -394,6 +440,9 @@ private fun WorkflowPhoneTabLayout(
     onFrameClose: (String) -> Unit,
     onFrameMinimize: (String) -> Unit,
     onFrameMaximize: (String) -> Unit,
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     frameContent: @Composable (CockpitFrame) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -444,6 +493,9 @@ private fun WorkflowPhoneTabLayout(
                         onStepSelected(id)
                         scope.launch { pagerState.animateScrollToPage(1) }
                     },
+                    onStepRenamed = onStepRenamed,
+                    onStepReordered = onStepReordered,
+                    onStepDeleted = onStepDeleted,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(8.dp)
@@ -514,13 +566,16 @@ private fun VerticalDivider(modifier: Modifier = Modifier) {
 }
 
 /**
- * Scrollable list of workflow steps with state indicators.
+ * Scrollable list of workflow steps with state indicators and CRUD controls.
  */
 @Composable
 private fun StepListPanel(
     frames: List<CockpitFrame>,
     activeIndex: Int,
     onStepSelected: (String) -> Unit,
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -548,7 +603,13 @@ private fun StepListPanel(
                     stepNumber = index + 1,
                     title = frame.title,
                     state = state,
-                    onClick = { onStepSelected(frame.id) }
+                    isFirst = index == 0,
+                    isLast = index == frames.lastIndex,
+                    onClick = { onStepSelected(frame.id) },
+                    onRename = { newTitle -> onStepRenamed(frame.id, newTitle) },
+                    onMoveUp = { onStepReordered(frame.id, -1) },
+                    onMoveDown = { onStepReordered(frame.id, 1) },
+                    onDelete = { onStepDeleted(frame.id) }
                 )
             }
         }
@@ -556,16 +617,27 @@ private fun StepListPanel(
 }
 
 /**
- * Individual step row with number badge, title, and state indicator.
+ * Individual step row with number badge, title, state indicator, and CRUD controls.
+ *
+ * Tap the row to select. When the active step is selected, an edit row appears
+ * with rename field, reorder arrows, and delete button.
  */
 @Composable
 private fun StepRow(
     stepNumber: Int,
     title: String,
     state: StepState,
-    onClick: () -> Unit
+    isFirst: Boolean,
+    isLast: Boolean,
+    onClick: () -> Unit,
+    onRename: (String) -> Unit = {},
+    onMoveUp: () -> Unit = {},
+    onMoveDown: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
     val colors = AvanueTheme.colors
+    var isEditing by remember { mutableStateOf(false) }
+    var editText by remember(title) { mutableStateOf(title) }
 
     val badgeColor by animateColorAsState(
         targetValue = when (state) {
@@ -582,64 +654,184 @@ private fun StepRow(
         StepState.PENDING -> 0.4f
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .then(
-                if (state == StepState.ACTIVE) {
-                    Modifier.border(1.dp, colors.primary.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                } else Modifier
-            )
-            .background(
-                if (state == StepState.ACTIVE) colors.primary.copy(alpha = 0.1f)
-                else colors.surface.copy(alpha = 0.3f)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Number badge
-        Box(
+    Column {
+        Row(
             modifier = Modifier
-                .size(24.dp)
-                .background(badgeColor, CircleShape),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .then(
+                    if (state == StepState.ACTIVE) {
+                        Modifier.border(
+                            1.dp,
+                            colors.primary.copy(alpha = 0.5f),
+                            RoundedCornerShape(8.dp)
+                        )
+                    } else Modifier
+                )
+                .background(
+                    if (state == StepState.ACTIVE) colors.primary.copy(alpha = 0.1f)
+                    else colors.surface.copy(alpha = 0.3f)
+                )
+                .clickable(onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stepNumber.toString(),
-                color = colors.onPrimary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
+            // Number badge
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(badgeColor, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stepNumber.toString(),
+                    color = colors.onPrimary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            // Step title or edit field
+            if (isEditing) {
+                BasicTextField(
+                    value = editText,
+                    onValueChange = { editText = it },
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = colors.textPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    singleLine = true,
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            colors.surfaceInput.copy(alpha = 0.5f),
+                            RoundedCornerShape(4.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                )
+            } else {
+                Text(
+                    text = title,
+                    color = colors.textPrimary.copy(alpha = textAlpha),
+                    fontSize = 13.sp,
+                    fontWeight = if (state == StepState.ACTIVE) FontWeight.Medium
+                    else FontWeight.Normal,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.width(6.dp))
+
+            // Edit/save toggle
+            if (state == StepState.ACTIVE) {
+                if (isEditing) {
+                    // Save + cancel
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Voice: click Save",
+                        tint = colors.success,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable {
+                                onRename(editText)
+                                isEditing = false
+                            }
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Voice: click Cancel",
+                        tint = colors.textTertiary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable {
+                                editText = title
+                                isEditing = false
+                            }
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Voice: click Edit",
+                        tint = colors.textSecondary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable { isEditing = true }
+                    )
+                }
+            } else {
+                // State icon (non-active steps)
+                Icon(
+                    imageVector = when (state) {
+                        StepState.COMPLETED -> Icons.Default.CheckCircle
+                        else -> Icons.Default.RadioButtonUnchecked
+                    },
+                    contentDescription = state.name,
+                    tint = badgeColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
 
-        Spacer(Modifier.width(10.dp))
+        // Action row (visible only for active step)
+        if (state == StepState.ACTIVE && !isEditing) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 34.dp, top = 2.dp, bottom = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                // Move up
+                if (!isFirst) {
+                    Icon(
+                        Icons.Default.KeyboardArrowUp,
+                        contentDescription = "Voice: click Move Up",
+                        tint = colors.textSecondary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(colors.surface.copy(alpha = 0.5f))
+                            .clickable(onClick = onMoveUp)
+                            .padding(2.dp)
+                    )
+                }
 
-        // Step title
-        Text(
-            text = title,
-            color = colors.textPrimary.copy(alpha = textAlpha),
-            fontSize = 13.sp,
-            fontWeight = if (state == StepState.ACTIVE) FontWeight.Medium else FontWeight.Normal,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
+                // Move down
+                if (!isLast) {
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Voice: click Move Down",
+                        tint = colors.textSecondary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(colors.surface.copy(alpha = 0.5f))
+                            .clickable(onClick = onMoveDown)
+                            .padding(2.dp)
+                    )
+                }
 
-        Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.weight(1f))
 
-        // State icon
-        Icon(
-            imageVector = when (state) {
-                StepState.COMPLETED -> Icons.Default.CheckCircle
-                StepState.ACTIVE -> Icons.Default.RadioButtonUnchecked
-                StepState.PENDING -> Icons.Default.RadioButtonUnchecked
-            },
-            contentDescription = state.name,
-            tint = badgeColor,
-            modifier = Modifier.size(18.dp)
-        )
+                // Delete
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Voice: click Delete Step",
+                    tint = colors.error.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(colors.surface.copy(alpha = 0.5f))
+                        .clickable(onClick = onDelete)
+                        .padding(2.dp)
+                )
+            }
+        }
     }
 }
 

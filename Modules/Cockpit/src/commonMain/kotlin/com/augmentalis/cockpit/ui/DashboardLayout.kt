@@ -85,7 +85,7 @@ fun DashboardLayout(
             .fillMaxSize()
             .padding(horizontal = 12.dp),
         contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // ── Recent Sessions (horizontal strip spanning full width) ────────

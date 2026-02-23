@@ -91,7 +91,7 @@ class LayoutModeTest {
     // ── Completeness ──────────────────────────────────────────────
 
     @Test
-    fun `LayoutMode has exactly 13 members`() {
-        assertEquals(13, LayoutMode.entries.size)
+    fun `LayoutMode has exactly 14 members`() {
+        assertEquals(14, LayoutMode.entries.size)
     }
 }

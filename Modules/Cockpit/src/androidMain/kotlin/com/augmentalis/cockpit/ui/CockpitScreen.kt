@@ -127,6 +127,9 @@ fun CockpitScreen(
         onModuleClick = { viewModel.launchModule(it) },
         onSessionClick = { viewModel.resumeSession(it) },
         onTemplateClick = { viewModel.launchTemplate(it) },
+        onStepRenamed = { id, title -> viewModel.renameFrame(id, title) },
+        onStepReordered = { id, delta -> viewModel.reorderFrame(id, delta) },
+        onStepDeleted = { viewModel.removeFrame(it) },
         modifier = modifier
     )
 }
