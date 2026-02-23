@@ -7,7 +7,7 @@
 **Dependencies**: LicensingModule (license validation), Redis (session state), PostgreSQL (audit/history)
 **Authoritative Repo**: SmartAvanue (`SmartAvanue-Development` branch)
 **Created**: 2026-02-22
-**Updated**: 2026-02-22 (Phase 3 complete, migrated to SmartAvanue)
+**Updated**: 2026-02-23 (Standalone server added)
 **Author**: Manoj Jhawar
 
 ---
@@ -521,19 +521,95 @@ apps/ac-api-v2/nestjs-src/modules/signaling/        (18 files)
 apps/ac-api-v2/nestjs-src/migrations/
 └── 1740200001000-CreateSignalingTables.ts   # 4 tables migration
 
+apps/signaling-server/                       # Standalone deployment
+├── package.json                             # NestJS 10 + TypeORM + Socket.IO + Redis
+├── tsconfig.json                            # Extends base + decorator metadata
+├── Dockerfile                               # Multi-stage node:22-slim
+├── .env.example                             # All config vars with defaults
+└── src/
+    ├── main.ts                              # Bootstrap on port 4001
+    ├── signaling-standalone.module.ts       # Root module (4 entities, 7 providers)
+    ├── standalone-license.guard.ts          # Env-based tier (no LicensingModule)
+    ├── standalone-migration.ts              # 4-table SQL (no FK to users)
+    └── signaling/                           # Self-contained signaling source
+        ├── signaling.gateway.ts             # Gateway (standalone guard import)
+        ├── enums/                           # Enums, Redis keys, tier limits
+        ├── dto/                             # DTOs + LicenseValidationResult
+        ├── entities/                        # 4 entities (User ManyToOne removed)
+        └── services/                        # 6 services (identical to full stack)
+
 config/
 └── turnserver.conf                          # Production coturn configuration
 ```
 
 ---
 
-## 11. Implementation Phases
+## 11. Standalone Server
+
+### Purpose
+
+The standalone server at `SmartAvanue/apps/signaling-server/` runs ONLY the signaling module without loading the full SmartAvanue NestJS app (60+ modules, 354 PG tables). It boots in seconds and is ideal for development and lightweight P2P-only deployments.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│         Standalone SignalingAvanue (port 4001)        │
+│                                                       │
+│  ┌───────────────┐  ┌──────────────────────────────┐ │
+│  │ Standalone     │  │  Signaling Module (copied)   │ │
+│  │ LicenseGuard   │──│  Gateway + 6 services        │ │
+│  │ (env-based)    │  │  4 entities (no User FK)     │ │
+│  └───────────────┘  └──────────────────────────────┘ │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │  PostgreSQL (4 tables)  │  Redis (session state) │ │
+│  └──────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────┘
+```
+
+### Key Differences from Full Stack
+
+| Aspect | Full Stack (ac-api-v2) | Standalone |
+|--------|----------------------|------------|
+| Port | 4000 | 4001 |
+| License validation | LicensingModule (PG lookup) | `SIGNALING_DEFAULT_TIER` env var |
+| PG tables needed | 354 | 4 |
+| User entity FK | Enforced | Omitted (userId stored as plain UUID) |
+| Docker profile | default | `signaling` |
+
+### Running
+
+```bash
+# Development
+cd apps/signaling-server && npm run dev
+
+# Docker (signaling + infra only)
+docker compose --profile signaling up signaling-server postgres redis coturn
+
+# Production migration (creates 4 tables if not exist)
+npx tsx src/standalone-migration.ts
+```
+
+### Env Variables
+
+`DATABASE_URL`, `REDIS_URL`, `SIGNALING_PORT` (4001), `TURN_SECRET`, `TURN_DOMAIN`, `CORS_ORIGIN`, `SIGNALING_DEFAULT_TIER` (FREE/PRO/BUSINESS/ENTERPRISE).
+
+See `.env.example` for full list with defaults.
+
+### LicenseValidationResult Interface
+
+Both the full-stack guard and standalone guard implement the same `LicenseValidationResult` interface, now defined in `dto/signaling-message.dto.ts` and re-exported from `guards/license.guard.ts` for backward compatibility.
+
+---
+
+## 12. Implementation Phases
 
 | Phase | Scope | Status |
 |-------|-------|--------|
 | **1** | Module scaffold, entities, migration, Redis keys, license integration | **Done** (AC `8860187`, SA `500097e`) |
 | **2** | Session lifecycle handlers, ICE/SDP relay, hub election, grace period | **Done** (AC `6d631ed`, SA `500097e`) |
 | **3** | Device pairing handlers, Ed25519 signature verify, production coturn config | **Done** (AC `82a39ee`, SA `500097e`) |
+| **3.5** | Standalone server (`apps/signaling-server/`) — lightweight deployment | **Done** (SA `SmartAvanue-Development`) |
 | **4-7** | NetAvanue KMP client (NewAvanues repo) | Planned |
 | **8** | RemoteCast integration | Planned |
 | **9** | Web/JS target | Planned |
@@ -541,7 +617,7 @@ config/
 
 ---
 
-## 12. Related Documents
+## 13. Related Documents
 
 - NetAvanue Core Plan: `docs/plans/NetAvanue/NetAvanue-Plan-PeerNetworkingModule-260222-V1.md`
 - Signaling Integration Plan: `docs/plans/NetAvanue/NetAvanue-Plan-AvanueCentralSignalingIntegration-260222-V1.md`
