@@ -76,8 +76,8 @@ include(":Modules:VoiceOSCore")            // Unified KMP voice control (consoli
 include(":Modules:Voice:WakeWord")         // Wake word detection
 include(":Modules:VoiceIsolation")         // Audio preprocessing (noise suppression, echo cancellation, AGC)
 
-// Actions Module (cross-platform KMP)
-include(":Modules:Actions")                 // Intent handlers, action execution
+// IntentActions — intent-based action execution (renamed from Actions 260223)
+include(":Modules:IntentActions")              // IIntentAction framework, entity extractors, intent handlers
 
 // Foundation Module (cross-platform KMP utilities)
 include(":Modules:Foundation")  // Common utilities: StateFlow, ViewModel, NumberToWords

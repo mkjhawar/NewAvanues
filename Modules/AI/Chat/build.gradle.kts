@@ -40,7 +40,7 @@ kotlin {
                 implementation(project(":Modules:AI:NLU"))
                 implementation(project(":Modules:AI:RAG"))
                 implementation(project(":Modules:AI:LLM"))
-                implementation(project(":Modules:Actions"))
+                implementation(project(":Modules:IntentActions"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
