@@ -263,6 +263,9 @@ class VosFileImporter(
         actionType = actionType,
         metadata = metadata,
         priority = 50,
-        isFallback = isFallback
+        isFallback = isFallback,
+        resourceId = resourceId,
+        elementHash = elementHash,
+        className = className
     )
 }

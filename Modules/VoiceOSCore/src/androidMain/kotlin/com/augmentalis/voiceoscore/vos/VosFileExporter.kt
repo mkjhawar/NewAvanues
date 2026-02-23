@@ -230,8 +230,9 @@ class VosFileExporter(
     }
 
     /**
-     * Build VOS v2.1 JSON from a list of VoiceCommandEntity.
-     * Reconstructs category_map, action_map, and meta_map from entity fields.
+     * Build VOS JSON from a list of VoiceCommandEntity.
+     * Reconstructs category_map, action_map, meta_map, and targeting_map from entity fields.
+     * Auto-selects version: v3.1 if any command has targeting data, otherwise v2.1.
      */
     private fun buildVosJson(
         locale: String,
@@ -239,8 +240,11 @@ class VosFileExporter(
         fallback: String,
         commands: List<VoiceCommandEntity>
     ): JSONObject {
+        val hasAnyTargeting = commands.any { it.resourceId != null || it.elementHash != null || it.className != null }
+        val effectiveVersion = if (hasAnyTargeting) "3.1" else VOS_VERSION
+
         val root = JSONObject()
-        root.put("version", VOS_VERSION)
+        root.put("version", effectiveVersion)
         root.put("locale", locale)
         root.put("fallback", fallback)
         root.put("domain", domain)
@@ -276,6 +280,21 @@ class VosFileExporter(
             }
         }
         root.put("meta_map", metaMap)
+
+        // Build targeting_map (v3.1) — device-independent targeting metadata for BoundsResolver
+        if (hasAnyTargeting) {
+            val targetingMap = JSONObject()
+            commands.forEach { cmd ->
+                if (cmd.resourceId != null || cmd.elementHash != null || cmd.className != null) {
+                    val targeting = JSONObject()
+                    cmd.resourceId?.let { targeting.put("resource_id", it) }
+                    cmd.elementHash?.let { targeting.put("element_hash", it) }
+                    cmd.className?.let { targeting.put("class_name", it) }
+                    targetingMap.put(cmd.id, targeting)
+                }
+            }
+            root.put("targeting_map", targetingMap)
+        }
 
         // Build commands array
         val commandsArray = JSONArray()

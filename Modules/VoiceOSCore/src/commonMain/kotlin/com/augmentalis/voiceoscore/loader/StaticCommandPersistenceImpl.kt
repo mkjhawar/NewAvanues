@@ -171,21 +171,43 @@ class StaticCommandPersistenceImpl(
         val now = currentTimeMillis()
         database.transaction {
             for (cmd in parsed) {
-                voiceCommandQueries.insertCommandFull(
-                    command_id = cmd.id,
-                    locale = cmd.locale,
-                    trigger_phrase = cmd.primaryText,
-                    synonyms = VosParser.synonymsToJson(cmd.synonyms),
-                    action = cmd.actionType.ifEmpty { cmd.id },
-                    description = cmd.description,
-                    category = cmd.category,
-                    domain = cmd.domain,
-                    priority = 50L,
-                    is_fallback = if (cmd.isFallback) 1L else 0L,
-                    is_enabled = 1L,
-                    created_at = now,
-                    updated_at = now
-                )
+                val hasTargeting = cmd.resourceId != null || cmd.elementHash != null || cmd.className != null
+                if (hasTargeting) {
+                    voiceCommandQueries.insertCommandWithTargeting(
+                        command_id = cmd.id,
+                        locale = cmd.locale,
+                        trigger_phrase = cmd.primaryText,
+                        synonyms = VosParser.synonymsToJson(cmd.synonyms),
+                        action = cmd.actionType.ifEmpty { cmd.id },
+                        description = cmd.description,
+                        category = cmd.category,
+                        domain = cmd.domain,
+                        priority = 50L,
+                        is_fallback = if (cmd.isFallback) 1L else 0L,
+                        is_enabled = 1L,
+                        element_hash = cmd.elementHash,
+                        resource_id = cmd.resourceId,
+                        class_name = cmd.className,
+                        created_at = now,
+                        updated_at = now
+                    )
+                } else {
+                    voiceCommandQueries.insertCommandFull(
+                        command_id = cmd.id,
+                        locale = cmd.locale,
+                        trigger_phrase = cmd.primaryText,
+                        synonyms = VosParser.synonymsToJson(cmd.synonyms),
+                        action = cmd.actionType.ifEmpty { cmd.id },
+                        description = cmd.description,
+                        category = cmd.category,
+                        domain = cmd.domain,
+                        priority = 50L,
+                        is_fallback = if (cmd.isFallback) 1L else 0L,
+                        is_enabled = 1L,
+                        created_at = now,
+                        updated_at = now
+                    )
+                }
             }
         }
 

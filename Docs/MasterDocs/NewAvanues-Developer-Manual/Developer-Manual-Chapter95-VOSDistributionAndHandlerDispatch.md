@@ -302,6 +302,102 @@ The `DisplayProfile` enum (`PHONE`, `TABLET`, `GLASS_MICRO`, `COMPACT`, `STANDAR
 
 > VOS files are the **lingua franca** of voice commands. They teach any device *what to say*. Each device independently discovers *where things are* via its own accessibility tree at runtime. This separation enables VOS portability across all form factors without screen-size-specific variants.
 
+### Coordinate Targeting: Who Does What?
+
+VOS files carry **device-independent targeting metadata** (resourceId, elementHash, className) that enable any device with an accessibility tree to find elements without re-scraping. Actual pixel coordinates are always resolved at runtime by the device that owns the screen.
+
+| Device Type | Needs VOS vocabulary? | Needs targeting metadata? | Resolves coordinates? |
+|-------------|----------------------|--------------------------|----------------------|
+| **Phone/tablet** (standalone) | Yes — from `.app.vos` | Yes — resourceId + elementHash in VOS v3.1 | Yes — from its own accessibility tree |
+| **Full Android glasses** (standalone) | Yes — same as phone | Yes — scrapes its own tree | Yes — resolves locally |
+| **Thin glasses** (Vuzix Z100, Even Realities G1) | Vocabulary only — pushed via VOC protocol | No — sends AVID back to phone | No — phone handles all targeting |
+
+**RemoteCast thin-client pattern:** When a phone streams its screen to thin glasses via CAST protocol, the glasses are a terminal — they display video and capture voice. The phone does ALL coordinate targeting on its own screen. Glasses hear "click Settings" → match against VOCAB → relay CMD with AVID back to phone → phone resolves coordinates from its own accessibility tree → executes click → screen updates → new frame streams to glasses. (See Chapter 103 Section 8 for full VOCAB sync architecture.)
+
+**No companion coordinate files needed.** Device-independent identifiers (resourceId, elementHash) go directly in VOS v3.1. Each device resolves pixel coordinates at runtime from its own accessibility tree. Thin glasses never need coordinates at all — the phone handles everything.
+
+## 3.6 VOS v3.1: Extended Format with Targeting Metadata
+
+### Motivation
+
+VOS v3.0 carries only vocabulary data (phrases, synonyms, descriptions). Dynamic commands exported from scraping lose all element targeting metadata (resourceId, elementHash, className). This means an importing device must re-scrape to discover element positions, even though the device-independent identifiers (resourceId, elementHash) would allow immediate BoundsResolver Layer 3 resolution.
+
+VOS v3.1 adds optional targeting fields to dynamic commands, making imported VOS files immediately actionable without re-scraping.
+
+### Format
+
+**Static commands (unchanged — backward compatible):**
+```
+action_id|primary_phrase|synonyms_csv|description
+```
+
+**Dynamic commands with targeting (v3.1 extension):**
+```
+action_id|primary_phrase|synonyms_csv|description|resource_id|element_hash|class_name
+```
+
+The parser detects field count: 4 fields = static command (v3.0), 7 fields = dynamic command with targeting (v3.1). Both formats coexist in the same file.
+
+### Header
+
+```
+VOS:3.1:en-US:en-US:app
+```
+
+Version `3.1` signals the parser that targeting fields MAY be present. A v3.1-aware parser reading a v3.0 file works unchanged (all commands have 4 fields). A v3.0 parser reading a v3.1 file ignores extra fields (graceful degradation).
+
+### Example
+
+```
+# VOS v3.1 — en-US app commands with targeting metadata
+VOS:3.1:en-US:en-US:app
+
+# Static commands (no targeting needed — handler-based)
+nav_back|go back|navigate back,back,previous screen|Navigate to previous screen
+media_play|play music|play,resume|Play/resume media
+
+# Dynamic commands (targeting metadata from scraping)
+click_settings|click settings|tap settings|Click settings button|@id/action_settings|a3f2e1c9|android.widget.Button
+click_compose|compose email|new email,write email|Compose new email|@id/compose_button|b7d4f2a1|com.google.android.material.floatingactionbutton.FloatingActionButton
+```
+
+### Field Reference
+
+| Field | Position | Required | Description |
+|-------|----------|----------|-------------|
+| action_id | 0 | Yes | Command identifier (e.g., `click_settings`) |
+| primary_phrase | 1 | Yes | Primary voice trigger (e.g., `click settings`) |
+| synonyms_csv | 2 | Yes | Comma-separated alternative phrases |
+| description | 3 | Yes | Human-readable description |
+| resource_id | 4 | No (v3.1) | Android view resource ID (e.g., `@id/action_settings`). Device-independent — same across all devices running the same app version. Enables BoundsResolver Layer 3 resolution. |
+| element_hash | 5 | No (v3.1) | Deterministic fingerprint from class+package+resourceId+text+description. Enables cross-session element matching via BoundsResolver Layer 4. |
+| class_name | 6 | No (v3.1) | Android widget class (e.g., `android.widget.Button`). Refines Layer 4 full-tree search from O(n) to O(filtered). |
+
+### Database Schema Extension
+
+`VoiceCommand.sq` adds three nullable columns:
+
+```sql
+element_hash TEXT,     -- Cross-session element fingerprint
+resource_id TEXT,      -- Android view resource ID for Layer 3 resolution
+class_name TEXT        -- Widget class for Layer 4 search refinement
+```
+
+Plus indexes for fast lookup:
+```sql
+CREATE INDEX idx_vc_element_hash ON commands_static(element_hash);
+CREATE INDEX idx_vc_resource_id ON commands_static(resource_id);
+```
+
+### Import Behavior
+
+When a device imports a v3.1 VOS file:
+1. Static commands load as before (4 fields, no targeting)
+2. Dynamic commands load with targeting metadata populated
+3. BoundsResolver Layer 3 can immediately find elements by resourceId — no scraping needed
+4. Layer 4 uses elementHash + className for fallback matching
+5. Layer 1 (pixel bounds) remains empty until the device scrapes its own screen — this is expected and handled gracefully by the fallback system
+
 ## 4. Static Command Dispatch Architecture
 
 ### Problem Solved
@@ -856,5 +952,5 @@ interface SyncEntryPoint {
 ---
 
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants) | Updated: 2026-02-22 (CommandManager import path fix: managers.commandmanager → commandmanager) | Updated: 2026-02-23 (Section 3: VOS export file naming convention AppName_AppVersion_Locale_Timestamp; Section 3.5: VOS portability — screen-size/orientation agnosticism, 4-layer BoundsResolver dispatch, cross-device import scenarios)*
+*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants) | Updated: 2026-02-22 (CommandManager import path fix: managers.commandmanager → commandmanager) | Updated: 2026-02-23 (Section 3: VOS export file naming convention AppName_AppVersion_Locale_Timestamp; Section 3.5: VOS portability — screen-size/orientation agnosticism, 4-layer BoundsResolver dispatch, cross-device import scenarios, coordinate targeting responsibility matrix; Section 3.6: VOS v3.1 extended format with targeting metadata — resourceId, elementHash, className for cross-device element resolution)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement), Chapter 96 (KMP Foundation)*

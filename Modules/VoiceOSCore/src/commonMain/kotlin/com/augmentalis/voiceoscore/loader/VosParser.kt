@@ -1,13 +1,20 @@
 /**
  * VosParser.kt - KMP parser for VOS (Voice OS) command files
  *
- * Parses VOS v2.1 JSON and v3.0 compact formats.
+ * Parses VOS v2.1 JSON, v3.0 compact, and v3.1 extended compact formats.
  * Auto-detects format: first non-whitespace char '{' = JSON, '#' or 'V' = compact.
  *
- * v3.0 compact format:
+ * v3.0 compact format (4 fields):
  *   # Comment lines
  *   VOS:3.0:en-US:en-US:app
  *   action_id|primary_text|synonym1,synonym2|description
+ *
+ * v3.1 extended compact format (7 fields — adds targeting metadata):
+ *   VOS:3.1:en-US:en-US:app
+ *   action_id|primary_text|synonym1,synonym2|description|resource_id|element_hash|class_name
+ *
+ * The parser auto-detects field count per line: 4 fields = v3.0, 7 fields = v3.1.
+ * Lines with fewer than 4 fields are skipped. Fields 5-7 are optional per-line.
  *
  * Maps (category, action, metadata) are compiled as constants since
  * they are identical across all locales. This eliminates ~25 KB of
@@ -37,7 +44,13 @@ data class VosParsedCommand(
     val actionType: String,
     val metadata: String,
     val isFallback: Boolean,
-    val domain: String = "app"
+    val domain: String = "app",
+    /** v3.1: Android resource ID for Layer 3 BoundsResolver lookup (e.g., "com.app:id/btn_save") */
+    val resourceId: String? = null,
+    /** v3.1: Content-hash fingerprint for cross-session element matching */
+    val elementHash: String? = null,
+    /** v3.1: Element class name for tree search (e.g., "android.widget.Button") */
+    val className: String? = null
 )
 
 /**
@@ -57,11 +70,13 @@ sealed class VosParseResult {
 /**
  * KMP parser for VOS command files.
  *
- * Supports two formats:
+ * Supports three formats:
  * - v2.1 JSON: Full JSON with embedded maps (backward compatible)
- * - v3.0 Compact: Pipe-delimited commands with compiled maps
+ * - v3.0 Compact: Pipe-delimited commands with compiled maps (4 fields per line)
+ * - v3.1 Extended: v3.0 + targeting metadata for BoundsResolver (7 fields per line)
  *
  * Auto-detects format by first non-whitespace character.
+ * Within compact format, auto-detects v3.0 vs v3.1 by field count per line.
  */
 object VosParser {
 
@@ -440,7 +455,7 @@ object VosParser {
 
     /**
      * Parse VOS file contents into a list of [VosParsedCommand].
-     * Auto-detects format: JSON v2.1 or compact v3.0.
+     * Auto-detects format: JSON v2.1 or compact v3.0/v3.1.
      *
      * @param content Raw VOS file contents
      * @param isFallback Whether this is the fallback locale (en-US)
@@ -471,13 +486,15 @@ object VosParser {
             val categoryMap = root["category_map"]?.jsonObject
             val actionMap = root["action_map"]?.jsonObject
             val metaMap = root["meta_map"]?.jsonObject
+            // v3.1: Targeting metadata for BoundsResolver (resource_id, element_hash, class_name)
+            val targetingMap = root["targeting_map"]?.jsonObject
 
             val commandsArray = root["commands"]?.jsonArray
                 ?: return VosParseResult.Error("Missing 'commands' array")
 
             val commands = parseJsonCommandsArray(
                 commandsArray, locale, isFallback, domain,
-                categoryMap, actionMap, metaMap
+                categoryMap, actionMap, metaMap, targetingMap
             )
 
             VosParseResult.Success(
@@ -498,14 +515,15 @@ object VosParser {
         domain: String,
         categoryMap: JsonObject?,
         actionMap: JsonObject?,
-        metaMap: JsonObject?
+        metaMap: JsonObject?,
+        targetingMap: JsonObject? = null
     ): List<VosParsedCommand> {
         val commands = mutableListOf<VosParsedCommand>()
 
         for (element in commandsArray) {
             try {
                 val cmdArray = element.jsonArray
-                if (cmdArray.size != 4) continue
+                if (cmdArray.size < 4) continue
 
                 val actionId = cmdArray[0].jsonPrimitive.content
                 val primaryText = cmdArray[1].jsonPrimitive.content
@@ -516,6 +534,12 @@ object VosParser {
                 val category = resolveCategoryFromJson(actionId, categoryMap)
                 val actionType = actionMap?.get(actionId)?.jsonPrimitive?.content ?: ""
                 val metadata = metaMap?.get(actionId)?.toString() ?: ""
+
+                // v3.1: Extract targeting metadata if present
+                val targeting = targetingMap?.get(actionId)?.jsonObject
+                val resourceId = targeting?.get("resource_id")?.jsonPrimitive?.content
+                val elementHash = targeting?.get("element_hash")?.jsonPrimitive?.content
+                val className = targeting?.get("class_name")?.jsonPrimitive?.content
 
                 commands.add(
                     VosParsedCommand(
@@ -528,7 +552,10 @@ object VosParser {
                         actionType = actionType,
                         metadata = metadata,
                         isFallback = isFallback,
-                        domain = domain
+                        domain = domain,
+                        resourceId = resourceId,
+                        elementHash = elementHash,
+                        className = className
                     )
                 )
             } catch (_: Exception) {
@@ -553,15 +580,22 @@ object VosParser {
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * Parse v3.0 compact format.
+     * Parse v3.0/v3.1 compact format.
      *
-     * Format:
+     * v3.0 format (4 fields):
      * ```
      * # Comment
      * VOS:3.0:en-US:en-US:app
      * action_id|primary_text|synonym1,synonym2|description
      * ```
      *
+     * v3.1 format (7 fields — targeting metadata):
+     * ```
+     * VOS:3.1:en-US:en-US:app
+     * action_id|primary_text|synonym1,synonym2|description|resource_id|element_hash|class_name
+     * ```
+     *
+     * Field count is auto-detected per line: 4 = v3.0, 7 = v3.1.
      * Maps are resolved from compiled constants [CATEGORY_MAP], [ACTION_MAP], [META_MAP].
      */
     private fun parseCompact(content: String, isFallback: Boolean): VosParseResult {
@@ -595,7 +629,9 @@ object VosParser {
 
                 if (!headerFound) continue
 
-                // Parse command line: action_id|primary_text|synonyms_csv|description
+                // Parse command line:
+                // v3.0 (4 fields): action_id|primary_text|synonyms_csv|description
+                // v3.1 (7 fields): action_id|primary_text|synonyms_csv|description|resource_id|element_hash|class_name
                 val parts = trimmed.split("|")
                 if (parts.size < 4) continue
 
@@ -603,6 +639,11 @@ object VosParser {
                 val primaryText = parts[1].trim()
                 val synonymsCsv = parts[2].trim()
                 val description = parts[3].trim()
+
+                // v3.1 targeting fields (fields 5-7, optional)
+                val resourceId = if (parts.size >= 5) parts[4].trim().ifEmpty { null } else null
+                val elementHash = if (parts.size >= 6) parts[5].trim().ifEmpty { null } else null
+                val className = if (parts.size >= 7) parts[6].trim().ifEmpty { null } else null
 
                 val synonyms = if (synonymsCsv.isEmpty()) {
                     emptyList()
@@ -626,7 +667,10 @@ object VosParser {
                         actionType = actionType,
                         metadata = metadata,
                         isFallback = isFallback,
-                        domain = domain
+                        domain = domain,
+                        resourceId = resourceId,
+                        elementHash = elementHash,
+                        className = className
                     )
                 )
             }

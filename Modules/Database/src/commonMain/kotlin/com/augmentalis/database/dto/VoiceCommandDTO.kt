@@ -24,6 +24,12 @@ data class VoiceCommandDTO(
     val priority: Long,
     val isFallback: Long = 0,
     val isEnabled: Long,
+    /** v3.1: Android resource ID for Layer 3 BoundsResolver lookup */
+    val resourceId: String? = null,
+    /** v3.1: Content-hash fingerprint for cross-session element matching */
+    val elementHash: String? = null,
+    /** v3.1: Element class name for tree search */
+    val className: String? = null,
     val createdAt: Long,
     val updatedAt: Long
 ) {
@@ -42,7 +48,10 @@ data class VoiceCommandDTO(
             isEnabled: Boolean = true,
             synonyms: String = "[]",
             description: String = "",
-            isFallback: Boolean = false
+            isFallback: Boolean = false,
+            resourceId: String? = null,
+            elementHash: String? = null,
+            className: String? = null
         ): VoiceCommandDTO {
             val now = Clock.System.now().toEpochMilliseconds()
             return VoiceCommandDTO(
@@ -58,6 +67,9 @@ data class VoiceCommandDTO(
                 priority = priority,
                 isFallback = if (isFallback) 1L else 0L,
                 isEnabled = if (isEnabled) 1L else 0L,
+                resourceId = resourceId,
+                elementHash = elementHash,
+                className = className,
                 createdAt = now,
                 updatedAt = now
             )
@@ -82,6 +94,9 @@ fun com.augmentalis.database.Commands_static.toVoiceCommandDTO(): VoiceCommandDT
     priority = priority,
     isFallback = is_fallback,
     isEnabled = is_enabled,
+    resourceId = resource_id,
+    elementHash = element_hash,
+    className = class_name,
     createdAt = created_at,
     updatedAt = updated_at
 )

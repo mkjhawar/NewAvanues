@@ -656,6 +656,23 @@ voice:discard|NAVIGATION|BTN:i9j0k1l2|1.0|en-US|target:remote
 
 Glasses parse these three commands, add to grammar. User says "send email" → matches SyncedGrammar entry, confidence 1.0, routes to remote (relayed to phone).
 
+### Coordinate Targeting: Phone Does Everything
+
+**Critical architectural point:** Thin glasses (Vuzix Z100, Even Realities G1/G2) never receive or need coordinate data. The command execution flow is:
+
+1. Phone captures its screen → streams JPEG to glasses via CAST protocol
+2. Phone scrapes its own accessibility tree → generates command vocabulary
+3. Phone pushes VOCAB (phrases + AVID identifiers) to glasses via VOC/CMD protocol
+4. Glasses run local speech recognition → match against VOCAB
+5. On match, glasses send CMD back to phone: `phrase|actionType|AVID|confidence|locale|target:remote`
+6. Phone receives CMD → looks up AVID in its own scraping database → resolves pixel coordinates from its own accessibility tree → executes click/tap/gesture on its own screen
+7. Screen updates → new JPEG frame streams to glasses
+
+**Glasses only need:** voice phrases + AVID identifiers (vocabulary)
+**Phone handles:** element discovery, coordinate resolution, action execution
+
+This is why VOS files for thin glasses don't need targeting metadata (resourceId, elementHash, className) — those fields help devices that have their own accessibility tree (phones, tablets, full Android glasses). Thin glasses are terminals, not agents. See Chapter 95 Section 3.5 for the full portability analysis and VOS v3.1 targeting format.
+
 ### Command Routing Rules
 
 | Phrase | Best Grammar | Default Route | Auto Logic |

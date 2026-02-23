@@ -346,6 +346,9 @@ class CommandLoader(
         metadata = metadata,
         domain = domain,
         priority = 50,
-        isFallback = isFallback
+        isFallback = isFallback,
+        resourceId = resourceId,
+        elementHash = elementHash,
+        className = className
     )
 }
