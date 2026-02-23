@@ -41,6 +41,3 @@ plugins {
     // alias(libs.plugins.sentry) apply false  // Not defined in version catalog
 }
 
-tasks.register("clean", Delete::class) {
-    delete(rootProject.layout.buildDirectory)
-}
