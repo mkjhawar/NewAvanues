@@ -35,9 +35,9 @@ import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.MaterialMode
 import com.augmentalis.avanueui.theme.ThemePreset
+import com.augmentalis.cockpit.model.CockpitScreenState
 import com.augmentalis.cockpit.model.CommandBarState
 import com.augmentalis.cockpit.model.CockpitFrame
-import com.augmentalis.cockpit.model.DashboardState
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.avanueui.display.GlassDisplayMode
 import com.augmentalis.cockpit.model.LayoutMode
@@ -58,10 +58,7 @@ import com.augmentalis.cockpit.spatial.SpatialViewportController
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CockpitScreenContent(
-    sessionName: String,
-    frames: List<CockpitFrame>,
-    selectedFrameId: String?,
-    layoutMode: LayoutMode,
+    state: CockpitScreenState,
     onNavigateBack: () -> Unit,
     onReturnToDashboard: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
@@ -76,19 +73,11 @@ fun CockpitScreenContent(
     frameContent: @Composable (CockpitFrame) -> Unit,
     spatialController: SpatialViewportController? = null,
     pseudoSpatialController: PseudoSpatialController? = null,
-    glassDisplayMode: GlassDisplayMode = GlassDisplayMode.FLAT_SCREEN,
-    backgroundScene: BackgroundScene = BackgroundScene.GRADIENT,
-    currentPalette: AvanueColorPalette = AvanueColorPalette.DEFAULT,
-    currentMaterial: MaterialMode = MaterialMode.DEFAULT,
-    currentAppearance: AppearanceMode = AppearanceMode.DEFAULT,
-    currentPresetId: String? = null,
     onPaletteChanged: (AvanueColorPalette) -> Unit = {},
     onMaterialChanged: (MaterialMode) -> Unit = {},
     onAppearanceChanged: (AppearanceMode) -> Unit = {},
     onPresetApplied: (ThemePreset) -> Unit = {},
     onBackgroundSceneChanged: (BackgroundScene) -> Unit = {},
-    availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
-    dashboardState: DashboardState = DashboardState(),
     onModuleClick: (String) -> Unit = {},
     onSessionClick: (String) -> Unit = {},
     onTemplateClick: (String) -> Unit = {},
@@ -103,8 +92,8 @@ fun CockpitScreenContent(
     var showThemePanel by remember { mutableStateOf(false) }
 
     // Auto-switch command bar to content-specific state when frame selection changes
-    val selectedFrame = frames.firstOrNull { it.id == selectedFrameId }
-    LaunchedEffect(selectedFrameId) {
+    val selectedFrame = state.frames.firstOrNull { it.id == state.selectedFrameId }
+    LaunchedEffect(state.selectedFrameId) {
         if (selectedFrame != null) {
             commandBarState = CommandBarState.forContentType(selectedFrame.contentType)
         }
@@ -113,7 +102,7 @@ fun CockpitScreenContent(
     Box(modifier = modifier.fillMaxSize()) {
         // Background scene layer
         BackgroundSceneRenderer(
-            scene = backgroundScene,
+            scene = state.backgroundScene,
             modifier = Modifier.fillMaxSize()
         )
 
@@ -124,7 +113,7 @@ fun CockpitScreenContent(
         // Top app bar — context-aware navigation + settings access
         TopAppBar(
             navigationIcon = {
-                if (layoutMode != LayoutMode.DASHBOARD) {
+                if (state.layoutMode != LayoutMode.DASHBOARD) {
                     // In a session: back arrow returns to Dashboard
                     IconButton(onClick = onReturnToDashboard) {
                         Icon(
@@ -137,14 +126,14 @@ fun CockpitScreenContent(
             },
             title = {
                 Text(
-                    text = if (layoutMode == LayoutMode.DASHBOARD) "Avanues" else sessionName,
+                    text = if (state.layoutMode == LayoutMode.DASHBOARD) "Avanues" else state.sessionName,
                     color = colors.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp
                 )
             },
             actions = {
-                if (layoutMode == LayoutMode.DASHBOARD) {
+                if (state.layoutMode == LayoutMode.DASHBOARD) {
                     IconButton(onClick = { showThemePanel = !showThemePanel }) {
                         Icon(
                             Icons.Default.Settings,
@@ -160,32 +149,32 @@ fun CockpitScreenContent(
         )
 
         // Main content area
-        if (layoutMode == LayoutMode.DASHBOARD) {
+        if (state.layoutMode == LayoutMode.DASHBOARD) {
             // Dashboard takes over the full content area — no frames rendered
             DashboardLayout(
-                dashboardState = dashboardState,
+                dashboardState = state.dashboardState,
                 onModuleClick = onModuleClick,
                 onSessionClick = onSessionClick,
                 onTemplateClick = onTemplateClick,
                 modifier = Modifier.weight(1f).fillMaxWidth()
             )
-        } else if (frames.isEmpty()) {
+        } else if (state.frames.isEmpty()) {
             EmptySessionView(
                 onAddFrame = { commandBarState = CommandBarState.ADD_FRAME },
                 modifier = Modifier.weight(1f).fillMaxWidth()
             )
         } else {
             val layoutModifier = Modifier.weight(1f).fillMaxWidth()
-            val isSpatial = layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null
+            val isSpatial = state.layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null
             val isPseudoSpatial = pseudoSpatialController != null &&
-                glassDisplayMode == GlassDisplayMode.FLAT_SCREEN
+                state.glassDisplayMode == GlassDisplayMode.FLAT_SCREEN
 
             // Layout rendering content (shared across all wrapping modes)
             val layoutContent: @Composable () -> Unit = {
                 LayoutEngine(
-                    layoutMode = layoutMode,
-                    frames = frames,
-                    selectedFrameId = selectedFrameId,
+                    layoutMode = state.layoutMode,
+                    frames = state.frames,
+                    selectedFrameId = state.selectedFrameId,
                     onFrameSelected = onFrameSelected,
                     onFrameMoved = onFrameMoved,
                     onFrameResized = onFrameResized,
@@ -193,7 +182,7 @@ fun CockpitScreenContent(
                     onFrameMinimize = onFrameMinimize,
                     onFrameMaximize = onFrameMaximize,
                     frameContent = frameContent,
-                    dashboardState = dashboardState,
+                    dashboardState = state.dashboardState,
                     onModuleClick = onModuleClick,
                     onSessionClick = onSessionClick,
                     onTemplateClick = onTemplateClick,
@@ -228,7 +217,7 @@ fun CockpitScreenContent(
         }
 
         // Status bar
-        if (frames.isNotEmpty()) {
+        if (state.frames.isNotEmpty()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -238,7 +227,7 @@ fun CockpitScreenContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${frames.size} frame${if (frames.size != 1) "s" else ""} · ${layoutModeLabel(layoutMode)}",
+                    text = "${state.frames.size} frame${if (state.frames.size != 1) "s" else ""} · ${layoutModeLabel(state.layoutMode)}",
                     color = colors.textPrimary.copy(alpha = 0.35f),
                     fontSize = 10.sp
                 )
@@ -248,32 +237,32 @@ fun CockpitScreenContent(
         // Command bar
         CommandBar(
             state = commandBarState,
-            currentLayoutMode = layoutMode,
+            currentLayoutMode = state.layoutMode,
             onStateChange = { commandBarState = it },
             onLayoutSelected = onLayoutModeChanged,
             onAddFrame = onAddFrame,
             onFrameMinimize = {
-                selectedFrameId?.let { onFrameMinimize(it) }
+                state.selectedFrameId?.let { onFrameMinimize(it) }
             },
             onFrameMaximize = {
-                selectedFrameId?.let { onFrameMaximize(it) }
+                state.selectedFrameId?.let { onFrameMaximize(it) }
             },
             onFrameClose = {
-                selectedFrameId?.let { onFrameClose(it) }
+                state.selectedFrameId?.let { onFrameClose(it) }
             },
             onContentAction = onContentAction,
-            availableLayoutModes = availableLayoutModes
+            availableLayoutModes = state.availableLayoutModes
         )
     } // end Column
 
         // Theme settings panel overlay
         if (showThemePanel) {
             ThemeSettingsPanel(
-                currentPalette = currentPalette,
-                currentMaterial = currentMaterial,
-                currentAppearance = currentAppearance,
-                currentPresetId = currentPresetId,
-                currentBackgroundScene = backgroundScene,
+                currentPalette = state.currentPalette,
+                currentMaterial = state.currentMaterial,
+                currentAppearance = state.currentAppearance,
+                currentPresetId = state.currentPresetId,
+                currentBackgroundScene = state.backgroundScene,
                 onPaletteChanged = onPaletteChanged,
                 onMaterialChanged = onMaterialChanged,
                 onAppearanceChanged = onAppearanceChanged,

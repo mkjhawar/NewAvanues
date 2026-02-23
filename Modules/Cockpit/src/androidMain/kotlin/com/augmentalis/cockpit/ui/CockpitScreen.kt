@@ -14,22 +14,23 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import android.util.Log
 import com.augmentalis.avanueui.theme.AppearanceMode
 import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.MaterialMode
 import com.augmentalis.cockpit.content.ContentRenderer
+import com.augmentalis.cockpit.model.CockpitScreenState
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.LayoutMode
 import com.augmentalis.cockpit.spatial.AndroidSpatialOrientationSource
 import com.augmentalis.cockpit.spatial.SpatialViewportController
 import com.augmentalis.cockpit.viewmodel.CockpitViewModel
+import com.avanues.logging.LoggerFactory
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 
-private const val TAG = "CockpitScreen"
+private val logger = LoggerFactory.getLogger("CockpitScreen")
 
 /**
  * Android entry point for the Cockpit screen.
@@ -120,16 +121,25 @@ fun CockpitScreen(
         if (deepLinkUri != null) {
             val handled = viewModel.handleDeepLink(deepLinkUri)
             if (!handled) {
-                Log.w(TAG, "Unrecognized deep link: $deepLinkUri")
+                logger.w { "Unrecognized deep link: $deepLinkUri" }
             }
         }
     }
 
     CockpitScreenContent(
-        sessionName = session?.name ?: "Cockpit",
-        frames = frames,
-        selectedFrameId = selectedFrameId,
-        layoutMode = layoutMode,
+        state = CockpitScreenState(
+            sessionName = session?.name ?: "Cockpit",
+            frames = frames,
+            selectedFrameId = selectedFrameId,
+            layoutMode = layoutMode,
+            dashboardState = dashboardState,
+            availableLayoutModes = availableModes,
+            backgroundScene = backgroundSceneState,
+            currentPalette = currentPalette,
+            currentMaterial = currentMaterial,
+            currentAppearance = currentAppearance,
+            currentPresetId = currentPresetId,
+        ),
         onNavigateBack = onNavigateBack,
         onReturnToDashboard = { viewModel.returnToDashboard() },
         onNavigateToSettings = onNavigateToSettings,
@@ -152,11 +162,6 @@ fun CockpitScreen(
             )
         },
         spatialController = spatialController,
-        backgroundScene = backgroundSceneState,
-        currentPalette = currentPalette,
-        currentMaterial = currentMaterial,
-        currentAppearance = currentAppearance,
-        currentPresetId = currentPresetId,
         onPaletteChanged = { currentPalette = it; currentPresetId = null },
         onMaterialChanged = { currentMaterial = it; currentPresetId = null },
         onAppearanceChanged = { currentAppearance = it; currentPresetId = null },
@@ -167,8 +172,6 @@ fun CockpitScreen(
             currentPresetId = preset.id
         },
         onBackgroundSceneChanged = { viewModel.setBackgroundScene(it) },
-        availableLayoutModes = availableModes,
-        dashboardState = dashboardState,
         onModuleClick = { viewModel.launchModule(it) },
         onSessionClick = { viewModel.resumeSession(it) },
         onTemplateClick = { viewModel.launchTemplate(it) },
@@ -196,7 +199,7 @@ private fun executeCockpitCommand(
     actionType: CommandActionType,
 ): HandlerResult {
     val selected = viewModel.selectedFrameId.value
-    Log.d(TAG, "executeCockpitCommand: $actionType, selectedFrame=$selected")
+    logger.d { "executeCockpitCommand: $actionType, selectedFrame=$selected" }
 
     return when (actionType) {
         // ── Frame Management ──────────────────────────────────────────
@@ -291,7 +294,7 @@ private fun executeCockpitCommand(
         }
 
         else -> {
-            Log.w(TAG, "Unhandled cockpit action: $actionType")
+            logger.w { "Unhandled cockpit action: $actionType" }
             HandlerResult.failure(
                 "Cockpit action $actionType not handled",
                 recoverable = true
