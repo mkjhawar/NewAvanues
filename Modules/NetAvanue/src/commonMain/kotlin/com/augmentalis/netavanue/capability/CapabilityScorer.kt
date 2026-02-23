@@ -1,5 +1,8 @@
 package com.augmentalis.netavanue.capability
 
+import com.augmentalis.netavanue.signaling.DeviceCapabilityDto
+import com.augmentalis.netavanue.signaling.NetworkType
+
 /**
  * Computes a capability score for a device, used for hub election.
  *
@@ -21,30 +24,51 @@ package com.augmentalis.netavanue.capability
  */
 object CapabilityScorer {
 
-    fun calculateScore(capability: DeviceCapability): Int {
-        var score = 0
-        score += capability.cpuCores * 10
-        score += capability.ramMb / 100
-        score += if (capability.isCharging) 200 else capability.batteryPercent * 2
-        score += capability.bandwidthMbps * 5
-        score += if (capability.deviceType == "DESKTOP") 100 else 0
-        score += if (capability.networkType == com.augmentalis.netavanue.signaling.NetworkType.ETHERNET) 50 else 0
-        score += capability.screenWidth / 10
-        score += capability.supportedCodecs.size * 15
-        return score
-    }
+    fun calculateScore(capability: DeviceCapability): Int = computeScore(
+        cpuCores = capability.cpuCores,
+        ramMb = capability.ramMb,
+        batteryPercent = capability.batteryPercent,
+        isCharging = capability.isCharging,
+        bandwidthMbps = capability.bandwidthMbps,
+        deviceType = capability.deviceType,
+        networkType = capability.networkType,
+        screenWidth = capability.screenWidth,
+        codecCount = capability.supportedCodecs.size,
+    )
 
     /** Overload for DTO input (used when evaluating remote peer capabilities) */
-    fun calculateScore(dto: com.augmentalis.netavanue.signaling.DeviceCapabilityDto): Int {
+    fun calculateScore(dto: DeviceCapabilityDto): Int = computeScore(
+        cpuCores = dto.cpuCores,
+        ramMb = dto.ramMb,
+        batteryPercent = dto.batteryPercent ?: 0,
+        isCharging = dto.isCharging ?: false,
+        bandwidthMbps = dto.bandwidthMbps ?: 0,
+        deviceType = dto.deviceType,
+        networkType = dto.networkType ?: NetworkType.UNKNOWN,
+        screenWidth = dto.screenWidth ?: 0,
+        codecCount = dto.supportedCodecs?.size ?: 0,
+    )
+
+    private fun computeScore(
+        cpuCores: Int,
+        ramMb: Int,
+        batteryPercent: Int,
+        isCharging: Boolean,
+        bandwidthMbps: Int,
+        deviceType: String,
+        networkType: NetworkType,
+        screenWidth: Int,
+        codecCount: Int,
+    ): Int {
         var score = 0
-        score += dto.cpuCores * 10
-        score += dto.ramMb / 100
-        score += if (dto.isCharging == true) 200 else (dto.batteryPercent ?: 0) * 2
-        score += (dto.bandwidthMbps ?: 0) * 5
-        score += if (dto.deviceType == "DESKTOP") 100 else 0
-        score += if (dto.networkType == com.augmentalis.netavanue.signaling.NetworkType.ETHERNET) 50 else 0
-        score += (dto.screenWidth ?: 0) / 10
-        score += (dto.supportedCodecs?.size ?: 0) * 15
+        score += cpuCores * 10
+        score += ramMb / 100
+        score += if (isCharging) 200 else batteryPercent * 2
+        score += bandwidthMbps * 5
+        score += if (deviceType == "DESKTOP") 100 else 0
+        score += if (networkType == NetworkType.ETHERNET) 50 else 0
+        score += screenWidth / 10
+        score += codecCount * 15
         return score
     }
 }

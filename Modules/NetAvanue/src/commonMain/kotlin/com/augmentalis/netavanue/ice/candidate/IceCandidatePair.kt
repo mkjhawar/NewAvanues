@@ -25,7 +25,7 @@ enum class PairState {
     FAILED,
 }
 
-data class IceCandidatePair(
+class IceCandidatePair(
     val local: IceCandidate,
     val remote: IceCandidate,
     val isControlling: Boolean,

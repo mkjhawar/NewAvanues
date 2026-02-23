@@ -1,5 +1,6 @@
 package com.augmentalis.netavanue.transport
 
+import com.avanues.logging.LoggerFactory
 import kotlinx.serialization.json.*
 
 /**
@@ -63,6 +64,7 @@ data class SioPacket(
 )
 
 object SocketIOCodec {
+    private val logger = LoggerFactory.getLogger("SocketIOCodec")
     private val json = Json { ignoreUnknownKeys = true }
 
     /** Parse an Engine.IO open handshake: "0{...json...}" */
@@ -103,7 +105,8 @@ object SocketIOCodec {
         val data = if (idx < raw.length) {
             try {
                 json.parseToJsonElement(raw.substring(idx))
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                logger.w { "Failed to parse SIO packet JSON at index $idx: ${e.message}" }
                 null
             }
         } else null
