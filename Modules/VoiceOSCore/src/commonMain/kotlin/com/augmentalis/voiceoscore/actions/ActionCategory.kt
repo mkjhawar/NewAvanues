@@ -93,8 +93,14 @@ enum class ActionCategory {
     COCKPIT,
 
     /**
-     * Camera/photo actions (capture, flash, zoom, switch lens, etc.)
+     * PDF viewing actions (page navigation, zoom, search, etc.)
      * Priority: 14
+     */
+    PDF,
+
+    /**
+     * Camera/photo actions (capture, flash, zoom, switch lens, etc.)
+     * Priority: 15
      */
     CAMERA,
 
@@ -147,6 +153,7 @@ enum class ActionCategory {
             BROWSER,
             NOTE,
             COCKPIT,
+            PDF,
             CAMERA,
             ANNOTATION,
             IMAGE,

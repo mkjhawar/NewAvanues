@@ -62,6 +62,9 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
+                // VoiceOSCore — Tier 4 voice command executor
+                implementation(project(":Modules:VoiceOSCore"))
+
                 // Android Core
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.androidx.activity.compose)

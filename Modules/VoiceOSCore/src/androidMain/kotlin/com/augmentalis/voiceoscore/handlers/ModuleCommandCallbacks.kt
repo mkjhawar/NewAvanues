@@ -70,6 +70,14 @@ object ModuleCommandCallbacks {
     @Volatile
     var noteExecutor: ModuleCommandExecutor? = null
 
+    /** PDFAvanue command executor — set when PDF viewer is active. */
+    @Volatile
+    var pdfExecutor: ModuleCommandExecutor? = null
+
+    /** PhotoAvanue command executor — set when camera preview is active. */
+    @Volatile
+    var cameraExecutor: ModuleCommandExecutor? = null
+
     /** Cockpit command executor — set when Cockpit multi-window is active. */
     @Volatile
     var cockpitExecutor: ModuleCommandExecutor? = null
@@ -104,6 +112,8 @@ object ModuleCommandCallbacks {
      */
     fun clearAll() {
         noteExecutor = null
+        pdfExecutor = null
+        cameraExecutor = null
         cockpitExecutor = null
         annotationExecutor = null
         imageExecutor = null
@@ -118,6 +128,8 @@ object ModuleCommandCallbacks {
      */
     fun activeModules(): List<String> = buildList {
         if (noteExecutor != null) add("note")
+        if (pdfExecutor != null) add("pdf")
+        if (cameraExecutor != null) add("camera")
         if (cockpitExecutor != null) add("cockpit")
         if (annotationExecutor != null) add("annotation")
         if (imageExecutor != null) add("image")

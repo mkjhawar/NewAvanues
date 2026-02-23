@@ -50,6 +50,7 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(project(":Modules:AvanueUI"))
+                implementation(project(":Modules:VoiceOSCore"))
                 implementation(libs.androidx.core.ktx)
                 implementation(project.dependencies.platform(libs.compose.bom))
                 implementation(libs.compose.ui.ui)

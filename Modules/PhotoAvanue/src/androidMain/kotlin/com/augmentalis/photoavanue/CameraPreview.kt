@@ -55,9 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.photoavanue.model.CaptureMode
 import com.augmentalis.photoavanue.model.FlashMode
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 
 /**
  * Embeddable camera preview composable — designed for Cockpit frame embedding.
@@ -100,6 +105,14 @@ fun CameraPreview(
     // Release controller on dispose
     DisposableEffect(Unit) {
         onDispose { controller.release() }
+    }
+
+    // Wire voice command executor for camera controls
+    DisposableEffect(controller) {
+        ModuleCommandCallbacks.cameraExecutor = { actionType, _ ->
+            executeCameraCommand(actionType, controller)
+        }
+        onDispose { ModuleCommandCallbacks.cameraExecutor = null }
     }
 
     // Permission handling
@@ -181,15 +194,20 @@ fun CameraPreview(
                 FlashMode.AUTO -> Icons.Default.FlashAuto
                 FlashMode.TORCH -> Icons.Default.FlashlightOn
             }
-            IconButton(onClick = {
-                val next = when (cameraState.flashMode) {
-                    FlashMode.OFF -> FlashMode.ON
-                    FlashMode.ON -> FlashMode.AUTO
-                    FlashMode.AUTO -> FlashMode.TORCH
-                    FlashMode.TORCH -> FlashMode.OFF
+            IconButton(
+                onClick = {
+                    val next = when (cameraState.flashMode) {
+                        FlashMode.OFF -> FlashMode.ON
+                        FlashMode.ON -> FlashMode.AUTO
+                        FlashMode.AUTO -> FlashMode.TORCH
+                        FlashMode.TORCH -> FlashMode.OFF
+                    }
+                    controller.setFlashMode(next)
+                },
+                modifier = Modifier.semantics {
+                    contentDescription = "Voice: click flash ${cameraState.flashMode.name.lowercase()}"
                 }
-                controller.setFlashMode(next)
-            }) {
+            ) {
                 Icon(flashIcon, "Flash", tint = colors.textPrimary)
             }
 
@@ -197,10 +215,15 @@ fun CameraPreview(
             when {
                 cameraState.captureMode == CaptureMode.VIDEO && cameraState.recording.isRecording -> {
                     // Pause/Resume
-                    IconButton(onClick = {
-                        if (cameraState.recording.isPaused) controller.resumeRecording()
-                        else controller.pauseRecording()
-                    }) {
+                    IconButton(
+                        onClick = {
+                            if (cameraState.recording.isPaused) controller.resumeRecording()
+                            else controller.pauseRecording()
+                        },
+                        modifier = Modifier.semantics {
+                            contentDescription = if (cameraState.recording.isPaused) "Voice: click resume recording" else "Voice: click pause recording"
+                        }
+                    ) {
                         Icon(
                             if (cameraState.recording.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                             "Pause", tint = colors.warning
@@ -210,6 +233,7 @@ fun CameraPreview(
                     IconButton(
                         onClick = { controller.stopRecording() },
                         modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.error.copy(alpha = 0.3f))
+                            .semantics { contentDescription = "Voice: click stop recording" }
                     ) {
                         Icon(Icons.Default.Stop, "Stop", tint = colors.error, modifier = Modifier.size(48.dp))
                     }
@@ -218,6 +242,7 @@ fun CameraPreview(
                     IconButton(
                         onClick = { controller.startRecording() },
                         modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.error.copy(alpha = 0.3f))
+                            .semantics { contentDescription = "Voice: click start recording" }
                     ) {
                         Icon(Icons.Default.FiberManualRecord, "Record", tint = colors.error, modifier = Modifier.size(48.dp))
                     }
@@ -226,6 +251,7 @@ fun CameraPreview(
                     IconButton(
                         onClick = { controller.capturePhoto() },
                         modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.primary.copy(alpha = 0.3f))
+                            .semantics { contentDescription = "Voice: click take photo" }
                     ) {
                         Icon(Icons.Default.Camera, "Capture", tint = colors.textPrimary, modifier = Modifier.size(48.dp))
                     }
@@ -233,7 +259,10 @@ fun CameraPreview(
             }
 
             // Lens switch
-            IconButton(onClick = { controller.switchLens() }) {
+            IconButton(
+                onClick = { controller.switchLens() },
+                modifier = Modifier.semantics { contentDescription = "Voice: click switch camera" }
+            ) {
                 Icon(Icons.Default.Cameraswitch, "Switch", tint = colors.textPrimary)
             }
         }
@@ -291,5 +320,97 @@ private fun PermissionRequestUI(
                 )
             }
         }
+    }
+}
+
+/**
+ * Maps camera voice commands to AndroidCameraController operations.
+ * Covers capture, recording, flash, lens, zoom, exposure, and capture mode.
+ */
+private fun executeCameraCommand(
+    actionType: CommandActionType,
+    controller: AndroidCameraController
+): HandlerResult {
+    return when (actionType) {
+        // -- Capture -------------------------------------------------------
+        CommandActionType.CAPTURE_PHOTO -> {
+            controller.capturePhoto()
+            HandlerResult.success("Photo captured")
+        }
+
+        // -- Recording -----------------------------------------------------
+        CommandActionType.RECORD_START -> {
+            controller.setCaptureMode(CaptureMode.VIDEO)
+            controller.startRecording()
+            HandlerResult.success("Recording started")
+        }
+        CommandActionType.RECORD_STOP -> {
+            controller.stopRecording()
+            HandlerResult.success("Recording stopped")
+        }
+        CommandActionType.RECORD_PAUSE -> {
+            controller.pauseRecording()
+            HandlerResult.success("Recording paused")
+        }
+        CommandActionType.RECORD_RESUME -> {
+            controller.resumeRecording()
+            HandlerResult.success("Recording resumed")
+        }
+
+        // -- Lens ----------------------------------------------------------
+        CommandActionType.SWITCH_LENS -> {
+            controller.switchLens()
+            HandlerResult.success("Camera switched")
+        }
+
+        // -- Flash ---------------------------------------------------------
+        CommandActionType.FLASH_ON -> {
+            controller.setFlashMode(FlashMode.ON)
+            HandlerResult.success("Flash on")
+        }
+        CommandActionType.FLASH_OFF -> {
+            controller.setFlashMode(FlashMode.OFF)
+            HandlerResult.success("Flash off")
+        }
+        CommandActionType.FLASH_AUTO -> {
+            controller.setFlashMode(FlashMode.AUTO)
+            HandlerResult.success("Flash auto")
+        }
+        CommandActionType.FLASH_TORCH -> {
+            controller.setFlashMode(FlashMode.TORCH)
+            HandlerResult.success("Torch on")
+        }
+
+        // -- Zoom ----------------------------------------------------------
+        CommandActionType.ZOOM_IN -> {
+            controller.zoomIn()
+            HandlerResult.success("Zoomed in")
+        }
+        CommandActionType.ZOOM_OUT -> {
+            controller.zoomOut()
+            HandlerResult.success("Zoomed out")
+        }
+
+        // -- Exposure ------------------------------------------------------
+        CommandActionType.EXPOSURE_UP -> {
+            controller.increaseExposure()
+            HandlerResult.success("Exposure increased")
+        }
+        CommandActionType.EXPOSURE_DOWN -> {
+            controller.decreaseExposure()
+            HandlerResult.success("Exposure decreased")
+        }
+
+        // -- Capture Mode --------------------------------------------------
+        CommandActionType.MODE_PHOTO -> {
+            controller.setCaptureMode(CaptureMode.PHOTO)
+            HandlerResult.success("Photo mode")
+        }
+        CommandActionType.MODE_VIDEO -> {
+            controller.setCaptureMode(CaptureMode.VIDEO)
+            HandlerResult.success("Video mode")
+        }
+
+        else -> HandlerResult.failure("Unsupported camera action: $actionType", recoverable = true)
     }
 }

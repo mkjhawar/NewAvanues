@@ -321,7 +321,7 @@ class VivokaAndroidEngine(
                 return Result.success(Unit)
             }
 
-            vivokaEngine?.setDynamicCommands(commands)
+            vivokaEngine?.setDynamicCommandsAwait(commands)
             lastCommandsHash.set(newHash)
             Result.success(Unit)
         } catch (e: Exception) {
@@ -330,7 +330,9 @@ class VivokaAndroidEngine(
     }
 
     override suspend fun updateConfiguration(config: SpeechConfig): Result<Unit> {
-        // Configuration updates would require re-initialization
+        // Clear command hash so next updateCommands() always pushes grammar
+        // after a mode change (prevents stale hash from skipping the update)
+        lastCommandsHash.set(0)
         return Result.success(Unit)
     }
 

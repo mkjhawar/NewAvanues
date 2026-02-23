@@ -34,6 +34,61 @@ private const val WIRE_RETRY_DELAY_MS = 100L
 private const val WIRE_MAX_RETRIES = 20
 
 /**
+ * Wire CursorActions, ClickDispatcher, and IMU tracking to the overlay service.
+ *
+ * Called from both AndroidCursorHandler (voice "show cursor") and
+ * VoiceAvanueAccessibilityService (settings toggle). Extracted as a
+ * top-level function to avoid duplicating the retry + wiring logic.
+ *
+ * The service starts asynchronously, so we retry on the main handler until
+ * the service instance is available (up to WIRE_MAX_RETRIES times).
+ *
+ * @param service The AccessibilityService to use for gesture dispatch and IMU
+ * @param retryCount Current retry count (starts at 0)
+ */
+fun wireCursorDependencies(service: AccessibilityService, retryCount: Int = 0) {
+    val svc = CursorOverlayService.getInstance()
+    if (svc == null) {
+        if (retryCount < WIRE_MAX_RETRIES) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                wireCursorDependencies(service, retryCount + 1)
+            }, WIRE_RETRY_DELAY_MS)
+        } else {
+            Log.w(TAG, "Service not ready after $WIRE_MAX_RETRIES retries, skipping wire")
+        }
+        return
+    }
+
+    Log.i(TAG, "Cursor dependencies wired after ${retryCount + 1} attempts (${(retryCount + 1) * WIRE_RETRY_DELAY_MS}ms)")
+
+    val ctrl = svc.getCursorController()
+    if (ctrl == null) {
+        Log.w(TAG, "CursorController not available from service")
+        return
+    }
+
+    // Wire CursorActions so voice movement commands ("cursor up/down/left/right")
+    // affect the same controller the overlay observes
+    val gestureDispatcher = AndroidGestureDispatcher(service)
+    CursorActions.initialize(ctrl, gestureDispatcher)
+    Log.i(TAG, "CursorActions wired to overlay controller + gesture dispatcher")
+
+    // Wire ClickDispatcher for dwell-click and service-level click dispatch
+    svc.setClickDispatcher(AccessibilityClickDispatcherImpl(service))
+    Log.i(TAG, "ClickDispatcher wired to overlay service")
+
+    // Wire IMU head tracking so cursor follows head motion
+    val imuManager = IMUManager.getInstance(service.applicationContext)
+    val imuStarted = imuManager.startIMUTracking("cursor_voice")
+    if (imuStarted) {
+        svc.startIMUTracking(imuManager)
+        Log.i(TAG, "IMU head tracking wired to cursor controller")
+    } else {
+        Log.w(TAG, "IMU tracking not started — no sensors or capabilities not injected")
+    }
+}
+
+/**
  * IHandler implementation for cursor voice commands.
  *
  * Handles show/hide (start/stop CursorOverlayService), click, movement
@@ -60,8 +115,6 @@ class AndroidCursorHandler(
         // Cursor-specific gestures
         "long press here", "double tap here"
     )
-
-    private val mainHandler = Handler(Looper.getMainLooper())
 
     override suspend fun execute(
         command: QuantizedCommand,
@@ -105,60 +158,12 @@ class AndroidCursorHandler(
             Log.i(TAG, "CursorOverlayService started via voice command")
 
             // Wire dependencies after service initializes on main thread
-            wireServiceDependencies(retryCount = 0)
+            wireCursorDependencies(service, retryCount = 0)
 
             HandlerResult.success("Cursor shown")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start CursorOverlayService", e)
             HandlerResult.failure("Failed to show cursor: ${e.message}")
-        }
-    }
-
-    /**
-     * Wire CursorActions and ClickDispatcher to the overlay service's controller.
-     *
-     * The service starts asynchronously, so we retry on the main handler until
-     * the service instance is available (up to WIRE_MAX_RETRIES times).
-     */
-    private fun wireServiceDependencies(retryCount: Int) {
-        val svc = CursorOverlayService.getInstance()
-        if (svc == null) {
-            if (retryCount < WIRE_MAX_RETRIES) {
-                mainHandler.postDelayed({
-                    wireServiceDependencies(retryCount + 1)
-                }, WIRE_RETRY_DELAY_MS)
-            } else {
-                Log.w(TAG, "Service not ready after $WIRE_MAX_RETRIES retries, skipping wire")
-            }
-            return
-        }
-
-        Log.i(TAG, "Service wired after ${retryCount + 1} attempts (${(retryCount + 1) * WIRE_RETRY_DELAY_MS}ms)")
-
-        val ctrl = svc.getCursorController()
-        if (ctrl == null) {
-            Log.w(TAG, "CursorController not available from service")
-            return
-        }
-
-        // Wire CursorActions so voice movement commands ("cursor up/down/left/right")
-        // affect the same controller the overlay observes
-        val gestureDispatcher = AndroidGestureDispatcher(service)
-        CursorActions.initialize(ctrl, gestureDispatcher)
-        Log.i(TAG, "CursorActions wired to overlay controller + gesture dispatcher")
-
-        // Wire ClickDispatcher for dwell-click and service-level click dispatch
-        svc.setClickDispatcher(AccessibilityClickDispatcherImpl(service))
-        Log.i(TAG, "ClickDispatcher wired to overlay service")
-
-        // Wire IMU head tracking so cursor follows head motion
-        val imuManager = IMUManager.getInstance(service.applicationContext)
-        val imuStarted = imuManager.startIMUTracking("cursor_voice")
-        if (imuStarted) {
-            svc.startIMUTracking(imuManager)
-            Log.i(TAG, "IMU head tracking wired to cursor controller")
-        } else {
-            Log.w(TAG, "IMU tracking not started — no sensors or capabilities not injected")
         }
     }
 

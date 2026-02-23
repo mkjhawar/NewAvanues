@@ -458,7 +458,7 @@ class VoiceOSCore private constructor(
             }
         }
 
-        println("[VoiceOSCore] Speech mode switched to $mode (exit commands: ${exitCommands.size})")
+        LoggingUtils.d("Speech mode switched to $mode (exit commands: ${exitCommands.size})", TAG)
     }
 
     /**

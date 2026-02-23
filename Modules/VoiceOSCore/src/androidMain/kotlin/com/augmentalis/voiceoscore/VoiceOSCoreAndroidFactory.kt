@@ -111,6 +111,8 @@ internal class AndroidHandlerFactory(
             NoteCommandHandler(service),
             CockpitCommandHandler(service),
             // Wave 4: Media/utility module handlers
+            PdfCommandHandler(service),
+            CameraCommandHandler(service),
             AnnotationCommandHandler(service),
             ImageCommandHandler(service),
             VideoCommandHandler(service),

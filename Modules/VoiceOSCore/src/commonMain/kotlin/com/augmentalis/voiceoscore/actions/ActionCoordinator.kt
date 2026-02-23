@@ -117,6 +117,7 @@ class ActionCoordinator(
             "web" -> ActionCategory.BROWSER
             "notes" -> ActionCategory.NOTE
             "cockpit" -> ActionCategory.COCKPIT
+            "pdf" -> ActionCategory.PDF
             "camera" -> ActionCategory.CAMERA
             "annotation" -> ActionCategory.ANNOTATION
             "image" -> ActionCategory.IMAGE
