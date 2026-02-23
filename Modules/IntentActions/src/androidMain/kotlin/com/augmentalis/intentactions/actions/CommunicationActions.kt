@@ -9,6 +9,7 @@ import com.augmentalis.intentactions.IIntentAction
 import com.augmentalis.intentactions.IntentCategory
 import com.augmentalis.intentactions.IntentResult
 import com.augmentalis.intentactions.PlatformContext
+import com.augmentalis.intentactions.UriSanitizer
 
 /**
  * Sends an email using the device's mail app.
@@ -25,7 +26,7 @@ object SendEmailAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Sending email with entities: $entities")
+            Log.d(TAG, "Sending email ${entities.toSafeString()}")
 
             val emailAddress = entities.recipientEmail
             if (emailAddress.isNullOrBlank()) {
@@ -33,6 +34,10 @@ object SendEmailAction : IIntentAction {
                     missingEntity = EntityType.RECIPIENT,
                     prompt = "Who would you like to email? Please provide an email address."
                 )
+            }
+
+            if (!UriSanitizer.isValidEmail(emailAddress)) {
+                return IntentResult.Failed(reason = "Invalid email address")
             }
 
             val subject = entities.query // reuse query for subject context
@@ -79,15 +84,18 @@ object SendTextAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Sending text with entities: $entities")
+            Log.d(TAG, "Sending text ${entities.toSafeString()}")
 
-            val address = entities.phoneNumber ?: entities.recipientName
-            if (address.isNullOrBlank()) {
+            val rawAddress = entities.phoneNumber ?: entities.recipientName
+            if (rawAddress.isNullOrBlank()) {
                 return IntentResult.NeedsMoreInfo(
                     missingEntity = EntityType.RECIPIENT,
                     prompt = "Who would you like to text? Say a name or phone number."
                 )
             }
+
+            val address = UriSanitizer.sanitizeSmsAddress(rawAddress)
+                ?: return IntentResult.Failed(reason = "Invalid SMS address")
 
             val body = entities.message
 
@@ -131,15 +139,18 @@ object MakeCallAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Making call with entities: $entities")
+            Log.d(TAG, "Making call ${entities.toSafeString()}")
 
-            val recipient = entities.phoneNumber ?: entities.recipientName
-            if (recipient.isNullOrBlank()) {
+            val rawRecipient = entities.phoneNumber ?: entities.recipientName
+            if (rawRecipient.isNullOrBlank()) {
                 return IntentResult.NeedsMoreInfo(
                     missingEntity = EntityType.RECIPIENT,
                     prompt = "Who would you like to call? Say a name or phone number."
                 )
             }
+
+            val recipient = UriSanitizer.sanitizePhoneNumber(rawRecipient)
+                ?: return IntentResult.Failed(reason = "Invalid phone number")
 
             val phoneUri = Uri.parse("tel:$recipient")
             val dialIntent = Intent(Intent.ACTION_DIAL, phoneUri).apply {

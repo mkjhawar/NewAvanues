@@ -25,7 +25,7 @@ object OpenSettingsAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Opening settings with entities: $entities")
+            Log.d(TAG, "Opening settings ${entities.toSafeString()}")
 
             val query = (entities.query ?: "").lowercase()
 
@@ -121,7 +121,7 @@ object OpenSettingsSubsectionAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Opening settings subsection with entities: $entities")
+            Log.d(TAG, "Opening settings subsection ${entities.toSafeString()}")
 
             val subsection = entities.query?.lowercase()?.trim()
             if (subsection.isNullOrBlank()) {

@@ -77,7 +77,7 @@ object SetTimerAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Setting timer with entities: $entities")
+            Log.d(TAG, "Setting timer ${entities.toSafeString()}")
 
             // Try to parse duration from entities or query
             val durationText = entities.duration ?: entities.query ?: ""
@@ -175,7 +175,7 @@ object CreateReminderAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Creating reminder with entities: $entities")
+            Log.d(TAG, "Creating reminder ${entities.toSafeString()}")
 
             val task = entities.query ?: entities.message
             if (task.isNullOrBlank()) {
@@ -240,7 +240,7 @@ object CreateCalendarEventAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Creating calendar event with entities: $entities")
+            Log.d(TAG, "Creating calendar event ${entities.toSafeString()}")
 
             val title = entities.query
             if (title.isNullOrBlank()) {
@@ -285,7 +285,7 @@ object AddTodoAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Adding todo with entities: $entities")
+            Log.d(TAG, "Adding todo ${entities.toSafeString()}")
 
             val task = entities.query ?: entities.message
             if (task.isNullOrBlank()) {
@@ -345,7 +345,7 @@ object CreateNoteAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Creating note with entities: $entities")
+            Log.d(TAG, "Creating note ${entities.toSafeString()}")
 
             val content = entities.query ?: entities.message
             if (content.isNullOrBlank()) {

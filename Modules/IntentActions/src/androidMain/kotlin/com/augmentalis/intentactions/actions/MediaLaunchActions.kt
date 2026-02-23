@@ -25,7 +25,7 @@ object PlayVideoAction : IIntentAction {
     override val requiredEntities = emptyList<EntityType>()
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
-        Log.d(TAG, "Playing video with entities: $entities")
+        Log.d(TAG, "Playing video ${entities.toSafeString()}")
 
         val query = entities.query
 
@@ -235,7 +235,7 @@ object OpenAppAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Opening app with entities: $entities")
+            Log.d(TAG, "Opening app ${entities.toSafeString()}")
 
             val appName = entities.appName
             if (appName.isNullOrBlank()) {

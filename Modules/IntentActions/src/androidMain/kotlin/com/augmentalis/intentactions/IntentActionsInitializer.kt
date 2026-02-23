@@ -32,7 +32,7 @@ import com.augmentalis.intentactions.actions.WebSearchAction
  * Call once at app startup.
  */
 object IntentActionsInitializer {
-    private var initialized = false
+    @Volatile private var initialized = false
 
     fun initialize() {
         if (initialized) return

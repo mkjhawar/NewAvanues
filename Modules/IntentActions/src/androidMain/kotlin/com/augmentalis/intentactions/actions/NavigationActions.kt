@@ -22,7 +22,7 @@ object GetDirectionsAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Getting directions with entities: $entities")
+            Log.d(TAG, "Getting directions ${entities.toSafeString()}")
 
             val destination = entities.location ?: entities.query
             if (destination.isNullOrBlank()) {
@@ -64,7 +64,7 @@ object FindNearbyAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Finding nearby with entities: $entities")
+            Log.d(TAG, "Finding nearby ${entities.toSafeString()}")
 
             val placeType = entities.query ?: entities.location
             if (placeType.isNullOrBlank()) {

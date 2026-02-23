@@ -45,4 +45,20 @@ data class ExtractedEntities(
         duration?.let { put("duration", it) }
         appName?.let { put("appName", it) }
     }
+
+    /** Safe string for logging -- masks PII fields, shows only presence flags */
+    fun toSafeString(): String = buildString {
+        append("[entities:")
+        if (query != null) append(" query=present")
+        if (url != null) append(" url=present")
+        if (phoneNumber != null) append(" phone=***")
+        if (recipientName != null) append(" recipient=***")
+        if (recipientEmail != null) append(" email=***")
+        if (message != null) append(" message=***")
+        if (location != null) append(" location=present")
+        if (time != null) append(" time=present")
+        if (duration != null) append(" duration=present")
+        if (appName != null) append(" app=$appName")
+        append("]")
+    }
 }

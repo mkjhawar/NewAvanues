@@ -10,6 +10,7 @@ import com.augmentalis.intentactions.IIntentAction
 import com.augmentalis.intentactions.IntentCategory
 import com.augmentalis.intentactions.IntentResult
 import com.augmentalis.intentactions.PlatformContext
+import com.augmentalis.intentactions.UriSanitizer
 import com.augmentalis.intentactions.math.MathCalculator
 import com.augmentalis.intentactions.web.DuckDuckGoSearchService
 import com.augmentalis.intentactions.web.SearchResult
@@ -29,7 +30,7 @@ object WebSearchAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Searching web with entities: $entities")
+            Log.d(TAG, "Searching web ${entities.toSafeString()}")
 
             val query = entities.query
             if (query.isNullOrBlank()) {
@@ -126,7 +127,7 @@ object NavigateURLAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Navigating to URL with entities: $entities")
+            Log.d(TAG, "Navigating to URL ${entities.toSafeString()}")
 
             val url = entities.url
             if (url.isNullOrBlank()) {
@@ -136,19 +137,15 @@ object NavigateURLAction : IIntentAction {
                 )
             }
 
-            // Ensure URL has a scheme
-            val fullUrl = if (url.startsWith("http://") || url.startsWith("https://")) {
-                url
-            } else {
-                "https://$url"
-            }
+            val fullUrl = UriSanitizer.sanitizeWebUrl(url)
+                ?: return IntentResult.Failed(reason = "Invalid or blocked URL")
 
             val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(fullUrl)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(browserIntent)
 
-            Log.i(TAG, "Opened URL: $fullUrl")
+            Log.i(TAG, "Opened URL")
             IntentResult.Success(message = "Opening $fullUrl")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to navigate to URL", e)
@@ -172,7 +169,7 @@ object CalculateAction : IIntentAction {
 
     override suspend fun execute(context: PlatformContext, entities: ExtractedEntities): IntentResult {
         return try {
-            Log.d(TAG, "Calculating with entities: $entities")
+            Log.d(TAG, "Calculating ${entities.toSafeString()}")
 
             val expression = entities.query
             if (expression.isNullOrBlank()) {
