@@ -151,10 +151,29 @@ class NoteCommandHandler : IHandler {
 
 ## IntentActions: IIntentAction System
 
+### PlatformContext (KMP Expect/Actual)
+
+`PlatformContext` is a KMP expect/actual wrapper providing platform-specific context to intent actions:
+
+```kotlin
+// commonMain — type declaration only
+expect class PlatformContext
+
+// androidMain — wraps Android Context (Kotlin 2.1: actual typealias no longer permitted)
+actual class PlatformContext(val android: Context)
+
+// iosMain / desktopMain — empty stubs for future platform support
+actual class PlatformContext
+```
+
+**Usage in Android actions:** Functions receive `platformCtx: PlatformContext` and rebind via `val context = platformCtx.android` to access Android `Context` APIs (`startActivity`, `packageManager`, etc.).
+
+**Constructing on Android:** Callers pass `PlatformContext(activity)` or `PlatformContext(applicationContext)`.
+
 ### Interface Contract
 
 ```kotlin
-// Modules/AI/NLU/src/commonMain/.../intent/IIntentAction.kt
+// Modules/IntentActions/src/commonMain/.../IIntentAction.kt
 interface IIntentAction {
     val intentId: String
     val category: IntentCategory
@@ -278,7 +297,7 @@ object IntentActionRegistry {
 The NLU classifier determines whether input should go to VoiceOSCore or IntentActions:
 
 ```kotlin
-// Modules/AI/NLU/src/commonMain/.../IntentClassifier.kt
+// Modules/IntentActions/src/commonMain/.../IntentClassifier.kt
 sealed class CommandRoute {
     data class VoiceCommand(val phrase: String, val confidence: Float) : CommandRoute()
     data class IntentAction(val intentId: String, val entities: ExtractedEntities) : CommandRoute()

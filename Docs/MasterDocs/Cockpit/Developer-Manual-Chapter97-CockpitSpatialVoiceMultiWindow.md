@@ -131,15 +131,16 @@ sealed class FrameContent
 
 Each variant carries content-specific state (URL, page number, zoom level, etc.) and serializes to JSON for DB persistence.
 
-### LayoutMode (13 Modes)
+### LayoutMode (14 Modes)
 
 | Mode | Description | Best For |
 |------|------------|---------|
+| `DASHBOARD` | Launcher/home with module tiles and recent sessions | Default when no session active |
 | `FREEFORM` | Drag-and-resize windows | Custom arrangement |
 | `GRID` | Responsive column grid | General multi-content |
 | `SPLIT_LEFT` | Primary 60% left | Side-by-side comparison |
 | `SPLIT_RIGHT` | Primary 60% right | Mirror of SPLIT_LEFT |
-| `COCKPIT` | Flight-deck instrument panel | Default for tablets |
+| `COCKPIT` | Flight-deck instrument panel | Default for active sessions |
 | `T_PANEL` | Primary 60% top | Presentation + notes |
 | `MOSAIC` | Primary 50% left + grid right | Media-heavy layouts |
 | `FULLSCREEN` | Single frame | Voice-controlled switching |
@@ -151,7 +152,9 @@ Each variant carries content-specific state (URL, page number, zoom level, etc.)
 
 **Constants:**
 
+- `DEFAULT` = `COCKPIT` — default layout for active sessions with frames
 - `SPATIAL_CAPABLE` set: `FREEFORM, COCKPIT, MOSAIC, T_PANEL, SPATIAL_DICE` — layouts that support spatial viewport panning
+- `FRAME_LAYOUTS`: All modes except `DASHBOARD` — modes that render frames
 - `GALLERY_CONTENT_TYPES`: Content types shown in Gallery mode
 
 ### ContentAccent
