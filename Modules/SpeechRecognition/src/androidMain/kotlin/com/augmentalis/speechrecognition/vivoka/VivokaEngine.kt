@@ -751,6 +751,44 @@ class VivokaEngine(
     }
 
     /**
+     * Suspending version of setDynamicCommands that WAITS for compilation to complete.
+     *
+     * Unlike setDynamicCommands() which fires and forgets via coroutineScope.launch,
+     * this method:
+     * 1. Waits for any in-progress compilation to finish (spins on atomic guard)
+     * 2. Registers and compiles the new grammar synchronously
+     * 3. Only returns AFTER compilation is complete
+     *
+     * Used by VivokaAndroidEngine.updateCommands() for mode transitions (MUTED → COMBINED)
+     * where startListening() must NOT run until the grammar is ready.
+     */
+    suspend fun setDynamicCommandsAwait(commands: List<String>): Boolean {
+        // Wait for any in-progress compilation to finish
+        while (!isSettingDynamicCommands.compareAndSet(false, true)) {
+            delay(50) // yield, let the current compilation finish
+        }
+        try {
+            Log.d(TAG, "setDynamicCommandsAwait: ${commands.size} commands")
+            registeredCommands.clear()
+            registeredCommands.addAll(commands)
+
+            // Register with model component
+            model.registerCommands(commands)
+
+            // Register with learning system
+            learning.registerCommands(commands)
+
+            // Compile models if not sleeping and initialized
+            if (!voiceStateManager.isVoiceSleeping() && voiceStateManager.isInitialized()) {
+                return model.compileModelWithCommands(registeredCommands)
+            }
+            return true // registered but not compiled (sleeping or uninitialized)
+        } finally {
+            isSettingDynamicCommands.set(false)
+        }
+    }
+
+    /**
      * Set listeners
      */
     fun setResultListener(listener: OnSpeechResultListener) {

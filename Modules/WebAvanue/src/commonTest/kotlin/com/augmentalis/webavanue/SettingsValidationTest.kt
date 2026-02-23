@@ -83,7 +83,8 @@ class SettingsValidationTest {
     @Test
     fun `validate passes valid zoom unchanged`() {
         // Given - Zoom of 125 is valid (within 50-200)
-        val settings = BrowserSettings(desktopModeDefaultZoom = 125)
+        // Explicitly set mobilePortraitScale to a valid value (default 0f is below min 0.5f)
+        val settings = BrowserSettings(desktopModeDefaultZoom = 125, mobilePortraitScale = 1.0f)
 
         // When
         val result = SettingsValidation.validate(settings)
