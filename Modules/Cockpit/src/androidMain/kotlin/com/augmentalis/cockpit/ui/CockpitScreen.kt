@@ -5,8 +5,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -40,12 +42,18 @@ private const val TAG = "CockpitScreen"
  * Also creates the spatial orientation pipeline:
  * [AndroidSpatialOrientationSource] → [SpatialViewportController] → SpatialCanvas
  */
+/**
+ * @param deepLinkUri Optional deep link URI to process on first composition.
+ *   Supports: cockpit://session/{id}, cockpit://module/{id},
+ *   cockpit://layout/{mode}, cockpit://template/{id}, cockpit://dashboard
+ */
 @Composable
 fun CockpitScreen(
     viewModel: CockpitViewModel,
     onNavigateBack: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onSpecialModuleLaunch: (String) -> Unit = {},
+    deepLinkUri: String? = null,
     modifier: Modifier = Modifier
 ) {
     val session by viewModel.activeSession.collectAsState()
@@ -54,6 +62,12 @@ fun CockpitScreen(
     val layoutMode by viewModel.layoutMode.collectAsState()
     val dashboardState by viewModel.dashboardState.collectAsState()
     val backgroundSceneState by viewModel.backgroundScene.collectAsState()
+
+    // Theme state — local until DataStore persistence is wired
+    var currentPalette by remember { mutableStateOf(AvanueColorPalette.DEFAULT) }
+    var currentMaterial by remember { mutableStateOf(MaterialMode.DEFAULT) }
+    var currentAppearance by remember { mutableStateOf(AppearanceMode.DEFAULT) }
+    var currentPresetId by remember { mutableStateOf<String?>(null) }
 
     // Device-adaptive layout filtering
     val displayProfile = AvanueTheme.displayProfile
@@ -101,6 +115,16 @@ fun CockpitScreen(
         }
     }
 
+    // Process deep link URI on first composition (once per URI)
+    LaunchedEffect(deepLinkUri) {
+        if (deepLinkUri != null) {
+            val handled = viewModel.handleDeepLink(deepLinkUri)
+            if (!handled) {
+                Log.w(TAG, "Unrecognized deep link: $deepLinkUri")
+            }
+        }
+    }
+
     CockpitScreenContent(
         sessionName = session?.name ?: "Cockpit",
         frames = frames,
@@ -122,25 +146,33 @@ fun CockpitScreen(
                 frame = frame,
                 onContentStateChanged = { frameId, newContent ->
                     viewModel.updateFrameContent(frameId, newContent)
-                }
+                },
+                // Only the selected frame receives content actions from the CommandBar
+                contentActionFlow = if (frame.id == selectedFrameId) viewModel.contentAction else null
             )
         },
         spatialController = spatialController,
         backgroundScene = backgroundSceneState,
-        currentPalette = AvanueColorPalette.DEFAULT,
-        currentMaterial = MaterialMode.DEFAULT,
-        currentAppearance = AppearanceMode.DEFAULT,
-        currentPresetId = null,
-        onPaletteChanged = {},
-        onMaterialChanged = {},
-        onAppearanceChanged = {},
-        onPresetApplied = {},
+        currentPalette = currentPalette,
+        currentMaterial = currentMaterial,
+        currentAppearance = currentAppearance,
+        currentPresetId = currentPresetId,
+        onPaletteChanged = { currentPalette = it; currentPresetId = null },
+        onMaterialChanged = { currentMaterial = it; currentPresetId = null },
+        onAppearanceChanged = { currentAppearance = it; currentPresetId = null },
+        onPresetApplied = { preset ->
+            preset.palette?.let { currentPalette = it }
+            currentMaterial = preset.materialMode
+            preset.appearance?.let { currentAppearance = it }
+            currentPresetId = preset.id
+        },
         onBackgroundSceneChanged = { viewModel.setBackgroundScene(it) },
         availableLayoutModes = availableModes,
         dashboardState = dashboardState,
         onModuleClick = { viewModel.launchModule(it) },
         onSessionClick = { viewModel.resumeSession(it) },
         onTemplateClick = { viewModel.launchTemplate(it) },
+        onContentAction = { viewModel.dispatchContentAction(it) },
         onStepRenamed = { id, title -> viewModel.renameFrame(id, title) },
         onStepReordered = { id, delta -> viewModel.reorderFrame(id, delta) },
         onStepDeleted = { viewModel.removeFrame(it) },

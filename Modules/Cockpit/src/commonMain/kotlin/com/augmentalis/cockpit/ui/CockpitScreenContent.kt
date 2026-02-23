@@ -92,6 +92,7 @@ fun CockpitScreenContent(
     onModuleClick: (String) -> Unit = {},
     onSessionClick: (String) -> Unit = {},
     onTemplateClick: (String) -> Unit = {},
+    onContentAction: (ContentAction) -> Unit = {},
     onStepRenamed: (String, String) -> Unit = { _, _ -> },
     onStepReordered: (String, Int) -> Unit = { _, _ -> },
     onStepDeleted: (String) -> Unit = {},
@@ -260,6 +261,7 @@ fun CockpitScreenContent(
             onFrameClose = {
                 selectedFrameId?.let { onFrameClose(it) }
             },
+            onContentAction = onContentAction,
             availableLayoutModes = availableLayoutModes
         )
     } // end Column

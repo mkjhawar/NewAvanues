@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -15,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.augmentalis.cockpit.ui.ContentAction
+import kotlinx.coroutines.flow.SharedFlow
 import com.augmentalis.annotationavanue.AnnotationCanvas
 import com.augmentalis.annotationavanue.SignatureCapture
 import com.augmentalis.annotationavanue.controller.AnnotationSerializer
@@ -49,10 +53,16 @@ import com.augmentalis.videoavanue.VideoPlayer
  * - Whiteboard/Signature -> AnnotationAvanue (AnnotationCanvas/SignatureCapture)
  * - ScreenCast -> RemoteCast (CastOverlay)
  */
+/**
+ * @param contentActionFlow Optional flow of content-specific actions from the
+ *   CommandBar. Only actions relevant to this frame's content type are handled;
+ *   all others are silently ignored. The flow is collected inside a LaunchedEffect.
+ */
 @Composable
 fun ContentRenderer(
     frame: CockpitFrame,
     onContentStateChanged: (String, FrameContent) -> Unit = { _, _ -> },
+    contentActionFlow: SharedFlow<ContentAction>? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -63,17 +73,44 @@ fun ContentRenderer(
                 url = content.url,
                 onUrlChanged = { newUrl ->
                     onContentStateChanged(frame.id, content.copy(url = newUrl))
-                }
+                },
+                contentActionFlow = contentActionFlow
             )
 
-            is FrameContent.Pdf -> PdfViewer(
-                uri = content.uri,
-                initialPage = content.currentPage,
-                onPageChanged = { page ->
-                    onContentStateChanged(frame.id, content.copy(currentPage = page))
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+            is FrameContent.Pdf -> {
+                // Track current page for content action dispatch (prev/next page)
+                val pdfPage = remember { mutableStateOf(content.currentPage) }
+
+                if (contentActionFlow != null) {
+                    LaunchedEffect(contentActionFlow) {
+                        contentActionFlow.collect { action ->
+                            when (action) {
+                                ContentAction.PDF_PREV_PAGE -> {
+                                    val newPage = (pdfPage.value - 1).coerceAtLeast(0)
+                                    pdfPage.value = newPage
+                                    onContentStateChanged(frame.id, content.copy(currentPage = newPage))
+                                }
+                                ContentAction.PDF_NEXT_PAGE -> {
+                                    val newPage = pdfPage.value + 1
+                                    pdfPage.value = newPage
+                                    onContentStateChanged(frame.id, content.copy(currentPage = newPage))
+                                }
+                                else -> { /* Not a PDF action */ }
+                            }
+                        }
+                    }
+                }
+
+                PdfViewer(
+                    uri = content.uri,
+                    initialPage = pdfPage.value,
+                    onPageChanged = { page ->
+                        pdfPage.value = page
+                        onContentStateChanged(frame.id, content.copy(currentPage = page))
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             is FrameContent.Image -> ImageViewer(
                 uri = content.uri,
@@ -206,13 +243,37 @@ fun ContentRenderer(
 
 /**
  * Web content renderer using WebAvanue's WebView infrastructure.
+ *
+ * Handles content actions: WEB_BACK, WEB_FORWARD, WEB_REFRESH, WEB_ZOOM_IN, WEB_ZOOM_OUT.
+ * The WebView reference is retained via [remember] + [mutableStateOf] so that
+ * the LaunchedEffect can dispatch actions to the live platform view.
  */
 @Composable
 private fun WebContentRenderer(
     url: String,
     onUrlChanged: (String) -> Unit,
+    contentActionFlow: SharedFlow<ContentAction>? = null,
     modifier: Modifier = Modifier
 ) {
+    val webViewRef = remember { mutableStateOf<android.webkit.WebView?>(null) }
+
+    // Collect content actions and route to WebView
+    if (contentActionFlow != null) {
+        LaunchedEffect(contentActionFlow) {
+            contentActionFlow.collect { action ->
+                val wv = webViewRef.value ?: return@collect
+                when (action) {
+                    ContentAction.WEB_BACK -> if (wv.canGoBack()) wv.goBack()
+                    ContentAction.WEB_FORWARD -> if (wv.canGoForward()) wv.goForward()
+                    ContentAction.WEB_REFRESH -> wv.reload()
+                    ContentAction.WEB_ZOOM_IN -> wv.zoomIn()
+                    ContentAction.WEB_ZOOM_OUT -> wv.zoomOut()
+                    else -> { /* Not a web action — ignore */ }
+                }
+            }
+        }
+    }
+
     androidx.compose.ui.viewinterop.AndroidView(
         factory = { ctx ->
             android.webkit.WebView(ctx).apply {
@@ -220,23 +281,34 @@ private fun WebContentRenderer(
                 settings.domStorageEnabled = true
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
+                settings.builtInZoomControls = true
+                settings.displayZoomControls = false
                 webViewClient = object : android.webkit.WebViewClient() {
                     override fun onPageFinished(view: android.webkit.WebView?, finishedUrl: String?) {
-                        finishedUrl?.let { onUrlChanged(it) }
+                        if (finishedUrl != null && finishedUrl.isSafeWebUrl()) {
+                            onUrlChanged(finishedUrl)
+                        }
                     }
                 }
-                loadUrl(url.ifBlank { "about:blank" })
+                val safeUrl = url.ifBlank { "about:blank" }
+                loadUrl(if (safeUrl.isSafeWebUrl()) safeUrl else "about:blank")
+                webViewRef.value = this
             }
         },
         update = { webView ->
+            webViewRef.value = webView
             val currentUrl = webView.url
-            if (currentUrl != url && url.isNotBlank()) {
+            if (currentUrl != url && url.isNotBlank() && url.isSafeWebUrl()) {
                 webView.loadUrl(url)
             }
         },
         modifier = modifier.fillMaxSize()
     )
 }
+
+/** URL scheme allowlist — rejects javascript:, data:, file:, content: schemes. */
+private fun String.isSafeWebUrl(): Boolean =
+    startsWith("https://") || startsWith("http://") || this == "about:blank"
 
 /**
  * Voice note renderer showing recording state, waveform, and transcription.

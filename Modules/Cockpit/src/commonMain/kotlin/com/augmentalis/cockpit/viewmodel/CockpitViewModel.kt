@@ -3,6 +3,7 @@ package com.augmentalis.cockpit.viewmodel
 import com.augmentalis.cockpit.CockpitConstants
 import com.augmentalis.cockpit.model.BuiltInTemplates
 import com.augmentalis.cockpit.ui.BackgroundScene
+import com.augmentalis.cockpit.ui.ContentAction
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.CockpitSession
 import com.augmentalis.cockpit.model.DashboardModuleRegistry
@@ -80,6 +81,11 @@ class CockpitViewModel(
      *  and need special navigation handling by the platform layer. */
     private val _specialModuleLaunch = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val specialModuleLaunch: SharedFlow<String> = _specialModuleLaunch.asSharedFlow()
+
+    /** Emits content-specific actions (web back/forward, PDF page turn, etc.)
+     *  targeted at the currently selected frame's content renderer. */
+    private val _contentAction = MutableSharedFlow<ContentAction>(extraBufferCapacity = 1)
+    val contentAction: SharedFlow<ContentAction> = _contentAction.asSharedFlow()
 
     init {
         // Derive dashboard state from sessions + active session
@@ -471,6 +477,69 @@ class CockpitViewModel(
      */
     fun setBackgroundScene(scene: BackgroundScene) {
         _backgroundScene.value = scene
+    }
+
+    /**
+     * Dispatch a content-specific action (e.g. web back/forward, PDF page turn)
+     * to the currently selected frame's content renderer.
+     *
+     * The action is emitted via [contentAction] SharedFlow and collected by the
+     * active ContentRenderer instance for the selected frame.
+     */
+    fun dispatchContentAction(action: ContentAction) {
+        _contentAction.tryEmit(action)
+    }
+
+    // ── Deep Link Entry Points ────────────────────────────────────────
+
+    /**
+     * Handle a deep link URI and navigate to the corresponding state.
+     *
+     * Supported URI schemes:
+     * - `cockpit://session/{sessionId}` — Resume an existing session
+     * - `cockpit://module/{moduleId}` — Launch a module (creates new session)
+     * - `cockpit://layout/{layoutMode}` — Switch to a layout mode in the current session
+     * - `cockpit://template/{templateId}` — Launch a session template
+     * - `cockpit://dashboard` — Return to the Dashboard
+     *
+     * Returns true if the deep link was handled, false if the URI was unrecognized.
+     * Unknown segments are silently ignored — this prevents crashes from malformed URIs.
+     */
+    fun handleDeepLink(uri: String): Boolean {
+        if (!uri.startsWith("cockpit://")) return false
+        val normalized = uri.removePrefix("cockpit://").trimEnd('/')
+        val segments = normalized.split("/", limit = 2)
+        val action = segments.firstOrNull() ?: return false
+        val param = segments.getOrNull(1)
+
+        return when (action) {
+            "session" -> {
+                val sessionId = param ?: return false
+                resumeSession(sessionId)
+                true
+            }
+            "module" -> {
+                val moduleId = param ?: return false
+                launchModule(moduleId)
+                true
+            }
+            "layout" -> {
+                val modeName = param?.uppercase() ?: return false
+                val mode = LayoutMode.entries.firstOrNull { it.name == modeName } ?: return false
+                setLayoutMode(mode)
+                true
+            }
+            "template" -> {
+                val templateId = param ?: return false
+                launchTemplate(templateId)
+                true
+            }
+            "dashboard" -> {
+                returnToDashboard()
+                true
+            }
+            else -> false
+        }
     }
 
     /**

@@ -21,6 +21,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,6 +41,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.Card
@@ -47,7 +50,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,10 +69,14 @@ import com.augmentalis.avanueui.components.settings.SettingsGroupCard
 import com.augmentalis.avanueui.components.settings.SettingsSectionHeader
 import com.augmentalis.avanueui.theme.AppearanceMode
 import com.augmentalis.avanueui.theme.AvanueColorPalette
+import com.augmentalis.avanueui.theme.AvanueModuleAccents
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.MaterialMode
+import com.augmentalis.avanueui.theme.ModuleAccent
 import com.augmentalis.avanueui.theme.ThemePreset
 import com.augmentalis.avanueui.theme.ThemePresetRegistry
+import com.augmentalis.cockpit.model.DashboardModule
+import com.augmentalis.cockpit.model.DashboardModuleRegistry
 
 /**
  * Inline overlay panel for theme customization within the Cockpit Dashboard.
@@ -164,6 +174,11 @@ fun ThemeSettingsPanel(
                     currentScene = currentBackgroundScene,
                     onSceneChanged = onBackgroundSceneChanged
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Section 4: Module Accent Colors
+                ModuleAccentsSection()
             }
         }
     }
@@ -431,4 +446,219 @@ private fun backgroundSceneLabel(scene: BackgroundScene): String = when (scene) 
     BackgroundScene.STARFIELD -> "Starfield"
     BackgroundScene.SCANLINE_GRID -> "Scanline Grid"
     BackgroundScene.TRANSPARENT -> "Transparent"
+}
+
+// ── Section 4: Module Accent Colors ─────────────────────────────────────────
+
+/**
+ * Predefined accent color palette for module customization.
+ * Material Design 500-level colors covering the full hue range.
+ */
+private val ACCENT_PALETTE: List<Color> = listOf(
+    Color(0xFFE53935), // Red
+    Color(0xFFEC407A), // Pink
+    Color(0xFF9C27B0), // Purple
+    Color(0xFF7E57C2), // Deep Purple
+    Color(0xFF3F51B5), // Indigo
+    Color(0xFF2196F3), // Blue
+    Color(0xFF00BCD4), // Cyan
+    Color(0xFF009688), // Teal
+    Color(0xFF4CAF50), // Green
+    Color(0xFF8BC34A), // Light Green
+    Color(0xFFFFC107), // Amber
+    Color(0xFFFF9800), // Orange
+    Color(0xFFFF5722), // Deep Orange
+    Color(0xFF795548), // Brown
+)
+
+/**
+ * Module accent color customization section.
+ *
+ * Allows per-module accent color overrides. Shows a horizontal scrollable
+ * row of module chips — selecting one reveals a color palette grid below.
+ * Choosing a color calls [AvanueModuleAccents.setOverride]; "Reset" clears
+ * the override to revert to the theme's global accent.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ModuleAccentsSection() {
+    val colors = AvanueTheme.colors
+    var selectedModuleId by remember { mutableStateOf<String?>(null) }
+
+    SettingsSectionHeader(title = "MODULE ACCENTS")
+
+    SettingsGroupCard {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            // Module chip row
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(
+                    DashboardModuleRegistry.allModules,
+                    key = { it.id }
+                ) { module ->
+                    ModuleAccentChip(
+                        module = module,
+                        isSelected = module.id == selectedModuleId,
+                        onClick = {
+                            selectedModuleId = if (selectedModuleId == module.id) null else module.id
+                        }
+                    )
+                }
+            }
+
+            // Expanded color palette for selected module
+            if (selectedModuleId != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = DashboardModuleRegistry.findById(selectedModuleId!!)?.displayName ?: "",
+                    color = colors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Color dots in a wrapping flow layout
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val currentAccent = AvanueModuleAccents.get(selectedModuleId!!)
+
+                    ACCENT_PALETTE.forEach { paletteColor ->
+                        AccentColorDot(
+                            color = paletteColor,
+                            isSelected = currentAccent.isCustom && currentAccent.accent == paletteColor,
+                            onClick = {
+                                AvanueModuleAccents.setOverride(
+                                    selectedModuleId!!,
+                                    ModuleAccent(
+                                        accent = paletteColor,
+                                        onAccent = Color.White,
+                                        accentMuted = paletteColor.copy(alpha = 0.6f),
+                                        isCustom = true
+                                    )
+                                )
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Reset button
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            AvanueModuleAccents.clearOverride(selectedModuleId!!)
+                        }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .semantics {
+                            contentDescription = "Voice: click Reset Accent"
+                        },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        tint = colors.textSecondary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "Reset to theme default",
+                        color = colors.textSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Compact chip showing a module's name and current accent color swatch.
+ * Tapping selects/deselects the module for accent editing.
+ */
+@Composable
+private fun ModuleAccentChip(
+    module: DashboardModule,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = AvanueTheme.colors
+    val accent = AvanueModuleAccents.get(module.id)
+    val chipShape = RoundedCornerShape(10.dp)
+
+    Row(
+        modifier = Modifier
+            .height(36.dp)
+            .clip(chipShape)
+            .background(
+                if (isSelected) accent.accent.copy(alpha = 0.15f) else colors.surface,
+                chipShape
+            )
+            .border(
+                width = if (isSelected) 1.5.dp else 0.5.dp,
+                color = if (isSelected) accent.accent else colors.border.copy(alpha = 0.3f),
+                shape = chipShape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp)
+            .semantics {
+                contentDescription = "Voice: click ${module.displayName} Accent"
+            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Color swatch dot
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(accent.accent)
+        )
+        Text(
+            text = module.displayName,
+            color = if (isSelected) accent.accent else colors.textPrimary.copy(alpha = 0.8f),
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * Individual color dot in the accent palette grid.
+ * Selected state shown with a primary-colored ring.
+ */
+@Composable
+private fun AccentColorDot(
+    color: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val ringColor = AvanueTheme.colors.textPrimary
+
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .then(
+                if (isSelected) Modifier.border(2.dp, ringColor, RoundedCornerShape(16.dp))
+                else Modifier
+            )
+            .clickable(onClick = onClick)
+            .padding(3.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(color)
+            .semantics {
+                contentDescription = "Voice: click Accent Color"
+            }
+    )
 }
