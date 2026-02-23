@@ -81,7 +81,7 @@ media_play|play music|play,resume|Play/resume media
 5. Merges command lists
 6. Single `insertBatch()` to DB
 
-Version `requiredVersion = "3.0"` — forces DB reload on app upgrade from v2.1.
+Version `VOS_DB_VERSION = "3.2"` — shared constant in `StaticCommandPersistenceImpl.companion` (commonMain). Both `CommandLoader` (androidMain) and `StaticCommandPersistenceImpl` (commonMain) reference this single constant to prevent version ping-pong on startup. Bump this constant to force DB reload across all platforms.
 
 **CRITICAL (260212)**: VOS files are now the ONLY source of truth. The hardcoded fallback command lists (~800 lines) have been removed from `StaticCommandRegistry`. If the DB is not initialized, `StaticCommandRegistry.all()` returns an empty list. This enforces `.VOS → DB` as the single source and eliminates dual-source maintenance burden.
 
@@ -625,6 +625,10 @@ fun findByPhrase(phrase: String): StaticCommand? =
 Multi-phrase commands (a single `StaticCommand` with several `phrases`) are indexed under each
 phrase independently, so all synonyms resolve in O(1).
 
+**`findById(id)`** — O(n) linear scan to find a command by its unique VOS action_id (e.g., `"voice_wake"`, `"voice_dict_stop"`). Used by `VoiceOSCore.setSpeechMode()` and `VoiceAvanueAccessibilityService` to load fallback wake/exit phrases from the registry. Returns `StaticCommand?`.
+
+**`StaticCommand` invariant** — `phrases` must be non-empty (enforced by `init { require(phrases.isNotEmpty()) }`). The `primaryPhrase` property delegates to `phrases.first()` and is safe given this guard. Use `cmd.phrases` directly when you need all trigger phrases including synonyms.
+
 ### 5.6 `StaticCommandRegistry` Suspend Variants
 
 All query methods now have `suspend` overloads. Callers running inside a coroutine scope use the
@@ -758,7 +762,7 @@ The `RETRAIN_PAGE` action type triggers a fresh DOM scrape of the current web pa
 7. If adding a new action_id prefix: add entry to `VosParser.CATEGORY_MAP`
 8. Add action_id → CommandActionType entry to `VosParser.ACTION_MAP`
 9. If the command has metadata (direction/scale/factor): add entry to `VosParser.META_MAP`
-10. Bump VOS version in `CommandLoader.requiredVersion` to force DB reload
+10. Bump `StaticCommandPersistenceImpl.VOS_DB_VERSION` to force DB reload (both CommandLoader and StaticCommandPersistenceImpl read this constant)
 
 ## 8. SFTP Sync (Phase B) — Implemented
 

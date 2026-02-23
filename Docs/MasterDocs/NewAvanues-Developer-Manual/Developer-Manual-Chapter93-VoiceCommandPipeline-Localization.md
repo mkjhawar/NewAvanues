@@ -93,6 +93,19 @@ Maps voice PHRASES to CommandActionTypes. Loaded from `commands_static` DB table
 
 **Total: 107 commands**
 
+### SpeechMode Enum and Engine Adapter Mapping
+
+`SpeechMode` (in `VoiceOSCore/speech/SpeechMode.kt`) defines how speech is processed:
+- `STATIC_COMMAND` — restricted grammar, predefined commands only
+- `DYNAMIC_COMMAND` — restricted grammar, UI-scraped commands
+- `COMBINED_COMMAND` — both static + dynamic (combining handled by VoiceOSCore coordinator)
+- `DICTATION` — continuous speech input, exit commands only in grammar
+- `FREE_SPEECH` — unrestricted vocabulary
+- `MUTED` — engine stays alive with restricted wake-only grammar (e.g., "wake up voice")
+- `HYBRID` — Vivoka-specific auto online/offline switching
+
+**Engine adapter mapping policy (260223):** All three adapters (VivokaAndroidEngine, KmpSpeechEngineAdapter, AppleSpeechEngineAdapter) map `COMBINED_COMMAND` and `MUTED` to `SpeechRecognition.SpeechMode.STATIC_COMMAND`. The combining of static + dynamic commands is a coordinator concern — the engine just receives a restricted grammar via `updateCommands()`. MUTED mode restricts the grammar to wake commands only.
+
 ### Layer 3: ActionCoordinator (Routing)
 Routes QuantizedCommands to the appropriate handler based on:
 1. Command metadata (source="web" -> WebCommandHandler)
