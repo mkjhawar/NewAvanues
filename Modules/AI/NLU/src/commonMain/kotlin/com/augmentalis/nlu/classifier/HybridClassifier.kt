@@ -18,6 +18,7 @@
 
 package com.augmentalis.nlu.classifier
 
+import com.augmentalis.nlu.Synchronized
 import kotlinx.datetime.Clock
 import com.augmentalis.nlu.matcher.EmbeddingProvider
 import com.augmentalis.nlu.matcher.FuzzyMatcher

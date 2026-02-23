@@ -11,6 +11,7 @@ package com.augmentalis.nlu
 import android.content.Context
 import com.augmentalis.ava.core.common.Result
 import com.augmentalis.ava.core.common.AVAException
+import com.augmentalis.crypto.aon.AONCodec
 import com.augmentalis.ava.core.data.db.EmbeddingMetadataQueries
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -735,6 +736,32 @@ actual class ModelManager(private val context: Context) {
             cachedChecksum = null
             cachedChecksumModelPath = null
         }
+    }
+
+    /**
+     * Get unwrapped ONNX model bytes with full AON verification.
+     *
+     * Reads the model file (from APK assets or file system) and passes
+     * through AONCodec.unwrap() which verifies HMAC-SHA256, SHA-256,
+     * CRC32, package authorization, and decrypts if needed.
+     *
+     * For APK-bundled models, reads from assets → internal storage.
+     * For non-AON files, returns data as-is (backward compatibility).
+     *
+     * @return Raw ONNX model bytes, verified and ready for inference
+     */
+    suspend fun getUnwrappedModelBytes(): ByteArray = withContext(Dispatchers.IO) {
+        val modelFile = activeModelFile
+        val rawBytes = when {
+            modelFile != null && modelFile.exists() -> modelFile.readBytes()
+            apkAssetExists() -> {
+                // Read from APK assets if not yet copied to internal storage
+                val assetFileName = getApkAssetFileName() ?: ModelType.MOBILEBERT.modelFileName
+                context.assets.open("models/$assetFileName").use { it.readBytes() }
+            }
+            else -> throw IllegalStateException("No NLU model available")
+        }
+        AONCodec.unwrap(rawBytes)
     }
 
     companion object {

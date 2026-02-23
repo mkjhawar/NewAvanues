@@ -17,6 +17,7 @@
 
 package com.augmentalis.nlu.matching
 
+import com.augmentalis.nlu.Synchronized
 import com.augmentalis.nlu.matcher.EmbeddingProvider
 import com.augmentalis.nlu.matcher.FuzzyMatcher
 import com.augmentalis.nlu.matcher.PatternMatcher

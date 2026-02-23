@@ -37,11 +37,11 @@ kotlin {
         }
     }
 
-    // Web/JS target (Phase 2 - disabled for now due to task conflicts)
-    // js(IR) {
-    //     browser()
-    //     nodejs()
-    // }
+    // Web/JS target — ONNX Runtime Web for browser-based NLU inference
+    js(IR) {
+        browser()
+        nodejs()
+    }
 
     sourceSets {
         // Common code (shared across all platforms)
@@ -49,6 +49,7 @@ kotlin {
             dependencies {
                 implementation(project(":Modules:AVA:core:Utils"))
                 implementation(project(":Modules:AVA:core:Domain"))
+                implementation(project(":Modules:Crypto"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
@@ -140,12 +141,21 @@ kotlin {
             }
         }
 
-        // JS-specific code (Phase 2 - disabled for now)
-        // val jsMain by getting {
-        //     dependencies {
-        //         // TensorFlow.js for browser-based inference (future)
-        //     }
-        // }
+        // JS/Web — ONNX Runtime Web for browser-based ML inference
+        val jsMain by getting {
+            dependencies {
+                // ONNX Runtime Web for browser WASM inference
+                implementation(npm("onnxruntime-web", "1.17.0"))
+                // SQLDelight web-worker driver for IndexedDB-backed SQL
+                implementation(libs.sqldelight.js.driver)
+            }
+        }
+
+        val jsTest by getting {
+            dependencies {
+                implementation(kotlin("test-js"))
+            }
+        }
     }
 }
 
