@@ -348,6 +348,28 @@ function bindFrameActions(container) {
       return;
     }
 
+    /* workflow step items */
+    const step = e.target.closest('.workflow-step');
+    if (step) {
+      const frameId = step.getAttribute('data-frame');
+      if (frameId) {
+        selectFrame(state, frameId);
+        render();
+      }
+      return;
+    }
+
+    /* carousel navigation arrows */
+    const carouselNav = e.target.closest('.carousel-nav');
+    if (carouselNav) {
+      const frameId = carouselNav.getAttribute('data-frame');
+      if (frameId) {
+        selectFrame(state, frameId);
+        render();
+      }
+      return;
+    }
+
     /* frame window selection */
     const frameEl = e.target.closest('.frame-window');
     if (frameEl) {
