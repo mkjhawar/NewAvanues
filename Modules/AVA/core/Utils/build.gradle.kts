@@ -54,7 +54,7 @@ kotlin {
                 api("com.jakewharton.timber:timber:5.0.1")
 
                 // Firebase Crashlytics (optional - graceful degradation if missing)
-                compileOnly(platform("com.google.firebase:firebase-bom:32.7.0"))
+                compileOnly(project.dependencies.platform("com.google.firebase:firebase-bom:32.7.0"))
                 compileOnly("com.google.firebase:firebase-crashlytics-ktx")
             }
         }

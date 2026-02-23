@@ -52,7 +52,7 @@ kotlin {
                 implementation(project(":Modules:AvanueUI"))
                 implementation(project(":Modules:VoiceOSCore"))
                 implementation(libs.androidx.core.ktx)
-                implementation(platform(libs.compose.bom.get()))
+                implementation(project.dependencies.platform(libs.compose.bom.get()))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
                 implementation(libs.compose.material.icons.extended)

@@ -63,7 +63,7 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     
     // Compose - Using project's forced BOM version
-    implementation(platform(libs.compose.bom.get()))
+    implementation(project.dependencies.platform(libs.compose.bom.get()))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")

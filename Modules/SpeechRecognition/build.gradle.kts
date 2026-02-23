@@ -163,7 +163,7 @@ kotlin {
                 implementation(libs.gson)
 
                 // Firebase
-                implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
+                implementation(project.dependencies.platform("com.google.firebase:firebase-bom:34.3.0"))
                 implementation("com.google.firebase:firebase-config")
                 implementation("com.google.firebase:firebase-auth")
 
