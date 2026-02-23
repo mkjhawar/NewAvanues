@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -324,89 +325,35 @@ fun AvanuesApp(
 
         // ── Module-Direct Launcher Routes ──
         // Each launches Cockpit with a specific module auto-opened via launchModule()
+        moduleDirectRoute(AvanueMode.PDF, "pdfavanue", navController)
+        moduleDirectRoute(AvanueMode.IMAGE, "imageavanue", navController)
+        moduleDirectRoute(AvanueMode.VIDEO, "videoavanue", navController)
+        moduleDirectRoute(AvanueMode.NOTE, "noteavanue", navController)
+        moduleDirectRoute(AvanueMode.PHOTO, "photoavanue", navController)
+        moduleDirectRoute(AvanueMode.CAST, "remotecast", navController)
+        moduleDirectRoute(AvanueMode.DRAW, "annotationavanue", navController)
+    }
+}
 
-        composable(AvanueMode.PDF.route) {
-            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                cockpitEntry.cockpitViewModel.launchModule("pdfavanue")
-            }
-            CockpitScreen(
-                viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
-            )
+/**
+ * Registers a module-direct launcher route — launches Cockpit with a specific
+ * module auto-opened via [CockpitViewModel.launchModule].
+ * Used for launcher icon aliases (PDF, Image, Video, Note, Photo, Cast, Draw).
+ */
+private fun NavGraphBuilder.moduleDirectRoute(
+    mode: AvanueMode,
+    moduleId: String,
+    navController: NavHostController
+) {
+    composable(mode.route) {
+        val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+        LaunchedEffect(Unit) {
+            cockpitEntry.cockpitViewModel.launchModule(moduleId)
         }
-
-        composable(AvanueMode.IMAGE.route) {
-            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                cockpitEntry.cockpitViewModel.launchModule("imageavanue")
-            }
-            CockpitScreen(
-                viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
-            )
-        }
-
-        composable(AvanueMode.VIDEO.route) {
-            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                cockpitEntry.cockpitViewModel.launchModule("videoavanue")
-            }
-            CockpitScreen(
-                viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
-            )
-        }
-
-        composable(AvanueMode.NOTE.route) {
-            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                cockpitEntry.cockpitViewModel.launchModule("noteavanue")
-            }
-            CockpitScreen(
-                viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
-            )
-        }
-
-        composable(AvanueMode.PHOTO.route) {
-            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                cockpitEntry.cockpitViewModel.launchModule("photoavanue")
-            }
-            CockpitScreen(
-                viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
-            )
-        }
-
-        composable(AvanueMode.CAST.route) {
-            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                cockpitEntry.cockpitViewModel.launchModule("remotecast")
-            }
-            CockpitScreen(
-                viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
-            )
-        }
-
-        composable(AvanueMode.DRAW.route) {
-            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                cockpitEntry.cockpitViewModel.launchModule("annotationavanue")
-            }
-            CockpitScreen(
-                viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
-            )
-        }
+        CockpitScreen(
+            viewModel = cockpitEntry.cockpitViewModel,
+            onNavigateBack = { navController.popBackStack() },
+            onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
+        )
     }
 }
