@@ -32,13 +32,13 @@ class SettingsStateMachineTest {
     // ==================== Basic State Transitions ====================
 
     @Test
-    fun `initial state is Idle`() = runTest {
+    fun `initial state is Idle`() = testScope.runTest {
         val state = stateMachine.state.first()
         assertTrue(state is SettingsState.Idle)
     }
 
     @Test
-    fun `single update transitions Idle to Applying to Idle`() = runTest {
+    fun `single update transitions Idle to Applying to Idle`() = testScope.runTest {
         val settings = BrowserSettings()
         var applyCount = 0
 
@@ -67,7 +67,7 @@ class SettingsStateMachineTest {
     }
 
     @Test
-    fun `failed update transitions to Error state`() = runTest {
+    fun `failed update transitions to Error state`() = testScope.runTest {
         val settings = BrowserSettings()
         val error = Exception("Apply failed")
 
@@ -88,7 +88,7 @@ class SettingsStateMachineTest {
     // ==================== Queuing Behavior ====================
 
     @Test
-    fun `rapid updates queue correctly`() = runTest {
+    fun `rapid updates queue correctly`() = testScope.runTest {
         val settings1 = BrowserSettings(enableJavaScript = true)
         val settings2 = BrowserSettings(enableJavaScript = false)
         val appliedSettings = mutableListOf<BrowserSettings>()
@@ -128,7 +128,7 @@ class SettingsStateMachineTest {
     }
 
     @Test
-    fun `queued update replaces previous queue`() = runTest {
+    fun `queued update replaces previous queue`() = testScope.runTest {
         val settings1 = BrowserSettings(enableJavaScript = true)
         val settings2 = BrowserSettings(blockAds = true)
         val settings3 = BrowserSettings(blockTrackers = true)
@@ -173,7 +173,7 @@ class SettingsStateMachineTest {
     // ==================== Error Handling & Retry ====================
 
     @Test
-    fun `retry error with exponential backoff`() = runTest {
+    fun `retry error with exponential backoff`() = testScope.runTest {
         val settings = BrowserSettings()
         var attemptCount = 0
         val errors = mutableListOf<Exception>()
@@ -211,7 +211,7 @@ class SettingsStateMachineTest {
     }
 
     @Test
-    fun `retry respects maxRetries limit`() = runTest {
+    fun `retry respects maxRetries limit`() = testScope.runTest {
         val settings = BrowserSettings()
         var attemptCount = 0
 
@@ -251,7 +251,7 @@ class SettingsStateMachineTest {
     // ==================== Reset Behavior ====================
 
     @Test
-    fun `reset clears queue and returns to Idle`() = runTest {
+    fun `reset clears queue and returns to Idle`() = testScope.runTest {
         val settings1 = BrowserSettings(enableJavaScript = true)
         val settings2 = BrowserSettings(blockAds = true)
         val appliedSettings = mutableListOf<BrowserSettings>()
@@ -292,7 +292,7 @@ class SettingsStateMachineTest {
     // ==================== Concurrency Tests ====================
 
     @Test
-    fun `concurrent requests are serialized`() = runTest {
+    fun `concurrent requests are serialized`() = testScope.runTest {
         val settings1 = BrowserSettings(enableJavaScript = true)
         val settings2 = BrowserSettings(blockAds = true)
         val settings3 = BrowserSettings(blockTrackers = true)
@@ -322,7 +322,7 @@ class SettingsStateMachineTest {
     }
 
     @Test
-    fun `state machine prevents race conditions`() = runTest {
+    fun `state machine prevents race conditions`() = testScope.runTest {
         val settings = BrowserSettings()
         var concurrentAccessCount = 0
         var maxConcurrent = 0
@@ -359,7 +359,7 @@ class SettingsStateMachineTest {
     // ==================== Utility Methods ====================
 
     @Test
-    fun `isApplying returns correct state`() = runTest {
+    fun `isApplying returns correct state`() = testScope.runTest {
         assertFalse(stateMachine.isApplying())
 
         val settings = BrowserSettings()
@@ -376,7 +376,7 @@ class SettingsStateMachineTest {
     }
 
     @Test
-    fun `getCurrentError returns error when in Error state`() = runTest {
+    fun `getCurrentError returns error when in Error state`() = testScope.runTest {
         assertNull(stateMachine.getCurrentError())
 
         val settings = BrowserSettings()
@@ -396,7 +396,7 @@ class SettingsStateMachineTest {
     // ==================== Real-World Scenario ====================
 
     @Test
-    fun `realistic settings update scenario`() = runTest {
+    fun `realistic settings update scenario`() = testScope.runTest {
         // User rapidly toggles settings
         val settings1 = BrowserSettings(enableJavaScript = true)
         val settings2 = BrowserSettings(enableJavaScript = false)
