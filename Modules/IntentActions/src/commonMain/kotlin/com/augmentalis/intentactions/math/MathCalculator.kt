@@ -365,14 +365,16 @@ object MathCalculator {
             result == result.toLong().toDouble() -> result.toLong().toString()
             else -> {
                 // Format to 6 decimal places without String.format (KMP-compatible)
-                val scaled = (result * 1_000_000).toLong()
-                val intPart = (result.toLong())
-                val fracPart = kotlin.math.abs(scaled - intPart * 1_000_000)
+                val isNegative = result < 0
+                val absResult = kotlin.math.abs(result)
+                val scaled = (absResult * 1_000_000).toLong()
+                val intPart = absResult.toLong()
+                val fracPart = scaled - intPart * 1_000_000
                 val fracStr = fracPart.toString().padStart(6, '0').trimEnd('0')
                 if (fracStr.isEmpty()) {
-                    intPart.toString()
+                    if (isNegative) "-$intPart" else intPart.toString()
                 } else {
-                    "$intPart.$fracStr"
+                    if (isNegative) "-$intPart.$fracStr" else "$intPart.$fracStr"
                 }
             }
         }

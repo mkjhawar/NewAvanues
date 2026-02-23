@@ -50,6 +50,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.kotlinx.serialization.json)
+                implementation("com.jakewharton.timber:timber:5.0.1")
             }
         }
 

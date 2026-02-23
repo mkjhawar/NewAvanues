@@ -27,7 +27,7 @@ object UriSanitizer {
         return when {
             lowerUrl.startsWith("https://") -> trimmed
             lowerUrl.startsWith("http://") -> "https://${trimmed.substring("http://".length)}"
-            trimmed.contains(".") -> "https://$trimmed"  // bare domain
+            trimmed.matches(Regex("[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/\\S*)?")) -> "https://$trimmed"
             else -> null
         }
     }

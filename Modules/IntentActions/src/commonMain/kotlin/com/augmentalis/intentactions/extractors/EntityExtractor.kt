@@ -1,5 +1,7 @@
 package com.augmentalis.intentactions.extractors
 
+import com.augmentalis.intentactions.UriSanitizer
+
 /**
  * Base interface for entity extraction from user utterances.
  *
@@ -90,13 +92,7 @@ object URLEntityExtractor : EntityExtractor<String> {
     override fun extract(utterance: String): String? {
         patterns.forEach { pattern ->
             pattern.find(utterance)?.groupValues?.getOrNull(1)?.let { match ->
-                val url = match.trim()
-                // Add https:// if not present
-                return if (url.startsWith("http://") || url.startsWith("https://")) {
-                    url
-                } else {
-                    "https://$url"
-                }
+                return UriSanitizer.sanitizeWebUrl(match.trim())
             }
         }
         return null
@@ -192,7 +188,8 @@ object RecipientEntityExtractor : EntityExtractor<Recipient> {
 object MessageEntityExtractor : EntityExtractor<String> {
     private val patterns = listOf(
         Regex("(?:saying|that) (.+)", RegexOption.IGNORE_CASE),
-        Regex("(?:message|text) (?:[\\w\\s]+?) (.+)", RegexOption.IGNORE_CASE)
+        Regex("(?:message|text) [\\w]+\\s+(?:saying |that )(.+)", RegexOption.IGNORE_CASE),
+        Regex("(?:send |text |message )\\w+\\s+(.+)", RegexOption.IGNORE_CASE)
     )
 
     override fun extract(utterance: String): String? {

@@ -76,4 +76,15 @@ object IntentActionsInitializer {
             initialized = true
         }
     }
+
+    /** Check if the initializer has already run */
+    fun isInitialized(): Boolean = initialized
+
+    /** Reset state and clear the registry (for testing or re-initialization) */
+    fun reset() {
+        synchronized(this) {
+            initialized = false
+            IntentActionRegistry.clear()
+        }
+    }
 }

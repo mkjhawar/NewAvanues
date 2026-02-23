@@ -130,24 +130,21 @@ object SetTimerAction : IIntentAction {
         var durationSeconds: Int? = null
         var unit = "minutes"
 
-        durationPatterns.forEach { pattern ->
-            pattern.find(text)?.let { matchResult ->
-                val value = matchResult.groupValues.getOrNull(1)?.toIntOrNull()
-                if (value != null) {
-                    unit = when {
-                        matchResult.value.contains("second", ignoreCase = true) ||
-                        matchResult.value.contains("sec", ignoreCase = true) -> "seconds"
-                        matchResult.value.contains("hour", ignoreCase = true) -> "hours"
-                        else -> "minutes"
-                    }
-                    durationSeconds = when (unit) {
-                        "seconds" -> value
-                        "hours" -> value * 3600
-                        else -> value * 60
-                    }
-                    return@forEach
-                }
+        for (pattern in durationPatterns) {
+            val matchResult = pattern.find(text) ?: continue
+            val value = matchResult.groupValues.getOrNull(1)?.toIntOrNull() ?: continue
+            unit = when {
+                matchResult.value.contains("second", ignoreCase = true) ||
+                matchResult.value.contains("sec", ignoreCase = true) -> "seconds"
+                matchResult.value.contains("hour", ignoreCase = true) -> "hours"
+                else -> "minutes"
             }
+            durationSeconds = when (unit) {
+                "seconds" -> value
+                "hours" -> value * 3600
+                else -> value * 60
+            }
+            break
         }
 
         // Fallback: try to extract a plain number and assume minutes
@@ -319,7 +316,10 @@ object AddTodoAction : IIntentAction {
                 }
 
                 try {
-                    context.startActivity(Intent.createChooser(genericIntent, "Add task to..."))
+                    val chooser = Intent.createChooser(genericIntent, "Add task to...").apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(chooser)
                     IntentResult.Success(message = "Adding task: $task")
                 } catch (chooserError: Exception) {
                     IntentResult.Failed(
@@ -382,7 +382,10 @@ object CreateNoteAction : IIntentAction {
                 }
 
                 try {
-                    context.startActivity(Intent.createChooser(genericIntent, "Create note in..."))
+                    val chooser = Intent.createChooser(genericIntent, "Create note in...").apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(chooser)
                     val preview = if (content.length > 50) "${content.take(50)}..." else content
                     IntentResult.Success(message = "Creating note: $preview")
                 } catch (chooserError: Exception) {
