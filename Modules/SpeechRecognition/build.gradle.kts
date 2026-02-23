@@ -90,6 +90,9 @@ kotlin {
 
                 // NLU module for CommandMatchingService
                 implementation(project(":Modules:AI:NLU"))
+
+                // Foundation for ModuleSettingsProvider
+                implementation(project(":Modules:Foundation"))
             }
         }
 

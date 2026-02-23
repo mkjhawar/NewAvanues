@@ -101,19 +101,22 @@ class GoogleCloudStreamingClient(
      * Start the streaming recognition session.
      * Launches a background coroutine that manages the HTTP/2 stream lifecycle.
      */
-    fun startStreaming(speechMode: String = "") {
+    private var currentPhraseHints: List<String> = emptyList()
+
+    fun startStreaming(speechMode: String = "", phraseHints: List<String> = emptyList()) {
         if (isStreaming.getAndSet(true)) {
             Log.w(TAG, "Already streaming")
             return
         }
 
+        currentPhraseHints = phraseHints
         reconnectAttempts = 0
 
         streamJob = scope.launch(Dispatchers.IO) {
             streamLoop(speechMode)
         }
 
-        Log.i(TAG, "Streaming started")
+        Log.i(TAG, "Streaming started (phraseHints=${phraseHints.size})")
     }
 
     /**
@@ -373,6 +376,24 @@ class GoogleCloudStreamingClient(
                     addProperty("maxAlternatives", this@GoogleCloudStreamingClient.config.maxAlternatives)
                     addProperty("profanityFilter", this@GoogleCloudStreamingClient.config.profanityFilter)
                 })
+
+                // Phrase hints via adaptation — biases streaming recognition toward expected commands
+                if (currentPhraseHints.isNotEmpty()) {
+                    add("adaptation", JsonObject().apply {
+                        val phraseSets = com.google.gson.JsonArray()
+                        phraseSets.add(JsonObject().apply {
+                            val phrases = com.google.gson.JsonArray()
+                            currentPhraseHints.take(500).forEach { hint ->
+                                phrases.add(JsonObject().apply {
+                                    addProperty("value", hint)
+                                    addProperty("boost", 10.0)
+                                })
+                            }
+                            add("phrases", phrases)
+                        })
+                        add("phraseSets", phraseSets)
+                    })
+                }
             })
             add("streamingConfig", JsonObject().apply {
                 add("streamingFeatures", JsonObject().apply {

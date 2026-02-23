@@ -408,7 +408,7 @@ class GoogleCloudEngine(
             return
         }
 
-        client.startStreaming(speechMode.name)
+        client.startStreaming(speechMode.name, phraseHints = commandCache.getAllCommands())
 
         while (scope.isActive && engineState.get() == WhisperEngineState.LISTENING) {
             delay(STREAM_CHUNK_MS)
@@ -436,7 +436,7 @@ class GoogleCloudEngine(
             val audioDurationMs = (audioData.size * 1000L) / WhisperAudio.SAMPLE_RATE
             Log.d(TAG, "Recognizing chunk: ${audioData.size} samples, ~${audioDurationMs}ms")
 
-            val response = client.recognize(audioData, speechMode.name)
+            val response = client.recognize(audioData, speechMode.name, phraseHints = commandCache.getAllCommands())
 
             when (response) {
                 is RecognizeResponse.Success -> {
