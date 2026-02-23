@@ -3,16 +3,16 @@
  * All Rights Reserved.
  */
 
-@file:OptIn(ExperimentalUnsignedTypes::class)
+@file:OptIn(ExperimentalUnsignedTypes::class, kotlinx.cinterop.ExperimentalForeignApi::class)
 
 package com.augmentalis.crypto.digest
 
-import com.augmentalis.crypto.native.cc.CC_MD5
-import com.augmentalis.crypto.native.cc.CC_MD5_DIGEST_LENGTH
-import com.augmentalis.crypto.native.cc.CC_SHA256
-import com.augmentalis.crypto.native.cc.CC_SHA256_DIGEST_LENGTH
-import com.augmentalis.crypto.native.cc.CCHmac
-import com.augmentalis.crypto.native.cc.kCCHmacAlgSHA256
+import platform.CoreCrypto.CC_MD5
+import platform.CoreCrypto.CC_MD5_DIGEST_LENGTH
+import platform.CoreCrypto.CC_SHA256
+import platform.CoreCrypto.CC_SHA256_DIGEST_LENGTH
+import platform.CoreCrypto.CCHmac
+import platform.CoreCrypto.kCCHmacAlgSHA256
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.memScoped
@@ -22,8 +22,8 @@ import kotlinx.cinterop.UByteVar
 import platform.posix.uint8_tVar
 
 /**
- * iOS/macOS implementation of CryptoDigest.
- * Uses CommonCrypto framework via cinterop.
+ * Darwin (iOS + macOS) implementation of CryptoDigest.
+ * Uses CommonCrypto framework via built-in platform.CoreCrypto bindings.
  */
 actual object CryptoDigest {
 

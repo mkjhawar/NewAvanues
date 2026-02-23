@@ -1,5 +1,5 @@
 /**
- * Sha256Ios.kt - iOS implementation of SHA-256
+ * Sha256Darwin.kt - Darwin (iOS + macOS) implementation of SHA-256
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Pure Kotlin implementation for maximum compatibility (FIPS 180-4).

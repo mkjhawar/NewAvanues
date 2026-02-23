@@ -20,7 +20,7 @@ kotlin {
         }
     }
 
-    // iOS targets with CommonCrypto cinterop
+    // iOS targets — CommonCrypto via built-in platform.CoreCrypto
     listOf(
         iosX64(),
         iosArm64(),
@@ -30,29 +30,11 @@ kotlin {
             baseName = "Crypto"
             isStatic = true
         }
-
-        it.compilations.getByName("main") {
-            cinterops {
-                val commoncrypto by creating {
-                    defFile("src/nativeInterop/cinterop/commoncrypto.def")
-                }
-            }
-        }
     }
 
-    // macOS targets with CommonCrypto cinterop
-    listOf(
-        macosX64(),
-        macosArm64()
-    ).forEach {
-        it.compilations.getByName("main") {
-            cinterops {
-                val commoncrypto by creating {
-                    defFile("src/nativeInterop/cinterop/commoncrypto.def")
-                }
-            }
-        }
-    }
+    // macOS targets — CommonCrypto via built-in platform.CoreCrypto
+    macosX64()
+    macosArm64()
 
     // Desktop JVM target
     jvm("desktop") {
@@ -90,9 +72,8 @@ kotlin {
             dependsOn(jvmMain)
         }
 
-        // Shared Apple/Darwin source set — CommonCrypto-based crypto
-        // All iOS + macOS targets have commoncrypto cinterop, so darwinMain
-        // gets access to the generated bindings (Kotlin 1.9+ feature)
+        // Shared Apple/Darwin source set — uses built-in platform.CoreCrypto
+        // (CommonCrypto) bindings, available for all Apple targets
         val darwinMain by creating {
             dependsOn(commonMain)
             dependencies {

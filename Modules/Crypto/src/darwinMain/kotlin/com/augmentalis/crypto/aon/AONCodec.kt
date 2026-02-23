@@ -3,18 +3,22 @@
  * All Rights Reserved.
  */
 
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
 package com.augmentalis.crypto.aon
 
 import com.augmentalis.crypto.digest.CryptoDigest
 import com.augmentalis.crypto.identity.PlatformIdentity
+import platform.Foundation.NSDate
+import platform.Foundation.timeIntervalSince1970
 
 /**
- * iOS/macOS implementation of AONCodec.
+ * Darwin (iOS + macOS) implementation of AONCodec.
  * Uses CommonCrypto via CryptoDigest for all crypto operations.
  *
  * Note: AES-256-GCM decryption requires CommonCrypto's CCCrypt with
  * kCCAlgorithmAES + kCCOptionPKCS7Padding for GCM mode. For initial
- * release, encrypted models are not supported on iOS — only signed
+ * release, encrypted models are not supported on Darwin — only signed
  * and integrity-checked models.
  */
 actual object AONCodec {
@@ -89,7 +93,7 @@ actual object AONCodec {
 
             // 6. Expiry
             if (header.expiryTimestamp > 0) {
-                val now = platform.Foundation.NSDate().timeIntervalSince1970.toLong()
+                val now = NSDate().timeIntervalSince1970.toLong()
                 expired = now > header.expiryTimestamp
                 if (expired) errors.add("AON file expired")
             }
@@ -120,7 +124,7 @@ actual object AONCodec {
         val onnxData = aonData.copyOfRange(AONFormat.HEADER_SIZE, payloadEnd)
 
         if (header.encryptionScheme == AONFormat.ENCRYPTION_AES_256_GCM) {
-            throw AONSecurityException("AES-256-GCM decryption not yet supported on iOS. Use unencrypted AON files.")
+            throw AONSecurityException("AES-256-GCM decryption not yet supported on Darwin. Use unencrypted AON files.")
         }
 
         return onnxData
