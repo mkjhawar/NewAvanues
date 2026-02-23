@@ -234,7 +234,14 @@ fun AvanuesApp(
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
                 onNavigateBack = { /* no-op, this is home */ },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) },
+                onSpecialModuleLaunch = { moduleId ->
+                    when (moduleId) {
+                        "voicecursor" -> navController.navigate(AvanueMode.VOICE.route)
+                        else -> android.util.Log.w("MainActivity",
+                            "Unknown special module: $moduleId — no navigation target")
+                    }
+                }
             )
         }
 

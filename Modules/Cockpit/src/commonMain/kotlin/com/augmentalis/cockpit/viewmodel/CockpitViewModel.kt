@@ -15,8 +15,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -65,6 +68,11 @@ class CockpitViewModel(
 
     private val _dashboardState = MutableStateFlow(DashboardState())
     val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
+
+    /** Emits module IDs that don't map to frame content (e.g. "voicecursor")
+     *  and need special navigation handling by the platform layer. */
+    private val _specialModuleLaunch = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val specialModuleLaunch: SharedFlow<String> = _specialModuleLaunch.asSharedFlow()
 
     init {
         // Derive dashboard state from sessions + active session
@@ -348,18 +356,18 @@ class CockpitViewModel(
      */
     fun launchModule(moduleId: String) {
         val module = DashboardModuleRegistry.findById(moduleId) ?: return
+        val content = contentForType(module.contentType)
+        if (content == null) {
+            // Non-frame module (e.g. CursorAvanue) — don't create a session,
+            // emit to specialModuleLaunch so the platform layer can navigate.
+            _specialModuleLaunch.tryEmit(moduleId)
+            return
+        }
         scope.launch {
             val session = createSession(module.displayName)
             loadSessionInternal(session.id)
-
-            val content = contentForType(module.contentType)
-            if (content != null) {
-                addFrame(content, module.displayName)
-                setLayoutMode(LayoutMode.FULLSCREEN)
-            }
-            // Non-frame modules (e.g. "cursor") skip frame creation —
-            // the session exists but remains on Dashboard or triggers
-            // a special navigation via onSpecialModuleLaunch flow.
+            addFrame(content, module.displayName)
+            setLayoutMode(LayoutMode.FULLSCREEN)
         }
     }
 

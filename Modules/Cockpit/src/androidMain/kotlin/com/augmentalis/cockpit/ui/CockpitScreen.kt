@@ -2,6 +2,7 @@ package com.augmentalis.cockpit.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ fun CockpitScreen(
     viewModel: CockpitViewModel,
     onNavigateBack: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onSpecialModuleLaunch: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val session by viewModel.activeSession.collectAsState()
@@ -85,6 +87,13 @@ fun CockpitScreen(
         }
         onDispose {
             ModuleCommandCallbacks.cockpitExecutor = null
+        }
+    }
+
+    // Handle non-frame module launches (e.g. CursorAvanue → VoiceTouch home)
+    LaunchedEffect(viewModel) {
+        viewModel.specialModuleLaunch.collect { moduleId ->
+            onSpecialModuleLaunch(moduleId)
         }
     }
 
