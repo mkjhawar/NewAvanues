@@ -44,8 +44,6 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wallpaper
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -64,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.augmentalis.avanueui.components.AvanueCard
 import com.augmentalis.avanueui.components.settings.SettingsDropdownRow
 import com.augmentalis.avanueui.components.settings.SettingsGroupCard
 import com.augmentalis.avanueui.components.settings.SettingsSectionHeader
@@ -276,28 +275,24 @@ private fun PresetCard(
         )
     }
 
-    Card(
+    AvanueCard(
+        onClick = onClick,
         modifier = Modifier
             .width(140.dp)
             .height(100.dp)
             .then(borderModifier)
-            .clickable(onClick = onClick)
             .semantics {
                 contentDescription = "Voice: click ${preset.displayName} Preset"
             },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) {
-                colors.primary.copy(alpha = 0.1f)
-            } else {
-                colors.surface.copy(alpha = 0.7f)
-            }
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    if (isActive) colors.primary.copy(alpha = 0.1f)
+                    else colors.surface.copy(alpha = 0.7f)
+                )
                 .padding(10.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {

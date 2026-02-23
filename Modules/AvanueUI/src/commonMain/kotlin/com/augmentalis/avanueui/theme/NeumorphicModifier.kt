@@ -218,10 +218,10 @@ private fun DrawScope.drawNeumorphicLayer(
     blurPx: Float,
     cornerPx: Float,
 ) {
-    drawIntoCanvas { canvas ->
-        val paint = Paint().apply { isAntiAlias = true }
-        val path = Path()
+    val paint = Paint().apply { isAntiAlias = true }
+    val path = Path()
 
+    drawIntoCanvas { canvas ->
         for (i in 0 until BLUR_PASSES) {
             val fraction = i.toFloat() / BLUR_PASSES.toFloat()
             val expansion = blurPx * fraction

@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import kotlin.random.Random
 
 /**
  * ViewModel managing the active Cockpit session, frames, layout, and persistence.
@@ -212,88 +211,70 @@ class CockpitViewModel(
     }
 
     /**
+     * Apply a transform to a single frame by ID, stamp updatedAt, and auto-save.
+     *
+     * Centralizes the map-match-copy-save pattern that was duplicated across
+     * selectFrame, moveFrame, resizeFrame, toggleMinimize, toggleMaximize,
+     * updateFrameContent, and renameFrame.
+     */
+    private fun updateFrame(frameId: String, transform: (CockpitFrame) -> CockpitFrame) {
+        _frames.value = _frames.value.map { frame ->
+            if (frame.id == frameId) transform(frame).copy(updatedAt = Clock.System.now().toString())
+            else frame
+        }
+        scheduleAutoSave()
+    }
+
+    /**
      * Select/focus a frame (brings it to front in freeform mode).
      */
     fun selectFrame(frameId: String) {
         _selectedFrameId.value = frameId
-
-        // Bring to front: update z-order
-        _frames.value = _frames.value.map { frame ->
-            if (frame.id == frameId) {
-                frame.copy(
-                    state = frame.state.copy(zOrder = nextZOrder++),
-                    updatedAt = Clock.System.now().toString()
-                )
-            } else frame
+        updateFrame(frameId) { frame ->
+            frame.copy(state = frame.state.copy(zOrder = nextZOrder++))
         }
-
-        scheduleAutoSave()
     }
 
     /**
      * Move a frame to a new position (freeform mode).
      */
     fun moveFrame(frameId: String, newX: Float, newY: Float) {
-        _frames.value = _frames.value.map { frame ->
-            if (frame.id == frameId) {
-                frame.copy(
-                    state = frame.state.copy(posX = newX, posY = newY),
-                    updatedAt = Clock.System.now().toString()
-                )
-            } else frame
+        updateFrame(frameId) { frame ->
+            frame.copy(state = frame.state.copy(posX = newX, posY = newY))
         }
-        scheduleAutoSave()
     }
 
     /**
      * Resize a frame to new dimensions (freeform mode).
      */
     fun resizeFrame(frameId: String, newWidth: Float, newHeight: Float) {
-        _frames.value = _frames.value.map { frame ->
-            if (frame.id == frameId) {
-                frame.copy(
-                    state = frame.state.copy(width = newWidth, height = newHeight),
-                    updatedAt = Clock.System.now().toString()
-                )
-            } else frame
+        updateFrame(frameId) { frame ->
+            frame.copy(state = frame.state.copy(width = newWidth, height = newHeight))
         }
-        scheduleAutoSave()
     }
 
     /**
      * Toggle minimize state for a frame.
      */
     fun toggleMinimize(frameId: String) {
-        _frames.value = _frames.value.map { frame ->
-            if (frame.id == frameId) {
-                frame.copy(
-                    state = frame.state.copy(
-                        isMinimized = !frame.state.isMinimized,
-                        isMaximized = false // un-maximize if minimizing
-                    ),
-                    updatedAt = Clock.System.now().toString()
-                )
-            } else frame
+        updateFrame(frameId) { frame ->
+            frame.copy(state = frame.state.copy(
+                isMinimized = !frame.state.isMinimized,
+                isMaximized = false
+            ))
         }
-        scheduleAutoSave()
     }
 
     /**
      * Toggle maximize state for a frame.
      */
     fun toggleMaximize(frameId: String) {
-        _frames.value = _frames.value.map { frame ->
-            if (frame.id == frameId) {
-                frame.copy(
-                    state = frame.state.copy(
-                        isMaximized = !frame.state.isMaximized,
-                        isMinimized = false // un-minimize if maximizing
-                    ),
-                    updatedAt = Clock.System.now().toString()
-                )
-            } else frame
+        updateFrame(frameId) { frame ->
+            frame.copy(state = frame.state.copy(
+                isMaximized = !frame.state.isMaximized,
+                isMinimized = false
+            ))
         }
-        scheduleAutoSave()
     }
 
     /**
@@ -301,15 +282,9 @@ class CockpitViewModel(
      * Updates in-memory state AND schedules auto-save to persist.
      */
     fun updateFrameContent(frameId: String, newContent: FrameContent) {
-        _frames.value = _frames.value.map { frame ->
-            if (frame.id == frameId) {
-                frame.copy(
-                    content = newContent,
-                    updatedAt = Clock.System.now().toString()
-                )
-            } else frame
+        updateFrame(frameId) { frame ->
+            frame.copy(content = newContent)
         }
-        scheduleAutoSave()
     }
 
     /**
@@ -370,15 +345,9 @@ class CockpitViewModel(
      * Rename a frame's title (used in workflow step editing).
      */
     fun renameFrame(frameId: String, newTitle: String) {
-        _frames.value = _frames.value.map { frame ->
-            if (frame.id == frameId) {
-                frame.copy(
-                    title = newTitle,
-                    updatedAt = Clock.System.now().toString()
-                )
-            } else frame
+        updateFrame(frameId) { frame ->
+            frame.copy(title = newTitle)
         }
-        scheduleAutoSave()
     }
 
     /**
@@ -613,11 +582,12 @@ class CockpitViewModel(
 
     /**
      * Generate a unique ID for sessions/frames.
-     * Uses timestamp + random Long (base-36) for high entropy without UUID dependency.
+     * Uses timestamp prefix (for sortability) + Uuid random suffix (for uniqueness).
+     * Kotlin 2.1.0 stdlib Uuid replaces kotlin.random.Random for cryptographic quality.
      */
+    @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
     private fun generateId(): String {
         val timestamp = Clock.System.now().toEpochMilliseconds()
-        val random = Random.nextLong(0, Long.MAX_VALUE)
-        return "${timestamp}_${random.toString(36)}"
+        return "${timestamp}_${kotlin.uuid.Uuid.random().toHexString().take(12)}"
     }
 }
