@@ -90,6 +90,10 @@ import kotlin.math.sin
  * Canvas draws orbit rings and connection lines behind the positioned composables.
  * Each module node is a clickable circle with icon + label below.
  */
+@Deprecated(
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    level = DeprecationLevel.WARNING
+)
 @Composable
 fun SpatialOrbitHub(
     onModuleClick: (HubModule) -> Unit,

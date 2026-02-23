@@ -2,9 +2,16 @@
  * MainActivity.kt - Main entry point for Avanues Consolidated App
  *
  * Routes to different modules based on which launcher icon was tapped:
- * - AvanuesAlias → hub dashboard (HubDashboardScreen)
+ * - Avanues (default) → Cockpit Dashboard
  * - VoiceAvanueAlias → voice dashboard (HomeScreen)
  * - WebAvanueAlias → full browser (WebAvanue BrowserApp)
+ * - PDFAvanueAlias → Cockpit with PDFAvanue module
+ * - ImageAvanueAlias → Cockpit with ImageAvanue module
+ * - VideoAvanueAlias → Cockpit with VideoAvanue module
+ * - NoteAvanueAlias → Cockpit with NoteAvanue module
+ * - PhotoAvanueAlias → Cockpit with PhotoAvanue module
+ * - CastAvanueAlias → Cockpit with CastAvanue (RemoteCast) module
+ * - DrawAvanueAlias → Cockpit with DrawAvanue (Annotation) module
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -19,7 +26,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,7 +56,6 @@ import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
 import com.augmentalis.voiceavanue.ui.developer.DeveloperSettingsScreen
 import com.augmentalis.voiceavanue.ui.home.CommandsScreen
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
-import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
 import com.augmentalis.voiceavanue.ui.about.AboutScreen
 import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
 import com.augmentalis.voiceavanue.ui.sync.VosSyncScreen
@@ -162,13 +167,20 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Determines which module to launch based on the activity-alias class name.
-     * - ".AvanuesAlias" or default → hub dashboard
-     * - ".VoiceAvanueAlias" → voice dashboard
-     * - ".WebAvanueAlias" → browser
+     * Module-specific aliases (PDF, Image, Video, Note, Photo, Cast, Draw) are
+     * checked first to avoid false matches with broader patterns like "VoiceAvanue".
+     * Falls back to HUB (Cockpit Dashboard) for the default Avanues launcher icon.
      */
     private fun determineLaunchMode(intent: Intent?): AvanueMode {
         val className = intent?.component?.className ?: return AvanueMode.HUB
         return when {
+            className.contains("PDFAvanue") -> AvanueMode.PDF
+            className.contains("ImageAvanue") -> AvanueMode.IMAGE
+            className.contains("VideoAvanue") -> AvanueMode.VIDEO
+            className.contains("NoteAvanue") -> AvanueMode.NOTE
+            className.contains("PhotoAvanue") -> AvanueMode.PHOTO
+            className.contains("CastAvanue") -> AvanueMode.CAST
+            className.contains("DrawAvanue") -> AvanueMode.DRAW
             className.contains("WebAvanue") -> AvanueMode.BROWSER
             className.contains("VoiceAvanue") -> AvanueMode.VOICE
             else -> AvanueMode.HUB
@@ -190,7 +202,14 @@ enum class AvanueMode(val route: String, val label: String) {
     DEVELOPER_CONSOLE("developer_console", "Developer Console"),
     DEVELOPER_SETTINGS("developer_settings", "Developer Settings"),
     VOS_SYNC("vos_sync", "VOS Sync"),
-    COCKPIT("cockpit", "Cockpit")
+    COCKPIT("cockpit", "Cockpit"),
+    PDF("cockpit/pdf", "PDFAvanue"),
+    IMAGE("cockpit/image", "ImageAvanue"),
+    VIDEO("cockpit/video", "VideoAvanue"),
+    NOTE("cockpit/note", "NoteAvanue"),
+    PHOTO("cockpit/photo", "PhotoAvanue"),
+    CAST("cockpit/cast", "CastAvanue"),
+    DRAW("cockpit/draw", "DrawAvanue")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
 }
 
@@ -211,25 +230,10 @@ fun AvanuesApp(
         startDestination = startMode.route
     ) {
         composable(AvanueMode.HUB.route) {
-            HubDashboardScreen(
-                onNavigateToRoute = { route ->
-                    navController.navigate(route) { launchSingleTop = true }
-                },
-                onNavigateToSettings = {
-                    navController.navigate(AvanueMode.SETTINGS.route) {
-                        launchSingleTop = true
-                    }
-                },
-                onNavigateToAbout = {
-                    navController.navigate(AvanueMode.ABOUT.route) {
-                        launchSingleTop = true
-                    }
-                },
-                onNavigateToDeveloperSettings = {
-                    navController.navigate(AvanueMode.DEVELOPER_SETTINGS.route) {
-                        launchSingleTop = true
-                    }
-                }
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { /* no-op, this is home */ }
             )
         }
 
@@ -303,6 +307,86 @@ fun AvanuesApp(
 
         composable(AvanueMode.COCKPIT.route) {
             val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── Module-Direct Launcher Routes ──
+        // Each launches Cockpit with a specific module auto-opened via launchModule()
+
+        composable(AvanueMode.PDF.route) {
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                cockpitEntry.cockpitViewModel.launchModule("pdfavanue")
+            }
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.IMAGE.route) {
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                cockpitEntry.cockpitViewModel.launchModule("imageavanue")
+            }
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.VIDEO.route) {
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                cockpitEntry.cockpitViewModel.launchModule("videoavanue")
+            }
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.NOTE.route) {
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                cockpitEntry.cockpitViewModel.launchModule("noteavanue")
+            }
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.PHOTO.route) {
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                cockpitEntry.cockpitViewModel.launchModule("photoavanue")
+            }
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.CAST.route) {
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                cockpitEntry.cockpitViewModel.launchModule("remotecast")
+            }
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(AvanueMode.DRAW.route) {
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                cockpitEntry.cockpitViewModel.launchModule("annotationavanue")
+            }
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
                 onNavigateBack = { navController.popBackStack() }

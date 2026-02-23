@@ -29,12 +29,20 @@ import com.augmentalis.voiceavanue.AvanueMode
  * CORE modules are the 4 primary apps on the inner orbit.
  * CONTENT modules are the 7 content viewers on the outer orbit.
  */
+@Deprecated(
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    level = DeprecationLevel.WARNING
+)
 enum class OrbitTier { CORE, CONTENT }
 
 /**
  * A module entry for the Spatial Orbit hub launcher.
  * Each module maps to a visual node on one of the two orbit rings.
  */
+@Deprecated(
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    level = DeprecationLevel.WARNING
+)
 data class HubModule(
     val id: String,
     val displayName: String,
@@ -56,6 +64,10 @@ data class HubModule(
  * Content modules navigate to Cockpit where they render inside frames.
  * Each "Avanue" is a destination — an avenue to explore.
  */
+@Deprecated(
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    level = DeprecationLevel.WARNING
+)
 object HubModuleRegistry {
 
     val coreModules: List<HubModule> = listOf(
@@ -159,6 +171,10 @@ object HubModuleRegistry {
  * Resolves the accent color for a module by its ID.
  * Core and content modules may share colors since they're on different orbits.
  */
+@Deprecated(
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Chapter 110.",
+    level = DeprecationLevel.WARNING
+)
 @Composable
 fun moduleAccentColor(moduleId: String): Color {
     return when (moduleId) {

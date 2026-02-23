@@ -39,6 +39,7 @@ import com.augmentalis.voiceoscore.OverlayNumberingExecutor
 import com.augmentalis.voiceoscore.OverlayStateManager
 import com.augmentalis.voiceoscore.SpeechMode
 import com.augmentalis.voiceoscore.TARGET_APPS
+import com.augmentalis.voiceoscore.wireCursorDependencies
 import com.augmentalis.voiceavanue.MainActivity
 import com.augmentalis.avanueui.theme.AvanueModuleAccents
 import com.augmentalis.avanueui.theme.ModuleAccent
@@ -49,6 +50,8 @@ import com.augmentalis.voiceoscore.commandmanager.CommandManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
+import com.augmentalis.devicemanager.DeviceManager
+import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 import com.augmentalis.voiceoscore.handlers.VoiceControlCallbacks
 import com.augmentalis.voiceoscore.vos.VosFileImporter
@@ -141,6 +144,15 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 db.waitForInitialization()
 
                 boundsResolver = BoundsResolver(this@VoiceAvanueAccessibilityService)
+
+                // Ensure IMU capabilities are injected before any cursor/sensor code.
+                // DeviceManager.imu triggers lazy injectCapabilities() on IMUManager,
+                // so sensor properties resolve correctly on first access.
+                try {
+                    DeviceManager.getInstance(applicationContext).imu
+                } catch (e: Exception) {
+                    Log.w(TAG, "DeviceManager IMU init failed (non-fatal): ${e.message}")
+                }
 
                 // Read developer settings from DataStore
                 val devPrefs = DeveloperPreferencesRepository(applicationContext)
@@ -472,12 +484,16 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                     val intent = Intent(applicationContext, CursorOverlayService::class.java)
                                     applicationContext.startForegroundService(intent)
                                     Log.i(TAG, "CursorOverlayService started via settings toggle")
+                                    // Wire IMU + CursorActions + ClickDispatcher to the overlay service
+                                    wireCursorDependencies(this@VoiceAvanueAccessibilityService)
                                 } catch (e: Exception) {
                                     Log.e(TAG, "Failed to start CursorOverlayService", e)
                                 }
                             }
                         } else if (!settings.cursorEnabled) {
                             CursorOverlayService.getInstance()?.let {
+                                // Stop IMU tracking before stopping the service to release sensor resources
+                                IMUManager.getInstance(applicationContext).stopIMUTracking("cursor_settings")
                                 applicationContext.stopService(Intent(applicationContext, CursorOverlayService::class.java))
                                 Log.i(TAG, "CursorOverlayService stopped via settings toggle")
                             }
