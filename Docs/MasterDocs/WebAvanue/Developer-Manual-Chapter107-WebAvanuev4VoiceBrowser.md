@@ -1023,7 +1023,34 @@ When extending WebAvanue:
 
 ---
 
+---
+
+## Test Suite Fixes (260223)
+
+### SettingsStateMachineTest — Coroutine Scope Mismatch
+
+All 13 tests used `= runTest { ... }` but the `SettingsStateMachine` was constructed with a separate `testScope`. The `runTest` block creates its own `TestScope` with its own `TestCoroutineScheduler`, so `advanceTimeBy()` and `advanceUntilIdle()` were advancing the wrong scheduler.
+
+**Fix**: Changed all 13 tests from `= runTest {` to `= testScope.runTest {` so the test coroutine dispatcher matches the `SettingsStateMachine`'s scope.
+
+### Dead Android Imports in commonMain
+
+`BrowserSettingsModel.kt` and `SettingsViewModel.kt` both had `import android.util.Log` — an Android-only API in the shared `commonMain` source set. These were dead imports (Log was not actually used in either file). Removed.
+
+### Device-Only Tests Marked @Ignore
+
+Two test classes require hardware/native libraries unavailable in Robolectric:
+
+| Test Class | Reason | Annotation |
+|-----------|--------|-----------|
+| `EncryptionManagerTest` | AndroidKeyStore unavailable in Robolectric | `@Ignore("Requires device/emulator")` |
+| `EncryptedDatabaseTest` | SQLCipher native lib unavailable in Robolectric | `@Ignore("Requires device/emulator")` |
+
+These tests run on device/emulator via `connectedAndroidTest` instead.
+
+---
+
 **Status**: Active Development
 **Module Version**: 4.0.0-alpha
-**Last Updated**: 2026-02-22
+**Last Updated**: 2026-02-23
 **Next Chapter**: 108 (RemoteAvanue: Remote Desktop Control & Accessibility)

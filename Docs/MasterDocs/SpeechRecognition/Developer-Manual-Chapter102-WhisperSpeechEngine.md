@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-22 — Whisper engine full sweep (vadSensitivity, unified confidence, platform perf fixes), VLM encryption (Section 14), Google Cloud STT v2 (Section 15)
+**Updated**: 2026-02-23 — Phrase hints (Section 15.10), Settings provider (Section 15.11)
 
 ---
 
@@ -1554,3 +1554,42 @@ Firebase Auth is recommended for production — no API key storage required.
 - `com.google.code.gson:gson` — for JSON parsing (already included)
 
 No new dependencies required beyond existing stack.
+
+### 15.10 Phrase Hints (Adaptation)
+
+Google Cloud STT v2 supports **phrase hints** via the `adaptation.phraseSets` field, which biases the recognition model toward expected phrases. This significantly improves command recognition accuracy.
+
+**Integration**: Both `GoogleCloudApiClient.recognize()` and `GoogleCloudStreamingClient.startStreaming()` accept a `phraseHints: List<String>` parameter. The `GoogleCloudEngine` automatically forwards `commandCache.getAllCommands()` (current screen's voice commands) to both clients.
+
+**Wire format** (inside `config`):
+```json
+{
+  "adaptation": {
+    "phraseSets": [{
+      "phrases": [
+        { "value": "click save", "boost": 10.0 },
+        { "value": "scroll down", "boost": 10.0 }
+      ]
+    }]
+  }
+}
+```
+
+- **Boost value**: 10.0 (strong bias toward expected commands)
+- **Cap**: 500 phrases per request (Google API limit)
+- **Source**: `CommandCache.getAllCommands()` — includes static + dynamic (UI-scraped) commands
+
+### 15.11 Settings Provider
+
+`GoogleCloudSettingsProvider` implements `ModuleSettingsProvider` for the Unified Adaptive Settings screen.
+
+| Section | Settings |
+|---------|----------|
+| Project Configuration | GCP Project ID, Location |
+| Authentication | Auth mode (API Key / Firebase), API key |
+| Recognition | Model (latest_short/latest_long), Streaming toggle, Language |
+| Advanced | Punctuation, Profanity filter, Word timestamps |
+
+**DataStore keys**: Prefixed with `gcp_stt_` (e.g., `gcp_stt_project_id`, `gcp_stt_api_key`).
+
+**Build dependency**: `implementation(project(":Modules:Foundation"))` added for `ModuleSettingsProvider` interface.

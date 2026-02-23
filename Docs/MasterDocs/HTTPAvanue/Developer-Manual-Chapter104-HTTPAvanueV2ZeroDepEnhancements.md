@@ -454,3 +454,25 @@ Socket contract (4), all parsers/codecs (12), build.gradle.kts (1), HttpStatus.k
 - v2.0 Plan: `docs/plans/HTTPAvanue/HTTPAvanue-Plan-V2Implementation-260222-V1.md`
 - AVACode Recipe Plan: `docs/plans/AVACode/AVACode-Plan-RecipeSystemPending-260222-V1.md`
 - Audit Fixes (v1.1): `Docs/fixes/HTTPAvanue/HTTPAvanue-Fix-AuditBugs-260220-V1.md`
+
+---
+
+## JS/Browser Target (260223)
+
+Added `js(IR) { browser(); nodejs() }` target as part of NetAvanue JS dependency chain.
+
+### jsMain Actuals (6 files)
+
+| Expect | JS Implementation | Notes |
+|--------|-------------------|-------|
+| `currentTimeMillis()` | `kotlin.js.Date.now().toLong()` | Trivial |
+| `readResource()` | Returns `null` | Browser loads resources via fetch/bundler |
+| `Socket` | Throws `UnsupportedOperationException` | Raw TCP unavailable in browsers |
+| `SocketServer` | Throws `UnsupportedOperationException` | Browsers can't be servers |
+| `gzipCompress/Decompress` | Throws `UnsupportedOperationException` | Server-side middleware; browsers handle Content-Encoding transparently |
+| `sha1()` | Pure-Kotlin SHA-1 implementation | SubtleCrypto is async-only; synchronous expect requires pure implementation |
+| `MdnsAdvertiser` | Throws `UnsupportedOperationException` | Multicast UDP unavailable in browsers |
+
+### Why UnsupportedOperationException (Not Stubs)
+
+HTTPAvanue is fundamentally an HTTP **server** library. Browsers are clients by design — they cannot open TCP server sockets, send raw UDP multicast, or run gzip middleware. These throws represent genuine platform limitations, not incomplete implementations.

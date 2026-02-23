@@ -1011,6 +1011,39 @@ For questions, refer to the **PluginSystem** module source at `/Volumes/M-Drive/
 
 ---
 
+## Expect/Actual Fix Log (260223)
+
+### JVM PermissionStorage — Rewritten
+
+The JVM actual was completely out of sync with the expect declaration:
+
+| Old (Broken) | New (Fixed) |
+|-------------|-------------|
+| `class JvmPermissionStorage : PermissionStorage` (treated as interface) | `actual class PermissionStorage` (proper actual) |
+| `save(state: PluginPermissionState)` | `savePermission(pluginId, permission)` |
+| `load(pluginId): PluginPermissionState?` | `hasPermission(pluginId, permission): Boolean` |
+| `delete(pluginId)` | `revokePermission(pluginId, permission)` |
+| `loadAll(): Map<...>` | `getAllPermissions(pluginId): Set<String>` |
+| JSON file storage | `java.util.prefs.Preferences` |
+
+New implementation stores permissions as comma-separated sets under per-plugin Preferences nodes at `/com/augmentalis/magiccode/plugins/permissions/{pluginId}/`.
+
+### JVM + iOS FontLoader — Nested Types Removed
+
+Both platforms re-declared `LoadResult`, `LoadedFont`, and `FontFormat` as nested `actual` types inside `FontLoader`. The expect class references top-level types from commonMain:
+
+- `FontLoadResult` (sealed class) — was re-declared as `FontLoader.LoadResult`
+- `LoadedFont` (data class) — was re-declared as `FontLoader.LoadedFont`
+- `FontFormat` (enum) — was re-declared as `FontLoader.FontFormat`
+
+Fix: Removed all nested re-declarations, switched to top-level types. Return types updated from `LoadResult` to `FontLoadResult`.
+
+### IosPluginExample.kt — Deleted
+
+Stale example file referencing non-existent `PluginClassLoader.register()` API. The registration pattern changed but the example was never updated.
+
+---
+
 **Document Info**
 Author: Manoj Jhawar
 Chapter: 108

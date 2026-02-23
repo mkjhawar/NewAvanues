@@ -7,7 +7,7 @@ NetAvanue is a KMP peer-to-peer networking module providing signaling, device ca
 **Module Location**: `Modules/NetAvanue/`
 **Package**: `com.augmentalis.netavanue`
 **Dependencies**: HTTPAvanue (WebSocket), Foundation, Logging, kotlinx-serialization/coroutines/datetime
-**Targets**: Android, Desktop (JVM), iOS (arm64 + simulatorArm64)
+**Targets**: Android, Desktop (JVM), iOS (arm64 + simulatorArm64), JS (browser + Node.js)
 
 ---
 
@@ -482,7 +482,7 @@ RemoteCast Integration:
 | 6 | STUN codec + UdpSocket + StunClient + ICE candidates | COMPLETE |
 | 7 | PeerConnection + DataChannel + SimpleSdp | COMPLETE |
 | 8 | RemoteCast P2P transport integration | COMPLETE |
-| 9 | Web/JS target (browser RTCPeerConnection wrapper) | Future |
+| 9 | Web/JS target (browser RTCPeerConnection wrapper) | COMPLETE |
 | 10 | End-to-end testing across NAT | Future |
 
 ---
@@ -495,3 +495,61 @@ RemoteCast Integration:
 - HTTPAvanue v2.0 (Chapter 104): `Docs/MasterDocs/HTTPAvanue/Developer-Manual-Chapter104-HTTPAvanueV2ZeroDepEnhancements.md`
 - RemoteCast Architecture: `docs/plans/RemoteCast/RemoteCast-Spec-GlassClientArchitecture-260219-V1.md`
 - AvanueCentral Signaling Module: `packages/api/src/modules/signaling/` (2,523 lines, fully implemented)
+
+---
+
+## Phase 9: JS/Browser Target (260223)
+
+Added `js(IR) { browser(); nodejs() }` to NetAvanue and its full dependency chain (Logging, Foundation, HTTPAvanue). This required cascading JS targets through 4 modules.
+
+### jsMain Actuals (5 files)
+
+| Expect | JS Implementation | Notes |
+|--------|-------------------|-------|
+| `CapabilityCollector` | `CapabilityCollector.js.kt` | Navigator/Screen APIs, `deviceMemory`, `hardwareConcurrency` |
+| `DeviceFingerprint` | `DeviceFingerprint.js.kt` | Browser fingerprint (userAgent+platform+screen), HMAC-SHA256 signing |
+| `UdpSocket` | `UdpSocket.js.kt` | Throws `UnsupportedOperationException` — browser can't do raw UDP |
+| `currentTimeMillis` | `TimeMillis.js.kt` | `kotlin.js.Date.now().toLong()` |
+| `getLocalAddresses` | `LocalAddresses.js.kt` | Returns `["0.0.0.0"]` — browsers can't enumerate interfaces |
+
+### Dependency Chain
+
+```
+Logging/jsMain (2 files: JsLogger + LoggerFactory → console.*)
+    ↑
+Foundation/jsMain (1 file: SHA-256 pure-Kotlin)
+    ↑
+HTTPAvanue/jsMain (6 files: PlatformTime, Socket, Resources, Compression, SHA-1, mDNS)
+    ↑
+NetAvanue/jsMain (5 files: see table above)
+```
+
+### Browser Limitations
+
+In browser environments, the following are not available and throw `UnsupportedOperationException`:
+- **Raw TCP/UDP sockets** — browser security model forbids direct socket access
+- **mDNS advertising** — requires multicast UDP (224.0.0.251:5353)
+- **SocketServer** — browsers are clients, not servers
+- **gzip compress/decompress** — server-side middleware, browsers handle Content-Encoding transparently
+
+The browser's WebRTC ICE agent handles STUN/TURN communication internally via `RTCPeerConnection`.
+
+### Crypto: Pure-Kotlin SHA
+
+Browser's `SubtleCrypto` API is async-only, but the expect signatures require synchronous functions. Pure-Kotlin implementations of SHA-1 (HTTPAvanue) and SHA-256 (Foundation, DeviceFingerprint) provide portable synchronous hashing.
+
+---
+
+## Review Follow-ups (260223)
+
+### CapabilityScorer Formula Dedup
+
+Extracted shared `computeScore()` private function to eliminate formula duplication between the `DeviceCapability` and `DeviceCapabilityDto` overloads. Both public `calculateScore()` methods now delegate to the single formula.
+
+### IceCandidatePair: data class → class
+
+Changed from `data class` to regular `class`. Kotlin's `data class` auto-generates `equals()`/`hashCode()` from constructor parameters only, ignoring the mutable `var state`, `var nominated`, and `var lastCheckTimestamp` fields. This meant two pairs with the same local/remote/controlling but different states compared as equal — a correctness bug for ICE checklist management.
+
+### SocketIOPacket JSON Parse Logging
+
+Added `LoggerFactory.getLogger("SocketIOCodec")` to `SocketIOCodec` and replaced the silent `catch (_: Exception) { null }` in `parseSioPacket()` with a warning log: `"Failed to parse SIO packet JSON at index $idx: ${e.message}"`. This helps diagnose malformed signaling messages from the server.
