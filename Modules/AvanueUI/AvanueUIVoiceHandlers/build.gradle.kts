@@ -86,7 +86,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 29  // Must match VoiceOSCore dependency (minSdk 29)
     }
 
     compileOptions {

@@ -236,7 +236,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 29  // Must match Localization/VoiceOSCore/WebAvanue dependencies (minSdk 29)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

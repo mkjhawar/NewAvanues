@@ -97,7 +97,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 28  // Must match AVU → AvanueUI dependency chain
     }
 
     compileOptions {

@@ -57,7 +57,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 28  // Must match AvanueUI/DeviceManager dependency chain (minSdk 28)
     }
 
     compileOptions {

@@ -47,10 +47,10 @@ kotlin {
         // Common Main - Shared across all platforms
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                implementation("org.jetbrains.kotlinx:atomicfu:0.23.2")
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
+                implementation(libs.kotlinx.atomicfu)
             }
         }
 
@@ -58,7 +58,7 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -72,10 +72,10 @@ kotlin {
                 implementation(project(":Modules:AvanueUI"))
 
                 // Coroutines Android
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+                implementation(libs.kotlinx.coroutines.android)
 
                 // AndroidX Core
-                implementation("androidx.core:core-ktx:1.12.0")
+                implementation(libs.androidx.core.ktx)
                 implementation("androidx.appcompat:appcompat:1.6.1")
                 implementation("androidx.fragment:fragment-ktx:1.6.2")
                 implementation("androidx.viewpager2:viewpager2:1.0.0")
@@ -119,7 +119,7 @@ kotlin {
                 implementation("androidx.annotation:annotation:1.7.1")
                 implementation("androidx.collection:collection-ktx:1.4.0")
                 implementation("androidx.concurrent:concurrent-futures:1.1.0")
-                implementation("androidx.datastore:datastore-preferences:1.0.0")
+                implementation(libs.androidx.datastore.preferences)
 
                 // Backward Compatibility
                 implementation("androidx.legacy:legacy-support-v4:1.0.0")
@@ -140,27 +140,27 @@ kotlin {
         // Android Unit Test
         val androidUnitTest by getting {
             dependencies {
-                implementation("junit:junit:4.13.2")
-                implementation("org.jetbrains.kotlin:kotlin-test:1.9.25")
+                implementation(libs.junit)
+                implementation(libs.kotlin.test)
                 implementation("org.mockito:mockito-core:4.11.0")
                 implementation("org.mockito.kotlin:mockito-kotlin:4.1.0")
                 implementation("androidx.arch.core:core-testing:2.2.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation(libs.kotlinx.coroutines.test)
 
                 // MockK for better Kotlin testing
-                implementation("io.mockk:mockk:1.13.8")
-                implementation("io.mockk:mockk-android:1.13.8")
+                implementation(libs.mockk)
+                implementation(libs.mockk.android)
 
                 // Robolectric for Android unit tests
-                implementation("org.robolectric:robolectric:4.11.1")
+                implementation(libs.robolectric)
             }
         }
 
         // Android Instrumented Test
         val androidInstrumentedTest by getting {
             dependencies {
-                implementation("androidx.test.ext:junit:1.1.5")
-                implementation("androidx.test.espresso:espresso-core:3.5.1")
+                implementation(libs.androidx.test.junit)
+                implementation(libs.androidx.test.espresso.core)
                 implementation(project.dependencies.platform(libs.compose.bom))
                 implementation("androidx.compose.ui:ui-test-junit4")
             }
@@ -169,7 +169,7 @@ kotlin {
         // Desktop (JVM) Main
         val desktopMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
+                implementation(libs.kotlinx.coroutines.swing)
                 implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
             }
         }
@@ -214,7 +214,7 @@ android {
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 28  // Must match AvanueUI dependency (minSdk 28)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
         multiDexEnabled = true

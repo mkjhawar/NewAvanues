@@ -233,7 +233,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 28  // Must match NLU dependency (minSdk 28)
         multiDexEnabled = true
 
         buildConfigField("String", "MODULE_VERSION", "\"3.0.0\"")

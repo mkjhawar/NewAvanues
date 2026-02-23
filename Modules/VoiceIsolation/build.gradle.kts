@@ -95,7 +95,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 28
         buildConfigField("String", "MODULE_VERSION", "\"1.0.0\"")
         buildConfigField("String", "MODULE_NAME", "\"VoiceIsolation-KMP\"")
     }
