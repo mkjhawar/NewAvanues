@@ -10,10 +10,8 @@ version = "1.0.0"
 kotlin {
     // Android-only to match Components:Core module
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 

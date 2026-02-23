@@ -12,10 +12,8 @@ kotlin {
     // NOTE: Temporarily Android-only until platform-specific APIs (Math, etc.)
     // are refactored for multiplatform support
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 

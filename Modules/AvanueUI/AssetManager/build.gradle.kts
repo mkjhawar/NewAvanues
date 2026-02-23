@@ -11,10 +11,8 @@ kotlin {
     // Target platforms
     // NOTE: Android-only until Core module supports multiplatform
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
