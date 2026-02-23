@@ -439,10 +439,11 @@ The legacy `Modules/Actions/` module contained ~147 handlers. Of these:
 
 ### Adding an IntentAction
 
-1. Create `IIntentAction` implementation in `Modules/AI/NLU/src/androidMain/.../intent/actions/`
-2. Register in `AndroidIntentClassifier` initialization
+1. Create `IIntentAction` implementation in `Modules/IntentActions/src/androidMain/.../actions/`
+2. Register in `IntentActionsInitializer`
 3. Add entity extraction patterns if needed
-4. Add NLU training phrases for intent classification
+4. **Use `UriSanitizer`** for any URI construction from user input
+5. **Use `entities.toSafeString()`** in all Log statements (never log raw entities)
 
 ### Adding a Module Command (Content Module)
 
@@ -462,12 +463,43 @@ The legacy `Modules/Actions/` module contained ~147 handlers. Of these:
 | `HandlerRegistry.kt` | `Modules/VoiceOSCore/src/commonMain/.../handler/` | Priority-based handler lookup |
 | `ActionCoordinator.kt` | `Modules/VoiceOSCore/src/commonMain/.../actions/` | Main dispatch orchestrator |
 | `ModuleCommandCallbacks.kt` | `Modules/VoiceOSCore/src/androidMain/.../handlers/` | Volatile executor slots |
-| `IIntentAction.kt` | `Modules/AI/NLU/src/commonMain/.../intent/` | IntentAction interface |
-| `IntentActionRegistry.kt` | `Modules/AI/NLU/src/commonMain/.../intent/` | IntentAction lookup + execution |
-| `IntentClassifier.kt` | `Modules/AI/NLU/src/commonMain/` | NLU classification + routing |
+| `IIntentAction.kt` | `Modules/IntentActions/src/commonMain/.../` | IntentAction interface |
+| `IntentActionRegistry.kt` | `Modules/IntentActions/src/commonMain/.../` | IntentAction lookup + execution |
+| `IntentActionsInitializer.kt` | `Modules/IntentActions/src/androidMain/.../` | Registers all 26 actions |
+| `UriSanitizer.kt` | `Modules/IntentActions/src/commonMain/.../` | URI injection prevention |
+| `ExtractedEntities.kt` | `Modules/IntentActions/src/commonMain/.../` | Entity container + toSafeString() |
+| `EntityExtractor.kt` | `Modules/IntentActions/src/commonMain/.../extractors/` | Entity extraction (pure Kotlin) |
 | `MacroStep.kt` | `Modules/VoiceOSCore/src/commonMain/.../macro/` | Macro composition model |
-| `EntityExtractor.kt` | `Modules/AI/NLU/src/commonMain/.../extractors/` | Entity extraction interface |
 
 ---
 
-*Chapter 110 | Unified Command Architecture | 2026-02-23*
+## Security Guidelines for IntentActions
+
+### URI Sanitization (Mandatory)
+
+All IntentActions that construct URIs from user input MUST use `UriSanitizer`:
+
+| URI Type | Sanitizer Method | What It Blocks |
+|----------|-----------------|----------------|
+| Web URLs | `sanitizeWebUrl()` | `javascript:`, `intent:`, `data:`, `file:`, `content:` schemes; upgrades http→https |
+| Email | `isValidEmail()` | `?`, `&`, `#` in address (BCC/body injection) |
+| Phone | `sanitizePhoneNumber()` | USSD codes (`*`, `#`), non-phone characters |
+| SMS | `sanitizeSmsAddress()` | Same as phone |
+
+### PII Logging (Mandatory)
+
+Never log raw `ExtractedEntities`. Always use `entities.toSafeString()` which masks:
+- `phoneNumber` → `phone=***`
+- `recipientName` → `recipient=***`
+- `recipientEmail` → `email=***`
+- `message` → `message=***`
+
+Safe fields shown as presence flags: `query=present`, `url=present`, `app=<name>`.
+
+### Thread Safety
+
+`IntentActionsInitializer.initialized` is `@Volatile` for correct double-checked locking.
+
+---
+
+*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated with security guidelines)*
