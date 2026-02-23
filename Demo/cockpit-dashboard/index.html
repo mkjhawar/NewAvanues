@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cockpit Dashboard - PseudoSpatial Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --primary: #1565C0;
+    --primary-light: #42A5F5;
+    --surface: #0D1117;
+    --surface-elevated: #161B22;
+    --surface-card: #1C2128;
+    --text-primary: #E6EDF3;
+    --text-secondary: #8B949E;
+    --accent-pdf: #E53935;
+    --accent-image: #43A047;
+    --accent-video: #E91E63;
+    --accent-note: #FFA726;
+    --accent-photo: #7E57C2;
+    --accent-cast: #26C6DA;
+    --accent-draw: #EF5350;
+    --accent-voice: #1565C0;
+    --accent-web: #00897B;
+    --accent-cursor: #FF7043;
+    --glass-bg: rgba(22, 27, 34, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --grid-color: rgba(230, 237, 243, 0.04);
+    --corner-color: rgba(21, 101, 192, 0.5);
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    perspective: 1200px;
+  }
+
+  /* Scanline Grid Overlay */
+  .scanline-grid {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* Corner Accents */
+  .corner-accent {
+    position: fixed;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .corner-accent::before, .corner-accent::after {
+    content: '';
+    position: absolute;
+    background: var(--corner-color);
+  }
+  .corner-accent::before { width: 14px; height: 2px; }
+  .corner-accent::after { width: 2px; height: 14px; }
+  .corner-tl { top: 8px; left: 8px; }
+  .corner-tl::before { top: 0; left: 0; }
+  .corner-tl::after { top: 0; left: 0; }
+  .corner-tr { top: 8px; right: 8px; }
+  .corner-tr::before { top: 0; right: 0; }
+  .corner-tr::after { top: 0; right: 0; }
+  .corner-bl { bottom: 8px; left: 8px; }
+  .corner-bl::before { bottom: 0; left: 0; }
+  .corner-bl::after { bottom: 0; left: 0; }
+  .corner-br { bottom: 8px; right: 8px; }
+  .corner-br::before { bottom: 0; right: 0; }
+  .corner-br::after { bottom: 0; right: 0; }
+
+  /* Background gradient */
+  .bg-gradient {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, var(--surface) 0%, rgba(22, 27, 34, 0.6) 50%, var(--surface) 100%);
+    z-index: 0;
+  }
+
+  /* Parallax layers */
+  .parallax-layer {
+    position: absolute;
+    inset: 0;
+    transition: transform 0.15s ease-out;
+    will-change: transform;
+  }
+  .layer-bg { z-index: 1; }
+  .layer-mid { z-index: 2; }
+  .layer-fg { z-index: 3; }
+  .layer-hud { z-index: 10; }
+
+  /* Dashboard container */
+  .dashboard {
+    position: relative;
+    height: 100vh;
+    width: 100vw;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 24px 80px;
+  }
+
+  /* Section headers */
+  .section-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 24px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--glass-border), transparent);
+  }
+
+  /* Recent Sessions strip */
+  .sessions-strip {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 4px 0 12px;
+    scrollbar-width: none;
+  }
+  .sessions-strip::-webkit-scrollbar { display: none; }
+
+  .session-card {
+    flex-shrink: 0;
+    width: 160px;
+    height: 72px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .session-card:hover {
+    border-color: var(--primary-light);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(21, 101, 192, 0.15);
+  }
+  .session-card .name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .session-card .meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .session-card .frames-badge {
+    background: var(--primary);
+    color: white;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  /* Module tiles grid */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    padding: 4px 0;
+  }
+
+  .module-tile {
+    height: 110px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 16px 8px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+  .module-tile:hover {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+  }
+  .module-tile .icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: transform 0.3s ease;
+  }
+  .module-tile:hover .icon-circle {
+    transform: scale(1.15);
+  }
+  .module-tile .label {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+  .module-tile .sublabel {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-top: -4px;
+  }
+
+  /* Templates grid */
+  .templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 4px 0;
+  }
+  .template-card {
+    height: 80px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .template-card:hover {
+    border-color: var(--primary-light);
+    transform: translateY(-2px);
+  }
+  .template-card .name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .template-card .desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  /* HUD - Footer branding */
+  .hud-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    background: linear-gradient(180deg, transparent, rgba(13,17,23,0.9));
+    z-index: 20;
+  }
+  .hud-footer .vos-badge {
+    font-size: 10px;
+    color: var(--primary-light);
+    font-weight: 600;
+  }
+
+  /* Mode indicator */
+  .mode-indicator {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+  }
+  .mode-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+  }
+  .mode-btn.active {
+    border-color: var(--primary);
+    color: var(--primary-light);
+    background: rgba(21, 101, 192, 0.15);
+  }
+  .mode-btn:hover { border-color: var(--primary-light); }
+
+  /* Title */
+  .dashboard-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--text-primary), var(--primary-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .dashboard-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+
+  /* Glass mode styles */
+  .glass-mode .module-tile {
+    height: 48px;
+    flex-direction: row;
+    padding: 8px 16px;
+    gap: 12px;
+    text-align: left;
+  }
+  .glass-mode .module-tile .icon-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+  .glass-mode .module-tile .sublabel { display: none; }
+  .glass-mode .module-tile .label { font-size: 16px; }
+  .glass-mode .module-tile .voice-num {
+    display: block;
+    font-size: 14px;
+    color: var(--primary-light);
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  .glass-mode .modules-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .glass-mode .sessions-strip { flex-direction: column; align-items: center; }
+  .glass-mode .session-card { width: 100%; max-width: 400px; }
+  .glass-mode .templates-grid { display: none; }
+  .glass-mode .scanline-grid { display: none; }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .module-tile, .session-card, .template-card {
+    animation: fadeInUp 0.4s ease backwards;
+  }
+  .module-tile:nth-child(1) { animation-delay: 0.05s; }
+  .module-tile:nth-child(2) { animation-delay: 0.1s; }
+  .module-tile:nth-child(3) { animation-delay: 0.15s; }
+  .module-tile:nth-child(4) { animation-delay: 0.2s; }
+  .module-tile:nth-child(5) { animation-delay: 0.25s; }
+  .module-tile:nth-child(6) { animation-delay: 0.3s; }
+  .module-tile:nth-child(7) { animation-delay: 0.35s; }
+  .module-tile:nth-child(8) { animation-delay: 0.4s; }
+  .module-tile:nth-child(9) { animation-delay: 0.45s; }
+  .module-tile:nth-child(10) { animation-delay: 0.5s; }
+</style>
+</head>
+<body>
+
+<!-- Scanline Grid -->
+<div class="scanline-grid"></div>
+
+<!-- Corner Accents -->
+<div class="corner-accent corner-tl"></div>
+<div class="corner-accent corner-tr"></div>
+<div class="corner-accent corner-bl"></div>
+<div class="corner-accent corner-br"></div>
+
+<!-- Background Gradient -->
+<div class="bg-gradient parallax-layer layer-bg" id="layerBg"></div>
+
+<!-- Mode Indicator -->
+<div class="mode-indicator">
+  <button class="mode-btn active" onclick="setMode('phone')" id="modePhone">Phone</button>
+  <button class="mode-btn" onclick="setMode('tablet')" id="modeTablet">Tablet</button>
+  <button class="mode-btn" onclick="setMode('glass')" id="modeGlass">Glass</button>
+</div>
+
+<!-- Dashboard Content -->
+<div class="dashboard parallax-layer layer-fg" id="layerFg">
+
+  <div class="dashboard-title">Cockpit Dashboard</div>
+  <div class="dashboard-subtitle">PseudoSpatial Mode &mdash; Gyroscope Parallax Active</div>
+
+  <!-- Recent Sessions -->
+  <div class="section-header">Recent Sessions</div>
+  <div class="sessions-strip" id="sessionsStrip">
+    <div class="session-card" onclick="openSession('research')">
+      <div class="name">Research</div>
+      <div class="meta">
+        <span>Flight Deck</span>
+        <span class="frames-badge">4</span>
+      </div>
+    </div>
+    <div class="session-card" onclick="openSession('meeting')">
+      <div class="name">Meeting Notes</div>
+      <div class="meta">
+        <span>Split Left</span>
+        <span class="frames-badge">2</span>
+      </div>
+    </div>
+    <div class="session-card" onclick="openSession('field')">
+      <div class="name">Field Inspection</div>
+      <div class="meta">
+        <span>Grid</span>
+        <span class="frames-badge">3</span>
+      </div>
+    </div>
+    <div class="session-card" onclick="openSession('dev')">
+      <div class="name">Developer</div>
+      <div class="meta">
+        <span>Mosaic</span>
+        <span class="frames-badge">5</span>
+      </div>
+    </div>
+    <div class="session-card" onclick="openSession('remote')">
+      <div class="name">Remote Assist</div>
+      <div class="meta">
+        <span>T-Panel</span>
+        <span class="frames-badge">2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Launch -->
+  <div class="section-header">Quick Launch</div>
+  <div class="modules-grid" id="modulesGrid">
+    <!-- Core modules -->
+    <div class="module-tile" onclick="launchModule('voiceavanue')">
+      <div class="icon-circle" style="background: rgba(21,101,192,0.2); color: var(--accent-voice);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F3A4;
+      </div>
+      <div class="label">VoiceTouch</div>
+      <div class="sublabel">Voice commands</div>
+    </div>
+    <div class="module-tile" onclick="launchModule('webavanue')">
+      <div class="icon-circle" style="background: rgba(0,137,123,0.2); color: var(--accent-web);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F310;
+      </div>
+      <div class="label">WebAvanue</div>
+      <div class="sublabel">Voice browser</div>
+    </div>
+    <div class="module-tile" onclick="launchModule('voicecursor')">
+      <div class="icon-circle" style="background: rgba(255,112,67,0.2); color: var(--accent-cursor);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F5B1;
+      </div>
+      <div class="label">CursorAvanue</div>
+      <div class="sublabel">Cursor control</div>
+    </div>
+    <!-- Content modules -->
+    <div class="module-tile" onclick="launchModule('pdfavanue')">
+      <div class="icon-circle" style="background: rgba(229,57,53,0.2); color: var(--accent-pdf);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F4C4;
+      </div>
+      <div class="label">PDFAvanue</div>
+      <div class="sublabel">PDF viewer</div>
+    </div>
+    <div class="module-tile" onclick="launchModule('imageavanue')">
+      <div class="icon-circle" style="background: rgba(67,160,71,0.2); color: var(--accent-image);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F5BC;
+      </div>
+      <div class="label">ImageAvanue</div>
+      <div class="sublabel">Image viewer</div>
+    </div>
+    <div class="module-tile" onclick="launchModule('videoavanue')">
+      <div class="icon-circle" style="background: rgba(233,30,99,0.2); color: var(--accent-video);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F3A5;
+      </div>
+      <div class="label">VideoAvanue</div>
+      <div class="sublabel">Video player</div>
+    </div>
+    <div class="module-tile" onclick="launchModule('noteavanue')">
+      <div class="icon-circle" style="background: rgba(255,167,38,0.2); color: var(--accent-note);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F4DD;
+      </div>
+      <div class="label">NoteAvanue</div>
+      <div class="sublabel">Rich notes</div>
+    </div>
+    <div class="module-tile" onclick="launchModule('photoavanue')">
+      <div class="icon-circle" style="background: rgba(126,87,194,0.2); color: var(--accent-photo);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F4F7;
+      </div>
+      <div class="label">PhotoAvanue</div>
+      <div class="sublabel">Camera</div>
+    </div>
+    <div class="module-tile" onclick="launchModule('remotecast')">
+      <div class="icon-circle" style="background: rgba(38,198,218,0.2); color: var(--accent-cast);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x1F4E1;
+      </div>
+      <div class="label">CastAvanue</div>
+      <div class="sublabel">Screen cast</div>
+    </div>
+    <div class="module-tile" onclick="launchModule('annotationavanue')">
+      <div class="icon-circle" style="background: rgba(239,83,80,0.2); color: var(--accent-draw);">
+        <span class="voice-num" style="display:none;"></span>
+        &#x270F;
+      </div>
+      <div class="label">DrawAvanue</div>
+      <div class="sublabel">Whiteboard</div>
+    </div>
+  </div>
+
+  <!-- Templates -->
+  <div class="section-header">Session Templates</div>
+  <div class="templates-grid">
+    <div class="template-card" onclick="launchTemplate('field')">
+      <div class="name">Field Inspection</div>
+      <div class="desc">Camera + Notes + Checklist (3 frames, Grid)</div>
+    </div>
+    <div class="template-card" onclick="launchTemplate('research')">
+      <div class="name">Research</div>
+      <div class="desc">Web + PDF + Notes + AI (4 frames, Flight Deck)</div>
+    </div>
+    <div class="template-card" onclick="launchTemplate('meeting')">
+      <div class="name">Meeting Notes</div>
+      <div class="desc">Notes + Audio + Summary (3 frames, Split Left)</div>
+    </div>
+    <div class="template-card" onclick="launchTemplate('remote')">
+      <div class="name">Remote Assist</div>
+      <div class="desc">Cast + Annotate (2 frames, Split Right)</div>
+    </div>
+    <div class="template-card" onclick="launchTemplate('training')">
+      <div class="name">Training Workflow</div>
+      <div class="desc">Video + Notes + Checklist (3 frames, Workflow)</div>
+    </div>
+  </div>
+</div>
+
+<!-- HUD Footer -->
+<div class="hud-footer parallax-layer layer-hud">
+  <span class="vos-badge">VoiceOS&reg;</span>
+  <span>Avanues EcoSystem</span>
+  <span style="color: var(--primary); margin-left: 12px;">&#9679;</span>
+  <span>Dashboard</span>
+</div>
+
+<!-- Status overlay -->
+<div id="statusOverlay" style="
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--glass-bg);
+  border: 1px solid var(--primary);
+  border-radius: 16px;
+  padding: 24px 48px;
+  backdrop-filter: blur(20px);
+  z-index: 50;
+  text-align: center;
+  animation: fadeInUp 0.3s ease;
+">
+  <div style="font-size: 32px; margin-bottom: 8px;" id="statusIcon"></div>
+  <div style="font-size: 16px; font-weight: 600;" id="statusText"></div>
+  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;" id="statusSub"></div>
+</div>
+
+<script>
+// PseudoSpatial Parallax Controller
+let parallaxEnabled = true;
+const BG_MULT = 0.3, MID_MULT = 0.6, FG_MULT = 1.0;
+const MAX_BG = 12, MAX_FG = 4;
+let currentBgX = 0, currentBgY = 0, currentFgX = 0, currentFgY = 0;
+let targetBgX = 0, targetBgY = 0, targetFgX = 0, targetFgY = 0;
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// Mouse-based parallax (simulates gyroscope on desktop)
+document.addEventListener('mousemove', (e) => {
+  if (!parallaxEnabled) return;
+  const nx = (e.clientX / window.innerWidth - 0.5) * 2;
+  const ny = (e.clientY / window.innerHeight - 0.5) * 2;
+  targetBgX = nx * MAX_BG * BG_MULT;
+  targetBgY = ny * MAX_BG * BG_MULT;
+  targetFgX = nx * MAX_FG * FG_MULT;
+  targetFgY = ny * MAX_FG * FG_MULT;
+});
+
+// DeviceOrientation for real gyroscope on mobile
+if (window.DeviceOrientationEvent) {
+  window.addEventListener('deviceorientation', (e) => {
+    if (!parallaxEnabled || !e.gamma || !e.beta) return;
+    const nx = Math.max(-1, Math.min(1, e.gamma / 30));
+    const ny = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
+    targetBgX = nx * MAX_BG * BG_MULT;
+    targetBgY = ny * MAX_BG * BG_MULT;
+    targetFgX = nx * MAX_FG * FG_MULT;
+    targetFgY = ny * MAX_FG * FG_MULT;
+  });
+}
+
+function animate() {
+  currentBgX = lerp(currentBgX, targetBgX, 0.08);
+  currentBgY = lerp(currentBgY, targetBgY, 0.08);
+  currentFgX = lerp(currentFgX, targetFgX, 0.08);
+  currentFgY = lerp(currentFgY, targetFgY, 0.08);
+
+  const bg = document.getElementById('layerBg');
+  const fg = document.getElementById('layerFg');
+  if (bg) bg.style.transform = `translate(${currentBgX}px, ${currentBgY}px)`;
+  if (fg) {
+    const tiltX = currentFgX * 0.3;
+    const tiltY = -currentFgY * 0.3;
+    fg.style.transform = `translate(${currentFgX}px, ${currentFgY}px) rotateY(${tiltX}deg) rotateX(${tiltY}deg)`;
+  }
+  requestAnimationFrame(animate);
+}
+animate();
+
+// Display mode switching
+function setMode(mode) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+
+  const body = document.body;
+  body.classList.remove('glass-mode');
+
+  if (mode === 'glass') {
+    body.classList.add('glass-mode');
+    parallaxEnabled = false;
+    // Add voice numbers
+    document.querySelectorAll('.module-tile .voice-num').forEach((el, i) => {
+      el.style.display = 'block';
+      el.textContent = (i + 1) + '.';
+    });
+    showStatus('&#x1F453;', 'Glass Mode', 'Voice-numbered list, no parallax');
+  } else {
+    parallaxEnabled = true;
+    document.querySelectorAll('.module-tile .voice-num').forEach(el => {
+      el.style.display = 'none';
+    });
+    if (mode === 'tablet') {
+      showStatus('&#x1F4F1;', 'Tablet Mode', 'PseudoSpatial + expanded grid');
+    }
+  }
+}
+
+function showStatus(icon, text, sub) {
+  const overlay = document.getElementById('statusOverlay');
+  document.getElementById('statusIcon').innerHTML = icon;
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusSub').textContent = sub;
+  overlay.style.display = 'block';
+  setTimeout(() => overlay.style.display = 'none', 1500);
+}
+
+function launchModule(id) {
+  const tile = event.currentTarget;
+  const name = tile.querySelector('.label').textContent;
+  tile.style.transform = 'scale(0.95)';
+  setTimeout(() => tile.style.transform = '', 150);
+  showStatus(tile.querySelector('.icon-circle').textContent.trim(), 'Launching ' + name, 'Opening in Cockpit workspace...');
+}
+
+function openSession(name) {
+  showStatus('&#x1F4C2;', 'Resuming Session', name.charAt(0).toUpperCase() + name.slice(1));
+}
+
+function launchTemplate(name) {
+  showStatus('&#x1F4CB;', 'Creating Session', 'From template: ' + name);
+}
+</script>
+</body>
+</html>
