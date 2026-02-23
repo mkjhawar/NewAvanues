@@ -151,6 +151,45 @@ Key operations:
 
 ## 3. VOS Export/Import
 
+### VOS Export File Naming Convention
+
+**Pattern**: `{AppName}_{AppVersion}_{Locale}_{Timestamp}.{type}.vos`
+
+| Segment | Example | Source |
+|---------|---------|--------|
+| AppName | `Avanues` | App display name or package short name |
+| AppVersion | `V1.0.0` | App `versionName` from build config |
+| Locale | `en-US` | Device locale at export time |
+| Timestamp | `260223T1430` | YYMMDD + T + HHMM (compact) |
+| Type | `.app.vos` / `.web.vos` | Static app commands vs scraped web |
+
+**App VOS examples:**
+```
+Avanues_V1.0.0_en-US_260223T1430.app.vos
+Avanues_V1.0.0_es-ES_260223T1430.app.vos
+Avanues_V1.2.0_en-US_260315T0900.app.vos
+```
+
+**Web VOS examples:**
+```
+google.com_V1.0.0_en-US_260223T1430.web.vos
+github.com_V1.0.0_en-US_260223T1502.web.vos
+```
+
+**JSON backup/export examples:**
+```
+Avanues_V1.0.0_en-US_Backup_260223T1430.json
+Avanues_V1.0.0_en-US_Export_260223T1430.json
+```
+
+**Why this convention:**
+- **Version visible at a glance** — no need to open the file or query the DB to know which version it is
+- **Sortable by timestamp** — chronological ordering in any file browser
+- **Locale in filename** — unambiguous when files from multiple locales sit in the same folder
+- **AppVersion tracks compatibility** — a V2.0.0 VOS file may have new commands not supported by V1.x apps
+
+**Version tracking still in DB:** The `VosFileRegistry` continues to track internal revision numbers (`version` column) for dedup and sync. The filename convention is for human readability and file management; the DB tracks the machine-readable provenance chain.
+
 ### VosFileExporter
 
 **File**: `VoiceOSCore/src/androidMain/.../vos/VosFileExporter.kt`
@@ -165,6 +204,7 @@ class VosFileExporter(context: Context, registry: IVosFileRegistryRepository) {
 ```
 
 - Saves to `Downloads/commands/{filename}`
+- Filename follows `{AppName}_{AppVersion}_{Locale}_{Timestamp}.{type}.vos` convention
 - Computes SHA-256 content hash
 - Skips export if identical hash already registered
 - Auto-increments version per fileId
@@ -189,6 +229,78 @@ class VosFileImporter(registry: IVosFileRegistryRepository, commandDao: VoiceCom
 - Maps `VosParsedCommand` → `VoiceCommandEntity` via `toEntity()`
 - Batch insert via `VoiceCommandDaoAdapter.insertBatch()`
 - Auto-detects file type (app/web) from filename or parsed `domain` from VosParseResult
+
+## 3.5 VOS Portability: Screen-Size & Orientation Agnosticism
+
+### Why VOS Files Are Form-Factor-Independent
+
+VOS files are **screen-size and orientation agnostic**. A single VOS file works identically across phones (portrait/landscape), tablets, smart glasses, and desktops. This is by design — VOS files define a **vocabulary layer** (what commands exist), not a **targeting layer** (where elements are on screen).
+
+**What a VOS command contains:**
+```
+nav_back|go back|navigate back,back,previous screen|Navigate to previous screen
+```
+
+**What a VOS command does NOT contain:**
+- Screen width, height, or density
+- Portrait vs landscape orientation
+- Pixel coordinates or element positions
+- Display profile or form factor data
+
+### Vocabulary vs Targeting: Two Separate Concerns
+
+| Concern | Where it lives | Portable? |
+|---------|---------------|-----------|
+| **Command vocabulary** ("go back", "scroll down") | `.vos` files | Yes — same file works everywhere |
+| **Element coordinates** (pixel bounds at scrape time) | `ScrapedElement.sq` DB (device-local) | No — device-specific, not in VOS |
+| **Runtime element discovery** (where is "Settings" NOW?) | `BoundsResolver.kt` (live accessibility tree) | N/A — resolved at runtime |
+
+### How Click Dispatch Works Without Stored Coordinates
+
+When a user says "click Settings", the system does NOT require coordinates from the VOS file. Instead, `BoundsResolver` uses a **4-layer fallback system** to find the element at runtime:
+
+| Layer | Method | Speed | How it works |
+|-------|--------|-------|-------------|
+| 1 | Metadata bounds | 0-1ms | Use cached pixel coordinates (fast path, same device only) |
+| 2 | Delta compensation | 1-2ms | Adjust cached bounds by scroll offset |
+| 3 | Resource ID search | 5-10ms | Query **live** accessibility tree by `viewIdResourceName` |
+| 4 | Full tree BFS | 50-100ms | Search by text, contentDescription, or elementHash |
+
+**Key insight:** Layers 3 and 4 use **intrinsic element identifiers** — a button with `resourceId="@id/settings_button"` or `text="Settings"` will be found on ANY Android device running that app, regardless of screen size or orientation.
+
+### Cross-Device Import Scenarios
+
+| Scenario | Layer 1 (bounds) | Layer 3 (resourceId) | Layer 4 (text) | Works? |
+|----------|-----------------|---------------------|----------------|--------|
+| Same device, same orientation | Valid | Valid | Valid | Yes (0ms) |
+| Same device, rotated | Stale | Valid | Valid | Yes (5ms) |
+| Different phone (1080p → 1440p) | Wrong | Valid | Valid | Yes (5ms) |
+| Phone → Tablet | Wrong | Valid | Valid | Yes (5ms) |
+| Phone → Smart glasses | Wrong | May differ | Valid | Yes (50ms) |
+| Android → iOS | N/A | N/A (no Android IDs) | Valid | Yes (50ms) |
+
+**Static commands** (handler-based: "go back", "scroll down", "copy", "paste") work immediately on any device — no coordinates needed. They execute via `AccessibilityService.performGlobalAction()` or handler logic.
+
+**Dynamic/scraped commands** (element-specific: "click Settings button") need the importing device to discover element positions via its own accessibility tree. The VOS gives the device the command vocabulary; the runtime accessibility tree provides the targeting.
+
+### What About Scraped Element Bounds?
+
+`ScrapedElement.sq` stores absolute device pixel bounds (`"left,top,right,bottom"`) captured at scrape time via `node.getBoundsInScreen(rect)`. These are:
+
+- **Device-local** — captured on THAT device at THAT screen size
+- **Used for Layer 1 fast-path** — optimization, not correctness requirement
+- **NOT exported in VOS files** — stay in the local database
+- **Rebuilt on import** — the importing device re-scrapes to build its own bounds cache
+
+The `elementHash` (deterministic fingerprint based on `className + packageName + resourceId + text + contentDescription`) IS included in VOS command metadata, enabling cross-device element matching without coordinates.
+
+### DisplayProfile Is Orthogonal to VOS
+
+The `DisplayProfile` enum (`PHONE`, `TABLET`, `GLASS_MICRO`, `COMPACT`, `STANDARD`, `HD`) affects **UI rendering** (Compose density scaling, font sizing, touch targets) but has **zero coupling** to VOS files or command generation. Commands don't change by form factor — "click back" is "click back" whether rendered on a phone or smart glasses.
+
+### Design Principle
+
+> VOS files are the **lingua franca** of voice commands. They teach any device *what to say*. Each device independently discovers *where things are* via its own accessibility tree at runtime. This separation enables VOS portability across all form factors without screen-size-specific variants.
 
 ## 4. Static Command Dispatch Architecture
 
@@ -744,5 +856,5 @@ interface SyncEntryPoint {
 ---
 
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants) | Updated: 2026-02-22 (CommandManager import path fix: managers.commandmanager → commandmanager)*
+*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants) | Updated: 2026-02-22 (CommandManager import path fix: managers.commandmanager → commandmanager) | Updated: 2026-02-23 (Section 3: VOS export file naming convention AppName_AppVersion_Locale_Timestamp; Section 3.5: VOS portability — screen-size/orientation agnosticism, 4-layer BoundsResolver dispatch, cross-device import scenarios)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement), Chapter 96 (KMP Foundation)*
