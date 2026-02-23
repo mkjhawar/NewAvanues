@@ -162,6 +162,9 @@ include(":Modules:HTTPAvanue")             // KMP HTTP/1.1 + HTTP/2 server, WebS
 include(":Modules:AnnotationAvanue")        // KMP whiteboard/signature/drawing canvas
 include(":Modules:NetAvanue")              // KMP P2P networking: signaling, capabilities, pairing (AvanueCentral client)
 
+// Crypto — Cross-platform AON codec, HMAC, AES-256-GCM (KMP)
+include(":Modules:Crypto")
+
 // Rpc - Cross-platform RPC module
 include(":Modules:Rpc")                  // Root module with KMP + Wire
 
