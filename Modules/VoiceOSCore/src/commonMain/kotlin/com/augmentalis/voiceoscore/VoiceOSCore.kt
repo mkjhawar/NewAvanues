@@ -402,7 +402,7 @@ class VoiceOSCore private constructor(
                 } else {
                     // Defensive fallback: load wake commands from registry
                     val fallbackWake = StaticCommandRegistry.findById("voice_wake")
-                        ?.let { listOf(it.triggerPhrase) + it.synonyms }
+                        ?.let { listOf(it.primaryPhrase) + it.phrases.drop(1) }
                         ?: listOf("wake up voice", "start listening", "voice on")
                     engine.updateCommands(fallbackWake)
                     println("[VoiceOSCore] MUTED with no exitCommands — auto-loaded ${fallbackWake.size} wake commands")
@@ -416,7 +416,7 @@ class VoiceOSCore private constructor(
                 } else {
                     // Defensive fallback: load stop-dictation commands from registry
                     val fallbackExit = StaticCommandRegistry.findById("voice_dict_stop")
-                        ?.let { listOf(it.triggerPhrase) + it.synonyms }
+                        ?.let { listOf(it.primaryPhrase) + it.phrases.drop(1) }
                         ?: listOf("stop dictation", "end dictation", "command mode")
                     engine.updateCommands(fallbackExit)
                     println("[VoiceOSCore] DICTATION with no exitCommands — auto-loaded ${fallbackExit.size} exit commands")

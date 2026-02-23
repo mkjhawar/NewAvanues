@@ -204,6 +204,7 @@ internal class AppleSpeechEngineAdapter : ISpeechEngine {
             SpeechMode.COMBINED_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND
             SpeechMode.DICTATION -> com.augmentalis.speechrecognition.SpeechMode.DICTATION
             SpeechMode.FREE_SPEECH -> com.augmentalis.speechrecognition.SpeechMode.FREE_SPEECH
+            SpeechMode.MUTED -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND  // Muted = restricted wake-only grammar
             SpeechMode.HYBRID -> com.augmentalis.speechrecognition.SpeechMode.HYBRID
         }
         return com.augmentalis.speechrecognition.SpeechConfig(

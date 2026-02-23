@@ -228,6 +228,7 @@ class KmpSpeechEngineAdapter(
             SpeechMode.COMBINED_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.HYBRID
             SpeechMode.DICTATION -> com.augmentalis.speechrecognition.SpeechMode.DICTATION
             SpeechMode.FREE_SPEECH -> com.augmentalis.speechrecognition.SpeechMode.FREE_SPEECH
+            SpeechMode.MUTED -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND  // Muted = restricted wake-only grammar
             SpeechMode.HYBRID -> com.augmentalis.speechrecognition.SpeechMode.HYBRID
         }
     }

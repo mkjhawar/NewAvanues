@@ -81,6 +81,12 @@ object StaticCommandRegistry {
         all().filter { it.category == category }
 
     /**
+     * Find command by its unique ID (e.g., "voice_wake", "nav_back").
+     */
+    fun findById(id: String): StaticCommand? =
+        all().find { it.id == id }
+
+    /**
      * Find command matching phrase
      */
     fun findByPhrase(phrase: String): StaticCommand? {

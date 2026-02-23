@@ -167,6 +167,7 @@ class VivokaAndroidEngine(
                 SpeechMode.COMBINED_COMMAND -> SRSpeechMode.DYNAMIC_COMMAND  // No combined in SR, use dynamic
                 SpeechMode.DICTATION -> SRSpeechMode.DICTATION
                 SpeechMode.FREE_SPEECH -> SRSpeechMode.FREE_SPEECH
+                SpeechMode.MUTED -> SRSpeechMode.STATIC_COMMAND  // Muted = restricted wake-only grammar
                 SpeechMode.HYBRID -> SRSpeechMode.HYBRID
             },
             voiceEnabled = true,
