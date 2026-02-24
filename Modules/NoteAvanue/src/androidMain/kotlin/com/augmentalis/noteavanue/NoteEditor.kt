@@ -1,7 +1,6 @@
 package com.augmentalis.noteavanue
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +52,7 @@ import com.augmentalis.noteavanue.model.NoteAttachment
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
+import com.mohamedrejeb.richeditor.model.RichTextState
 import com.mohamedrejeb.richeditor.model.rememberRichTextState
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditor
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditorDefaults
@@ -86,6 +86,7 @@ fun NoteEditor(
 ) {
     val colors = AvanueTheme.colors
     val richTextState = rememberRichTextState()
+    val undoManager = remember(richTextState) { RichTextUndoManager(richTextState) }
     var titleField by remember { mutableStateOf(initialTitle) }
     var hasLoaded by remember(initialContent) { mutableStateOf(false) }
 
@@ -96,9 +97,9 @@ fun NoteEditor(
     }
 
     // Wire voice command executor for note formatting/editing
-    DisposableEffect(richTextState) {
+    DisposableEffect(richTextState, undoManager) {
         ModuleCommandCallbacks.noteExecutor = { actionType, metadata ->
-            executeNoteCommand(richTextState, actionType, metadata,
+            executeNoteCommand(richTextState, undoManager, actionType, metadata,
                 getTitle = { titleField },
                 doSave = { onSave(titleField, richTextState.toMarkdown()) },
                 doAttachFile = onAttachFile,
@@ -291,7 +292,8 @@ fun NoteEditor(
  */
 @Suppress("CyclomaticComplexMethod")
 private fun executeNoteCommand(
-    richTextState: com.mohamedrejeb.richeditor.model.RichTextState,
+    richTextState: RichTextState,
+    undoManager: RichTextUndoManager,
     actionType: CommandActionType,
     metadata: Map<String, String>,
     getTitle: () -> String,
@@ -301,50 +303,65 @@ private fun executeNoteCommand(
     doStartDictation: () -> Unit,
 ): HandlerResult {
     return when (actionType) {
-        // ── Formatting ────────────────────────────────────────────────
+        // ── Formatting (snapshot before each mutation) ─────────────────
         CommandActionType.FORMAT_BOLD -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontWeight = FontWeight.Bold))
             HandlerResult.success("Bold toggled")
         }
         CommandActionType.FORMAT_ITALIC -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontStyle = FontStyle.Italic))
             HandlerResult.success("Italic toggled")
         }
         CommandActionType.FORMAT_UNDERLINE -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(textDecoration = TextDecoration.Underline))
             HandlerResult.success("Underline toggled")
         }
         CommandActionType.FORMAT_STRIKETHROUGH -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(textDecoration = TextDecoration.LineThrough))
             HandlerResult.success("Strikethrough toggled")
         }
         CommandActionType.HEADING_1 -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold))
             HandlerResult.success("Heading 1")
         }
         CommandActionType.HEADING_2 -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold))
             HandlerResult.success("Heading 2")
         }
         CommandActionType.HEADING_3 -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold))
             HandlerResult.success("Heading 3")
         }
         CommandActionType.CODE_BLOCK -> {
+            undoManager.captureSnapshot()
             richTextState.toggleCodeSpan()
             HandlerResult.success("Code block toggled")
         }
 
-        // ── Editing ───────────────────────────────────────────────────
+        // ── Undo/Redo (snapshot-based via RichTextUndoManager) ────────
         CommandActionType.NOTE_UNDO -> {
-            // compose-rich-editor RC13 does not expose undo API
-            HandlerResult.failure("Undo not available in current editor version", recoverable = true)
+            if (undoManager.undo()) {
+                HandlerResult.success("Undone")
+            } else {
+                HandlerResult.failure("Nothing to undo", recoverable = true)
+            }
         }
         CommandActionType.NOTE_REDO -> {
-            // compose-rich-editor RC13 does not expose redo API
-            HandlerResult.failure("Redo not available in current editor version", recoverable = true)
+            if (undoManager.redo()) {
+                HandlerResult.success("Redone")
+            } else {
+                HandlerResult.failure("Nothing to redo", recoverable = true)
+            }
         }
         CommandActionType.CLEAR_FORMATTING -> {
+            undoManager.captureSnapshot()
             richTextState.removeSpanStyle(richTextState.currentSpanStyle)
             HandlerResult.success("Formatting cleared")
         }

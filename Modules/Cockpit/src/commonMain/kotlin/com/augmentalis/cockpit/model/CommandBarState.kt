@@ -30,6 +30,7 @@ enum class CommandBarState {
     VIDEO_ACTIONS,
     NOTE_ACTIONS,
     CAMERA_ACTIONS,
+    WHITEBOARD_ACTIONS,
 
     // Level 2: Navigation
     SCROLL_COMMANDS,
@@ -42,7 +43,8 @@ enum class CommandBarState {
             MAIN -> null
             ADD_FRAME, LAYOUT_PICKER, FRAME_ACTIONS -> MAIN
             WEB_ACTIONS, PDF_ACTIONS, IMAGE_ACTIONS,
-            VIDEO_ACTIONS, NOTE_ACTIONS, CAMERA_ACTIONS -> FRAME_ACTIONS
+            VIDEO_ACTIONS, NOTE_ACTIONS, CAMERA_ACTIONS,
+            WHITEBOARD_ACTIONS -> FRAME_ACTIONS
             SCROLL_COMMANDS, ZOOM_COMMANDS, SPATIAL_COMMANDS -> MAIN
         }
 
@@ -62,21 +64,21 @@ enum class CommandBarState {
     companion object {
         private val CONTENT_SPECIFIC_STATES = setOf(
             WEB_ACTIONS, PDF_ACTIONS, IMAGE_ACTIONS,
-            VIDEO_ACTIONS, NOTE_ACTIONS, CAMERA_ACTIONS
+            VIDEO_ACTIONS, NOTE_ACTIONS, CAMERA_ACTIONS,
+            WHITEBOARD_ACTIONS
         )
 
         /** Map content type ID to the appropriate command bar state.
-         *  note/voice_note and camera map to FRAME_ACTIONS because NoteAvanue and
-         *  PhotoAvanue don't expose undo/redo or flip/capture APIs — showing dead
-         *  chips is worse than showing generic frame actions. NOTE_ACTIONS and
-         *  CAMERA_ACTIONS enum values are retained for future API wiring. */
+         *  Each content type routes to its dedicated action state. The actions
+         *  are dispatched via ModuleCommandCallbacks executors in ContentRenderer. */
         fun forContentType(typeId: String): CommandBarState = when (typeId) {
             "web" -> WEB_ACTIONS
             "pdf" -> PDF_ACTIONS
             "image" -> IMAGE_ACTIONS
             "video" -> VIDEO_ACTIONS
-            "note", "voice_note" -> FRAME_ACTIONS
-            "camera" -> FRAME_ACTIONS
+            "note", "voice_note" -> NOTE_ACTIONS
+            "camera" -> CAMERA_ACTIONS
+            "whiteboard" -> WHITEBOARD_ACTIONS
             else -> FRAME_ACTIONS
         }
     }

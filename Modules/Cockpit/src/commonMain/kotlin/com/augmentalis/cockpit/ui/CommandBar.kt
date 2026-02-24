@@ -29,9 +29,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatStrikethrough
+import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Language
@@ -39,6 +46,7 @@ import androidx.compose.material.icons.filled.Minimize
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ScreenSearchDesktop
 import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -83,10 +91,13 @@ enum class ContentAction {
     IMAGE_ZOOM_IN, IMAGE_ZOOM_OUT, IMAGE_ROTATE,
     // Video
     VIDEO_REWIND, VIDEO_PLAY_PAUSE, VIDEO_FULLSCREEN,
-    // Note
-    NOTE_UNDO, NOTE_REDO,
+    // Note (formatting + snapshot-based undo/redo)
+    NOTE_BOLD, NOTE_ITALIC, NOTE_UNDERLINE, NOTE_STRIKETHROUGH,
+    NOTE_UNDO, NOTE_REDO, NOTE_SAVE,
     // Camera
-    CAMERA_FLIP, CAMERA_CAPTURE
+    CAMERA_FLIP, CAMERA_CAPTURE,
+    // Whiteboard / Annotation
+    WB_PEN, WB_HIGHLIGHTER, WB_ERASER, WB_UNDO, WB_REDO, WB_CLEAR,
 }
 
 /**
@@ -257,11 +268,26 @@ fun CommandBar(
                     }
 
                     CommandBarState.NOTE_ACTIONS -> {
+                        CommandChip(Icons.Default.FormatBold, "Bold", false) {
+                            onContentAction(ContentAction.NOTE_BOLD)
+                        }
+                        CommandChip(Icons.Default.FormatItalic, "Italic", false) {
+                            onContentAction(ContentAction.NOTE_ITALIC)
+                        }
+                        CommandChip(Icons.Default.FormatUnderlined, "Underline", false) {
+                            onContentAction(ContentAction.NOTE_UNDERLINE)
+                        }
+                        CommandChip(Icons.Default.FormatStrikethrough, "Strikethrough", false) {
+                            onContentAction(ContentAction.NOTE_STRIKETHROUGH)
+                        }
                         CommandChip(Icons.Default.Undo, "Undo", false) {
                             onContentAction(ContentAction.NOTE_UNDO)
                         }
                         CommandChip(Icons.Default.Redo, "Redo", false) {
                             onContentAction(ContentAction.NOTE_REDO)
+                        }
+                        CommandChip(Icons.Default.Save, "Save", false) {
+                            onContentAction(ContentAction.NOTE_SAVE)
                         }
                     }
 
@@ -271,6 +297,27 @@ fun CommandBar(
                         }
                         CommandChip(Icons.Default.TouchApp, "Capture", false) {
                             onContentAction(ContentAction.CAMERA_CAPTURE)
+                        }
+                    }
+
+                    CommandBarState.WHITEBOARD_ACTIONS -> {
+                        CommandChip(Icons.Default.Draw, "Pen", false) {
+                            onContentAction(ContentAction.WB_PEN)
+                        }
+                        CommandChip(Icons.Default.Brush, "Highlight", false) {
+                            onContentAction(ContentAction.WB_HIGHLIGHTER)
+                        }
+                        CommandChip(Icons.Default.Delete, "Eraser", false) {
+                            onContentAction(ContentAction.WB_ERASER)
+                        }
+                        CommandChip(Icons.Default.Undo, "Undo", false) {
+                            onContentAction(ContentAction.WB_UNDO)
+                        }
+                        CommandChip(Icons.Default.Redo, "Redo", false) {
+                            onContentAction(ContentAction.WB_REDO)
+                        }
+                        CommandChip(Icons.Default.Close, "Clear", false) {
+                            onContentAction(ContentAction.WB_CLEAR)
                         }
                     }
 

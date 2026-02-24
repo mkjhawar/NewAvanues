@@ -20,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import com.augmentalis.cockpit.ui.ContentAction
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 import kotlinx.coroutines.flow.SharedFlow
 import com.augmentalis.annotationavanue.AnnotationCanvas
 import com.augmentalis.annotationavanue.SignatureCapture
@@ -173,22 +175,59 @@ fun ContentRenderer(
                 )
             }
 
-            is FrameContent.Note -> NoteEditor(
-                initialTitle = frame.title,
-                initialContent = content.markdownContent,
-                onSave = { _, markdownContent ->
-                    onContentStateChanged(frame.id, content.copy(markdownContent = markdownContent))
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+            is FrameContent.Note -> {
+                if (contentActionFlow != null) {
+                    LaunchedEffect(contentActionFlow) {
+                        contentActionFlow.collect { action ->
+                            val actionType = when (action) {
+                                ContentAction.NOTE_BOLD -> CommandActionType.FORMAT_BOLD
+                                ContentAction.NOTE_ITALIC -> CommandActionType.FORMAT_ITALIC
+                                ContentAction.NOTE_UNDERLINE -> CommandActionType.FORMAT_UNDERLINE
+                                ContentAction.NOTE_STRIKETHROUGH -> CommandActionType.FORMAT_STRIKETHROUGH
+                                ContentAction.NOTE_UNDO -> CommandActionType.NOTE_UNDO
+                                ContentAction.NOTE_REDO -> CommandActionType.NOTE_REDO
+                                ContentAction.NOTE_SAVE -> CommandActionType.SAVE_NOTE
+                                else -> null
+                            }
+                            if (actionType != null) {
+                                ModuleCommandCallbacks.noteExecutor?.invoke(actionType, emptyMap())
+                            }
+                        }
+                    }
+                }
+                NoteEditor(
+                    initialTitle = frame.title,
+                    initialContent = content.markdownContent,
+                    onSave = { _, markdownContent ->
+                        onContentStateChanged(frame.id, content.copy(markdownContent = markdownContent))
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-            is FrameContent.Camera -> CameraPreview(
-                onPhotoCaptured = { _ ->
-                    // Photo capture is a side-effect (saved to gallery/attachment storage).
-                    // Camera content tracks lens/flash/zoom settings, not captured URIs.
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+            is FrameContent.Camera -> {
+                if (contentActionFlow != null) {
+                    LaunchedEffect(contentActionFlow) {
+                        contentActionFlow.collect { action ->
+                            val actionType = when (action) {
+                                ContentAction.CAMERA_FLIP -> CommandActionType.SWITCH_LENS
+                                ContentAction.CAMERA_CAPTURE -> CommandActionType.CAPTURE_PHOTO
+                                else -> null
+                            }
+                            if (actionType != null) {
+                                ModuleCommandCallbacks.cameraExecutor?.invoke(actionType, emptyMap())
+                            }
+                        }
+                    }
+                }
+                CameraPreview(
+                    onPhotoCaptured = { _ ->
+                        // Photo capture is a side-effect (saved to gallery/attachment storage).
+                        // Camera content tracks lens/flash/zoom settings, not captured URIs.
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             is FrameContent.VoiceNote -> VoiceNoteRenderer(
                 transcription = content.transcript,
@@ -214,9 +253,29 @@ fun ContentRenderer(
                 modifier = Modifier.fillMaxSize()
             )
 
-            is FrameContent.Whiteboard -> AnnotationCanvas(
-                modifier = Modifier.fillMaxSize()
-            )
+            is FrameContent.Whiteboard -> {
+                if (contentActionFlow != null) {
+                    LaunchedEffect(contentActionFlow) {
+                        contentActionFlow.collect { action ->
+                            val actionType = when (action) {
+                                ContentAction.WB_PEN -> CommandActionType.ANNOTATION_PEN
+                                ContentAction.WB_HIGHLIGHTER -> CommandActionType.ANNOTATION_HIGHLIGHTER
+                                ContentAction.WB_ERASER -> CommandActionType.ANNOTATION_ERASER
+                                ContentAction.WB_UNDO -> CommandActionType.ANNOTATION_UNDO
+                                ContentAction.WB_REDO -> CommandActionType.ANNOTATION_REDO
+                                ContentAction.WB_CLEAR -> CommandActionType.ANNOTATION_CLEAR
+                                else -> null
+                            }
+                            if (actionType != null) {
+                                ModuleCommandCallbacks.annotationExecutor?.invoke(actionType, emptyMap())
+                            }
+                        }
+                    }
+                }
+                AnnotationCanvas(
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             is FrameContent.ScreenCast -> CastOverlay(
                 castState = CastState(
