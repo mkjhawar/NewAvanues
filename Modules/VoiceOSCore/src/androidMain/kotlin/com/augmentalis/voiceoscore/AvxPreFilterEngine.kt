@@ -132,9 +132,22 @@ class AvxPreFilterEngine(
             return true
         }
 
-        // Lazy-load AVX engine
-        if (avxEngine == null) {
-            avxEngine = AvxEngine(context)
+        // Check Sherpa-ONNX availability before touching AVX engine classes
+        if (!AvxEngine.isSherpaAvailable()) {
+            Log.w(TAG, "Sherpa-ONNX not available — pre-filter disabled")
+            mode = PreFilterMode.DISABLED
+            return false
+        }
+
+        // Lazy-load AVX engine (safe now that Sherpa classes are confirmed present)
+        try {
+            if (avxEngine == null) {
+                avxEngine = AvxEngine(context)
+            }
+        } catch (e: NoClassDefFoundError) {
+            Log.w(TAG, "Sherpa-ONNX class loading failed — pre-filter disabled: ${e.message}")
+            mode = PreFilterMode.DISABLED
+            return false
         }
 
         val avxLang = AvxLanguage.forCode(language) ?: AvxLanguage.ENGLISH
