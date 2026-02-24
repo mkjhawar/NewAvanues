@@ -41,6 +41,7 @@ import com.augmentalis.noteavanue.NoteEditor
 import com.augmentalis.pdfavanue.PdfViewer
 import com.augmentalis.remotecast.CastOverlay
 import com.augmentalis.remotecast.model.CastState
+import com.augmentalis.videoavanue.VideoGalleryScreen
 import com.augmentalis.videoavanue.VideoPlayer
 
 /**
@@ -146,33 +147,43 @@ fun ContentRenderer(
             }
 
             is FrameContent.Video -> {
-                val isPlaying = remember { mutableStateOf(content.isPlaying) }
+                if (content.uri.isBlank()) {
+                    // No video selected — show gallery picker so the user can choose one
+                    VideoGalleryScreen(
+                        onVideoSelected = { video ->
+                            onContentStateChanged(frame.id, content.copy(uri = video.uri))
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    val isPlaying = remember { mutableStateOf(content.isPlaying) }
 
-                if (contentActionFlow != null) {
-                    LaunchedEffect(contentActionFlow) {
-                        contentActionFlow.collect { action ->
-                            when (action) {
-                                ContentAction.VIDEO_PLAY_PAUSE -> isPlaying.value = !isPlaying.value
-                                ContentAction.VIDEO_REWIND -> {
-                                    val newPos = (content.playbackPositionMs - 10_000L).coerceAtLeast(0L)
-                                    onContentStateChanged(frame.id, content.copy(playbackPositionMs = newPos))
+                    if (contentActionFlow != null) {
+                        LaunchedEffect(contentActionFlow) {
+                            contentActionFlow.collect { action ->
+                                when (action) {
+                                    ContentAction.VIDEO_PLAY_PAUSE -> isPlaying.value = !isPlaying.value
+                                    ContentAction.VIDEO_REWIND -> {
+                                        val newPos = (content.playbackPositionMs - 10_000L).coerceAtLeast(0L)
+                                        onContentStateChanged(frame.id, content.copy(playbackPositionMs = newPos))
+                                    }
+                                    ContentAction.VIDEO_FULLSCREEN -> { /* Layout concern — no-op at content level */ }
+                                    else -> { /* Not a video action */ }
                                 }
-                                ContentAction.VIDEO_FULLSCREEN -> { /* Layout concern — no-op at content level */ }
-                                else -> { /* Not a video action */ }
                             }
                         }
                     }
-                }
 
-                VideoPlayer(
-                    uri = content.uri,
-                    autoPlay = isPlaying.value,
-                    initialPositionMs = content.playbackPositionMs,
-                    onPositionChanged = { posMs ->
-                        onContentStateChanged(frame.id, content.copy(playbackPositionMs = posMs))
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
+                    VideoPlayer(
+                        uri = content.uri,
+                        autoPlay = isPlaying.value,
+                        initialPositionMs = content.playbackPositionMs,
+                        onPositionChanged = { posMs ->
+                            onContentStateChanged(frame.id, content.copy(playbackPositionMs = posMs))
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
 
             is FrameContent.Note -> {

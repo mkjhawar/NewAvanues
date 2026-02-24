@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
@@ -59,8 +60,33 @@ fun VideoPlayer(
     onPositionChanged: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val colors = AvanueTheme.colors
+
+    // Guard: prevent ExoPlayer initialization with empty/blank URI
+    if (uri.isBlank()) {
+        Box(
+            modifier = modifier.fillMaxSize().background(colors.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.VideoLibrary,
+                    contentDescription = "No video",
+                    tint = colors.textPrimary.copy(alpha = 0.4f),
+                    modifier = Modifier.size(64.dp)
+                )
+                Text(
+                    "No video selected",
+                    color = colors.textPrimary.copy(alpha = 0.5f),
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+        return
+    }
+
+    val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(autoPlay) }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
@@ -69,7 +95,7 @@ fun VideoPlayer(
     var playbackSpeed by remember { mutableStateOf(1f) }
     var isLooping by remember { mutableStateOf(false) }
 
-    val exoPlayer = remember {
+    val exoPlayer = remember(uri) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(Uri.parse(uri)))
             prepare(); seekTo(initialPositionMs); playWhenReady = autoPlay
@@ -95,7 +121,7 @@ fun VideoPlayer(
         }
     }
 
-    DisposableEffect(Unit) { onDispose { exoPlayer.release() } }
+    DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
 
     // Wire voice command executor for video playback control
     DisposableEffect(exoPlayer) {
