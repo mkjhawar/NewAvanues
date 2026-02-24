@@ -81,7 +81,7 @@ class StubVivokaEngine(
     private val _wakeWordDetected = MutableSharedFlow<WakeWordEvent>()
     override val wakeWordDetected: SharedFlow<WakeWordEvent> = _wakeWordDetected
 
-    override suspend fun enableWakeWord(wakeWord: String): Result<Unit> {
+    override suspend fun enableWakeWord(wakeWord: String, sensitivity: Float): Result<Unit> {
         return Result.failure(UnsupportedOperationException(reason))
     }
 

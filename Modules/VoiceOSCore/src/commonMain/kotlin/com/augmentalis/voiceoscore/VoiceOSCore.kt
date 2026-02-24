@@ -659,6 +659,40 @@ class VoiceOSCore private constructor(
     }
 
     /**
+     * Update wake word settings at runtime.
+     *
+     * Called by the platform lifecycle manager (e.g., accessibility service) when
+     * AvanuesSettings wake word fields change. Delegates to the speech engine's
+     * IWakeWordCapable interface if the engine supports it.
+     *
+     * @param enabled Whether wake word detection should be active
+     * @param wakePhrase The spoken wake phrase (e.g. "hey ava")
+     * @param sensitivity Detection confidence threshold (0.1-0.9)
+     */
+    suspend fun updateWakeWordSettings(
+        enabled: Boolean,
+        wakePhrase: String,
+        sensitivity: Float
+    ): Result<Unit> {
+        val engine = speechEngine
+        if (engine == null) {
+            return Result.failure(IllegalStateException("Speech engine not initialized"))
+        }
+
+        // Check if the engine supports wake word (IWakeWordCapable)
+        val wakeCapable = engine as? IWakeWordCapable
+            ?: return Result.failure(UnsupportedOperationException(
+                "Current engine (${engine.getEngineType()}) does not support wake word detection"
+            ))
+
+        return if (enabled) {
+            wakeCapable.enableWakeWord(wakePhrase, sensitivity)
+        } else {
+            wakeCapable.disableWakeWord()
+        }
+    }
+
+    /**
      * Get debug information.
      */
     suspend fun getDebugInfo(): String {

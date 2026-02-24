@@ -476,6 +476,23 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         }
                         previousVoiceLocale = newLocale
 
+                        // Wake word settings → VoiceOSCore lifecycle
+                        try {
+                            val wakePhrase = when (settings.wakeWordKeyword) {
+                                "HEY_AVA" -> "hey ava"
+                                "OK_AVA" -> "ok ava"
+                                "COMPUTER" -> "computer"
+                                else -> "hey ava"
+                            }
+                            voiceOSCore?.updateWakeWordSettings(
+                                enabled = settings.wakeWordEnabled,
+                                wakePhrase = wakePhrase,
+                                sensitivity = settings.wakeWordSensitivity
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Wake word settings update failed", e)
+                        }
+
                         // Start/stop CursorOverlayService based on toggle
                         val canOverlay = Settings.canDrawOverlays(applicationContext)
                         if (settings.cursorEnabled && canOverlay) {
