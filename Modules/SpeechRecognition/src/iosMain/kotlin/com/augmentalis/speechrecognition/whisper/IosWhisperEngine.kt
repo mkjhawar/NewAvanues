@@ -341,14 +341,17 @@ class IosWhisperEngine {
             throw IllegalStateException("Failed to initialize AVAudioEngine capture")
         }
 
-        // Step 3: Initialize VAD (shared commonMain implementation)
+        // Step 3: Initialize VAD (shared commonMain implementation) — use effective params (profile-aware)
         vad = WhisperVAD(
             speechThreshold = 0f, // auto-calibrate from noise floor
-            vadSensitivity = config.vadSensitivity,
-            silenceTimeoutMs = config.silenceThresholdMs.toLong(),
-            minSpeechDurationMs = config.minSpeechDurationMs.toLong(),
+            vadSensitivity = config.effectiveVadSensitivity,
+            silenceTimeoutMs = config.effectiveSilenceThresholdMs.toLong(),
+            minSpeechDurationMs = config.effectiveMinSpeechDurationMs.toLong(),
             maxSpeechDurationMs = config.maxChunkDurationMs.toLong(),
-            paddingMs = 150
+            hangoverFrames = config.effectiveHangoverFrames,
+            paddingMs = 150,
+            thresholdAlpha = config.effectiveThresholdAlpha,
+            minThreshold = config.effectiveMinThreshold
         )
 
         // Step 4: Load model (auto-download if missing)

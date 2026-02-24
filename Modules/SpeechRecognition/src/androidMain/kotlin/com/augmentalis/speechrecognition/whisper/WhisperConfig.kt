@@ -49,8 +49,30 @@ data class WhisperConfig(
     val maxChunkDurationMs: Long = 30_000,
 
     /** Whether to use 16-bit quantized models when available (faster, slightly less accurate) */
-    val useQuantized: Boolean = false
+    val useQuantized: Boolean = false,
+
+    /** Optional VAD profile preset. When set, overrides individual VAD parameters
+     *  (vadSensitivity, silenceThresholdMs, minSpeechDurationMs) with profile values. */
+    val vadProfile: VADProfile? = null
 ) {
+    /** Effective VAD sensitivity: profile value if set, otherwise explicit config value */
+    val effectiveVadSensitivity: Float get() = vadProfile?.vadSensitivity ?: vadSensitivity
+
+    /** Effective silence threshold: profile value if set, otherwise explicit config value */
+    val effectiveSilenceThresholdMs: Long get() = vadProfile?.silenceTimeoutMs ?: silenceThresholdMs
+
+    /** Effective minimum speech duration: profile value if set, otherwise explicit config value */
+    val effectiveMinSpeechDurationMs: Long get() = vadProfile?.minSpeechDurationMs ?: minSpeechDurationMs
+
+    /** Effective hangover frames: profile value if set, otherwise default 5 */
+    val effectiveHangoverFrames: Int get() = vadProfile?.hangoverFrames ?: 5
+
+    /** Effective threshold alpha: profile value if set, otherwise default */
+    val effectiveThresholdAlpha: Float get() = vadProfile?.thresholdAlpha ?: WhisperVAD.DEFAULT_THRESHOLD_ALPHA
+
+    /** Effective min threshold: profile value if set, otherwise default */
+    val effectiveMinThreshold: Float get() = vadProfile?.minThreshold ?: WhisperVAD.DEFAULT_MIN_THRESHOLD
+
     /**
      * Resolve the effective number of threads.
      */

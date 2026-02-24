@@ -40,8 +40,30 @@ data class IosWhisperConfig(
     val vadSensitivity: Float = 0.6f,
     val silenceThresholdMs: Int = 700,
     val minSpeechDurationMs: Int = 300,
-    val maxChunkDurationMs: Int = 30_000
+    val maxChunkDurationMs: Int = 30_000,
+
+    /** Optional VAD profile preset. When set, overrides individual VAD parameters
+     *  (vadSensitivity, silenceThresholdMs, minSpeechDurationMs) with profile values. */
+    val vadProfile: VADProfile? = null
 ) {
+    /** Effective VAD sensitivity: profile value if set, otherwise explicit config value */
+    val effectiveVadSensitivity: Float get() = vadProfile?.vadSensitivity ?: vadSensitivity
+
+    /** Effective silence threshold: profile value if set, otherwise explicit config value */
+    val effectiveSilenceThresholdMs: Int get() = vadProfile?.silenceTimeoutMs?.toInt() ?: silenceThresholdMs
+
+    /** Effective minimum speech duration: profile value if set, otherwise explicit config value */
+    val effectiveMinSpeechDurationMs: Int get() = vadProfile?.minSpeechDurationMs?.toInt() ?: minSpeechDurationMs
+
+    /** Effective hangover frames: profile value if set, otherwise default 5 */
+    val effectiveHangoverFrames: Int get() = vadProfile?.hangoverFrames ?: 5
+
+    /** Effective threshold alpha: profile value if set, otherwise default */
+    val effectiveThresholdAlpha: Float get() = vadProfile?.thresholdAlpha ?: WhisperVAD.DEFAULT_THRESHOLD_ALPHA
+
+    /** Effective min threshold: profile value if set, otherwise default */
+    val effectiveMinThreshold: Float get() = vadProfile?.minThreshold ?: WhisperVAD.DEFAULT_MIN_THRESHOLD
+
     companion object {
         private const val TAG = "IosWhisperConfig"
 
