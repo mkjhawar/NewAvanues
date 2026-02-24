@@ -48,6 +48,9 @@ class IosWhisperModelManager {
         private const val TAG = "IosWhisperModelManager"
         private const val PARTIAL_SUFFIX = ".partial"
         private const val CHECKSUM_SUFFIX = ".sha256"
+        private const val MAX_RETRY_ATTEMPTS = 3
+        private const val INITIAL_RETRY_DELAY_MS = 2_000L
+        private const val MAX_RETRY_DELAY_MS = 30_000L
     }
 
     // Download state
@@ -58,13 +61,17 @@ class IosWhisperModelManager {
     private var downloadTask: NSURLSessionTask? = null
 
     /**
-     * Download a model from HuggingFace.
-     * Uses NSURLSession for native iOS networking.
+     * Download a model from HuggingFace with automatic retry on transient failures.
+     * Uses exponential backoff: 2s → 4s → 8s (capped at 30s).
      *
      * @param modelSize Which model to download
+     * @param maxRetries Max retry attempts (default 3)
      * @return true if download completed successfully
      */
-    suspend fun downloadModel(modelSize: WhisperModelSize): Boolean {
+    suspend fun downloadModel(
+        modelSize: WhisperModelSize,
+        maxRetries: Int = MAX_RETRY_ATTEMPTS
+    ): Boolean {
         if (isModelDownloaded(modelSize)) {
             _downloadState.value = ModelDownloadState.Completed(
                 modelSize, getModelPath(modelSize)!!
@@ -75,17 +82,41 @@ class IosWhisperModelManager {
         _downloadState.value = ModelDownloadState.Checking
 
         return withContext(Dispatchers.Default) {
-            try {
-                performDownload(modelSize)
-            } catch (e: CancellationException) {
-                _downloadState.value = ModelDownloadState.Cancelled(modelSize)
-                logInfo(TAG, "Download cancelled: ${modelSize.displayName}")
-                false
-            } catch (e: Exception) {
-                _downloadState.value = ModelDownloadState.Failed(modelSize, e.message ?: "Unknown error")
-                logError(TAG, "Download failed: ${modelSize.displayName}")
-                false
+            var lastError: String? = null
+
+            for (attempt in 1..maxRetries) {
+                try {
+                    val success = performDownload(modelSize)
+                    if (success) return@withContext true
+
+                    // performDownload returned false — extract error from current state
+                    lastError = (_downloadState.value as? ModelDownloadState.Failed)?.error
+                        ?: "Download returned false"
+                } catch (e: CancellationException) {
+                    _downloadState.value = ModelDownloadState.Cancelled(modelSize)
+                    logInfo(TAG, "Download cancelled: ${modelSize.displayName}")
+                    return@withContext false
+                } catch (e: Exception) {
+                    lastError = e.message ?: "Unknown error"
+                }
+
+                // Retry with exponential backoff (skip delay on final attempt)
+                if (attempt < maxRetries) {
+                    val delayMs = (INITIAL_RETRY_DELAY_MS * (1L shl (attempt - 1)))
+                        .coerceAtMost(MAX_RETRY_DELAY_MS)
+                    logWarn(TAG, "Download attempt $attempt/$maxRetries failed: $lastError, retrying in ${delayMs}ms")
+                    _downloadState.value = ModelDownloadState.Retrying(
+                        modelSize, attempt, maxRetries, delayMs
+                    )
+                    delay(delayMs)
+                }
             }
+
+            _downloadState.value = ModelDownloadState.Failed(
+                modelSize, lastError ?: "Failed after $maxRetries attempts"
+            )
+            logError(TAG, "Download failed after $maxRetries attempts: ${modelSize.displayName}")
+            false
         }
     }
 
