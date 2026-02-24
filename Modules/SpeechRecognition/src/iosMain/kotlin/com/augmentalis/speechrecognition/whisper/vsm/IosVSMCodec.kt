@@ -18,6 +18,10 @@ import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.native.crypto.*
 import kotlinx.cinterop.*
+import platform.CoreCrypto.CC_MD5
+import platform.CoreCrypto.CC_MD5_DIGEST_LENGTH
+import platform.CoreCrypto.CC_SHA512
+import platform.CoreCrypto.CC_SHA512_DIGEST_LENGTH
 import platform.Foundation.*
 import platform.posix.*
 import kotlin.random.Random as KRandom
