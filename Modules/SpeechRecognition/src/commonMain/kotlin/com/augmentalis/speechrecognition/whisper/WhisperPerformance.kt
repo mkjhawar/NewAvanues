@@ -58,6 +58,7 @@ class WhisperPerformance : SynchronizedObject() {
     @Volatile var totalAudioProcessedMs: Long = 0; private set
     @Volatile var totalProcessingTimeMs: Long = 0; private set
     @Volatile var totalCharactersTranscribed: Long = 0; private set
+    @Volatile var totalSegments: Long = 0; private set
 
     // Peaks
     @Volatile var peakLatencyMs: Long = 0; private set
@@ -93,6 +94,7 @@ class WhisperPerformance : SynchronizedObject() {
             totalAudioProcessedMs += audioDurationMs
             totalProcessingTimeMs += processingTimeMs
             totalCharactersTranscribed += textLength
+            totalSegments += segmentCount
 
             if (textLength == 0) {
                 emptyTranscriptions++
@@ -151,6 +153,7 @@ class WhisperPerformance : SynchronizedObject() {
                 "totalAudioProcessedMs" to totalAudioProcessedMs,
                 "totalProcessingTimeMs" to totalProcessingTimeMs,
                 "totalCharactersTranscribed" to totalCharactersTranscribed,
+                "totalSegments" to totalSegments,
                 "peakLatencyMs" to peakLatencyMs,
                 "peakRTF" to peakRTF
             )
@@ -226,6 +229,7 @@ class WhisperPerformance : SynchronizedObject() {
             totalAudioProcessedMs = 0
             totalProcessingTimeMs = 0
             totalCharactersTranscribed = 0
+            totalSegments = 0
             peakLatencyMs = 0
             peakRTF = 0f
             detectedLanguage = null

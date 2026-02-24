@@ -129,37 +129,30 @@ actual class IntentClassifier private constructor() {
                 tokenTypeIds = tokens.tokenTypeIds
             )
 
-            val embeddingOutput = when (inferenceResult) {
-                is Result.Success -> inferenceResult.data
-                is Result.Error -> {
-                    return@withContext Result.Error(
-                        exception = inferenceResult.exception,
-                        message = "Core ML inference failed: ${inferenceResult.message}"
-                    )
-                }
-                else -> return@withContext Result.Error(
-                    exception = IllegalStateException("Invalid inference result"),
-                    message = "Unexpected result type"
-                )
-            }
-
-            // Extract embedding from inference output
-            val queryEmbedding = l2Normalize(embeddingOutput)
-
-            // Calculate similarity scores with candidate intents
-            val scores = if (intentEmbeddings.isNotEmpty()) {
-                candidateIntents.map { intent ->
-                    val intentEmbed = intentEmbeddings[intent]
-                    if (intentEmbed != null) {
-                        cosineSimilarity(queryEmbedding, intentEmbed)
+            // Try semantic inference; fall through to keyword matching on failure
+            val scores = when (inferenceResult) {
+                is Result.Success -> {
+                    val queryEmbedding = l2Normalize(inferenceResult.data)
+                    if (intentEmbeddings.isNotEmpty()) {
+                        candidateIntents.map { intent ->
+                            val intentEmbed = intentEmbeddings[intent]
+                            if (intentEmbed != null) {
+                                cosineSimilarity(queryEmbedding, intentEmbed)
+                            } else {
+                                computeKeywordScore(intent, utterance)
+                            }
+                        }
                     } else {
-                        computeKeywordScore(intent, utterance)
+                        candidateIntents.map { intent ->
+                            computeKeywordScore(intent, utterance)
+                        }
                     }
                 }
-            } else {
-                println("IntentClassifier: Using keyword matching fallback")
-                candidateIntents.map { intent ->
-                    computeKeywordScore(intent, utterance)
+                else -> {
+                    // Inference unavailable — fall through to keyword matching
+                    candidateIntents.map { intent ->
+                        computeKeywordScore(intent, utterance)
+                    }
                 }
             }
 
@@ -175,7 +168,7 @@ actual class IntentClassifier private constructor() {
                 "unknown"
             }
 
-            println("IntentClassifier: Classified '$utterance' -> $intent (confidence: $confidence, time: ${inferenceTime}ms)")
+            println("IntentClassifier: Classified ${utterance.length}-char input -> $intent (confidence: $confidence, time: ${inferenceTime}ms)")
 
             Result.Success(
                 IntentClassification(
@@ -292,7 +285,7 @@ actual class IntentClassifier private constructor() {
                 return@withContext CommandClassificationResult.NoMatch
             }
 
-            println("IntentClassifier: classifyCommand: \"$utterance\"")
+            println("IntentClassifier: classifyCommand: ${utterance.length}-char input")
             println("IntentClassifier: Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
 
             // Step 1: Try exact matching first (fast path)

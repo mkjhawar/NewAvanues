@@ -515,7 +515,7 @@ class IosWhisperEngine {
 
             val rtfStr = ((realTimeFactor * 100).roundToInt() / 100.0).toString()
             val confStr = ((result.confidence * 100).roundToInt() / 100.0).toString()
-            logInfo(TAG, "Transcribed: '${result.text}' " +
+            logInfo(TAG, "Transcribed ${result.text.length} chars " +
                     "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, " +
                     "RTF=$rtfStr, conf=$confStr)")
 
