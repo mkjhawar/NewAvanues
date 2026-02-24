@@ -249,7 +249,8 @@ actual class IntentClassifier private constructor() {
                 val pooledEmbedding = meanPooling(allTokenEmbeddings, attentionMask, seqLen, hiddenSize)
                 val queryEmbedding = l2Normalize(pooledEmbedding)
 
-                nluLogDebug(TAG, "Classifying: \"$utterance\"")
+                // PII-safe: log utterance length, not content
+                nluLogDebug(TAG, "Classifying: ${utterance.length}-char input")
                 nluLogDebug(TAG, "Candidates: ${candidateIntents.joinToString()}")
 
                 // Calculate similarity scores
@@ -566,7 +567,8 @@ actual class IntentClassifier private constructor() {
                 return@withContext CommandClassificationResult.NoMatch
             }
 
-            nluLogDebug(TAG, "classifyCommand: \"$utterance\"")
+            // PII-safe: log utterance length, not content
+            nluLogDebug(TAG, "classifyCommand: ${utterance.length}-char input")
             nluLogDebug(TAG, "Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
 
             // Step 1: Try exact matching first (fast path)

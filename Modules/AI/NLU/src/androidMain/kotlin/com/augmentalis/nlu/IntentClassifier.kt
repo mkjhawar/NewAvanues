@@ -244,7 +244,8 @@ actual class IntentClassifier private constructor(
                 val queryEmbedding = embeddingManager.l2Normalize(pooledEmbedding)
 
                 // Log classification start
-                android.util.Log.i("IntentClassifier", "=== Classifying: \"$utterance\" ===")
+                // PII-safe: log utterance length, not content
+                android.util.Log.i("IntentClassifier", "=== Classifying: ${utterance.length}-char input ===")
                 android.util.Log.d("IntentClassifier", "Candidate intents: ${candidateIntents.joinToString()}")
                 android.util.Log.d("IntentClassifier", "Using method: ${if (embeddingManager.hasEmbeddings()) "Semantic Similarity" else "Keyword Matching"}")
 
@@ -297,7 +298,7 @@ actual class IntentClassifier private constructor(
                 if (intent == "unknown") {
                     android.util.Log.w("IntentClassifier", "⚠️ Unknown intent detected!")
                     android.util.Log.w("IntentClassifier", "  Confidence: $confidence (threshold: $threshold)")
-                    android.util.Log.w("IntentClassifier", "  Input: \"$utterance\"")
+                    android.util.Log.w("IntentClassifier", "  Input: ${utterance.length}-char input")
 
                     // Log top 3 candidates for debugging
                     val topCandidates = candidateIntents.zip(scores)
@@ -835,7 +836,8 @@ actual class IntentClassifier private constructor(
             // Delegate to embedding manager for in-memory cache
             embeddingManager.addEmbedding("trained_${exampleHash}", embedding)
 
-            android.util.Log.i("IntentClassifier", "Saved trained embedding: '$utterance' -> $intent (conf=$confidence)")
+            // PII-safe: log utterance length, not content
+            android.util.Log.i("IntentClassifier", "Saved trained embedding: ${utterance.length}-char input -> $intent (conf=$confidence)")
             true
         } catch (e: Exception) {
             android.util.Log.e("IntentClassifier", "saveTrainedEmbedding error: ${e.message}")
@@ -854,7 +856,7 @@ actual class IntentClassifier private constructor(
             withDatabase { database ->
                 database.trainExampleQueries.confirmUtterance(utterance)
             }
-            android.util.Log.i("IntentClassifier", "Confirmed embedding: '$utterance'")
+            android.util.Log.i("IntentClassifier", "Confirmed embedding: ${utterance.length}-char input")
         } catch (e: Exception) {
             android.util.Log.e("IntentClassifier", "confirmTrainedEmbedding error: ${e.message}")
         }
@@ -875,7 +877,7 @@ actual class IntentClassifier private constructor(
             val hash = utterance.hashCode().toString()
             embeddingManager.removeEmbedding("trained_$hash")
 
-            android.util.Log.i("IntentClassifier", "Deleted embedding: '$utterance'")
+            android.util.Log.i("IntentClassifier", "Deleted embedding: ${utterance.length}-char input")
         } catch (e: Exception) {
             android.util.Log.e("IntentClassifier", "deleteTrainedEmbedding error: ${e.message}")
         }
@@ -1093,7 +1095,8 @@ actual class IntentClassifier private constructor(
                 return@withContext CommandClassificationResult.NoMatch
             }
 
-            android.util.Log.d("IntentClassifier", "=== classifyCommand: \"$utterance\" ===")
+            // PII-safe: log utterance length, not content
+            android.util.Log.d("IntentClassifier", "=== classifyCommand: ${utterance.length}-char input ===")
             android.util.Log.d("IntentClassifier", "Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
 
             // Step 1: Try exact/fuzzy matching first (fast path)

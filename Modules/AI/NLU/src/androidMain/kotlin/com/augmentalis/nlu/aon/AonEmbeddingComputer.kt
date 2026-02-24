@@ -142,7 +142,8 @@ class AonEmbeddingComputer(
             // Step 1: Create embedding text from .aot ontology data
             val embeddingText = createEmbeddingTextFromOntology(ontology)
 
-            android.util.Log.d(TAG, "  Embedding text (${embeddingText.length} chars): ${embeddingText.take(100)}...")
+            // PII-safe: log length only, not content
+            android.util.Log.d(TAG, "  Embedding text: ${embeddingText.length} chars")
 
             // Step 2: Tokenize with mALBERT tokenizer (TVM 0.22 compatible)
             val tokenizer = BertTokenizer(context)

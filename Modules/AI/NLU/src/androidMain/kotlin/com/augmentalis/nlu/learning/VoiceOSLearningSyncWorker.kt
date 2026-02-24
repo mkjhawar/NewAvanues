@@ -271,7 +271,8 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                     failed++
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to sync command '${command.utterance}': ${e.message}")
+                // PII-safe: log utterance length, not content
+                Log.e(TAG, "Failed to sync command ${command.utterance.length}-char cmd: ${e.message}")
                 failed++
             }
         }

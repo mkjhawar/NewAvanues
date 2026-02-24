@@ -68,7 +68,8 @@ class UnifiedLearningService @Inject constructor(
 
     override suspend fun consume(command: LearnedCommand): Boolean = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Consuming command: '${command.utterance}' -> ${command.intent}")
+            // PII-safe: log utterance length, not content
+            Log.d(TAG, "Consuming command: ${command.utterance.length}-char cmd -> ${command.intent}")
 
             // 1. Compute embedding if needed
             val commandWithEmbedding = if (!command.hasEmbedding) {
@@ -90,7 +91,7 @@ class UnifiedLearningService @Inject constructor(
                 // 4. Notify other consumers
                 notifyConsumers(commandWithEmbedding)
 
-                Log.i(TAG, "Successfully consumed: '${command.utterance}' -> ${command.intent}")
+                Log.i(TAG, "Successfully consumed: ${command.utterance.length}-char cmd -> ${command.intent}")
             }
 
             saved
@@ -319,10 +320,10 @@ class UnifiedLearningService @Inject constructor(
         return try {
             val embedding = intentClassifier.computeEmbedding(command.utterance)
             if (embedding != null) {
-                Log.d(TAG, "Computed embedding for '${command.utterance}': ${embedding.size} dims")
+                Log.d(TAG, "Computed embedding for ${command.utterance.length}-char cmd: ${embedding.size} dims")
                 command.copy(embedding = embedding)
             } else {
-                Log.w(TAG, "Failed to compute embedding for '${command.utterance}'")
+                Log.w(TAG, "Failed to compute embedding for ${command.utterance.length}-char cmd")
                 command
             }
         } catch (e: Exception) {
@@ -346,7 +347,7 @@ class UnifiedLearningService @Inject constructor(
                 )
             } else {
                 // Schedule background computation
-                Log.d(TAG, "Command has no embedding, skipping NLU save: '${command.utterance}'")
+                Log.d(TAG, "Command has no embedding, skipping NLU save: ${command.utterance.length}-char cmd")
                 false
             }
         } catch (e: Exception) {
