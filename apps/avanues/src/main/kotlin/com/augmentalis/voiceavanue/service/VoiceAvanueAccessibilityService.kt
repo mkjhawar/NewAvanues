@@ -585,10 +585,12 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                             dwellRingColor = accentArgb
                         )
 
-                        CursorOverlayService.getInstance()?.let { cursorService ->
-                            cursorService.updateConfig(config)
-                            // ClickDispatcher is wired by wireCursorDependencies() when cursor
-                            // is first enabled — no need to re-wire on every settings change
+                        // updateConfig mutates View properties + WindowManager LayoutParams
+                        // — must run on Main to avoid race with the render thread.
+                        withContext(Dispatchers.Main) {
+                            CursorOverlayService.getInstance()?.let { cursorService ->
+                                cursorService.updateConfig(config)
+                            }
                         }
                     }
                 }
@@ -691,9 +693,11 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
      * Navigation detection is handled by structural-change-ratio in handleScreenContext(),
      * not by event source. This works for both Activity and Fragment transitions.
      */
-    private fun refreshOverlayBadges() {
+    private suspend fun refreshOverlayBadges() {
         try {
-            val root = rootInActiveWindow ?: return
+            // Capture rootInActiveWindow on Main — Android AccessibilityService
+            // API is safest when accessed from the service connection thread.
+            val root = withContext(Dispatchers.Main) { rootInActiveWindow } ?: return
             val packageName = root.packageName?.toString() ?: return
             val isTargetApp = TARGET_APPS.contains(packageName)
 
