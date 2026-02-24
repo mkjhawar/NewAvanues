@@ -35,9 +35,13 @@ interface IWakeWordCapable {
     val wakeWordDetected: SharedFlow<WakeWordEvent>
 
     /**
-     * Enable wake word detection.
+     * Enable wake word detection with the given wake phrase and sensitivity.
+     *
+     * @param wakeWord The wake phrase to listen for (e.g. "hey ava")
+     * @param sensitivity Detection threshold (0.0-1.0). Higher = more false positives,
+     *                    fewer misses. Default 0.5 (balanced).
      */
-    suspend fun enableWakeWord(wakeWord: String): Result<Unit>
+    suspend fun enableWakeWord(wakeWord: String, sensitivity: Float = 0.5f): Result<Unit>
 
     /**
      * Disable wake word detection.

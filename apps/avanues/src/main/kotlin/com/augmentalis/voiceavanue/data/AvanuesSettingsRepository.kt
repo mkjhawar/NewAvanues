@@ -57,6 +57,11 @@ class AvanuesSettingsRepository @Inject constructor(
         // Voice command locale
         private val KEY_VOICE_LOCALE = stringPreferencesKey("voice_command_locale")
 
+        // Wake Word
+        private val KEY_WAKE_WORD_ENABLED = booleanPreferencesKey("wake_word_enabled")
+        private val KEY_WAKE_WORD_KEYWORD = stringPreferencesKey("wake_word_keyword")
+        private val KEY_WAKE_WORD_SENSITIVITY = floatPreferencesKey("wake_word_sensitivity")
+
         // VoiceCursor appearance
         private val KEY_CURSOR_SIZE = intPreferencesKey("cursor_size")
         private val KEY_CURSOR_SPEED = intPreferencesKey("cursor_speed")
@@ -111,6 +116,9 @@ class AvanuesSettingsRepository @Inject constructor(
             themeStyle = style,
             themeAppearance = prefs[KEY_THEME_APPEARANCE] ?: AvanuesSettings.DEFAULT_THEME_APPEARANCE,
             voiceLocale = prefs[KEY_VOICE_LOCALE] ?: "en-US",
+            wakeWordEnabled = prefs[KEY_WAKE_WORD_ENABLED] ?: false,
+            wakeWordKeyword = prefs[KEY_WAKE_WORD_KEYWORD] ?: AvanuesSettings.DEFAULT_WAKE_WORD_KEYWORD,
+            wakeWordSensitivity = prefs[KEY_WAKE_WORD_SENSITIVITY] ?: AvanuesSettings.DEFAULT_WAKE_WORD_SENSITIVITY,
             cursorSize = prefs[KEY_CURSOR_SIZE] ?: 48,
             cursorSpeed = prefs[KEY_CURSOR_SPEED] ?: 8,
             showCoordinates = prefs[KEY_SHOW_COORDINATES] ?: false,
@@ -139,6 +147,9 @@ class AvanuesSettingsRepository @Inject constructor(
         prefs[KEY_THEME_STYLE] = s.themeStyle
         prefs[KEY_THEME_APPEARANCE] = s.themeAppearance
         prefs[KEY_VOICE_LOCALE] = s.voiceLocale
+        prefs[KEY_WAKE_WORD_ENABLED] = s.wakeWordEnabled
+        prefs[KEY_WAKE_WORD_KEYWORD] = s.wakeWordKeyword
+        prefs[KEY_WAKE_WORD_SENSITIVITY] = s.wakeWordSensitivity
         prefs[KEY_CURSOR_SIZE] = s.cursorSize
         prefs[KEY_CURSOR_SPEED] = s.cursorSpeed
         prefs[KEY_SHOW_COORDINATES] = s.showCoordinates
@@ -225,6 +236,20 @@ class AvanuesSettingsRepository @Inject constructor(
                 prefs.remove(KEY_CURSOR_ACCENT_OVERRIDE)
             }
         }
+    }
+
+    // ==================== Wake Word Settings ====================
+
+    suspend fun updateWakeWordEnabled(enabled: Boolean) {
+        context.avanuesDataStore.edit { it[KEY_WAKE_WORD_ENABLED] = enabled }
+    }
+
+    suspend fun updateWakeWordKeyword(keyword: String) {
+        context.avanuesDataStore.edit { it[KEY_WAKE_WORD_KEYWORD] = keyword }
+    }
+
+    suspend fun updateWakeWordSensitivity(sensitivity: Float) {
+        context.avanuesDataStore.edit { it[KEY_WAKE_WORD_SENSITIVITY] = sensitivity.coerceIn(0.1f, 0.9f) }
     }
 
     // ==================== VOS Sync Settings ====================

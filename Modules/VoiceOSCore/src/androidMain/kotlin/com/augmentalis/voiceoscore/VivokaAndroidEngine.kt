@@ -24,10 +24,13 @@ import com.vivoka.vsdk.Constants
 import com.vivoka.vsdk.util.AssetsExtractor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.util.Log
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 
@@ -119,6 +122,29 @@ class VivokaAndroidEngine(
 
     /** Track last command set hash to skip truly redundant Vivoka grammar updates */
     private val lastCommandsHash = AtomicReference<Int>(0)
+
+    // ==================== Wake Word State ====================
+
+    companion object {
+        private const val TAG = "VivokaAndroidEngine"
+        /** Duration of the command window after wake word detection (ms) */
+        private const val WAKE_WORD_COMMAND_WINDOW_MS = 4000L
+    }
+
+    /** The wake phrase currently being listened for (e.g. "hey ava") */
+    private var activeWakeWord: String? = null
+
+    /** Sensitivity threshold for wake word detection (0.0-1.0) */
+    private var wakeWordSensitivity: Float = 0.5f
+
+    /** Job for the command window timeout — cancels when a command is received */
+    private var wakeWordTimeoutJob: Job? = null
+
+    /** Whether we're in the post-detection command window (full grammar active) */
+    private var isInCommandWindow: Boolean = false
+
+    /** Cached copy of the full command list for recompilation after command window */
+    private val lastCommandList = AtomicReference<List<String>>(emptyList())
 
     /**
      * Check if Vivoka models are available at external storage paths.
@@ -219,10 +245,10 @@ class VivokaAndroidEngine(
             val success = vivokaEngine?.initialize(srConfig) ?: false
 
             if (success) {
-                // Set up result listener - converts RecognitionResult to SpeechResult
+                // Set up result listener — intercepts wake word results, passes others through
                 vivokaEngine?.setResultListener { result ->
                     scope.launch {
-                        _results.emit(toSpeechResult(result))
+                        handleRecognitionResult(result)
                     }
                 }
 
@@ -314,6 +340,16 @@ class VivokaAndroidEngine(
      */
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
         return try {
+            // Always cache the full command list for wake-word → command-mode recompilation
+            lastCommandList.set(commands.toList())
+
+            // If wake word is active and we're NOT in the command window,
+            // don't push the full grammar — keep the restricted wake-word grammar
+            if (_isWakeWordEnabled.value && !isInCommandWindow) {
+                Log.d(TAG, "updateCommands: wake word active, caching ${commands.size} commands (grammar unchanged)")
+                return Result.success(Unit)
+            }
+
             // Skip if commands haven't changed (hash comparison)
             val newHash = commands.sorted().hashCode()
             val oldHash = lastCommandsHash.get()
@@ -376,18 +412,172 @@ class VivokaAndroidEngine(
         return Result.success(Unit)
     }
 
-    override suspend fun enableWakeWord(wakeWord: String): Result<Unit> {
-        _isWakeWordEnabled.value = true
-        return Result.success(Unit)
+    override suspend fun enableWakeWord(wakeWord: String, sensitivity: Float): Result<Unit> {
+        return try {
+            Log.i(TAG, "enableWakeWord: phrase='$wakeWord', sensitivity=$sensitivity")
+            activeWakeWord = wakeWord
+            wakeWordSensitivity = sensitivity.coerceIn(0.1f, 0.9f)
+            isInCommandWindow = false
+            wakeWordTimeoutJob?.cancel()
+
+            // Compile a restricted grammar containing ONLY the wake phrase.
+            // This mirrors handleMuteCommand() which compiles only "wake up".
+            val wakeGrammar = listOf(wakeWord)
+            val compiled = vivokaEngine?.setDynamicCommandsAwait(wakeGrammar) ?: false
+            if (!compiled) {
+                Log.e(TAG, "enableWakeWord: grammar compilation failed for '$wakeWord'")
+                return Result.failure(RuntimeException("Wake word grammar compilation failed"))
+            }
+
+            // Clear the command hash so that when we later recompile full grammar,
+            // the hash check doesn't skip it
+            lastCommandsHash.set(0)
+            _isWakeWordEnabled.value = true
+
+            Log.i(TAG, "enableWakeWord: active, listening for '$wakeWord'")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "enableWakeWord: failed", e)
+            Result.failure(e)
+        }
     }
 
     override suspend fun disableWakeWord(): Result<Unit> {
-        _isWakeWordEnabled.value = false
-        return Result.success(Unit)
+        return try {
+            Log.i(TAG, "disableWakeWord: deactivating")
+            _isWakeWordEnabled.value = false
+            isInCommandWindow = false
+            wakeWordTimeoutJob?.cancel()
+            wakeWordTimeoutJob = null
+            activeWakeWord = null
+
+            // Recompile full command grammar so normal recognition resumes
+            val commands = lastCommandList.get()
+            if (commands.isNotEmpty()) {
+                lastCommandsHash.set(0) // force recompilation
+                vivokaEngine?.setDynamicCommandsAwait(commands)
+            }
+
+            Log.i(TAG, "disableWakeWord: full grammar restored (${commands.size} commands)")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "disableWakeWord: failed", e)
+            Result.failure(e)
+        }
     }
 
     override fun getAvailableWakeWords(): List<String> {
-        return listOf("Hey Ava", "OK Ava", "Ava")
+        return listOf("hey ava", "ok ava", "computer")
+    }
+
+    // ==================== Wake Word Internal Logic ====================
+
+    /**
+     * Central result handler — intercepts wake-word matches when in wake-word mode,
+     * passes all other results through to the normal SpeechResult flow.
+     */
+    private suspend fun handleRecognitionResult(result: RecognitionResult) {
+        val wakeWord = activeWakeWord
+
+        if (_isWakeWordEnabled.value && wakeWord != null && !isInCommandWindow) {
+            // In wake-word-only grammar mode — check if result matches wake phrase
+            val resultText = result.text.trim().lowercase()
+            val wakePhrase = wakeWord.trim().lowercase()
+
+            if (resultText == wakePhrase && result.confidence >= wakeWordSensitivity) {
+                Log.i(TAG, "Wake word detected: '$resultText' (confidence=${result.confidence})")
+                transitionToCommandMode(wakeWord, result.confidence)
+                return // consumed — don't emit as normal result
+            } else {
+                // Low confidence or non-match on restricted grammar — ignore
+                Log.v(TAG, "Wake word miss: '$resultText' (confidence=${result.confidence}, need>=$wakeWordSensitivity)")
+                return
+            }
+        }
+
+        if (_isWakeWordEnabled.value && isInCommandWindow) {
+            // In command window — pass result through AND reset the timeout
+            // (the user is actively speaking commands)
+            wakeWordTimeoutJob?.cancel()
+            _results.emit(toSpeechResult(result))
+            // Restart the command window timeout after each command
+            startCommandWindowTimeout()
+            return
+        }
+
+        // Normal mode — pass through
+        _results.emit(toSpeechResult(result))
+    }
+
+    /**
+     * Transition from wake-word-only grammar to full command grammar.
+     * Emits WakeWordEvent, recompiles grammar, starts command window timeout.
+     */
+    private suspend fun transitionToCommandMode(detectedPhrase: String, confidence: Float) {
+        Log.i(TAG, "transitionToCommandMode: wake word confirmed, opening command window")
+
+        // Emit detection event for UI/service layer
+        _wakeWordDetected.emit(
+            WakeWordEvent(
+                wakeWord = detectedPhrase,
+                confidence = confidence,
+                timestamp = System.currentTimeMillis()
+            )
+        )
+
+        isInCommandWindow = true
+
+        // Recompile with full command grammar
+        val commands = lastCommandList.get()
+        if (commands.isNotEmpty()) {
+            lastCommandsHash.set(0) // force recompilation
+            val compiled = vivokaEngine?.setDynamicCommandsAwait(commands) ?: false
+            if (!compiled) {
+                Log.w(TAG, "transitionToCommandMode: full grammar compilation failed, returning to wake mode")
+                returnToWakeWordMode()
+                return
+            }
+            Log.d(TAG, "transitionToCommandMode: full grammar compiled (${commands.size} commands)")
+        } else {
+            Log.w(TAG, "transitionToCommandMode: no cached commands, staying in command window anyway")
+        }
+
+        // Start the command window timeout
+        startCommandWindowTimeout()
+    }
+
+    /**
+     * Start (or restart) the command window timeout.
+     * After [WAKE_WORD_COMMAND_WINDOW_MS] of silence, returns to wake-word-only grammar.
+     */
+    private fun startCommandWindowTimeout() {
+        wakeWordTimeoutJob?.cancel()
+        wakeWordTimeoutJob = scope.launch {
+            delay(WAKE_WORD_COMMAND_WINDOW_MS)
+            Log.i(TAG, "Command window timeout — returning to wake word mode")
+            returnToWakeWordMode()
+        }
+    }
+
+    /**
+     * Return from command mode to wake-word-only grammar.
+     * Recompiles the restricted grammar containing only the wake phrase.
+     */
+    private suspend fun returnToWakeWordMode() {
+        isInCommandWindow = false
+        wakeWordTimeoutJob?.cancel()
+        wakeWordTimeoutJob = null
+
+        val wakeWord = activeWakeWord
+        if (wakeWord != null && _isWakeWordEnabled.value) {
+            val compiled = vivokaEngine?.setDynamicCommandsAwait(listOf(wakeWord)) ?: false
+            lastCommandsHash.set(0) // invalidate hash for next full grammar push
+            if (compiled) {
+                Log.d(TAG, "returnToWakeWordMode: listening for '$wakeWord' again")
+            } else {
+                Log.e(TAG, "returnToWakeWordMode: grammar compilation failed")
+            }
+        }
     }
 
     override suspend fun isModelDownloaded(modelId: String): Boolean {
