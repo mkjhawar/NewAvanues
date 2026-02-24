@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-23 — Phrase hints (Section 15.10), Settings provider (Section 15.11)
+**Updated**: 2026-02-24 — KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric
 
 ---
 
@@ -24,7 +24,7 @@ The Whisper Speech Engine provides **fully offline** speech recognition using Op
 
 | Engine | Android | iOS | macOS | Desktop (JVM) |
 |---|---|---|---|---|
-| **Whisper** | JNI (WhisperEngine) | cinterop (IosWhisperEngine) | — | JNI (DesktopWhisperEngine) |
+| **Whisper** | JNI (WhisperEngine) | cinterop (IosWhisperEngine) | cinterop (shared iosMain) | JNI (DesktopWhisperEngine) |
 | **Apple Speech** | — | SFSpeechRecognizer | SFSpeechRecognizer | — |
 | **Android STT** | Built-in | — | — | — |
 | **Vivoka** | VSDK AAR | — | — | — |
@@ -85,8 +85,12 @@ Modules/SpeechRecognition/src/
 
     macosMain/kotlin/.../
         MacosSpeechRecognitionService.kt  # SFSpeechRecognizer (macOS 10.15+)
-        PlatformUtils.macos.kt           # NSLog + atomicfu
+        PlatformUtils.macos.kt           # NSLog + atomicfu SynchronizedObject
         SpeechRecognitionServiceFactory.macos.kt
+
+    NOTE: commoncrypto.def was removed (260224) — CommonCrypto imports
+    are resolved via platform.CoreCrypto.* in Kotlin/Native without a
+    separate cinterop definition.
 
     desktopMain/kotlin/.../whisper/
         DesktopWhisperEngine.kt         # Desktop engine orchestrator
@@ -97,7 +101,6 @@ Modules/SpeechRecognition/src/
 
     nativeInterop/cinterop/
         whisper.def               # K/N cinterop definition for whisper_bridge
-        commoncrypto.def          # K/N cinterop definition for CommonCrypto (VSM)
         whisper_bridge.h          # C header for whisper.cpp bindings
         whisper_bridge.c          # C implementation wrapping whisper.cpp
 
@@ -518,6 +521,7 @@ perf.getAverageRTF()          // Real-time factor (< 1.0 = faster than real-time
 perf.getAverageConfidence()   // Rolling average confidence
 perf.totalTranscriptions      // Total count
 perf.emptyTranscriptions      // Silence/noise count
+perf.totalSegments            // Cumulative segment count across all transcriptions
 perf.peakLatencyMs            // Worst-case latency
 perf.detectedLanguage         // Last detected language
 perf.getMetrics()             // Full map for logging/reporting
@@ -536,21 +540,44 @@ perf.getMetrics()             // Full map for logging/reporting
 
 ## 9. Thread Safety
 
-### 9.1 JNI Serialization
+### 9.1 Cross-Platform Synchronization (atomicfu)
 
-whisper.cpp contexts are **NOT thread-safe**. All native calls are serialized through a single `synchronized(this)` lock in `WhisperNative`/`DesktopWhisperNative`.
+whisper.cpp contexts are **NOT thread-safe**. All native calls are serialized through synchronized blocks.
+
+**KMP approach**: `WhisperPerformance` (commonMain) extends `kotlinx.atomicfu.locks.SynchronizedObject` and uses `synchronized(this) { }` blocks. This compiles to:
+- **JVM**: `java.util.concurrent` intrinsic monitor locks
+- **Native (iOS/macOS)**: `pthread_mutex_lock`/`unlock`
+- **JS**: No-op (single-threaded)
+
+Mutable fields use `@Volatile` for visibility across threads without requiring the full lock.
+
+### 9.2 JNI Serialization (Android/Desktop)
+
+All JNI calls are serialized through `synchronized(this)` in `WhisperNative`/`DesktopWhisperNative`.
 
 Overhead: ~50ns per uncontended lock + ~5us JNI crossing. This is <0.001% of whisper inference time (200-2000ms).
 
-### 9.2 transcribeToText() Atomicity
+### 9.3 cinterop Serialization (iOS)
+
+`IosWhisperNative` uses a `SynchronizedObject` lock with `synchronized(lock) { }` blocks. The entire transcribe+read cycle runs atomically — same pattern as JNI but via K/N cinterop.
+
+Pointer handling: Context pointers are stored as `Long` and converted back to `COpaquePointer` via `kotlinx.cinterop.toCPointer<COpaque>()` for each native call. Null guards prevent crashes on 0L sentinel values.
+
+### 9.4 transcribeToText() Atomicity
 
 The entire transcribe+read cycle runs in one synchronized block:
-1. `fullTranscribe()` — run inference
-2. `getTextSegmentCount()` — read segment count
-3. For each segment: `getTextSegment()`, `getTextSegmentT0()`, `getTextSegmentT1()`, token probabilities
-4. `getDetectedLanguage()` — read language
+1. `fullTranscribe()` / `whisper_bridge_transcribe()` — run inference
+2. `getTextSegmentCount()` / `whisper_bridge_segment_count()` — read segment count
+3. For each segment: text, timestamps, token probabilities
+4. `getDetectedLanguage()` / `whisper_bridge_detected_language()` — read language
 
 This prevents interleaving from concurrent callers.
+
+### 9.5 PII-Safe Logging
+
+Transcribed text is **never logged verbatim** in production builds. All log statements use character counts instead of raw text:
+- `logInfo(TAG, "Transcribed ${result.text.length} chars ...")` (NOT `"Transcribed: '${result.text}'"`)
+- This applies to all platforms (Android, iOS, macOS, Desktop)
 
 ---
 

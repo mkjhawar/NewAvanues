@@ -1,6 +1,6 @@
 # NLU Module - Natural Language Understanding
 
-**Version:** 1.0 | **Platform:** Kotlin Multiplatform | **Last Updated:** 2026-01-11
+**Version:** 1.1 | **Platform:** Kotlin Multiplatform (Android, iOS, macOS, Desktop) | **Last Updated:** 2026-02-24
 
 ---
 
@@ -101,7 +101,7 @@ Stage 3: Semantic Matching (BERT)
 ## Module Structure
 
 ```
-Modules/Shared/NLU/
+Modules/AI/NLU/
 ├── src/
 │   ├── commonMain/kotlin/com/augmentalis/shared/nlu/
 │   │   ├── classifier/              # Hybrid classification
@@ -117,13 +117,35 @@ Modules/Shared/NLU/
 │   │   ├── repository/              # Data access
 │   │   └── service/                 # High-level APIs
 │   │
-│   └── androidMain/kotlin/com/augmentalis/nlu/
-│       ├── IntentClassifier.kt      # ONNX inference
-│       ├── BertTokenizer.kt         # WordPiece tokenization
-│       ├── ModelManager.kt          # Model lifecycle
-│       ├── learning/                # Self-learning
-│       └── migration/               # VoiceOS bridge
+│   ├── androidMain/kotlin/com/augmentalis/nlu/
+│   │   ├── IntentClassifier.kt      # ONNX inference (BERT embedding)
+│   │   ├── BertTokenizer.kt         # WordPiece tokenization
+│   │   ├── ModelManager.kt          # Model lifecycle
+│   │   ├── learning/                # Self-learning
+│   │   └── migration/               # VoiceOS bridge
+│   │
+│   ├── iosMain/kotlin/com/augmentalis/nlu/
+│   │   ├── IntentClassifier.kt      # CoreML inference + keyword fallback
+│   │   ├── BertTokenizer.kt         # WordPiece tokenization (CoreML)
+│   │   ├── ModelManager.kt          # NSDocumentDirectory model storage
+│   │   ├── coreml/CoreMLModelManager.kt  # CoreML model loading
+│   │   ├── locale/LocaleManager.kt       # NSLocale wrapper
+│   │   ├── matching/PlatformUtils.ios.kt # iOS platform utilities
+│   │   ├── repository/IosIntentRepository.kt  # UserDefaults-backed
+│   │   └── learning/domain/LearningDomainIos.kt
+│   │
+│   └── macosMain/kotlin/com/augmentalis/nlu/
+│       ├── IntentClassifier.kt      # CoreML inference + keyword fallback
+│       ├── BertTokenizer.kt         # WordPiece tokenization (stub — returns zeros)
+│       ├── ModelManager.kt          # NSApplicationSupportDirectory storage
+│       ├── coreml/CoreMLModelManager.kt  # CoreML model loading
+│       ├── locale/LocaleManager.kt       # NSLocale wrapper
+│       ├── matching/PlatformUtils.macos.kt # macOS platform utilities
+│       ├── repository/MacosIntentRepository.kt  # UserDefaults-backed
+│       └── learning/domain/LearningDomainMacos.kt
 ```
+
+> **Note**: iOS and macOS source sets share identical API signatures. A future `darwinMain` shared source set will deduplicate ~1,500 lines. The macOS `BertTokenizer` currently returns all-zero arrays — tensor interop configuration is pending.
 
 ---
 
@@ -149,6 +171,32 @@ Modules/Shared/NLU/
 | `IntentSourceCoordinator` | Multi-source intent loading |
 | `ClassifyIntentUseCase` | High-level use case |
 | `IntentLearningManager` | Self-learning support |
+
+### iOS Classes
+
+| Class | Purpose |
+|-------|---------|
+| `IntentClassifier` | CoreML inference + keyword fallback |
+| `BertTokenizer` | WordPiece tokenization (CoreML) |
+| `ModelManager` | NSDocumentDirectory model storage |
+| `CoreMLModelManager` | CoreML model loading + `runInference()` |
+| `LocaleManager` | NSLocale-backed locale management |
+| `IosIntentRepository` | UserDefaults-backed intent storage |
+| `LearningDomainIos` | iOS learning domain implementation |
+
+### macOS Classes
+
+| Class | Purpose |
+|-------|---------|
+| `IntentClassifier` | CoreML inference + keyword fallback |
+| `BertTokenizer` | WordPiece tokenization (stub — returns zeros) |
+| `ModelManager` | NSApplicationSupportDirectory storage |
+| `CoreMLModelManager` | CoreML model loading |
+| `LocaleManager` | NSLocale-backed locale management |
+| `MacosIntentRepository` | UserDefaults-backed intent storage |
+| `LearningDomainMacos` | macOS learning domain implementation |
+
+> **macOS classification behavior**: When CoreML tensor interop is not configured (the `BertTokenizer` returns zero embeddings), `IntentClassifier.classifyIntent()` falls back to keyword matching via `computeKeywordScore()`. This provides basic intent classification (~70% accuracy) without requiring a fully configured CoreML pipeline.
 
 ---
 
@@ -349,4 +397,4 @@ class CommandProcessor(
 
 ---
 
-**Author:** Avanues NLU Team | **Last Updated:** 2026-01-11
+**Author:** Avanues NLU Team | **Last Updated:** 2026-02-24
