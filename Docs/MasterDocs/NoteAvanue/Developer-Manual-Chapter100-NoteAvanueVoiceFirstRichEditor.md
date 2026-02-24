@@ -3,8 +3,8 @@
 **Module:** `Modules/NoteAvanue/`
 **Package:** `com.augmentalis.noteavanue`
 **Platform:** KMP (Android + Desktop commonMain, Android-specific androidMain)
-**Branch:** `Cockpit-Development`
-**Date:** 2026-02-18
+**Branch:** `VoiceOS-1M-SpeechEngine`
+**Date:** 2026-02-18 (updated 2026-02-24: RichTextUndoManager, CommandBar wiring)
 
 ---
 
@@ -21,7 +21,7 @@ NoteAvanue is a voice-first rich text note editor that transforms spoken words i
 - Audio recording and photo attachment support
 - SpatialVoice design language (AvanueTheme)
 
-**KMP Score:** 11 commonMain files / 16 total = 69% shared code.
+**KMP Score:** 11 commonMain files / 18 total = 61% shared code.
 
 ---
 
@@ -52,7 +52,7 @@ NoteAvanue is a voice-first rich text note editor that transforms spoken words i
 | Source Set | Files | Purpose |
 |-----------|-------|---------|
 | `commonMain` | 11 | Models, interfaces, screen, repository, voice detection, attachment constants |
-| `androidMain` | 6 | NoteEditor, voice router, RAG indexer, attachment resolver, audio recorder |
+| `androidMain` | 7 | NoteEditor, RichTextUndoManager, voice router, RAG indexer, attachment resolver, audio recorder |
 
 ---
 
@@ -131,8 +131,31 @@ Compact editor for Cockpit frames:
 - Compact toolbar: Bold/Italic + action icons (camera, attach, dictate, save)
 - `RichTextEditor` with same Markdown round-trip
 - `hasLoaded` keyed by `initialContent` — resets when Cockpit switches notes in the same frame
+- `RichTextUndoManager` for snapshot-based undo/redo (see below)
 - Attachment chips (FlowRow)
 - Word count footer
+
+### RichTextUndoManager (androidMain)
+
+compose-rich-editor RC13 does not expose a native undo/redo API, so NoteAvanue implements snapshot-based undo/redo via `RichTextUndoManager`:
+
+```kotlin
+class RichTextUndoManager(richTextState: RichTextState, maxHistory: Int = 50) {
+    fun captureSnapshot()  // Saves current markdown to undo stack (dedup-aware)
+    fun undo(): Boolean    // Pops undo stack, pushes to redo, restores via setMarkdown()
+    fun redo(): Boolean    // Pops redo stack, pushes to undo, restores via setMarkdown()
+    val canUndo: Boolean
+    val canRedo: Boolean
+}
+```
+
+**How it works:**
+1. Before each formatting operation (bold, italic, heading, etc.), `captureSnapshot()` saves the current `toMarkdown()` output
+2. On undo, the last snapshot is popped from the undo stack, current state is pushed to redo stack, and `setMarkdown()` restores
+3. Deduplication: if the current markdown matches the last snapshot, no new entry is created
+4. Max 50 snapshots to prevent unbounded memory growth
+
+**Trade-off:** Cursor position is lost on undo/redo (markdown serialization doesn't preserve selection). Content is preserved correctly.
 
 ### Cockpit Integration
 
@@ -144,6 +167,21 @@ is FrameContent.Note -> NoteEditor(
     onSave = { title, markdownContent -> ... }
 )
 ```
+
+### CommandBar Integration (260224)
+
+The Cockpit CommandBar dispatches formatting actions to NoteEditor via `ModuleCommandCallbacks.noteExecutor`. This provides a **second input path** alongside voice commands — the user taps CommandBar chips, which translate to the same `CommandActionType` values used by voice:
+
+```
+CommandBar chip (NOTE_BOLD) → ContentAction enum
+  → CockpitViewModel._contentAction.tryEmit()
+  → ContentRenderer LaunchedEffect collects
+  → Maps ContentAction.NOTE_BOLD → CommandActionType.FORMAT_BOLD
+  → Calls ModuleCommandCallbacks.noteExecutor?.invoke(FORMAT_BOLD, emptyMap())
+  → NoteEditor's executeNoteCommand: captureSnapshot() + toggleSpanStyle(Bold)
+```
+
+Supported CommandBar actions: **Bold**, **Italic**, **Underline**, **Strikethrough**, **Undo**, **Redo**, **Save** (7 chips in NOTE_ACTIONS state).
 
 ---
 

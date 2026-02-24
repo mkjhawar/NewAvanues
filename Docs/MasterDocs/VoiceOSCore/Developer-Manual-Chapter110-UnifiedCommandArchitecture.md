@@ -147,6 +147,28 @@ class NoteCommandHandler : IHandler {
 }
 ```
 
+### CommandBar → ModuleCommandCallbacks Bridge (260224)
+
+In addition to the voice pipeline, the Cockpit **CommandBar** provides a second dispatch path into the same executor slots. When a user taps a CommandBar chip, `ContentRenderer` translates the `ContentAction` to a `CommandActionType` and invokes the executor:
+
+```
+CommandBar chip tap → ContentAction enum
+  → CockpitViewModel._contentAction.tryEmit()
+  → ContentRenderer LaunchedEffect collects
+  → Maps ContentAction → CommandActionType
+  → Calls ModuleCommandCallbacks.{module}Executor?.invoke(actionType, emptyMap())
+```
+
+Three module pipelines are wired:
+
+| Module | Executor | ContentAction → CommandActionType |
+|--------|----------|----------------------------------|
+| NoteAvanue | `noteExecutor` | NOTE_BOLD→FORMAT_BOLD, NOTE_ITALIC→FORMAT_ITALIC, NOTE_UNDERLINE→FORMAT_UNDERLINE, NOTE_STRIKETHROUGH→FORMAT_STRIKETHROUGH, NOTE_UNDO→NOTE_UNDO, NOTE_REDO→NOTE_REDO, NOTE_SAVE→SAVE_NOTE |
+| PhotoAvanue | `cameraExecutor` | CAMERA_FLIP→SWITCH_LENS, CAMERA_CAPTURE→CAPTURE_PHOTO |
+| AnnotationAvanue | `annotationExecutor` | WB_PEN→ANNOTATION_PEN, WB_HIGHLIGHTER→ANNOTATION_HIGHLIGHTER, WB_ERASER→ANNOTATION_ERASER, WB_UNDO→ANNOTATION_UNDO, WB_REDO→ANNOTATION_REDO, WB_CLEAR→ANNOTATION_CLEAR |
+
+This means voice commands and CommandBar taps converge on the **same executor**, keeping module implementations simple — they only handle `CommandActionType`, unaware of the input source.
+
 ---
 
 ## IntentActions: IIntentAction System
@@ -342,13 +364,23 @@ Input: "send email to John about the meeting"
 → Android: startActivity(Intent(ACTION_SENDTO, "mailto:john@...").putExtra(SUBJECT, "the meeting"))
 ```
 
-**Example 3: "Bold" (in NoteAvanue)**
+**Example 3: "Bold" (in NoteAvanue, via voice)**
 ```
 Input: "bold"
 → NLU: classifyAndRoute → VoiceCommand("bold", 0.95)
 → VoiceOSCore: ActionCoordinator → domain=NOTE → NoteCommandHandler
 → ModuleCommandCallbacks.noteExecutor(FORMAT_BOLD, {})
-→ NoteAvanue: controller.bold()
+→ NoteAvanue: captureSnapshot() + toggleSpanStyle(Bold)
+```
+
+**Example 4: Bold chip tap (in NoteAvanue, via CommandBar)**
+```
+User taps Bold chip in CommandBar
+→ CommandBar: onAction(ContentAction.NOTE_BOLD)
+→ CockpitViewModel._contentAction.tryEmit(NOTE_BOLD)
+→ ContentRenderer LaunchedEffect: NOTE_BOLD → CommandActionType.FORMAT_BOLD
+→ ModuleCommandCallbacks.noteExecutor(FORMAT_BOLD, {})
+→ NoteAvanue: captureSnapshot() + toggleSpanStyle(Bold)
 ```
 
 ---
@@ -473,6 +505,7 @@ The legacy `Modules/Actions/` module contained ~147 handlers. Of these:
 3. Add `ModuleCommandCallbacks.xxxExecutor` slot
 4. Register executor in module's Composable via `DisposableEffect`
 5. Add voice phrases to VOS seed data
+6. **(Optional) Wire CommandBar:** Add `ContentAction` enum value in `CommandBar.kt`, add chip in the module's `*_ACTIONS` state, add `ContentAction → CommandActionType` mapping in `ContentRenderer.kt` `LaunchedEffect`
 
 ---
 
@@ -523,4 +556,4 @@ Safe fields shown as presence flags: `query=present`, `url=present`, `app=<name>
 
 ---
 
-*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated with security guidelines)*
+*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar → ModuleCommandCallbacks bridge)*

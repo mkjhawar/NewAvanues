@@ -3,8 +3,8 @@
 **Module:** `Modules/PhotoAvanue/`
 **Package:** `com.augmentalis.photoavanue`
 **Platform:** KMP (Android + Desktop, iOS deferred)
-**Branch:** `Cockpit-Development`
-**Date:** 2026-02-17
+**Branch:** `VoiceOS-1M-SpeechEngine`
+**Date:** 2026-02-17 (updated 2026-02-24: CommandBar wiring)
 **Commit:** `9ed78c3d`
 
 ---
@@ -254,6 +254,7 @@ Minimal camera view for Cockpit frame embedding:
 - AndroidView wrapping `PreviewView` with CameraX binding
 - Bottom control bar: flash cycle, capture/record, lens switch
 - **Mode chips:** Photo/Video mode selector with `ModeChip` onClick wired to `controller.setCaptureMode()` (260222)
+- **CommandBar wiring (260224):** Cockpit CommandBar dispatches `CAMERA_FLIP` → `SWITCH_LENS` and `CAMERA_CAPTURE` → `CAPTURE_PHOTO` via `ModuleCommandCallbacks.cameraExecutor`, registered in `CameraPreview`'s `DisposableEffect`
 - Recording indicator overlay with timer
 - Permission request UI (AvanueTheme-styled)
 - Uses `DisposableEffect` for clean controller lifecycle
