@@ -98,6 +98,18 @@ fun DashboardLayout(
             }
         }
 
+        // ── Speech Engine Metrics ──────────────────────────────────────
+        if (dashboardState.speechMetrics != null) {
+            item(span = { GridItemSpan(3) }) {
+                SectionHeader(title = "Speech Engine")
+            }
+            item(span = { GridItemSpan(3) }) {
+                SpeechPerformanceCard(
+                    metrics = dashboardState.speechMetrics
+                )
+            }
+        }
+
         // ── Quick Launch Section Header ──────────────────────────────────
         item(span = { GridItemSpan(3) }) {
             SectionHeader(title = "Quick Launch")

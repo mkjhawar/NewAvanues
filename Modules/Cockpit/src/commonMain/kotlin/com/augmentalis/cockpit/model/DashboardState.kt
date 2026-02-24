@@ -1,6 +1,8 @@
 package com.augmentalis.cockpit.model
 
+import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * State for the Cockpit Dashboard (launcher/home view).
@@ -12,7 +14,8 @@ data class DashboardState(
     val availableModules: List<DashboardModule> = emptyList(),
     val activeSession: CockpitSession? = null,
     val templates: List<SessionTemplate> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    @Transient val speechMetrics: SpeechMetricsSnapshot? = null
 )
 
 /**

@@ -32,10 +32,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -95,6 +98,10 @@ class WhisperEngine(
 
     // Performance tracking
     val performance = WhisperPerformance()
+
+    // Metrics snapshot — updated after each transcription
+    private val _metricsSnapshot = MutableStateFlow<SpeechMetricsSnapshot?>(null)
+    val metricsSnapshot: StateFlow<SpeechMetricsSnapshot?> = _metricsSnapshot.asStateFlow()
 
     // Legacy accessors for backward compatibility
     val totalTranscriptions: Int get() = performance.totalTranscriptions
@@ -351,14 +358,17 @@ class WhisperEngine(
             }
         }
 
-        // Step 2b: Initialize VAD
+        // Step 2b: Initialize VAD — use effective params (profile-aware)
         vad = WhisperVAD(
             speechThreshold = 0f, // auto-calibrate from noise floor
-            vadSensitivity = config.vadSensitivity,
-            silenceTimeoutMs = config.silenceThresholdMs,
-            minSpeechDurationMs = config.minSpeechDurationMs,
+            vadSensitivity = config.effectiveVadSensitivity,
+            silenceTimeoutMs = config.effectiveSilenceThresholdMs,
+            minSpeechDurationMs = config.effectiveMinSpeechDurationMs,
             maxSpeechDurationMs = config.maxChunkDurationMs,
-            paddingMs = 150
+            hangoverFrames = config.effectiveHangoverFrames,
+            paddingMs = 150,
+            thresholdAlpha = config.effectiveThresholdAlpha,
+            minThreshold = config.effectiveMinThreshold
         )
 
         // Step 2c: Memory-aware model selection — check AVAILABLE RAM at load time.
@@ -523,6 +533,9 @@ class WhisperEngine(
             if (result.text.isBlank()) {
                 Log.d(TAG, "Empty transcription result (${audioDurationMs}ms audio, ${result.processingTimeMs}ms processing)")
                 performance.recordEmptyTranscription(audioDurationMs, result.processingTimeMs)
+                _metricsSnapshot.value = performance.toSnapshot(
+                    ENGINE_NAME, engineState.get().name, System.currentTimeMillis()
+                )
                 return
             }
 
@@ -543,6 +556,11 @@ class WhisperEngine(
             result.detectedLanguage?.let { lang ->
                 performance.recordLanguageDetection(lang)
             }
+
+            // Emit updated metrics snapshot
+            _metricsSnapshot.value = performance.toSnapshot(
+                ENGINE_NAME, engineState.get().name, System.currentTimeMillis()
+            )
 
             Log.i(TAG, "Transcribed: '${result.text}' " +
                     "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, " +

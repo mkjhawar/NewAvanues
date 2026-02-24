@@ -11,6 +11,7 @@
  */
 package com.augmentalis.speechrecognition.whisper
 
+import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
 import kotlin.concurrent.Volatile
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
@@ -210,6 +211,38 @@ class WhisperPerformance : SynchronizedObject() {
     fun getAverageConfidence(): Float {
         return synchronized(this) {
             if (confidenceSamples.isNotEmpty()) confidenceSamples.average().toFloat() else 0f
+        }
+    }
+
+    /**
+     * Create an immutable [SpeechMetricsSnapshot] capturing the current state.
+     *
+     * @param engineName Name of the engine ("Whisper", "GoogleCloud")
+     * @param engineState Current engine state name (e.g. "READY", "LISTENING")
+     * @return Frozen snapshot suitable for UI display or serialization
+     */
+    fun toSnapshot(engineName: String, engineState: String, timestampMs: Long = 0): SpeechMetricsSnapshot {
+        return synchronized(this) {
+            val successRate = if (totalTranscriptions > 0) {
+                ((totalTranscriptions - emptyTranscriptions).toFloat() / totalTranscriptions * 100)
+            } else 0f
+
+            SpeechMetricsSnapshot(
+                engineName = engineName,
+                modelSize = modelSize?.name,
+                initTimeMs = initTimeMs,
+                totalTranscriptions = totalTranscriptions,
+                successRate = successRate,
+                avgLatencyMs = if (latencySamples.isNotEmpty()) latencySamples.average().toLong() else 0L,
+                avgRTF = if (rtfSamples.isNotEmpty()) rtfSamples.average().toFloat() else 0f,
+                avgConfidence = if (confidenceSamples.isNotEmpty()) confidenceSamples.average().toFloat() else 0f,
+                peakLatencyMs = peakLatencyMs,
+                peakRTF = peakRTF,
+                totalAudioProcessedMs = totalAudioProcessedMs,
+                detectedLanguage = detectedLanguage,
+                engineState = engineState,
+                timestampMs = timestampMs
+            )
         }
     }
 

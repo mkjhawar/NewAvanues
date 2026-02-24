@@ -12,6 +12,7 @@ import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.FrameState
 import com.augmentalis.cockpit.model.LayoutMode
 import com.augmentalis.cockpit.repository.ICockpitRepository
+import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +77,10 @@ class CockpitViewModel(
     private val _dashboardState = MutableStateFlow(DashboardState())
     val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
 
+    // Speech engine metrics — pushed by platform bridge collecting from engine StateFlow
+    private val _speechMetrics = MutableStateFlow<SpeechMetricsSnapshot?>(null)
+    val speechMetrics: StateFlow<SpeechMetricsSnapshot?> = _speechMetrics.asStateFlow()
+
     /** Emits module IDs that don't map to frame content (e.g. "voicecursor")
      *  and need special navigation handling by the platform layer. */
     private val _specialModuleLaunch = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -87,15 +92,16 @@ class CockpitViewModel(
     val contentAction: SharedFlow<ContentAction> = _contentAction.asSharedFlow()
 
     init {
-        // Derive dashboard state from sessions + active session
+        // Derive dashboard state from sessions + active session + speech metrics
         dashboardCollectionJob = scope.launch {
-            combine(_sessions, _activeSession) { sessions, active ->
+            combine(_sessions, _activeSession, _speechMetrics) { sessions, active, metrics ->
                 DashboardState(
                     recentSessions = sessions.take(8),
                     availableModules = DashboardModuleRegistry.allModules,
                     activeSession = active,
                     templates = BuiltInTemplates.ALL,
-                    isLoading = false
+                    isLoading = false,
+                    speechMetrics = metrics
                 )
             }.collect { _dashboardState.value = it }
         }
@@ -366,6 +372,17 @@ class CockpitViewModel(
         currentFrames.add(newIndex, frame)
         _frames.value = currentFrames
         scheduleAutoSave()
+    }
+
+    // ── Speech Metrics ─────────────────────────────────────────────────
+
+    /**
+     * Update the speech engine metrics displayed on the Dashboard.
+     * Called by platform bridges that collect from engine StateFlows
+     * (e.g. WhisperEngine.metricsSnapshot, GoogleCloudEngine.metricsSnapshot).
+     */
+    fun updateSpeechMetrics(snapshot: SpeechMetricsSnapshot?) {
+        _speechMetrics.value = snapshot
     }
 
     // ── Dashboard Operations ──────────────────────────────────────────

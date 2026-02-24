@@ -63,6 +63,9 @@ kotlin {
                 // AvanueUI v5.1 — Theme + Unified Components (KMP)
                 implementation(project(":Modules:AvanueUI"))
 
+                // SpeechRecognition — SpeechMetricsSnapshot for dashboard card
+                implementation(project(":Modules:SpeechRecognition"))
+
                 // Coroutines
                 implementation(libs.kotlinx.coroutines.core)
 
