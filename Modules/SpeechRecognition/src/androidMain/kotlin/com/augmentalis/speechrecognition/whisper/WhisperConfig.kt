@@ -53,7 +53,19 @@ data class WhisperConfig(
 
     /** Optional VAD profile preset. When set, overrides individual VAD parameters
      *  (vadSensitivity, silenceThresholdMs, minSpeechDurationMs) with profile values. */
-    val vadProfile: VADProfile? = null
+    val vadProfile: VADProfile? = null,
+
+    /**
+     * Initial prompt for decoder biasing. When set, Whisper's decoder is primed with
+     * these tokens, making it more likely to transcribe words from the prompt.
+     *
+     * Use [InitialPromptBuilder.build] to construct from active commands.
+     * Set to null to disable biasing (default for DICTATION mode).
+     *
+     * NOTE: Requires whisper.cpp JNI to expose initial_prompt parameter in fullTranscribe.
+     * Currently stored here for config completeness; will be wired when JNI is updated.
+     */
+    val initialPrompt: String? = null
 ) {
     /** Effective VAD sensitivity: profile value if set, otherwise explicit config value */
     val effectiveVadSensitivity: Float get() = vadProfile?.vadSensitivity ?: vadSensitivity
@@ -167,6 +179,37 @@ data class WhisperConfig(
             return WhisperConfig(
                 modelSize = modelSize,
                 language = language
+            )
+        }
+
+        /**
+         * Create a config optimized for command recognition.
+         * Prefers Distil-Whisper models (5-6x faster) for English, and includes
+         * initial_prompt biasing from the provided command list.
+         */
+        fun forCommandMode(
+            context: Context,
+            language: String = "en",
+            staticCommands: List<String> = emptyList(),
+            dynamicCommands: List<String> = emptyList()
+        ): WhisperConfig {
+            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE)
+                    as ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memInfo)
+            val totalRamMB = (memInfo.totalMem / (1024 * 1024)).toInt()
+
+            val modelSize = WhisperModelSize.forCommandMode(totalRamMB, language)
+            val prompt = InitialPromptBuilder.build(staticCommands, dynamicCommands)
+
+            return WhisperConfig(
+                modelSize = modelSize,
+                language = language,
+                initialPrompt = prompt,
+                // Tighter VAD for commands: shorter silence = faster finalization
+                silenceThresholdMs = 500,
+                minSpeechDurationMs = 200,
+                maxChunkDurationMs = 10_000
             )
         }
     }

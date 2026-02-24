@@ -51,7 +51,16 @@ data class DesktopWhisperConfig(
 
     /** Optional VAD profile preset. When set, overrides individual VAD parameters
      *  (vadSensitivity, silenceThresholdMs, minSpeechDurationMs) with profile values. */
-    val vadProfile: VADProfile? = null
+    val vadProfile: VADProfile? = null,
+
+    /**
+     * Initial prompt for decoder biasing. When set, Whisper's decoder is primed with
+     * these tokens, making it more likely to transcribe words from the prompt.
+     *
+     * Use [InitialPromptBuilder.build] to construct from active commands.
+     * Set to null to disable biasing (default for DICTATION mode).
+     */
+    val initialPrompt: String? = null
 ) {
     /** Effective VAD sensitivity: profile value if set, otherwise explicit config value */
     val effectiveVadSensitivity: Float get() = vadProfile?.vadSensitivity ?: vadSensitivity
@@ -92,17 +101,41 @@ data class DesktopWhisperConfig(
          * falling back to JVM max heap if MXBean is unavailable.
          */
         fun autoTuned(language: String = "en"): DesktopWhisperConfig {
-            val physicalMemMB = try {
-                val osBean = ManagementFactory.getOperatingSystemMXBean()
-                    as com.sun.management.OperatingSystemMXBean
-                (osBean.totalMemorySize / (1024 * 1024)).toInt()
-            } catch (_: Exception) {
-                // Fallback to JVM heap if MXBean cast fails (e.g., non-HotSpot JVM)
-                (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
-            }
+            val physicalMemMB = getPhysicalMemoryMB()
             val isEnglish = language.startsWith("en")
             val modelSize = WhisperModelSize.forAvailableRAM(physicalMemMB, isEnglish)
             return DesktopWhisperConfig(modelSize = modelSize, language = language)
+        }
+
+        /**
+         * Create a config optimized for command recognition on Desktop.
+         * Prefers Distil-Whisper models for English, includes initial_prompt biasing.
+         */
+        fun forCommandMode(
+            language: String = "en",
+            staticCommands: List<String> = emptyList(),
+            dynamicCommands: List<String> = emptyList()
+        ): DesktopWhisperConfig {
+            val physicalMemMB = getPhysicalMemoryMB()
+            val modelSize = WhisperModelSize.forCommandMode(physicalMemMB, language)
+            val prompt = InitialPromptBuilder.build(staticCommands, dynamicCommands)
+
+            return DesktopWhisperConfig(
+                modelSize = modelSize,
+                language = language,
+                initialPrompt = prompt,
+                silenceThresholdMs = 500,
+                minSpeechDurationMs = 200,
+                maxChunkDurationMs = 10_000
+            )
+        }
+
+        private fun getPhysicalMemoryMB(): Int = try {
+            val osBean = ManagementFactory.getOperatingSystemMXBean()
+                as com.sun.management.OperatingSystemMXBean
+            (osBean.totalMemorySize / (1024 * 1024)).toInt()
+        } catch (_: Exception) {
+            (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
         }
     }
 

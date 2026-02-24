@@ -44,7 +44,14 @@ data class IosWhisperConfig(
 
     /** Optional VAD profile preset. When set, overrides individual VAD parameters
      *  (vadSensitivity, silenceThresholdMs, minSpeechDurationMs) with profile values. */
-    val vadProfile: VADProfile? = null
+    val vadProfile: VADProfile? = null,
+
+    /**
+     * Initial prompt for decoder biasing. When set, Whisper's decoder is primed with
+     * these tokens, making it more likely to transcribe words from the prompt.
+     * Use [InitialPromptBuilder.build] to construct from active commands.
+     */
+    val initialPrompt: String? = null
 ) {
     /** Effective VAD sensitivity: profile value if set, otherwise explicit config value */
     val effectiveVadSensitivity: Float get() = vadProfile?.vadSensitivity ?: vadSensitivity

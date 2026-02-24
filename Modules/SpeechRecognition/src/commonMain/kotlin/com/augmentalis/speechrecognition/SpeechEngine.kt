@@ -86,13 +86,25 @@ enum class SpeechEngine {
      * - Uses browser's native SpeechRecognition API
      * - Available: JS/Web only
      */
-    WEB_SPEECH;
+    WEB_SPEECH,
+
+    /**
+     * AVX (AvaVox) - ONNX-based command recognition engine
+     * - Offline capable
+     * - Per-language tuned models (~60-75MB each)
+     * - Hot words boosting for known commands
+     * - N-best hypotheses for better command matching
+     * - 30+ languages supported
+     * - ~70MB memory usage per language
+     * - Available: Android, Desktop
+     */
+    AVX;
 
     /**
      * Check if engine is offline capable
      */
     fun isOfflineCapable(): Boolean {
-        return this in listOf(VOSK, VIVOKA, WHISPER, APPLE_SPEECH)
+        return this in listOf(VOSK, VIVOKA, WHISPER, APPLE_SPEECH, AVX)
     }
 
     /**
@@ -115,6 +127,7 @@ enum class SpeechEngine {
             AZURE -> "Azure Cognitive Services"
             APPLE_SPEECH -> "Apple Speech"
             WEB_SPEECH -> "Web Speech API"
+            AVX -> "AvaVox Command Engine"
         }
     }
 
@@ -131,6 +144,7 @@ enum class SpeechEngine {
             AZURE -> 10
             APPLE_SPEECH -> 25
             WEB_SPEECH -> 5
+            AVX -> 70
         }
     }
 }

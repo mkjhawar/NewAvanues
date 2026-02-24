@@ -94,6 +94,9 @@ kotlin {
                 // Foundation for ModuleSettingsProvider
                 implementation(project(":Modules:Foundation"))
 
+                // Crypto module for AON codec (AVX model encryption/decryption)
+                implementation(project(":Modules:Crypto"))
+
                 // Atomicfu for cross-platform thread-safe primitives
                 implementation(libs.kotlinx.atomicfu)
             }
