@@ -2077,8 +2077,8 @@ Modules/SpeechRecognition/src/
 │   ├── AvxNative.kt         # Thread-safe wrapper around OnlineRecognizer (NOT raw JNI)
 │   └── AvxModelManager.kt   # Download model files → zip → AON encrypt → store
 └── desktopMain/.../avx/
-    ├── DesktopAvxEngine.kt   # Desktop JVM engine (primary command engine on Desktop)
-    └── DesktopAvxNative.kt   # Desktop JNI wrapper (needs rework for Sherpa JVM API)
+    ├── DesktopAvxEngine.kt   # Desktop JVM engine: streaming recognition via OnlineRecognizer
+    └── DesktopAvxNative.kt   # Thread-safe wrapper around OnlineRecognizer (Desktop library loading)
 ```
 
 **Key architectural change (v1.1.0):** `AvxNative` no longer uses custom JNI `external fun` declarations. It wraps the official Sherpa-ONNX Kotlin API (`OnlineRecognizer`, `OnlineStream`) which handles native library loading internally via the bundled AAR.
@@ -2125,19 +2125,38 @@ All AVX models are encrypted with AON codec (AES-256-GCM + HMAC-SHA256) from `Mo
 | Desktop | `~/.augmentalis/models/avx/` |
 | iOS (future) | `{Documents}/ava-ai-models/avx/` |
 
-**Download pipeline** (`AvxModelManager`):
+**Download + encrypt pipeline** (`AvxModelManager`):
+
+Each transducer model consists of 4 files (encoder, decoder, joiner, tokens.txt). These are archived into a single AON-encrypted file:
 
 ```
-1. Download raw ONNX from CDN → temp file
-2. AONCodec.wrap(tempBytes) → encrypted .aon
-3. Store in platform-specific avx/ directory
-4. Delete temp file
-5. Register in local model inventory
+1. Download 4 model files individually from HuggingFace:
+   - encoder-*.int8.onnx  (~40-120MB, bulk of the model)
+   - decoder-*.int8.onnx  (~0.5MB)
+   - joiner-*.int8.onnx   (~0.3MB)
+   - tokens.txt            (~5KB)
+2. Archive all 4 files into a zip
+3. AONCodec.wrap(zipBytes, modelId, platform) → Ava-AvxS-{Lang}.aon
+4. Store in platform-specific avx/ directory
+5. Delete temp files
 ```
 
-**Priority languages (15):** English, French, German, Spanish, Italian, Portuguese, Dutch, Russian, Chinese, Japanese, Korean, Arabic, Hindi, Turkish, Polish.
+**Runtime decrypt + extract pipeline** (`AvxEngine.decryptAndExtractModel()`):
 
-**Auto-download on first run:** Device locale language + English.
+```
+1. Read .aon file bytes
+2. AONCodec.unwrap() → decrypted zip bytes
+3. Unzip → 4 model files extracted to cache directory
+4. Verify all expected files exist
+5. Pass paths to OnlineRecognizer config
+6. Cache dir cleaned up on engine destroy()
+```
+
+**Priority languages (5 available):** English, Chinese, Korean, French, Chinese+English (bilingual).
+
+**Planned languages (11):** German, Spanish, Italian, Portuguese, Dutch, Russian, Japanese, Arabic, Hindi, Turkish, Polish — awaiting streaming transducer models, fall back to Whisper.
+
+**Auto-download on first run:** Device locale language + English (only if transducer model exists for that language).
 
 ### 20.7 ConfidenceScorer Integration
 
@@ -2149,12 +2168,22 @@ AVX is registered in the scoring pipeline:
 
 ### 20.8 Remaining Work
 
-- [ ] Add Sherpa-ONNX AAR to Android dependencies (requires version selection)
-- [ ] Build native JNI bridge for sherpa-onnx (or use pre-built binaries)
+**Completed:**
+- [x] Add Sherpa-ONNX AAR/JAR to Android + Desktop dependencies (v1.12.25 target)
+- [x] Replace custom JNI bridge with official Sherpa-ONNX Kotlin API (`OnlineRecognizer`)
+- [x] Rewrite AvxNative (Android) and DesktopAvxNative for streaming transducer recognition
+- [x] Multi-file model download + zip archive + AON encryption pipeline
+- [x] Desktop engine rewrite: streaming recognition (replaces VAD-chunked approach)
+
+**Remaining:**
+- [ ] Download Sherpa-ONNX AAR (v1.12.25) and extract Desktop classes JAR — see `sherpa-onnx/README.md`
+- [ ] Download Desktop native libraries (.dylib/.so/.dll) for target platforms
 - [ ] Wire pre-filter into VoiceOSCore's `SpeechEngineManager`
 - [ ] Add AVX settings to UnifiedSettingsScreen (language selection, pre-filter toggle)
 - [ ] Whisper JNI: expose `initial_prompt` parameter in `fullTranscribe()`
 - [ ] iOS AVX engine implementation
+- [ ] End-to-end testing: model download → encrypt → load → transcribe → command match
+- [ ] Memory profiling: verify AVX + Vivoka both loaded stays under budget
 
 ---
 
