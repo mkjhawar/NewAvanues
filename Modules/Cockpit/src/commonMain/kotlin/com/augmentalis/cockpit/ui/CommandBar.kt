@@ -49,11 +49,14 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ScreenSearchDesktop
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material.icons.filled.ViewColumn
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Icon
@@ -98,6 +101,8 @@ enum class ContentAction {
     CAMERA_FLIP, CAMERA_CAPTURE,
     // Whiteboard / Annotation
     WB_PEN, WB_HIGHLIGHTER, WB_ERASER, WB_UNDO, WB_REDO, WB_CLEAR,
+    // File manager
+    FILE_UP, FILE_SORT, FILE_VIEW_MODE, FILE_SELECT_ALL, FILE_SEARCH,
 }
 
 /**
@@ -321,6 +326,24 @@ fun CommandBar(
                         }
                     }
 
+                    CommandBarState.FILE_ACTIONS -> {
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Go Up", false) {
+                            onContentAction(ContentAction.FILE_UP)
+                        }
+                        CommandChip(Icons.Default.ArrowDownward, "Sort", false) {
+                            onContentAction(ContentAction.FILE_SORT)
+                        }
+                        CommandChip(Icons.Default.GridView, "View", false) {
+                            onContentAction(ContentAction.FILE_VIEW_MODE)
+                        }
+                        CommandChip(Icons.Default.SelectAll, "Select All", false) {
+                            onContentAction(ContentAction.FILE_SELECT_ALL)
+                        }
+                        CommandChip(Icons.Default.Search, "Search", false) {
+                            onContentAction(ContentAction.FILE_SEARCH)
+                        }
+                    }
+
                     CommandBarState.SCROLL_COMMANDS -> {
                         CommandChip(Icons.Default.ArrowUpward, "Scroll Up", false) {
                             onContentAction(ContentAction.WEB_ZOOM_IN) // Reuse zoom for scroll context
@@ -446,6 +469,7 @@ fun addFrameOptions(): List<Pair<String, FrameContent>> = listOf(
     "Video" to FrameContent.Video(),
     "Note" to FrameContent.Note(),
     "Camera" to FrameContent.Camera(),
+    "File" to FrameContent.File(),
     // P1: Extended
     "Voice Note" to FrameContent.VoiceNote(),
     "Voice" to FrameContent.Voice(),

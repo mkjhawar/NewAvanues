@@ -41,6 +41,7 @@ import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.avanueui.display.GlassDisplayMode
 import com.augmentalis.cockpit.model.LayoutMode
+import com.augmentalis.cockpit.model.SimplifiedShellMode
 import com.augmentalis.cockpit.spatial.PseudoSpatialController
 import com.augmentalis.cockpit.spatial.SpatialViewportController
 
@@ -85,6 +86,7 @@ fun CockpitScreenContent(
     onStepRenamed: (String, String) -> Unit = { _, _ -> },
     onStepReordered: (String, Int) -> Unit = { _, _ -> },
     onStepDeleted: (String) -> Unit = {},
+    onVoiceActivate: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
@@ -148,16 +150,43 @@ fun CockpitScreenContent(
             )
         )
 
-        // Main content area
+        // Main content area — shell mode determines home screen rendering
         if (state.layoutMode == LayoutMode.DASHBOARD) {
-            // Dashboard takes over the full content area — no frames rendered
-            DashboardLayout(
-                dashboardState = state.dashboardState,
-                onModuleClick = onModuleClick,
-                onSessionClick = onSessionClick,
-                onTemplateClick = onTemplateClick,
-                modifier = Modifier.weight(1f).fillMaxWidth()
-            )
+            // Home screen: render based on shell mode
+            when (state.shellMode) {
+                SimplifiedShellMode.CLASSIC -> DashboardLayout(
+                    dashboardState = state.dashboardState,
+                    onModuleClick = onModuleClick,
+                    onSessionClick = onSessionClick,
+                    onTemplateClick = onTemplateClick,
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
+
+                SimplifiedShellMode.AVANUE_VIEWS -> AvanueViewsStreamLayout(
+                    dashboardState = state.dashboardState,
+                    onModuleClick = onModuleClick,
+                    onSessionClick = onSessionClick,
+                    onVoiceFabClick = onVoiceActivate,
+                    onMoreModulesClick = { commandBarState = CommandBarState.ADD_FRAME },
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
+
+                SimplifiedShellMode.LENS -> LensLayout(
+                    dashboardState = state.dashboardState,
+                    onModuleClick = onModuleClick,
+                    onSessionClick = onSessionClick,
+                    onVoiceActivate = onVoiceActivate,
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
+
+                SimplifiedShellMode.CANVAS -> ZenCanvasLayout(
+                    dashboardState = state.dashboardState,
+                    onModuleClick = onModuleClick,
+                    onVoiceActivate = onVoiceActivate,
+                    onSearchClick = { commandBarState = CommandBarState.ADD_FRAME },
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
+            }
         } else if (state.frames.isEmpty()) {
             EmptySessionView(
                 onAddFrame = { commandBarState = CommandBarState.ADD_FRAME },
@@ -234,25 +263,39 @@ fun CockpitScreenContent(
             }
         }
 
-        // Command bar
-        CommandBar(
-            state = commandBarState,
-            currentLayoutMode = state.layoutMode,
-            onStateChange = { commandBarState = it },
-            onLayoutSelected = onLayoutModeChanged,
-            onAddFrame = onAddFrame,
-            onFrameMinimize = {
-                state.selectedFrameId?.let { onFrameMinimize(it) }
-            },
-            onFrameMaximize = {
-                state.selectedFrameId?.let { onFrameMaximize(it) }
-            },
-            onFrameClose = {
-                state.selectedFrameId?.let { onFrameClose(it) }
-            },
-            onContentAction = onContentAction,
-            availableLayoutModes = state.availableLayoutModes
-        )
+        // Command bar — Classic shell uses full CommandBar, simplified shells use flat bar
+        if (state.shellMode == SimplifiedShellMode.CLASSIC || state.layoutMode == LayoutMode.DASHBOARD) {
+            CommandBar(
+                state = commandBarState,
+                currentLayoutMode = state.layoutMode,
+                onStateChange = { commandBarState = it },
+                onLayoutSelected = onLayoutModeChanged,
+                onAddFrame = onAddFrame,
+                onFrameMinimize = {
+                    state.selectedFrameId?.let { onFrameMinimize(it) }
+                },
+                onFrameMaximize = {
+                    state.selectedFrameId?.let { onFrameMaximize(it) }
+                },
+                onFrameClose = {
+                    state.selectedFrameId?.let { onFrameClose(it) }
+                },
+                onContentAction = onContentAction,
+                availableLayoutModes = state.availableLayoutModes
+            )
+        } else {
+            // Simplified shells: flat contextual action bar
+            ContextualActionBar(
+                contentTypeId = selectedFrame?.contentType,
+                onActionClick = { actionId ->
+                    // Map action IDs to ContentAction enum values
+                    val action = contentActionFromId(actionId)
+                    if (action != null) onContentAction(action)
+                },
+                onMoreClick = { commandBarState = CommandBarState.MAIN },
+                visible = state.frames.isNotEmpty(),
+            )
+        }
     } // end Column
 
         // Theme settings panel overlay
@@ -273,6 +316,53 @@ fun CockpitScreenContent(
             )
         }
     } // end Box
+}
+
+/**
+ * Maps flat action bar action IDs (from [ContextualActionProvider]) to
+ * [ContentAction] enum values used by the platform content renderer.
+ *
+ * Returns null for non-content actions (frame/layout/tool actions),
+ * which are handled separately by their own callbacks.
+ */
+private fun contentActionFromId(actionId: String): ContentAction? = when (actionId) {
+    // Web
+    "web_back" -> ContentAction.WEB_BACK
+    "web_forward" -> ContentAction.WEB_FORWARD
+    "web_refresh" -> ContentAction.WEB_REFRESH
+    "web_zoom_in" -> ContentAction.WEB_ZOOM_IN
+    "web_zoom_out" -> ContentAction.WEB_ZOOM_OUT
+    // PDF
+    "pdf_prev" -> ContentAction.PDF_PREV_PAGE
+    "pdf_next" -> ContentAction.PDF_NEXT_PAGE
+    "pdf_zoom_in" -> ContentAction.PDF_ZOOM_IN
+    "pdf_zoom_out" -> ContentAction.PDF_ZOOM_OUT
+    // Image
+    "image_zoom_in" -> ContentAction.IMAGE_ZOOM_IN
+    "image_zoom_out" -> ContentAction.IMAGE_ZOOM_OUT
+    "image_rotate" -> ContentAction.IMAGE_ROTATE
+    // Video
+    "video_rewind" -> ContentAction.VIDEO_REWIND
+    "video_play_pause" -> ContentAction.VIDEO_PLAY_PAUSE
+    "video_fullscreen" -> ContentAction.VIDEO_FULLSCREEN
+    // Note
+    "note_bold" -> ContentAction.NOTE_BOLD
+    "note_italic" -> ContentAction.NOTE_ITALIC
+    "note_underline" -> ContentAction.NOTE_UNDERLINE
+    "note_undo" -> ContentAction.NOTE_UNDO
+    "note_redo" -> ContentAction.NOTE_REDO
+    "note_save" -> ContentAction.NOTE_SAVE
+    // Camera
+    "camera_flip" -> ContentAction.CAMERA_FLIP
+    "camera_capture" -> ContentAction.CAMERA_CAPTURE
+    // Whiteboard
+    "wb_pen" -> ContentAction.WB_PEN
+    "wb_highlight" -> ContentAction.WB_HIGHLIGHTER
+    "wb_eraser" -> ContentAction.WB_ERASER
+    "wb_undo" -> ContentAction.WB_UNDO
+    "wb_redo" -> ContentAction.WB_REDO
+    "wb_clear" -> ContentAction.WB_CLEAR
+    else -> null
 }
 
 /**

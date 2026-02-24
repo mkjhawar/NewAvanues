@@ -35,9 +35,16 @@ class CockpitCommandHandler(
         "open cockpit", "open hub",
         // Frame management
         "add frame", "minimize frame", "maximize frame", "close frame",
-        // Layout switching
+        // Layout switching (raw modes — legacy, still supported)
         "layout picker", "grid layout", "split layout",
         "freeform layout", "fullscreen layout", "workflow layout",
+        // Arrangement intents (simplified — auto-selects best LayoutMode)
+        "focus", "compare", "overview", "present",
+        // Shell mode switching
+        "classic mode", "stream mode", "lens mode", "canvas mode",
+        // Shell-specific navigation
+        "next card", "previous card",          // AvanueViews
+        "canvas zoom in", "canvas zoom out",   // Canvas
         // Content insertion
         "add web", "add camera", "add note", "add pdf",
         "add image", "add video", "add whiteboard", "add terminal",
