@@ -657,4 +657,19 @@ See: `docs/fixes/avanues/Avanues-Fix-ANRMainThreadBlocking-260224-V1.md` for ful
 
 ---
 
-*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar bridge, IActionCoordinator DI pattern, runBlocking elimination)*
+---
+
+## AdaptiveTimingManager Signal Wiring (260224)
+
+`ActionCoordinator.recordResult()` now feeds adaptive timing signals to `AdaptiveTimingManager`:
+
+- **On success**: calls `isDuplicate(phrase, timestamp)` to detect same-text-within-500ms, then either `recordCommandDuplicate()` or `recordCommandSuccess()`
+- **On failure/not-handled**: no timing change (failures are not timing-related)
+
+This creates the feedback loop: commands flow through ActionCoordinator → timing signals feed back to AdaptiveTimingManager → adapted values flow to VivokaRecognizer (processing delay), VoiceOSAccessibilityService (confidence floor), and DeviceCapabilityManager (scroll/speech debounce).
+
+`VoiceOSAccessibilityService.processVoiceCommand()` now uses `AdaptiveTimingManager.getConfidenceFloor()` instead of hardcoded `0.5f`. Near-misses (confidence within 0.05 of floor) are tracked via `recordConfidenceNearMiss()`.
+
+See Chapter 102 Section 21 for full AdaptiveTimingManager architecture.
+
+*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar bridge, IActionCoordinator DI pattern, runBlocking elimination, AdaptiveTimingManager signal wiring)*

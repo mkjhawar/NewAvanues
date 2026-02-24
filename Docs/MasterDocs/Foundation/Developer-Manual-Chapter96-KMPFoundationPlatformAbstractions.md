@@ -133,6 +133,19 @@ interface IPermissionChecker {
 
 All persistence key strings as constants. Platform implementations MUST use these keys for consistency.
 
+**Key categories:** Cursor, Voice, Wake Word, Boot/Lifecycle, Theme v5.1, VOS Sync, Voice Command Persistence, Developer Settings, Adaptive Timing.
+
+**Adaptive Timing keys (260224):** Persisted learned values from `AdaptiveTimingManager` (VoiceOSCore commonMain):
+
+| Constant | Key String | Purpose |
+|----------|-----------|---------|
+| `ADAPTIVE_PROCESSING_DELAY_MS` | `adaptive_processing_delay_ms` | Learned recognition-to-emission delay |
+| `ADAPTIVE_SCROLL_DEBOUNCE_MS` | `adaptive_scroll_debounce_ms` | Learned scroll event debounce |
+| `ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS` | `adaptive_speech_update_debounce_ms` | Learned grammar recompile debounce |
+| `ADAPTIVE_COMMAND_WINDOW_MS` | `adaptive_command_window_ms` | Learned wake word command window |
+
+See Chapter 102 Section 21 for full AdaptiveTimingManager documentation.
+
 ---
 
 ## 4. SettingsCodec Pattern

@@ -2128,3 +2128,110 @@ AVX is registered in the scoring pipeline:
 - [ ] Add AVX settings to UnifiedSettingsScreen (language selection, pre-filter toggle)
 - [ ] Whisper JNI: expose `initial_prompt` parameter in `fullTranscribe()`
 - [ ] iOS AVX engine implementation
+
+---
+
+## 21. AdaptiveTimingManager — Self-Tuning Voice Pipeline
+
+Added 2026-02-24. Addresses 5 compounding latency sources in the voice pipeline with a feedback-driven adaptive system inspired by TCP congestion control (AIMD).
+
+### 21.1 Problem Statement
+
+| Issue | Root Cause | Impact |
+|-------|-----------|--------|
+| 200ms hardcoded delay | `VivokaRecognizer.PROCESSING_DELAY = 200L` | Every command delayed 200ms unnecessarily |
+| Double confidence gate | Engine uses 0.45f, service hardcodes 0.5f | Commands at 0.45-0.50 silently dropped |
+| Scroll debounce too high | Same as content debounce (400-800ms) | Sluggish scroll overlay refresh |
+| Static grammar debounce | 300ms hardcoded | Not tuned to actual device compile speed |
+| No adaptation | All timing values static | No learning from real conditions |
+
+### 21.2 Architecture
+
+**Location:** `VoiceOSCore/src/commonMain/.../AdaptiveTimingManager.kt` (KMP singleton)
+
+```
+Signals In:                    Timing Values Out:
+─────────────                  ──────────────────
+commandSuccess()    ──┐        getProcessingDelayMs()    → VivokaRecognizer
+commandDuplicate()  ──┤        getConfidenceFloor()      → VoiceOSAccessibilityService
+confidenceNearMiss()──┼──→ EMA → getScrollDebounceMs()   → DeviceCapabilityManager
+grammarCompiled(ms) ──┤        getSpeechUpdateDebounceMs()→ DeviceCapabilityManager
+wakeWordHit(ms)     ──┤        getCommandWindowMs()      → VivokaAndroidEngine
+wakeWordTimeout()   ──┘
+```
+
+**EMA formula:** `newValue = 0.15 * sample + 0.85 * currentValue` (settles in ~15 samples)
+
+### 21.3 Timing Values & Ranges
+
+| Value | Start | Min | Max | Adapts To |
+|-------|-------|-----|-----|-----------|
+| processingDelayMs | 50 | 0 | 300 | Duplicate rate (AIMD: *0.95 on success, +25ms on duplicate) |
+| confidenceFloor | 0.45 | 0.3 | 0.7 | From DeveloperSettings (single source of truth) |
+| scrollDebounceMs | 200 | 100 | 500 | Separate from content; lighter operation |
+| speechUpdateDebounceMs | 200 | 100 | 500 | EMA of grammar compile time * 0.8 |
+| commandWindowMs | 4000 | 2000 | 8000 | Wake word: EMA of user response time * 1.5 |
+
+### 21.4 Signal → Adaptation Rules
+
+| Signal | Detection | Effect |
+|--------|-----------|--------|
+| Command success | Handler returns Success | processingDelay *= 0.95 (decrease toward min) |
+| Duplicate command | Same text within 500ms window | processingDelay += 25ms (increase) |
+| Success streak (10+) | 10 consecutive successes | processingDelay -= 10ms (bonus decrease) |
+| Grammar compile time | Measured ms from setDynamicCommandsAwait | speechUpdateDebounce = EMA(compileTime * 0.8) |
+| Wake word command hit | Command arrives within window | commandWindowMs = EMA(responseTime * 1.5) |
+| Wake word timeout | Window expires unused | commandWindowMs *= 0.9 (reduce waste) |
+| Confidence near-miss | Between floor-0.05 and floor | Tracked for metrics; no timing change |
+
+### 21.5 Integration Points
+
+| File | Change |
+|------|--------|
+| `VivokaRecognizer.kt` | `PROCESSING_DELAY` constant → `var processingDelayMs` (set by engine) |
+| `VivokaEngine.kt` | Added `setProcessingDelay(ms)` to delegate to recognizer |
+| `VivokaAndroidEngine.kt` | Wires adaptive processing delay + grammar compile tracking + wake word timing |
+| `VoiceOSAccessibilityService.kt` | Replaced hardcoded `0.5f` with `AdaptiveTimingManager.getConfidenceFloor()` |
+| `PlatformActual.kt` | `getScrollDebounceMs()` and SPEECH_ENGINE_UPDATE → delegate to manager |
+| `ActionCoordinator.kt` | Feeds success/duplicate signals in `recordResult()` |
+| `VoiceOSCore.kt` | Initializes confidence floor from `ServiceConfiguration` at startup |
+| `AvanuesSettingsRepository.kt` | `loadAdaptiveTimingValues()` / `persistAdaptiveTimingValues()` for DataStore round-trip |
+
+### 21.6 Wake Word Adaptive Command Window
+
+Extends Section 19 (Vivoka Wake-Word Detection). The 4000ms static command window is replaced with adaptive timing:
+
+```
+[Wake Word Mode] ─── "hey ava" detected ───→ [Command Window: adaptive ms]
+       ↑                                              │
+       │                                    ┌─────────┴──────────┐
+       │                               command arrives      timeout expires
+       │                               recordWakeWordHit()  recordWakeWordTimeout()
+       │                               execute command       │
+       └──────────────────────────────────────────────────────┘
+                                    returnToWakeWordMode()
+```
+
+- If users respond in ~1.5s consistently → window converges to ~2.5s (less idle grammar)
+- If users need 3s → window stays at ~5s
+- Each timeout shrinks window by 10% (multiplicative decrease)
+- `commandWindowOpenedAt` timestamp tracks response time for EMA input
+
+### 21.7 Persistence
+
+Learned values survive app restarts via DataStore:
+
+| DataStore Key | SettingsKeys Constant |
+|--------------|----------------------|
+| `adaptive_processing_delay_ms` | `ADAPTIVE_PROCESSING_DELAY_MS` |
+| `adaptive_scroll_debounce_ms` | `ADAPTIVE_SCROLL_DEBOUNCE_MS` |
+| `adaptive_speech_update_debounce_ms` | `ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS` |
+| `adaptive_command_window_ms` | `ADAPTIVE_COMMAND_WINDOW_MS` |
+
+Load: `AvanuesSettingsRepository.loadAdaptiveTimingValues()` at startup.
+Save: `AvanuesSettingsRepository.persistAdaptiveTimingValues()` periodically or on pause.
+Reset: `AdaptiveTimingManager.reset()` returns all values to defaults.
+
+### 21.8 Thread Safety
+
+`@Volatile` fields provide visibility. Compound read-modify-write operations (e.g., `processingDelayMs *= 0.95`) are intentionally NOT synchronized — rare lost updates are acceptable for a convergent heuristic. If precise counting is needed for dashboard metrics, add synchronization later.
