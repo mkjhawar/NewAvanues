@@ -22,8 +22,14 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
+import kotlinx.cinterop.alloc
 import kotlinx.cinterop.get
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.value
 import platform.AVFAudio.*
 import platform.Foundation.NSError
 
@@ -45,7 +51,7 @@ import platform.Foundation.NSError
  * audio.release()
  * ```
  */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class IosWhisperAudio {
 
     companion object {
@@ -127,7 +133,13 @@ class IosWhisperAudio {
             }
 
             engine.prepare()
-            engine.startAndReturnError(null)
+            memScoped {
+                val startError = alloc<ObjCObjectVar<NSError?>>()
+                engine.startAndReturnError(startError.ptr)
+                startError.value?.let { nsError ->
+                    logError(TAG, "Audio engine start failed: ${nsError.localizedDescription}")
+                }
+            }
 
             synchronized(lock) {
                 isCapturing = true
