@@ -44,6 +44,7 @@ import okio.BufferedSink
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.LockSupport
 
 /**
  * HTTP/2 streaming client for Google Cloud STT v2.
@@ -76,9 +77,11 @@ class GoogleCloudStreamingClient(
     private val isStreaming = AtomicBoolean(false)
 
     // Audio queue: mic thread produces, HTTP stream thread consumes.
+    // Bounded to 64 buffers (~6.4s of audio at 100ms chunks) to prevent unbounded
+    // memory growth if the HTTP stream can't keep up with mic input.
     // Declared as var because each streaming session rebuilds a fresh channel —
     // a closed channel cannot be reused after stopStreaming() or session rotation.
-    private var audioQueue = Channel<ByteArray>(Channel.UNLIMITED)
+    private var audioQueue = Channel<ByteArray>(64)
 
     // Result flow
     private val _resultFlow = MutableSharedFlow<RecognitionResult>(replay = 1)
@@ -204,7 +207,7 @@ class GoogleCloudStreamingClient(
         // is closed by stopStreaming() or by the 4:50-min rotation in writeTo().
         // A closed Channel cannot receive new items, so we must replace it before
         // any sendAudioChunk() calls arrive for this new session.
-        audioQueue = Channel(Channel.UNLIMITED)
+        audioQueue = Channel(64)
 
         val token = getAuthToken()
         val url = buildStreamingUrl()
@@ -241,8 +244,9 @@ class GoogleCloudStreamingClient(
                     } else if (result.isClosed) {
                         break
                     } else {
-                        // No data available — brief yield
-                        Thread.sleep(10)
+                        // No data available — brief yield (1ms instead of 10ms for lower latency)
+                        // Cannot use coroutine delay() — writeTo() is OkHttp's synchronous callback
+                        LockSupport.parkNanos(1_000_000)
                     }
 
                     // Check stream duration limit
@@ -300,9 +304,16 @@ class GoogleCloudStreamingClient(
 
     /**
      * Parse a single streaming response line and emit results.
+     * Handles both recognition results and speech event notifications from the server.
      */
     private suspend fun parseStreamingResponse(jsonLine: String, speechMode: String) {
         val json = JsonParser.parseString(jsonLine).asJsonObject
+
+        // Handle speech events (END_OF_SINGLE_UTTERANCE, SPEECH_ACTIVITY_*, etc.)
+        json.get("speechEventType")?.asString?.let { eventType ->
+            handleSpeechEvent(eventType)
+        }
+
         val results = json.getAsJsonArray("results") ?: return
 
         for (resultElement in results) {
@@ -359,6 +370,44 @@ class GoogleCloudStreamingClient(
     }
 
     /**
+     * Handle a speech event from the streaming response.
+     *
+     * Google Cloud STT v2 speech events:
+     * - END_OF_SINGLE_UTTERANCE: Server detected end of speech in singleUtterance mode.
+     *   We should stop sending audio and close the stream gracefully.
+     * - SPEECH_ACTIVITY_BEGIN: Speech activity started (user began talking).
+     * - SPEECH_ACTIVITY_END: Speech activity ended (user stopped talking).
+     * - SPEECH_ACTIVITY_TIMEOUT: Server timed out waiting for speech.
+     */
+    private suspend fun handleSpeechEvent(eventType: String) {
+        when (eventType) {
+            "END_OF_SINGLE_UTTERANCE" -> {
+                Log.i(TAG, "Server detected end of single utterance — closing stream gracefully")
+                // Stop sending audio; the server will send final results then close
+                audioQueue.close()
+            }
+            "SPEECH_ACTIVITY_BEGIN" -> {
+                Log.d(TAG, "Speech activity detected by server")
+            }
+            "SPEECH_ACTIVITY_END" -> {
+                Log.d(TAG, "Speech activity ended (server-side)")
+            }
+            "SPEECH_ACTIVITY_TIMEOUT" -> {
+                Log.w(TAG, "Server speech activity timeout — no speech detected")
+                _errorFlow.emit(SpeechError(
+                    code = SpeechError.ERROR_SPEECH_TIMEOUT,
+                    message = "No speech detected (server timeout)",
+                    isRecoverable = true,
+                    suggestedAction = SpeechError.Action.RETRY
+                ))
+            }
+            else -> {
+                Log.d(TAG, "Unknown speech event: $eventType")
+            }
+        }
+    }
+
+    /**
      * Build the initial streaming configuration JSON message.
      */
     private fun buildStreamingConfigJson(): String {
@@ -400,6 +449,9 @@ class GoogleCloudStreamingClient(
                     addProperty("enableVoiceActivityEvents", true)
                     addProperty("interimResults", true)
                 })
+                if (this@GoogleCloudStreamingClient.config.singleUtterance) {
+                    addProperty("singleUtterance", true)
+                }
             })
         }
         return gson.toJson(config)
