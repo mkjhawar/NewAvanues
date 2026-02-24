@@ -53,6 +53,25 @@ Phrase/sensitivity controls only visible when wake word is enabled.
 5. `updateCommands()` caches commands but skips grammar push while in wake-word mode
 6. `disableWakeWord()` → restores full command grammar
 
+### Lifecycle Wiring
+
+Settings changes flow reactively from DataStore to the engine:
+
+```
+DataStore (AvanuesSettingsRepository)
+  → Flow<AvanuesSettings>
+    → VoiceAvanueAccessibilityService.collectLatest
+      → VoiceOSCore.updateWakeWordSettings(enabled, wakePhrase, sensitivity)
+        → (engine as? IWakeWordCapable)
+          → enableWakeWord() / disableWakeWord()
+```
+
+`VoiceOSCore.updateWakeWordSettings()` uses `as? IWakeWordCapable` runtime type check — any engine implementing the interface (Vivoka now, PhonemeASR future) works without code changes.
+
+Keyword mapping in accessibility service: `"HEY_AVA"` → `"hey ava"`, `"OK_AVA"` → `"ok ava"`, `"COMPUTER"` → `"computer"`.
+
+`StubVivokaEngine` updated to match the new `enableWakeWord(wakeWord, sensitivity)` signature (returns `Result.failure(UnsupportedOperationException)`).
+
 ### Files Modified
 
 | File | Changes |
@@ -63,6 +82,9 @@ Phrase/sensitivity controls only visible when wake word is enabled.
 | `apps/avanues/.../VoiceControlSettingsProvider.kt` | Full wake word settings group (toggle+dropdown+slider) |
 | `Modules/VoiceOSCore/.../IVivokaEngine.kt` | `enableWakeWord()` + sensitivity param |
 | `Modules/VoiceOSCore/.../VivokaAndroidEngine.kt` | Wake word state, grammar switching, mode transitions |
+| `Modules/VoiceOSCore/.../VoiceOSCore.kt` | +`updateWakeWordSettings()` method with `IWakeWordCapable` runtime cast |
+| `Modules/VoiceOSCore/.../StubVivokaEngine.kt` | Fixed `enableWakeWord()` signature (added sensitivity param) |
+| `apps/avanues/.../VoiceAvanueAccessibilityService.kt` | Wired wake word settings observation in DataStore collection loop |
 
 ---
 

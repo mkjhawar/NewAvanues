@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-24 — Vivoka wake-word detection (Section 19), P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
+**Updated**: 2026-02-24 — Vivoka wake-word detection with lifecycle wiring (Section 19, 19.1-19.6), P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
 
 ---
 
@@ -1968,3 +1968,23 @@ Runtime selection via DI/settings. Settings (`wakeWordEnabled`, `wakeWordKeyword
 3. **`SettingsSliderRow`** — Sensitivity 10%-90% (conditionally visible)
 
 All interactive elements include AVID voice semantics.
+
+### 19.6 Lifecycle Wiring
+
+Settings flow reactively from DataStore through the accessibility service to the engine:
+
+```
+AvanuesSettingsRepository (DataStore)
+  → Flow<AvanuesSettings> (collectLatest in AccessibilityService)
+    → VoiceOSCore.updateWakeWordSettings(enabled, wakePhrase, sensitivity)
+      → speechEngine as? IWakeWordCapable
+        → enableWakeWord(wakePhrase, sensitivity)  // or disableWakeWord()
+```
+
+**`VoiceOSCore.updateWakeWordSettings()`** performs a runtime `as? IWakeWordCapable` cast — this makes wake-word support engine-agnostic. Any engine implementing `IWakeWordCapable` (Vivoka today, PhonemeASR future) receives wake-word commands without coordinator code changes.
+
+**Keyword mapping** (accessibility service): `"HEY_AVA"` → `"hey ava"`, `"OK_AVA"` → `"ok ava"`, `"COMPUTER"` → `"computer"`.
+
+**StubVivokaEngine**: Updated to match the `enableWakeWord(wakeWord: String, sensitivity: Float)` signature (returns `Result.failure(UnsupportedOperationException)` on all platforms without Vivoka).
+
+**Error handling**: Wake word settings update failures are caught and logged but do not interrupt the main settings observation loop.
