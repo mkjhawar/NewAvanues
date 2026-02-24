@@ -19,7 +19,7 @@ Both systems are accessible from any input source (voice, AI chat, macros). Macr
 ┌───────────────────────────────────────────────────┐
 │         INPUT SOURCES                              │
 │  Voice Speech → ISpeechEngine                      │
-│  AI Chat → NLU IntentClassifier                    │
+│  AI Chat → IActionCoordinator (DI interface)       │
 │  Macro Step → MacroExecutor                        │
 │  Scheduled Task → WorkManager                      │
 └──────────────────────┬────────────────────────────┘
@@ -385,6 +385,74 @@ User taps Bold chip in CommandBar
 
 ---
 
+## AI Chat Coordinator Path (IActionCoordinator)
+
+The AI Chat module has its own action coordinator — **separate from** VoiceOSCore's `ActionCoordinator`. While VoiceOSCore dispatches voice commands through `IHandler` + `HandlerRegistry`, the Chat module dispatches AI-classified intents through `IActionCoordinator` + `IntentActionRegistry`.
+
+### Interface: IActionCoordinator
+
+```kotlin
+// Modules/AI/Chat/src/commonMain/.../coordinator/IActionCoordinator.kt
+interface IActionCoordinator {
+    val showAccessibilityPrompt: StateFlow<Boolean>
+
+    fun isInitialized(): Boolean
+    fun initialize()
+    fun hasHandler(intent: String): Boolean
+    suspend fun getCategoryForIntent(intent: String): String
+
+    suspend fun executeActionWithRouting(
+        intent: String, category: String, utterance: String
+    ): ActionExecutionResult
+
+    suspend fun executeAction(intent: String, utterance: String): IntentResult
+    fun isAccessibilityServiceEnabled(): Boolean
+    fun getRoutingStats(): Map<String, Any>
+    fun getRegisteredIntents(): List<String>
+}
+```
+
+### Platform Implementations
+
+| Platform | Class | Behavior |
+|----------|-------|----------|
+| Android | `ActionCoordinator` (`@Singleton`, Hilt-injected) | Full implementation: wraps `IntentActionRegistry` + `IntentActionsInitializer`, routes local vs VoiceOS, checks accessibility |
+| Desktop | `ActionCoordinatorDesktop` | Built-in intent handlers for navigation/volume/teach mode; returns `IntentResult.Failed()` for unsupported features (weather, alarms, reminders, smart home) |
+
+### Dependency Inversion (DI Wiring)
+
+`ChatViewModel` injects `IActionCoordinator` (interface), not the concrete `ActionCoordinator`:
+
+```kotlin
+// ChatModule.kt — Hilt binding
+@Provides @Singleton
+fun provideActionCoordinator(impl: ActionCoordinator): IActionCoordinator = impl
+
+// ChatViewModel.kt — interface injection
+class ChatViewModel @Inject constructor(
+    private val actionCoordinator: IActionCoordinator,  // interface, not concrete
+    // ...
+)
+```
+
+This enables:
+- **Testability** — mock `IActionCoordinator` in unit tests without Android framework
+- **Platform-agnosticism** — Desktop uses `ActionCoordinatorDesktop`, Android uses `ActionCoordinator`
+- **Honest failures** — Desktop returns explicit `IntentResult.Failed("Weather check is not available on desktop")` instead of fake success stubs
+
+### Dispatch Flow (AI Chat Path)
+
+```
+User types in AI Chat → ChatViewModel
+  → NLUCoordinator.classify(utterance) → intent + category
+  → IActionCoordinator.executeActionWithRouting(intent, category, utterance)
+    → Route: local-capable? → IntentActionRegistry.execute(intentId, platformContext, entities)
+    → Route: needs VoiceOS? → Forward via IPC or show accessibility prompt
+    → Route: no handler? → ActionExecutionResult.NoHandler(intent)
+```
+
+---
+
 ## Macro Composition
 
 Macros can compose steps from both VoiceOSCore and IntentActions, enabling powerful automation:
@@ -524,6 +592,10 @@ The legacy `Modules/Actions/` module contained ~147 handlers. Of these:
 | `ExtractedEntities.kt` | `Modules/IntentActions/src/commonMain/.../` | Entity container + toSafeString() |
 | `EntityExtractor.kt` | `Modules/IntentActions/src/commonMain/.../extractors/` | Entity extraction (pure Kotlin) |
 | `MacroStep.kt` | `Modules/VoiceOSCore/src/commonMain/.../macro/` | Macro composition model |
+| `IActionCoordinator.kt` | `Modules/AI/Chat/src/commonMain/.../coordinator/` | Chat action coordinator interface (KMP) |
+| `ActionCoordinator.kt` | `Modules/AI/Chat/src/main/.../coordinator/` | Android implementation (Hilt `@Singleton`) |
+| `ActionCoordinatorDesktop.kt` | `Modules/AI/Chat/src/desktopMain/.../coordinator/` | Desktop implementation (honest failures) |
+| `ChatModule.kt` | `Modules/AI/Chat/src/main/.../di/` | Hilt DI: `ActionCoordinator` → `IActionCoordinator` |
 
 ---
 
@@ -556,4 +628,4 @@ Safe fields shown as presence flags: `query=present`, `url=present`, `app=<name>
 
 ---
 
-*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar → ModuleCommandCallbacks bridge)*
+*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar bridge, IActionCoordinator DI pattern)*
