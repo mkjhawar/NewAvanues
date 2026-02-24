@@ -9,7 +9,6 @@ import com.augmentalis.ava.core.domain.model.Conversation
 import com.augmentalis.ava.core.domain.model.Message
 import com.augmentalis.ava.core.domain.model.MessageRole
 import com.augmentalis.ava.core.domain.repository.MessageRepository
-import com.augmentalis.chat.coordinator.ActionCoordinator
 import com.augmentalis.chat.coordinator.ConversationManager
 import com.augmentalis.chat.coordinator.ExportCoordinator
 import com.augmentalis.chat.coordinator.ExportFormat
@@ -71,7 +70,7 @@ class ChatViewModel @Inject constructor(
     private val nluCoordinator: NLUCoordinator,
     private val responseCoordinator: ResponseCoordinator,
     private val ragCoordinator: RAGCoordinator,
-    private val actionCoordinator: ActionCoordinator,
+    private val actionCoordinator: IActionCoordinator,
     private val ttsCoordinator: TTSCoordinator,
     private val exportCoordinator: ExportCoordinator,
     private val teachingFlowManager: TeachingFlowManager,

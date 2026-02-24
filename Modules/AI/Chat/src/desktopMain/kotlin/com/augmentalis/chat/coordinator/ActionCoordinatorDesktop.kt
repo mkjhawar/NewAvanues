@@ -110,9 +110,9 @@ class ActionCoordinatorDesktop : IActionCoordinator {
             IntentResult.Success("Entering teach mode")
         }
 
-        // Information queries (stubs - would integrate with actual services)
-        actionHandlers[BuiltInIntents.CHECK_WEATHER] = { utterance ->
-            IntentResult.Success("Weather check requested: $utterance")
+        // Information queries (not available on desktop)
+        actionHandlers[BuiltInIntents.CHECK_WEATHER] = { _ ->
+            IntentResult.Failed("Weather check is not available on desktop")
         }
 
         actionHandlers[BuiltInIntents.SHOW_TIME] = { _ ->
@@ -120,22 +120,22 @@ class ActionCoordinatorDesktop : IActionCoordinator {
             IntentResult.Success("The current time is ${time.hour}:${time.minute.toString().padStart(2, '0')}")
         }
 
-        // Productivity (stubs)
-        actionHandlers[BuiltInIntents.SET_ALARM] = { utterance ->
-            IntentResult.Success("Alarm setting requested: $utterance")
+        // Productivity (not available on desktop)
+        actionHandlers[BuiltInIntents.SET_ALARM] = { _ ->
+            IntentResult.Failed("Alarms are not available on desktop")
         }
 
-        actionHandlers[BuiltInIntents.SET_REMINDER] = { utterance ->
-            IntentResult.Success("Reminder setting requested: $utterance")
+        actionHandlers[BuiltInIntents.SET_REMINDER] = { _ ->
+            IntentResult.Failed("Reminders are not available on desktop")
         }
 
-        // Device control (stubs - would integrate with smart home APIs)
-        actionHandlers[BuiltInIntents.CONTROL_LIGHTS] = { utterance ->
-            IntentResult.Success("Light control requested: $utterance")
+        // Device control (not available on desktop)
+        actionHandlers[BuiltInIntents.CONTROL_LIGHTS] = { _ ->
+            IntentResult.Failed("Smart home controls are not available on desktop")
         }
 
-        actionHandlers[BuiltInIntents.CONTROL_TEMPERATURE] = { utterance ->
-            IntentResult.Success("Temperature control requested: $utterance")
+        actionHandlers[BuiltInIntents.CONTROL_TEMPERATURE] = { _ ->
+            IntentResult.Failed("Smart home controls are not available on desktop")
         }
 
         println("[ActionCoordinatorDesktop] Registered ${actionHandlers.size} built-in handlers")
