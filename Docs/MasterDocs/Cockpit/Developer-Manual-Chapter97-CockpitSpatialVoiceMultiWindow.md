@@ -727,7 +727,7 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 
 **ContentRenderer content actions:**
 - **Image:** `zoom` + `rotation` state via `graphicsLayer`, handles `IMAGE_ZOOM_IN/OUT/ROTATE`
-- **Video:** `isPlaying` toggle via `VIDEO_PLAY_PAUSE`, 10s rewind via `VIDEO_REWIND`, `VIDEO_FULLSCREEN` no-op (layout concern)
+- **Video:** Blank-URI guard shows `VideoGalleryScreen` (MediaStore picker); on selection, `onContentStateChanged` updates the frame URI and transitions to `VideoPlayer`. Non-blank URI: `isPlaying` toggle via `VIDEO_PLAY_PAUSE`, 10s rewind via `VIDEO_REWIND`, `VIDEO_FULLSCREEN` no-op (layout concern)
 - **Map:** `shouldOverrideUrlLoading` restricts WebView navigation to `openstreetmap.org` hosts only
 
 **Security hardening:**
@@ -756,6 +756,15 @@ Wired NOTE_ACTIONS, CAMERA_ACTIONS, and new WHITEBOARD_ACTIONS to their module c
 - `ContentAction` enum expanded with 10 new values (NOTE_BOLD/ITALIC/UNDERLINE/STRIKETHROUGH/SAVE + WB_PEN/HIGHLIGHTER/ERASER/UNDO/REDO/CLEAR).
 
 See plan: `docs/plans/Cockpit/Cockpit-Plan-CommandBarModuleWiring-260224-V1.md`
+
+### 260224 — VideoPlayer Empty URI Crash Fix
+
+Two-layer defense against `ExoPlaybackException: FileDataSource$FileDataSourceException: ENOENT` caused by `FrameContent.Video()` defaulting `uri = ""`:
+
+- **Layer 1 (ContentRenderer):** `is FrameContent.Video` branch now checks `content.uri.isBlank()`. Blank URI shows `VideoGalleryScreen` (MediaStore picker) instead of `VideoPlayer`. On video selection, `onContentStateChanged` updates the frame's URI and the composable recomposes to show the player. Parallels the existing Web guard (`url.ifBlank { "about:blank" }` at line 398).
+- **Layer 2 (VideoPlayer):** Belt-and-suspenders early-return guard at the top of `VideoPlayer` composable. Blank URI shows a centered placeholder (VideoLibrary icon + "No video selected") and returns before `ExoPlayer.Builder` is ever called. Protects against any future caller that bypasses ContentRenderer.
+
+See fix doc: `docs/fixes/videoavanue/VideoAvanue-Fix-ExoPlayerEmptyUriCrash-260224-V1.md`
 
 ### 260222 — ContentRenderer Import Fix
 `ContentRenderer.kt` imports `CameraPreview` for the `FrameContent.Camera` content type. The import was corrected from the non-existent `com.augmentalis.cameraavanue` package to `com.augmentalis.photoavanue.CameraPreview`, which is the actual composable in the PhotoAvanue module (Chapter 98). The orphaned CameraAvanue module has been deleted — PhotoAvanue is the canonical camera module.
