@@ -1,8 +1,15 @@
-// filename: features/nlu/src/iosMain/kotlin/com/augmentalis/ava/features/nlu/coreml/CoreMLModelManager.kt
-// created: 2025-11-26
-// Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
-// Copyright (c) 2024-2025 Intelligent Devices LLC / Augmentalis
-// TCR: Phase 2 - Complete Core ML integration for iOS NLU
+/**
+ * Core ML Model Manager — Darwin (iOS + macOS) implementation.
+ *
+ * Handles Core ML model lifecycle for Apple platform NLU inference.
+ * CoreML API surface is identical on iOS 14+ and macOS 11+.
+ *
+ * Compute backends:
+ * - ANE: Apple Neural Engine (A12+ / Apple Silicon)
+ * - GPU: Metal GPU compute
+ * - CPU: Universal fallback
+ * - Auto: Let Core ML decide (recommended)
+ */
 
 package com.augmentalis.nlu.coreml
 
@@ -18,67 +25,14 @@ import kotlinx.coroutines.withContext
 import platform.CoreML.*
 import platform.Foundation.*
 
-/**
- * Core ML Model Manager - Complete iOS implementation
- *
- * Handles all Core ML model lifecycle operations for iOS-based NLU:
- * - Model loading from app bundle or downloaded locations
- * - Model compilation and optimization for target device
- * - Memory management and model lifecycle
- * - Inference execution with selected compute backend
- *
- * Architecture:
- * - Lazy-loads models for efficient memory usage
- * - Supports both .mlmodel and .mlpackage formats
- * - Configurable compute backends (ANE, GPU, CPU)
- * - Thread-safe inference operations
- * - Performance monitoring and metrics
- *
- * Key capabilities:
- * 1. Load and compile .mlmodel or .mlpackage files
- * 2. Configure Core ML with optimal compute units
- * 3. Manage model memory footprint and caching
- * 4. Execute inference with proper input/output tensor handling
- * 5. Handle model updates and version management
- * 6. Error handling and fallback strategies
- * 7. Performance monitoring (latency, memory)
- *
- * Compute backends (iOS 17+):
- * - ANE (Apple Neural Engine): Best performance/power, most models
- * - GPU: Fast for certain models, lower latency variance
- * - CPU: Universal fallback, no special requirements
- * - Auto: Intelligent selection based on device and model
- *
- * Example usage:
- * ```kotlin
- * val manager = CoreMLModelManager()
- * val loadResult = manager.loadModel(
- *     modelPath = "Models/intent_classifier.mlpackage",
- *     computeBackend = CoreMLModelManager.ComputeBackend.Auto
- * )
- *
- * val inferenceResult = manager.runInference(
- *     inputIds = longArrayOf(101, 2054, 2003, 2017, ...),
- *     attentionMask = longArrayOf(1, 1, 1, 1, ...),
- *     tokenTypeIds = longArrayOf(0, 0, 0, 0, ...)
- * )
- * ```
- *
- * Integration:
- * - Called by IntentClassifier.kt for semantic classification
- * - Coordinates with ModelManager.kt for model file handling
- * @see com.augmentalis.nlu.IntentClassifier
- * @see com.augmentalis.nlu.ModelManager
- */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
 internal class CoreMLModelManager {
 
-    // Compute backend options
     enum class ComputeBackend {
-        Auto,      // Let Core ML decide (recommended)
-        ANE,       // Apple Neural Engine (fastest, iOS 17+)
-        GPU,       // Metal GPU (fast, consistent latency)
-        CPU        // CPU only (universal fallback)
+        Auto,
+        ANE,
+        GPU,
+        CPU
     }
 
     private var model: MLModel? = null
@@ -92,10 +46,9 @@ internal class CoreMLModelManager {
     private var totalInferenceTimeMs = 0L
 
     /**
-     * Load Core ML model from specified path
+     * Load Core ML model from specified path.
      *
      * Supports both .mlmodel and .mlpackage bundle formats.
-     * Automatically compiles the model for current device.
      *
      * @param modelPath Path to .mlmodel or .mlpackage file
      * @param computeBackend Compute unit to use (default: Auto)
@@ -110,14 +63,12 @@ internal class CoreMLModelManager {
 
             this.computeBackend = computeBackend
 
-            // Create URL from path
             modelUrl = NSURL.fileURLWithPath(modelPath)
                 ?: return Result.Error(
                     exception = IllegalArgumentException("Invalid model path: $modelPath"),
                     message = "Failed to create URL from path"
                 )
 
-            // Check if file exists
             val fileManager = NSFileManager.defaultManager
             if (!fileManager.fileExistsAtPath(modelPath)) {
                 return Result.Error(
@@ -126,10 +77,8 @@ internal class CoreMLModelManager {
                 )
             }
 
-            // Load model configuration
             val config = configureModel(computeBackend)
 
-            // Load the model with configuration - Kotlin 2.1.0 requires error pointer
             model = memScoped {
                 val error = alloc<ObjCObjectVar<NSError?>>()
                 val loadedModel = MLModel.modelWithContentsOfURL(
@@ -162,22 +111,12 @@ internal class CoreMLModelManager {
         }
     }
 
-    /**
-     * Configure Core ML model with optimal settings
-     *
-     * Configures compute units, memory optimization, and feature extraction
-     * based on the specified backend preference.
-     *
-     * @param computeBackend Preferred compute backend
-     * @return MLModelConfiguration with optimized settings
-     */
     private fun configureModel(computeBackend: ComputeBackend): MLModelConfiguration {
         val config = MLModelConfiguration()
 
-        // Set compute units based on backend preference
         when (computeBackend) {
             ComputeBackend.ANE -> {
-                config.computeUnits = MLComputeUnitsAll  // Use ANE if available
+                config.computeUnits = MLComputeUnitsAll
                 println("CoreMLModelManager: Configured for Apple Neural Engine")
             }
             ComputeBackend.GPU -> {
@@ -189,27 +128,21 @@ internal class CoreMLModelManager {
                 println("CoreMLModelManager: Configured for CPU only")
             }
             ComputeBackend.Auto -> {
-                config.computeUnits = MLComputeUnitsAll  // Let Core ML decide
+                config.computeUnits = MLComputeUnitsAll
                 println("CoreMLModelManager: Configured for automatic backend selection")
             }
         }
 
-        // Memory optimization
         config.allowLowPrecisionAccumulationOnGPU = true
 
         return config
     }
 
     /**
-     * Run inference on input tokens
+     * Run inference on input tokens.
      *
-     * Executes the Core ML model with tokenized input and returns embedding vector.
-     * Handles tensor creation, inference, and output extraction.
-     *
-     * @param inputIds Tokenized input IDs [batch_size=1, seq_length]
-     * @param attentionMask Attention mask [1, seq_length]
-     * @param tokenTypeIds Token type IDs [1, seq_length]
-     * @return Result containing output embedding vector or error
+     * CoreML tensor interop is not yet configured — returns explicit error
+     * rather than a zero vector that downstream consumers would treat as valid.
      */
     suspend fun runInference(
         inputIds: LongArray,
@@ -223,8 +156,6 @@ internal class CoreMLModelManager {
             )
         }
 
-        // CoreML tensor interop is not yet configured — return explicit error
-        // rather than a zero vector that downstream consumers would treat as valid embeddings.
         Result.Error(
             exception = UnsupportedOperationException(
                 "CoreML inference not available — tensor interop not configured"
@@ -234,16 +165,8 @@ internal class CoreMLModelManager {
         )
     }
 
-    /**
-     * Get last inference latency
-     * @return Inference time in milliseconds
-     */
     fun getLastInferenceTimeMs(): Long = lastInferenceTimeMs
 
-    /**
-     * Get average inference latency
-     * @return Average time in milliseconds across all inferences
-     */
     fun getAverageInferenceTimeMs(): Long {
         return if (totalInferencesCount > 0) {
             totalInferenceTimeMs / totalInferencesCount
@@ -252,15 +175,8 @@ internal class CoreMLModelManager {
         }
     }
 
-    /**
-     * Get inference count
-     * @return Total number of inferences performed
-     */
     fun getInferenceCount(): Int = totalInferencesCount
 
-    /**
-     * Clean up resources
-     */
     fun close() {
         model = null
         modelUrl = null

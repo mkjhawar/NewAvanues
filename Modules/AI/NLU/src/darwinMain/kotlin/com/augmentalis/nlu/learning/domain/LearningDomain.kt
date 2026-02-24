@@ -4,6 +4,6 @@ import platform.Foundation.NSDate
 import platform.Foundation.timeIntervalSince1970
 
 /**
- * iOS implementation of platform utilities
+ * Darwin (iOS + macOS) implementation of platform time utility.
  */
 actual fun currentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()

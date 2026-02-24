@@ -1,20 +1,19 @@
-// filename: features/nlu/src/iosMain/kotlin/com/augmentalis/ava/features/nlu/BertTokenizer.kt
-// created: 2025-11-02
-// Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
-// © Augmentalis Inc, Intelligent Devices LLC
-// TCR: Phase 1 - KMP Migration (iOS stub)
-
 package com.augmentalis.nlu
 
 /**
- * iOS stub implementation of BertTokenizer
+ * Darwin (iOS + macOS) stub implementation of BertTokenizer.
  *
- * TODO Phase 2: Implement WordPiece tokenization for iOS
+ * Returns zero-filled tokenization results. Full WordPiece tokenization
+ * requires CoreML tensor interop to be configured for on-device inference.
+ *
+ * WARNING: Both tokenize() and tokenizePair() return all-zero arrays.
+ * The attention mask being all zeros tells the model to IGNORE all tokens,
+ * producing garbage embeddings. Callers should check for this and fall
+ * through to keyword matching when BertTokenizer returns zero arrays.
  */
 actual class BertTokenizer {
 
     actual fun tokenize(text: String, maxLength: Int): TokenizationResult {
-        // Return empty tokenization result
         return TokenizationResult(
             inputIds = LongArray(maxLength),
             attentionMask = LongArray(maxLength),
@@ -27,7 +26,6 @@ actual class BertTokenizer {
         textB: String,
         maxLength: Int
     ): TokenizationResult {
-        // Return empty tokenization result
         return TokenizationResult(
             inputIds = LongArray(maxLength),
             attentionMask = LongArray(maxLength),

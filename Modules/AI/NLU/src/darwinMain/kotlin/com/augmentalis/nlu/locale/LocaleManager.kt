@@ -7,7 +7,7 @@ import platform.Foundation.currentLocale
 import platform.Foundation.languageCode
 
 /**
- * iOS implementation of LocaleManager
+ * Darwin (iOS + macOS) implementation of LocaleManager.
  *
  * Uses:
  * - NSUserDefaults for user locale override persistence

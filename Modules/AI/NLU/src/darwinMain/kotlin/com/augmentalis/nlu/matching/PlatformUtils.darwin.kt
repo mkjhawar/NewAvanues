@@ -1,5 +1,9 @@
 /**
- * Platform-specific utilities for iOS.
+ * Platform-specific utilities for Darwin (iOS + macOS).
+ *
+ * Uses Foundation APIs shared across all Apple platforms:
+ * - NSString for Unicode normalization
+ * - NSDate for time measurement
  */
 
 package com.augmentalis.nlu.matching
@@ -12,7 +16,7 @@ import platform.Foundation.decomposedStringWithCanonicalMapping
 import platform.Foundation.timeIntervalSince1970
 
 /**
- * Unicode NFKC normalization (iOS).
+ * Unicode NFKC normalization via Foundation.
  */
 internal actual fun normalizeUnicode(text: String): String {
     @Suppress("CAST_NEVER_SUCCEEDS")
@@ -21,19 +25,18 @@ internal actual fun normalizeUnicode(text: String): String {
 }
 
 /**
- * Strip diacritical marks (iOS).
- * NFD decomposition + remove combining marks.
+ * Strip diacritical marks via Foundation.
+ * NFD decomposition + remove combining marks (Unicode block 0300-036F).
  */
 internal actual fun stripDiacritics(text: String): String {
     @Suppress("CAST_NEVER_SUCCEEDS")
     val nsString = text as NSString
     val decomposed = nsString.decomposedStringWithCanonicalMapping
-    // Remove combining diacritical marks (Unicode block 0300-036F)
     return decomposed.replace(Regex("[\\u0300-\\u036F]"), "")
 }
 
 /**
- * Current time in milliseconds (iOS).
+ * Current time in milliseconds via Foundation NSDate.
  */
 @OptIn(ExperimentalForeignApi::class)
 internal actual fun currentTimeMillis(): Long {

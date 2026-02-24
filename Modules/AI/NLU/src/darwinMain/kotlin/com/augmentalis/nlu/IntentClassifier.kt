@@ -1,15 +1,12 @@
 /**
- * macOS implementation of IntentClassifier using Core ML inference
- *
- * Adapted from iOS implementation with the following changes:
- * - Removed @ThreadLocal (deprecated in Kotlin/Native new memory model, Kotlin 2.1.0)
- * - Companion object uses regular singleton pattern (thread-safe by default in new MM)
+ * Darwin (iOS + macOS) implementation of IntentClassifier using Core ML inference.
  *
  * Features:
- * - Loads and manages ML models compiled for macOS
+ * - Loads and manages ML models compiled for Apple platforms
  * - Performs semantic intent classification via embeddings
- * - Supports fallback to keyword matching
- * - Thread-safe singleton with lazy initialization
+ * - Falls through to keyword matching when inference unavailable
+ * - Thread-safe singleton with lazy initialization (new memory model)
+ * - PII-safe logging (utterance length, not content)
  * - Resource cleanup on close()
  */
 
@@ -78,14 +75,15 @@ actual class IntentClassifier private constructor() {
             } catch (e: Exception) {
                 Result.Error(
                     exception = e,
-                    message = "Failed to initialize macOS NLU: ${e.message}"
+                    message = "Failed to initialize Darwin NLU: ${e.message}"
                 )
             }
         }
     }
 
     /**
-     * Classify intent from user utterance using semantic similarity
+     * Classify intent from user utterance using semantic similarity.
+     * Falls through to keyword matching when CoreML inference is unavailable.
      */
     actual suspend fun classifyIntent(
         utterance: String,
@@ -168,6 +166,7 @@ actual class IntentClassifier private constructor() {
                 "unknown"
             }
 
+            // PII-safe: log utterance length, not content
             println("IntentClassifier: Classified ${utterance.length}-char input -> $intent (confidence: $confidence, time: ${inferenceTime}ms)")
 
             Result.Success(
@@ -285,6 +284,7 @@ actual class IntentClassifier private constructor() {
                 return@withContext CommandClassificationResult.NoMatch
             }
 
+            // PII-safe: log utterance length, not content
             println("IntentClassifier: classifyCommand: ${utterance.length}-char input")
             println("IntentClassifier: Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
 

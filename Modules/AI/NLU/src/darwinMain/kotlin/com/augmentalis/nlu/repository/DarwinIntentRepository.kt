@@ -1,10 +1,8 @@
 /**
- * IosIntentRepository - iOS implementation of IntentRepository
+ * Darwin (iOS + macOS) implementation of IntentRepository.
  *
- * Uses SQLDelight with NativeSqliteDriver for persistent storage on iOS.
- * Mirrors AndroidIntentRepository with Dispatchers.Default (IO is internal on Native).
- *
- * Created: 2026-02-12
+ * Uses SQLDelight with NativeSqliteDriver for persistent storage.
+ * Dispatchers.Default is used because Dispatchers.IO is internal on Native targets.
  */
 
 package com.augmentalis.nlu.repository
@@ -17,10 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 
-/**
- * iOS implementation of IntentRepository.
- */
-class IosIntentRepository(
+class DarwinIntentRepository(
     private val database: SharedNluDatabase
 ) : IntentRepository {
 
@@ -68,11 +63,9 @@ class IosIntentRepository(
 
     override suspend fun save(intent: UnifiedIntent) = withContext(Dispatchers.Default) {
         database.transaction {
-            // Delete existing patterns and synonyms
             queries.deletePatterns(intent.id)
             queries.deleteSynonyms(intent.id)
 
-            // Insert or update intent
             queries.insertIntent(
                 id = intent.id,
                 canonical_phrase = intent.canonicalPhrase,
@@ -84,12 +77,10 @@ class IosIntentRepository(
                 embedding = intent.embedding?.toByteArray()
             )
 
-            // Insert patterns
             for (pattern in intent.patterns) {
                 queries.insertPattern(intent.id, pattern)
             }
 
-            // Insert synonyms
             for (synonym in intent.synonyms) {
                 queries.insertSynonym(intent.id, synonym)
             }
@@ -152,9 +143,6 @@ class IosIntentRepository(
         queries.selectCategories().executeAsList()
     }
 
-    /**
-     * Extension to convert database entity to domain model
-     */
     private fun com.augmentalis.shared.nlu.db.Unified_intent.toUnifiedIntent(): UnifiedIntent {
         val patterns = queries.selectPatterns(id).executeAsList()
         val synonyms = queries.selectSynonyms(id).executeAsList()
@@ -173,9 +161,6 @@ class IosIntentRepository(
         )
     }
 
-    /**
-     * Extension to convert SelectWithEmbeddings result to domain model
-     */
     private fun com.augmentalis.shared.nlu.db.SelectWithEmbeddings.toUnifiedIntent(): UnifiedIntent {
         val patterns = queries.selectPatterns(id).executeAsList()
         val synonyms = queries.selectSynonyms(id).executeAsList()
@@ -185,7 +170,7 @@ class IosIntentRepository(
             canonicalPhrase = canonical_phrase,
             patterns = patterns,
             synonyms = synonyms,
-            embedding = embedding.toFloatArray(),  // Non-null in this query
+            embedding = embedding.toFloatArray(),
             category = category,
             actionId = action_id,
             priority = priority.toInt(),
@@ -194,9 +179,6 @@ class IosIntentRepository(
         )
     }
 
-    /**
-     * Convert FloatArray to ByteArray for storage
-     */
     private fun FloatArray.toByteArray(): ByteArray {
         val bytes = ByteArray(size * 4)
         for (i in indices) {
@@ -209,9 +191,6 @@ class IosIntentRepository(
         return bytes
     }
 
-    /**
-     * Convert ByteArray to FloatArray for retrieval
-     */
     private fun ByteArray.toFloatArray(): FloatArray {
         val floats = FloatArray(size / 4)
         for (i in floats.indices) {
@@ -227,7 +206,7 @@ class IosIntentRepository(
 }
 
 /**
- * Factory implementation for iOS
+ * Factory implementation for Darwin (iOS + macOS).
  */
 actual object IntentRepositoryFactory {
     actual fun create(context: Any?): IntentRepository {
@@ -236,6 +215,6 @@ actual object IntentRepositoryFactory {
             name = "shared_nlu.db"
         )
         val database = SharedNluDatabase(driver)
-        return IosIntentRepository(database)
+        return DarwinIntentRepository(database)
     }
 }
