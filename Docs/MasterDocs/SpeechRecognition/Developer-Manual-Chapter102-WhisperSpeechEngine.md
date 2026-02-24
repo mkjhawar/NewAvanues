@@ -2,9 +2,9 @@
 
 **Module**: `Modules/SpeechRecognition/`
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
-**Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
+**Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple), Sherpa-ONNX (AVX engine), Crypto/AONCodec (AVX model encryption)
 **Created**: 2026-02-20
-**Updated**: 2026-02-24 — Vivoka wake-word detection with lifecycle wiring (Section 19, 19.1-19.6), P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
+**Updated**: 2026-02-24 — AVX (AvaVox) Command Engine (Section 20, 20.1-20.8), Distil-Whisper models (Section 20.2), initial_prompt biasing (Section 20.1), Pre-filter architecture (Section 20.5), Vivoka wake-word detection with lifecycle wiring (Section 19, 19.1-19.6), P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
 
 ---
 
@@ -28,6 +28,7 @@ The Whisper Speech Engine provides **fully offline** speech recognition using Op
 | **Apple Speech** | — | SFSpeechRecognizer | SFSpeechRecognizer | — |
 | **Android STT** | Built-in | — | — | — |
 | **Vivoka** | VSDK AAR | — | — | — |
+| **AVX (AvaVox)** | AvxEngine (Sherpa-ONNX JNI) | — (future) | — | DesktopAvxEngine (Sherpa-ONNX JNI) |
 | **Google Cloud** | GoogleCloudEngine (VAD_BATCH + STREAMING) | — | — | — |
 
 ### Why Whisper?
@@ -1988,3 +1989,142 @@ AvanuesSettingsRepository (DataStore)
 **StubVivokaEngine**: Updated to match the `enableWakeWord(wakeWord: String, sensitivity: Float)` signature (returns `Result.failure(UnsupportedOperationException)` on all platforms without Vivoka).
 
 **Error handling**: Wake word settings update failures are caught and logged but do not interrupt the main settings observation loop.
+
+---
+
+## 20. AVX (AvaVox) Command Engine
+
+AVX is a lightweight, multilingual ONNX-based command recognition engine that uses Sherpa-ONNX under the hood. It targets command recognition specifically (not open-vocabulary dictation) and supports **hot words boosting** — known commands get a score multiplier, dramatically improving command recognition accuracy without grammar compilation.
+
+### 20.1 Whisper initial_prompt Biasing
+
+Before AVX was added, `initialPrompt` fields were added to all three platform Whisper configs to bias Whisper's decoder toward expected vocabulary:
+
+- `WhisperConfig.kt` (Android) — `initialPrompt: String?` + `forCommandMode()` factory
+- `DesktopWhisperConfig.kt` — `initialPrompt: String?` + `forCommandMode()` factory
+- `IosWhisperConfig.kt` — `initialPrompt: String?`
+
+**`InitialPromptBuilder`** (commonMain `WhisperModels.kt`) builds a comma-separated prompt from active commands, capped at ~200 tokens. When Whisper processes audio, the decoder is primed with these tokens, making it more likely to transcribe matching words.
+
+> **JNI note**: The `initialPrompt` field is stored in config but the whisper.cpp JNI bridge (`WhisperNative.fullTranscribe`) does not yet pass it to the C API. This requires exposing the `initial_prompt` parameter in the native bridge.
+
+### 20.2 Distil-Whisper Models
+
+Two Distil-Whisper GGML models were added to `WhisperModelSize`:
+
+| Model | Enum | Size | Min RAM | Speed |
+|---|---|---|---|---|
+| Distil-Small.en | `DISTIL_SMALL_EN` | 350MB | 512MB | 1.2x |
+| Distil-Medium.en | `DISTIL_MEDIUM_EN` | 700MB | 1024MB | 4.0x |
+
+- `isDistilled` computed property identifies Distil models
+- `forAvailableRAM()` excludes Distil models (general transcription)
+- `forCommandMode()` prefers Distil models for English (faster inference, <1% WER degradation)
+
+### 20.3 AVX Architecture
+
+```
+Audio (16kHz) → AVX Engine (ONNX Runtime via Sherpa-ONNX, ~60-80MB per language)
+                    ↓
+              Raw transcription + confidence + N-best alternatives
+                    ↓
+              CommandMatchingService (existing 6-stage pipeline)
+                    ↓
+              Matched command
+```
+
+Key differences from Whisper:
+- **Per-language models** (tuned for that language's phonetics, not generic multilingual)
+- **Hot words boosting** (instant, no grammar compilation delay like Vivoka's 3-8s)
+- **N-best candidates** (top-5 hypotheses matched against command list)
+- **Smaller models** (~70MB vs Whisper's 75-500MB)
+- **Command-optimized** (not designed for open-vocabulary dictation)
+
+### 20.4 Source Set Layout
+
+```
+Modules/SpeechRecognition/src/
+├── commonMain/.../avx/
+│   ├── AvxModels.kt         # AvxEngineState, AvxLanguage (15 languages), HotWord, AvxModelInfo
+│   └── AvxConfig.kt         # Configuration: language, threads, hotWords, confidenceThreshold
+├── androidMain/.../avx/
+│   ├── AvxEngine.kt         # Full Android engine: lifecycle, VAD, audio, transcription
+│   ├── AvxNative.kt         # Thread-safe JNI wrapper for Sherpa-ONNX
+│   └── AvxModelManager.kt   # Download → AON encrypt → store pipeline
+└── desktopMain/.../avx/
+    ├── DesktopAvxEngine.kt   # Desktop JVM engine (primary command engine on Desktop)
+    └── DesktopAvxNative.kt   # Desktop JNI wrapper (loads from java.library.path)
+```
+
+### 20.5 Pre-Filter Architecture (Android Only)
+
+On Android where both AVX and Vivoka are available, AVX acts as a lightweight first pass:
+
+```
+Audio → AVX Engine (hot words boosted)
+            ↓
+        confidence >= 0.85? ──YES──→ Accept result → CommandMatchingService
+            ↓ NO
+        Forward to Vivoka (grammar-based, higher accuracy)
+            ↓
+        Vivoka result → CommandMatchingService
+```
+
+**`AvxPreFilterEngine`** (VoiceOSCore androidMain):
+- `PreFilterMode` enum: `DISABLED`, `COMMAND_ONLY`, `ALL_EXCEPT_DICTATION`
+- Lazy-loads AVX engine to save memory
+- Tracks metrics: `avxAcceptRate`, `avxAcceptCount`, `vivokaFallbackCount`
+- Only active in COMMAND modes (`STATIC_COMMAND`, `DYNAMIC_COMMAND`, `COMBINED_COMMAND`), never DICTATION
+
+**When pre-filter is active by mode:**
+
+| Speech Mode | Pre-filter | Engine |
+|---|---|---|
+| STATIC_COMMAND | Active | AVX first, Vivoka fallback |
+| DYNAMIC_COMMAND | Active | AVX first, Vivoka fallback |
+| COMBINED_COMMAND | Active | AVX first, Vivoka fallback |
+| DICTATION | Disabled | Whisper only |
+| WAKE_WORD | Disabled | Vivoka grammar (Section 19) |
+
+### 20.6 Model Storage & Encryption
+
+All AVX models are encrypted with AON codec (AES-256-GCM + HMAC-SHA256) from `Modules/Crypto/`.
+
+**Naming convention:** `Ava-AvxS-{LangCode}.aon`
+
+| Platform | Storage Path |
+|---|---|
+| Android | `/sdcard/ava-ai-models/avx/` |
+| Desktop | `~/.augmentalis/models/avx/` |
+| iOS (future) | `{Documents}/ava-ai-models/avx/` |
+
+**Download pipeline** (`AvxModelManager`):
+
+```
+1. Download raw ONNX from CDN → temp file
+2. AONCodec.wrap(tempBytes) → encrypted .aon
+3. Store in platform-specific avx/ directory
+4. Delete temp file
+5. Register in local model inventory
+```
+
+**Priority languages (15):** English, French, German, Spanish, Italian, Portuguese, Dutch, Russian, Chinese, Japanese, Korean, Arabic, Hindi, Turkish, Polish.
+
+**Auto-download on first run:** Device locale language + English.
+
+### 20.7 ConfidenceScorer Integration
+
+AVX is registered in the scoring pipeline:
+
+- `RecognitionEngine.AVX` — identifies AVX-originated results
+- `ScoringMethod.AVX_ONNX` — AVX confidence already normalized 0-1 (same scale as Google/Android)
+- `normalizeConfidence()` — AVX uses identity mapping (ONNX scores are already normalized)
+
+### 20.8 Remaining Work
+
+- [ ] Add Sherpa-ONNX AAR to Android dependencies (requires version selection)
+- [ ] Build native JNI bridge for sherpa-onnx (or use pre-built binaries)
+- [ ] Wire pre-filter into VoiceOSCore's `SpeechEngineManager`
+- [ ] Add AVX settings to UnifiedSettingsScreen (language selection, pre-filter toggle)
+- [ ] Whisper JNI: expose `initial_prompt` parameter in `fullTranscribe()`
+- [ ] iOS AVX engine implementation
