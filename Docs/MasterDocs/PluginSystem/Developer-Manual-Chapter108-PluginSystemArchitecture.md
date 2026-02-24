@@ -1044,9 +1044,69 @@ Stale example file referencing non-existent `PluginClassLoader.register()` API. 
 
 ---
 
+## Android Executor Warning Fixes (260224)
+
+The 5 Android executor files in `androidMain/kotlin/.../executors/` accumulated compiler warnings during the Kotlin 2.1.0 upgrade. All were fixed in commit `130340b5c`.
+
+### Files Changed
+
+| File | Key Fixes |
+|------|-----------|
+| `LiveDataFlowBridge.kt` | DRY `mainScope` extraction, `@OptIn(FlowPreview::class)` for `debounce()`, `@Suppress("DEPRECATION")` for `observeForever` |
+| `AndroidNavigationExecutor.kt` | `GESTURE_TIMEOUT_MS` constant (500ms) replacing magic numbers, `@OptIn(ExperimentalForeignApi::class)` |
+| `AndroidSelectionExecutor.kt` | `try-finally` blocks for `AccessibilityNodeInfo.recycle()`, `BOUNDS_MATCH_TOLERANCE` constant |
+| `AndroidTextInputExecutor.kt` | PII-safe logging (text length instead of content), `@Suppress("DEPRECATION")` for clipboard APIs |
+| `AndroidUIInteractionExecutor.kt` | `BOUNDS_MATCH_TOLERANCE` constant (5px), removed shadowed `findNodeByText`/`findNodeByViewId` extensions |
+
+### Pattern: DRY mainScope in LiveDataFlowBridge
+
+Before:
+```kotlin
+// Repeated in 3+ places
+CoroutineScope(Dispatchers.Main + SupervisorJob())
+```
+
+After:
+```kotlin
+private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+```
+
+### Pattern: try-finally for AccessibilityNodeInfo
+
+`AccessibilityNodeInfo` objects MUST be recycled to prevent memory leaks. The executors now use `try-finally`:
+
+```kotlin
+val node = findNode(...)
+try {
+    // Use node
+} finally {
+    node.recycle()
+}
+```
+
+### Pattern: PII-Safe Logging
+
+Text input content is never logged. Instead, log the length:
+
+```kotlin
+// BAD: logDebug(TAG, "Typing: $text")
+// GOOD:
+logDebug(TAG, "Typing text (${text.length} chars)")
+```
+
+### Kotlin 2.1.0 Deprecation Suppressions
+
+| Suppression | Reason |
+|-------------|--------|
+| `@OptIn(FlowPreview::class)` | `debounce()` is still @FlowPreview in kotlinx.coroutines |
+| `@Suppress("DEPRECATION")` on `observeForever` | AndroidX lifecycle deprecation, no replacement available for non-lifecycle-aware contexts |
+| `@Suppress("DEPRECATION")` on clipboard APIs | `ClipboardManager.setPrimaryClip` deprecation in API 33+, still functional |
+
+---
+
 **Document Info**
 Author: Manoj Jhawar
 Chapter: 108
 Module: PluginSystem
 Created: 2026-02-22
-Last Updated: 2026-02-23
+Last Updated: 2026-02-24
