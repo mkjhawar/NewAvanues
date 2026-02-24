@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-24 — KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
+**Updated**: 2026-02-24 — P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
 
 ---
 
@@ -49,9 +49,12 @@ The Whisper Speech Engine provides **fully offline** speech recognition using Op
 
 ```
 Modules/SpeechRecognition/src/
+    commonMain/kotlin/.../
+        SpeechMetricsSnapshot.kt  # Immutable metrics snapshot for dashboard/UI
     commonMain/kotlin/.../whisper/
         WhisperModels.kt          # Shared enums + data classes
         WhisperVAD.kt             # Voice Activity Detection algorithm
+        VADProfile.kt             # VAD presets (COMMAND/CONVERSATION/DICTATION)
         ModelDownloadState.kt     # Download state machine
         WhisperPerformance.kt     # Performance metrics tracker
         vsm/VSMFormat.kt          # VSM file format constants + header
@@ -1705,3 +1708,192 @@ Google Cloud STT v2 supports **phrase hints** via the `adaptation.phraseSets` fi
 **DataStore keys**: Prefixed with `gcp_stt_` (e.g., `gcp_stt_project_id`, `gcp_stt_api_key`).
 
 **Build dependency**: `implementation(project(":Modules:Foundation"))` added for `ModuleSettingsProvider` interface.
+
+---
+
+## 16. VAD Profile Presets
+
+### 16.1 Motivation
+
+WhisperVAD had two hardcoded constants — `THRESHOLD_ALPHA` (EMA smoothing factor for noise floor) and `MIN_THRESHOLD` (minimum energy threshold) — that were not configurable. Different speech modes (short commands vs dictation) need different silence/speech detection characteristics.
+
+### 16.2 VADProfile Enum
+
+`VADProfile` (`commonMain/whisper/VADProfile.kt`) provides three tuned presets:
+
+| Profile | silenceTimeoutMs | minSpeechDurationMs | hangoverFrames | vadSensitivity | thresholdAlpha | minThreshold |
+|---------|-----------------|--------------------:|---------------:|---------------:|---------------:|-------------:|
+| **COMMAND** | 400 | 200 | 3 | 0.5 | 0.03 | 0.002 |
+| **CONVERSATION** | 700 | 300 | 5 | 0.6 | 0.02 | 0.001 |
+| **DICTATION** | 1200 | 400 | 8 | 0.7 | 0.015 | 0.0005 |
+
+- **COMMAND**: Aggressive — short timeout, fast response, optimized for `STATIC_COMMAND` / `DYNAMIC_COMMAND` speech modes.
+- **CONVERSATION**: Balanced — matches original WhisperVAD defaults exactly. Maps to `FREE_SPEECH` / `HYBRID`.
+- **DICTATION**: Patient — long timeout, tolerates pauses, low alpha for stable noise floor.
+
+### 16.3 SpeechMode Mapping
+
+`VADProfile.forSpeechMode(SpeechMode)` auto-selects the appropriate profile:
+
+| SpeechMode | VADProfile |
+|---|---|
+| STATIC_COMMAND | COMMAND |
+| DYNAMIC_COMMAND | COMMAND |
+| DICTATION | DICTATION |
+| FREE_SPEECH | CONVERSATION |
+| HYBRID | CONVERSATION |
+
+### 16.4 Integration
+
+Each `*WhisperConfig` now accepts an optional `vadProfile: VADProfile?`. When set, `effective*` getters resolve profile values; when null, individual constructor params are used (backward-compatible).
+
+```kotlin
+// Option A: Use profile presets
+val config = WhisperConfig(vadProfile = VADProfile.COMMAND)
+
+// Option B: Fine-tune individual params (overrides profile)
+val config = WhisperConfig(
+    silenceThresholdMs = 500,
+    minSpeechDurationMs = 250,
+    vadSensitivity = 0.55f
+)
+```
+
+Engine constructors pass effective values to `WhisperVAD`:
+```kotlin
+vad = WhisperVAD(
+    silenceTimeoutMs = config.effectiveSilenceThresholdMs,
+    minSpeechDurationMs = config.effectiveMinSpeechDurationMs,
+    hangoverFrames = config.effectiveHangoverFrames,
+    speechThreshold = config.effectiveVadSensitivity,
+    thresholdAlpha = config.effectiveThresholdAlpha,
+    minThreshold = config.effectiveMinThreshold
+)
+```
+
+### 16.5 Exposed Constants
+
+`WhisperVAD.DEFAULT_THRESHOLD_ALPHA` (0.02f) and `WhisperVAD.DEFAULT_MIN_THRESHOLD` (0.001f) are now `public const` in the companion object, available for custom configurations that don't use profiles.
+
+---
+
+## 17. Google Cloud Streaming Hardening
+
+### 17.1 singleUtterance Support
+
+`GoogleCloudConfig.singleUtterance: Boolean = false` — when true, the server auto-detects end of speech and sends `END_OF_SINGLE_UTTERANCE`. Set true for COMMAND speech modes (short voice commands) to reduce server-side latency.
+
+Serialized in the streaming config JSON:
+```json
+{
+  "streamingConfig": {
+    "config": { ... },
+    "singleUtterance": true
+  }
+}
+```
+
+### 17.2 Speech Event Parsing
+
+`GoogleCloudStreamingClient.parseStreamingResponse()` now handles the `speechEventType` field:
+
+| Event | Handling |
+|---|---|
+| `END_OF_SINGLE_UTTERANCE` | Graceful stop — sets `singleUtteranceEndReceived = true`, triggers clean session close |
+| `SPEECH_ACTIVITY_BEGIN` | Logged at debug level |
+| `SPEECH_ACTIVITY_END` | Logged at debug level |
+| `SPEECH_ACTIVITY_TIMEOUT` | Emits `SpeechError(ERROR_SPEECH_TIMEOUT)` |
+
+Previously, all speech events were silently ignored — only the `results` array was parsed.
+
+### 17.3 Bounded Audio Channel
+
+Changed `Channel<ByteArray>(Channel.UNLIMITED)` to `Channel<ByteArray>(64)`.
+
+- 64 buffers x 100ms chunks = 6.4 seconds of audio backlog before backpressure
+- `trySend()` already handles full channels gracefully (returns ChannelResult.failure, no exception)
+- Prevents unbounded memory growth if the server is slow or connection degrades
+
+### 17.4 Polling Optimization
+
+Replaced `Thread.sleep(10)` with `LockSupport.parkNanos(1_000_000)` (1ms) in the `writeTo()` OkHttp callback.
+
+- Cannot use coroutine `delay()` — `writeTo()` is OkHttp's synchronous `RequestBody.writeTo()` callback running on OkHttp's thread pool
+- Reduces polling latency from 10ms to 1ms while still yielding CPU
+- `LockSupport.parkNanos()` is the JVM primitive for sub-millisecond parking
+
+---
+
+## 18. Performance Dashboard (SpeechMetricsSnapshot)
+
+### 18.1 Data Model
+
+`SpeechMetricsSnapshot` (`commonMain/SpeechMetricsSnapshot.kt`) — immutable data class capturing engine metrics at a point in time:
+
+| Field | Type | Description |
+|---|---|---|
+| engineName | String | "Whisper" or "GoogleCloud" |
+| modelSize | String? | Whisper model name (TINY, BASE, etc.) |
+| initTimeMs | Long | Engine initialization time |
+| totalTranscriptions | Int | Total transcription attempts |
+| successRate | Float | Non-empty / total * 100 |
+| avgLatencyMs | Long | Rolling average processing time |
+| avgRTF | Float | Rolling average real-time factor |
+| avgConfidence | Float | Rolling average confidence |
+| peakLatencyMs | Long | Worst-case processing time |
+| peakRTF | Float | Worst-case real-time factor |
+| totalAudioProcessedMs | Long | Total audio duration processed |
+| detectedLanguage | String? | Last detected language |
+| engineState | String | Current engine state name |
+| timestampMs | Long | Snapshot capture time (caller-provided) |
+
+**Note**: Plain data class (no `@Serializable`) to avoid adding kotlinx.serialization as a dependency to the SpeechRecognition module.
+
+### 18.2 Health Status
+
+Computed property `healthStatus: HealthStatus`:
+
+| Status | Condition |
+|---|---|
+| IDLE | totalTranscriptions == 0 |
+| GOOD | successRate >= 80% AND avgLatencyMs < 2000ms |
+| WARNING | successRate >= 50% AND avgLatencyMs < 5000ms |
+| CRITICAL | successRate < 50% OR avgLatencyMs >= 5000ms |
+
+### 18.3 Engine Integration
+
+Each engine exposes a `metricsSnapshot: StateFlow<SpeechMetricsSnapshot?>`:
+
+- **WhisperEngine** (Android): emits after every `recordTranscription()` / `recordEmptyTranscription()`
+- **DesktopWhisperEngine**: same pattern
+- **GoogleCloudEngine** (Android): added `WhisperPerformance` instance, records metrics around `client.recognize()` API calls with accurate timing
+
+`timestampMs` is provided by the caller (`System.currentTimeMillis()` on JVM) rather than requiring `kotlinx.datetime` as a dependency.
+
+### 18.4 Cockpit Dashboard Card
+
+`SpeechPerformanceCard` in `Modules/Cockpit/src/commonMain/.../ui/SpeechPerformanceCard.kt`:
+
+- Uses `AvanueTheme.colors.*` and `AvanueCard` (v5.1 theme compliant)
+- AVID: `Modifier.semantics { contentDescription = "Voice: speech performance" }`
+- 2x3 metric grid: Latency, RTF, Confidence, Success Rate, Total, Language
+- Health status dot + label (green/yellow/red/gray)
+
+### 18.5 Wiring
+
+```
+Engine.metricsSnapshot (StateFlow)
+    │ platform bridge collects
+    v
+CockpitViewModel.updateSpeechMetrics(snapshot)
+    │ combine(_sessions, _activeSession, _speechMetrics)
+    v
+DashboardState.speechMetrics (@Transient)
+    │
+    v
+DashboardLayout → SpeechPerformanceCard (when metrics != null)
+```
+
+`DashboardState.speechMetrics` uses `@Transient` to avoid serialization issues — it's runtime-only data not persisted to the database.
+
+**Build dependency**: `implementation(project(":Modules:SpeechRecognition"))` added to Cockpit's `commonMain` dependencies.
