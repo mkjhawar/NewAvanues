@@ -22,6 +22,7 @@ import com.augmentalis.voiceoscore.ElementFingerprint
 import com.augmentalis.voiceoscore.ElementInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 /**
@@ -34,6 +35,8 @@ import kotlin.coroutines.resume
  *
  * @param serviceRegistry Registry to retrieve AccessibilityService from
  */
+// recycle() deprecated API 34+ (no-op on 34+, still needed for minSdk 29)
+@Suppress("DEPRECATION")
 class AndroidUIInteractionExecutor(
     private val serviceRegistry: ServiceRegistry
 ) : UIInteractionExecutor {
@@ -86,8 +89,11 @@ class AndroidUIInteractionExecutor(
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            extractElements(child, elements)
-            child.recycle()
+            try {
+                extractElements(child, elements)
+            } finally {
+                child.recycle()
+            }
         }
     }
 
@@ -348,10 +354,11 @@ class AndroidUIInteractionExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findNodeByAvid(child, avid)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findNodeByAvid(child, avid)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -390,10 +397,11 @@ class AndroidUIInteractionExecutor(
         // Search children
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findNodeByText(child, text)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findNodeByText(child, text)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -404,16 +412,17 @@ class AndroidUIInteractionExecutor(
         root.getBoundsInScreen(rect)
 
         // Check if bounds match within tolerance
-        if (boundsMatch(rect, bounds, tolerance = 5)) {
+        if (boundsMatch(rect, bounds, tolerance = BOUNDS_MATCH_TOLERANCE)) {
             return AccessibilityNodeInfo.obtain(root)
         }
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findNodeByBounds(child, bounds)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findNodeByBounds(child, bounds)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -437,10 +446,11 @@ class AndroidUIInteractionExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findCheckableNode(child, hint)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findCheckableNode(child, hint)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -463,10 +473,11 @@ class AndroidUIInteractionExecutor(
 
         for (i in 0 until root.childCount) {
             val child = root.getChild(i) ?: continue
-            val found = findEditableNode(child, hint)
-            child.recycle()
-            if (found != null) {
-                return found
+            try {
+                val found = findEditableNode(child, hint)
+                if (found != null) return found
+            } finally {
+                child.recycle()
             }
         }
         return null
@@ -527,30 +538,31 @@ class AndroidUIInteractionExecutor(
         service: AccessibilityService,
         gesture: GestureDescription
     ): Boolean {
-        return suspendCancellableCoroutine { continuation ->
-            val callback = object : AccessibilityService.GestureResultCallback() {
-                override fun onCompleted(gestureDescription: GestureDescription?) {
-                    continuation.resume(true)
+        return withTimeoutOrNull(GESTURE_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                val callback = object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription?) {
+                        continuation.resume(true)
+                    }
+
+                    override fun onCancelled(gestureDescription: GestureDescription?) {
+                        continuation.resume(false)
+                    }
                 }
 
-                override fun onCancelled(gestureDescription: GestureDescription?) {
+                if (!service.dispatchGesture(gesture, callback, null)) {
                     continuation.resume(false)
                 }
             }
-
-            if (!service.dispatchGesture(gesture, callback, null)) {
-                continuation.resume(false)
-            }
-        }
+        } ?: false
     }
 
     companion object {
         private const val CLICK_DURATION_MS = 50L
         private const val LONG_CLICK_DURATION_MS = 800L
         private const val DOUBLE_CLICK_INTERVAL_MS = 100L
+        private const val GESTURE_TIMEOUT_MS = 5000L
+        /** Pixel tolerance for matching AccessibilityNodeInfo bounds to ElementInfo bounds. */
+        private const val BOUNDS_MATCH_TOLERANCE = 5
     }
 }
-
-// Extension properties for Bounds
-private val Bounds.centerX: Int get() = (left + right) / 2
-private val Bounds.centerY: Int get() = (top + bottom) / 2

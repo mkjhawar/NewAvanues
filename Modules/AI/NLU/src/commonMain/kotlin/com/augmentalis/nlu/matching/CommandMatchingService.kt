@@ -17,6 +17,8 @@
 
 package com.augmentalis.nlu.matching
 
+import com.augmentalis.nlu.NluThresholds
+import com.augmentalis.nlu.Synchronized
 import com.augmentalis.nlu.matcher.EmbeddingProvider
 import com.augmentalis.nlu.matcher.FuzzyMatcher
 import com.augmentalis.nlu.matcher.PatternMatcher
@@ -486,7 +488,7 @@ class CommandMatchingService(
             for (w2 in words2) {
                 if (w1 !in words2 && w2 !in words1) {
                     if (w1.contains(w2) || w2.contains(w1)) {
-                        partialBonus += 0.1f
+                        partialBonus += NluThresholds.PARTIAL_WORD_MATCH_BONUS
                     }
                 }
             }
@@ -621,12 +623,12 @@ class CommandMatchingService(
  * Configuration for matching service.
  */
 data class MatchingConfig(
-    val fuzzyThreshold: Float = 0.7f,
-    val semanticThreshold: Float = 0.6f,
-    val minimumConfidence: Float = 0.5f,
-    val ambiguityThreshold: Float = 0.1f,
+    val fuzzyThreshold: Float = NluThresholds.FUZZY_MATCH_THRESHOLD,
+    val semanticThreshold: Float = NluThresholds.SEMANTIC_MATCH_THRESHOLD,
+    val minimumConfidence: Float = NluThresholds.MINIMUM_MATCH_CONFIDENCE,
+    val ambiguityThreshold: Float = NluThresholds.COMMAND_AMBIGUITY_THRESHOLD,
     val maxCandidates: Int = 5,
-    val agreementBonus: Float = 0.05f,
+    val agreementBonus: Float = NluThresholds.COMMAND_AGREEMENT_BONUS,
     val normalizationConfig: NormalizationConfig = NormalizationConfig(),
     val enabledStrategies: Set<MatchStrategy> = setOf(
         MatchStrategy.LEARNED,
@@ -639,10 +641,10 @@ data class MatchingConfig(
     val strategyWeights: Map<MatchStrategy, Float> = mapOf(
         MatchStrategy.LEARNED to 1.0f,
         MatchStrategy.EXACT to 1.0f,
-        MatchStrategy.SYNONYM to 0.95f,
-        MatchStrategy.LEVENSHTEIN to 0.85f,
-        MatchStrategy.JACCARD to 0.8f,
-        MatchStrategy.SEMANTIC to 0.9f
+        MatchStrategy.SYNONYM to NluThresholds.SYNONYM_STRATEGY_WEIGHT,
+        MatchStrategy.LEVENSHTEIN to NluThresholds.LEVENSHTEIN_STRATEGY_WEIGHT,
+        MatchStrategy.JACCARD to NluThresholds.JACCARD_STRATEGY_WEIGHT,
+        MatchStrategy.SEMANTIC to NluThresholds.SEMANTIC_STRATEGY_WEIGHT
     )
 )
 

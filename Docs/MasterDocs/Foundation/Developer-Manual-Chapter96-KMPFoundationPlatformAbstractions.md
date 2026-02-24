@@ -3,7 +3,7 @@
 **Module:** Foundation (`Modules/Foundation/`)
 **Scope:** Cross-platform settings, credentials, file system, permissions
 **Version:** 1.0 (Phase 1+2+3 Complete)
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-02-22 (14-module test expansion documented)
 
 ---
 
@@ -132,6 +132,19 @@ interface IPermissionChecker {
 **Location:** `commonMain/.../settings/SettingsKeys.kt`
 
 All persistence key strings as constants. Platform implementations MUST use these keys for consistency.
+
+**Key categories:** Cursor, Voice, Wake Word, Boot/Lifecycle, Theme v5.1, VOS Sync, Voice Command Persistence, Developer Settings, Adaptive Timing.
+
+**Adaptive Timing keys (260224):** Persisted learned values from `AdaptiveTimingManager` (VoiceOSCore commonMain):
+
+| Constant | Key String | Purpose |
+|----------|-----------|---------|
+| `ADAPTIVE_PROCESSING_DELAY_MS` | `adaptive_processing_delay_ms` | Learned recognition-to-emission delay |
+| `ADAPTIVE_SCROLL_DEBOUNCE_MS` | `adaptive_scroll_debounce_ms` | Learned scroll event debounce |
+| `ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS` | `adaptive_speech_update_debounce_ms` | Learned grammar recompile debounce |
+| `ADAPTIVE_COMMAND_WINDOW_MS` | `adaptive_command_window_ms` | Learned wake word command window |
+
+See Chapter 102 Section 21 for full AdaptiveTimingManager documentation.
 
 ---
 
@@ -290,6 +303,101 @@ The Foundation module's `build.gradle.kts` targets:
 | iOS (x64/arm64/sim) | `iosMain` | Conditional (`kotlin.mpp.enableNativeTargets=true` or iOS task) |
 
 **Dependencies:** Only `kotlinx-coroutines-core` (commonMain). No external deps needed for iOS (platform.Foundation, platform.Security are Kotlin/Native stdlib) or Desktop (JDK stdlib).
+
+**Conditional iOS Pattern (ALL modules):** Every KMP module that declares iOS targets uses the same guard:
+
+```kotlin
+val enableIos = project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
+    gradle.startParameter.taskNames.any {
+        it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true)
+    }
+if (enableIos) { iosX64(); iosArm64(); iosSimulatorArm64() }
+```
+
+This applies to Foundation, VoiceOSCore, Database, AVID, SpeechRecognition, Logging, and the AvanuesShared umbrella module. Omitting this guard from any module in the dependency chain causes Gradle variant resolution failures during Android Studio sync (the consumer requests `ios_simulator_arm64`/`native` variants that the unconditional module can't provide).
+
+---
+
+## 8.5 Test Suite Expansion (260222)
+
+Foundation is part of a **14-module test infrastructure expansion** tracking KMP test coverage across the codebase.
+
+**Foundation-specific (commonTest):** 7 test files, 41 test cases covering codec round-trip, preference reading/writing, settings migrations, and credential storage.
+
+### Test Files
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `AvanuesSettingsCodecTest.kt` | 12 | Codec encode/decode, migration paths |
+| `PreferenceReaderWriterTest.kt` | 8 | Generic preference R/W for all platforms |
+| `SettingsMigrationTest.kt` | 6 | Theme v5.1 variant → palette+style migration |
+| `InMemoryPreferenceStore.kt` | 5 | Test double for codec roundtrip testing |
+| `DeveloperSettingsCodecTest.kt` | 4 | Developer settings codec coverage |
+| `CredentialStoreTest.kt` | 3 | Credential encrypt/decrypt verification |
+| `FileSystemTest.kt` | 3 | Path resolution, read/write simulation |
+
+### InMemoryPreferenceStore
+
+Provides an in-memory implementation of `PreferenceReader`/`PreferenceWriter` for testing codecs without platform dependencies:
+
+```kotlin
+val inMemory = InMemoryPreferenceStore()
+val decoded = AvanuesSettingsCodec.decode(inMemory)
+val encoded = AvanuesSettings(...)
+AvanuesSettingsCodec.encode(encoded, inMemory)
+// Roundtrip verification: decoded == AvanuesSettingsCodec.decode(inMemory)
+```
+
+All tests run on all platforms (Android, iOS, Desktop) via KMP's shared test infrastructure.
+
+### 14-Module Test Expansion (260222)
+
+Test suite now covers Foundation + 13 additional modules:
+1. **Foundation** (41 tests) — Settings, credentials, file system, permissions
+2. **VoiceOSCore** — Multi-locale command registry, handler dispatch, AVID generation
+3. **Database** — SQLDelight migrations, query verification
+4. **WebAvanue** — DOM scraping, command generation
+5. **PhotoAvanue** — Camera integration, file handling
+6. **NoteAvanue** — Rich text editing, persistence
+7. **HTTPAvanue** — Server startup, request routing
+8. **RemoteCast** — Wire protocol encoding, VOCAB sync
+9. **AvanueUI** — Token resolution, theme composition
+10. **DeviceManager** — Device scanning, permission checks
+11. **Accessibility** — Gesture dispatch, overlay rendering
+12. **VoiceRecognition** — Engine abstraction, STT result parsing
+13. **Navigation** — Route resolution, back stack management
+14. **Logging** — Log filtering, output formatting
+
+---
+
+### 8.6 Clock.System KMP Timestamp Migration (260222)
+
+All `System.currentTimeMillis()` calls in `commonMain` source sets have been replaced with `kotlinx.datetime.Clock.System.now().toEpochMilliseconds()` for full KMP portability.
+
+**Why:** `System.currentTimeMillis()` is a JVM-only API. It compiles for Android/Desktop targets but fails on iOS/Native/JS. The `kotlinx-datetime` library provides a cross-platform `Clock` interface that works on all Kotlin targets.
+
+**Modules swept (260222 session):**
+
+| Module | Files | Example Usage |
+|--------|-------|---------------|
+| WebAvanue | 8 | Scrape cooldown, session cache timestamps, command persistence |
+| PluginSystem | 14 | Marketplace cache, asset access logging, security audit timestamps |
+| AVACode | 2 | Workflow instance/persistence timing |
+| WebSocket | 1 | Reconnection delay tracking |
+| AvanueUI/Theme | 2 + build.gradle.kts | ThemeSync last-sync, ThemeOverride created/modified timestamps |
+| AvanueUI/ThemeBuilder | 2 | Auto-save timing, undo history timestamps |
+
+**Pattern:**
+```kotlin
+// BEFORE (JVM-only)
+val now = System.currentTimeMillis()
+
+// AFTER (KMP-portable)
+import kotlinx.datetime.Clock
+val now = Clock.System.now().toEpochMilliseconds()
+```
+
+**Dependency:** `kotlinx-datetime` is declared in `gradle/libs.versions.toml` as `libs.kotlinx.datetime` (v0.5.0). Modules that previously lacked it (e.g., AvanueUI/Theme) had it added to their `commonMain` dependencies.
 
 ---
 

@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import okio.Buffer
+import com.augmentalis.httpavanue.io.AvanueBuffer
 import kotlin.math.min
 import kotlin.math.pow
 
@@ -113,7 +113,7 @@ open class WebSocketClient(private val config: WebSocketClientConfig) {
 
     private suspend fun readHandshakeResponse(): String {
         val source = socket!!.source()
-        val buffer = Buffer()
+        val buffer = AvanueBuffer()
         val endMarker = byteArrayOf(13, 10, 13, 10)
         var foundEnd = false
         while (!foundEnd && buffer.size < 8192) {
@@ -123,7 +123,7 @@ open class WebSocketClient(private val config: WebSocketClientConfig) {
             val chunk = source.readByteArray(toRead)
             buffer.write(chunk)
             if (buffer.size >= 4) {
-                val bytes = buffer.snapshot().toByteArray()
+                val bytes = buffer.snapshot()
                 val startScan = maxOf(0, bytes.size - chunk.size - 3)
                 for (i in startScan until bytes.size - 3) {
                     if (bytes[i] == endMarker[0] && bytes[i+1] == endMarker[1] && bytes[i+2] == endMarker[2] && bytes[i+3] == endMarker[3]) { foundEnd = true; break }

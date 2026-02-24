@@ -2,7 +2,7 @@
  * ConfidenceTrackingRepository.kt - Learning system for confidence scoring
  *
  * Copyright (C) Augmentalis Inc, Intelligent Devices LLC
- * Author: AI Assistant
+ * Author: Manoj Jhawar
  * Created: 2025-10-09
  * Updated: 2026-01-28 - Migrated to KMP structure, uses common data models
  *

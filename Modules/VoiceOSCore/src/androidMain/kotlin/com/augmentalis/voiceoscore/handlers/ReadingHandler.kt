@@ -32,7 +32,7 @@ class ReadingHandler(
     )
 
     private var tts: TextToSpeech? = null
-    private var ttsReady = false
+    @Volatile private var ttsReady = false
 
     override suspend fun initialize() {
         tts = TextToSpeech(service.applicationContext) { status ->

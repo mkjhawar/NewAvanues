@@ -2,7 +2,6 @@
  * PaginationHandler.kt - Voice handler for Pagination control interactions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-28
  *
  * Purpose: Voice-driven pagination control with navigation and page size adjustment

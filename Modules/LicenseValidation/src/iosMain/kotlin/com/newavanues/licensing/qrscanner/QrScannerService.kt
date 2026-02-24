@@ -52,6 +52,7 @@ import platform.CoreImage.CIDetectorAccuracy
 import platform.CoreImage.CIDetectorAccuracyHigh
 import platform.CoreImage.CIDetectorTypeQRCode
 import platform.CoreImage.CIImage
+import platform.CoreImage.CIQRCodeFeature
 import platform.Foundation.NSData
 import platform.Foundation.NSRunLoop
 import platform.Foundation.NSRunLoopCommonModes
@@ -201,8 +202,7 @@ actual class QrScannerService actual constructor() {
             // Get the first QR code
             val qrFeature = features.firstOrNull()
             if (qrFeature != null) {
-                // CIQRCodeFeature has messageString property
-                val message = qrFeature.toString() // Simplified - actual implementation needs casting
+                val message = (qrFeature as? CIQRCodeFeature)?.messageString ?: ""
                 QrScanResult.Success(
                     content = message,
                     format = QrFormat.QR_CODE

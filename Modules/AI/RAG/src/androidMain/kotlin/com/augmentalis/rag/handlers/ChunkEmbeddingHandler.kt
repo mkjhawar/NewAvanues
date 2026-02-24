@@ -214,15 +214,28 @@ class ChunkEmbeddingHandler(
 
     /**
      * Internal method to update embedding (non-suspending for use in flow).
+     *
+     * Writes the new embedding blob to the database row identified by [chunkId].
+     * Called after re-embedding with an updated model (e.g. when switching from
+     * SimpleTokenizer hash IDs to real BERT WordPiece IDs).
      */
     private fun updateChunkEmbeddingInternal(chunkId: String, embedding: Embedding) {
-        val floatValues = when (embedding) {
-            is Embedding.Float32 -> embedding.values
-            is Embedding.Int8 -> embedding.toFloat32()
+        val blob = serializeEmbedding(embedding)
+        val embeddingType = when (embedding) {
+            is Embedding.Float32 -> "float32"
+            is Embedding.Int8 -> "int8"
         }
-        // Note: SQLDelight doesn't have updateEmbedding query,
-        // embeddings are stored during chunk insert
-        Log.d(TAG, "Updated embedding for chunk: $chunkId (${floatValues.size} dimensions)")
+        val dimension = when (embedding) {
+            is Embedding.Float32 -> embedding.values.size.toLong()
+            is Embedding.Int8 -> embedding.values.size.toLong()
+        }
+        chunkQueries.updateEmbedding(
+            embedding_blob = blob,
+            embedding_type = embeddingType,
+            embedding_dimension = dimension,
+            id = chunkId
+        )
+        Log.d(TAG, "Stored updated embedding for chunk: $chunkId (${dimension} dimensions)")
     }
 
     /**

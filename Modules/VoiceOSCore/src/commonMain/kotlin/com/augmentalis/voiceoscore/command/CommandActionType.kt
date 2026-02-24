@@ -229,6 +229,18 @@ enum class CommandActionType {
     /** Cursor click at current position */
     CURSOR_CLICK,
 
+    /** Move cursor up */
+    CURSOR_UP,
+
+    /** Move cursor down */
+    CURSOR_DOWN,
+
+    /** Move cursor left */
+    CURSOR_LEFT,
+
+    /** Move cursor right */
+    CURSOR_RIGHT,
+
     // ═══════════════════════════════════════════════════════════════════
     // Reading/TTS Actions
     // ═══════════════════════════════════════════════════════════════════
@@ -655,6 +667,34 @@ enum class CommandActionType {
     ADD_TERMINAL,
 
     // ═══════════════════════════════════════════════════════════════
+    // PDF Viewing Actions
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Go to next page in PDF viewer */
+    PDF_NEXT_PAGE,
+
+    /** Go to previous page in PDF viewer */
+    PDF_PREVIOUS_PAGE,
+
+    /** Go to first page in PDF viewer */
+    PDF_FIRST_PAGE,
+
+    /** Go to last page in PDF viewer */
+    PDF_LAST_PAGE,
+
+    /** Go to specific page (page number in metadata) */
+    PDF_GO_TO_PAGE,
+
+    /** Zoom in on PDF */
+    PDF_ZOOM_IN,
+
+    /** Zoom out on PDF */
+    PDF_ZOOM_OUT,
+
+    /** Reset PDF zoom to fit page */
+    PDF_FIT_PAGE,
+
+    // ═══════════════════════════════════════════════════════════════
     // Annotation/Drawing Actions
     // ═══════════════════════════════════════════════════════════════
 
@@ -877,7 +917,8 @@ enum class CommandActionType {
      * Check if this is a cursor action
      */
     fun isCursorAction(): Boolean = this in listOf(
-        CURSOR_SHOW, CURSOR_HIDE, CURSOR_CLICK
+        CURSOR_SHOW, CURSOR_HIDE, CURSOR_CLICK,
+        CURSOR_UP, CURSOR_DOWN, CURSOR_LEFT, CURSOR_RIGHT
     )
 
     /**
@@ -901,6 +942,27 @@ enum class CommandActionType {
     fun isVoiceOSAction(): Boolean = this in listOf(
         VOICE_MUTE, VOICE_WAKE, DICTATION_START, DICTATION_STOP, SHOW_COMMANDS,
         NUMBERS_ON, NUMBERS_OFF, NUMBERS_AUTO
+    )
+
+    /**
+     * Check if this is a PDF viewing action
+     */
+    fun isPdfAction(): Boolean = this in listOf(
+        PDF_NEXT_PAGE, PDF_PREVIOUS_PAGE, PDF_FIRST_PAGE, PDF_LAST_PAGE,
+        PDF_GO_TO_PAGE, PDF_ZOOM_IN, PDF_ZOOM_OUT, PDF_FIT_PAGE
+    )
+
+    /**
+     * Check if this is a camera/photo action
+     */
+    fun isCameraAction(): Boolean = this in listOf(
+        CAPTURE_PHOTO, RECORD_START, RECORD_STOP, RECORD_PAUSE, RECORD_RESUME,
+        SWITCH_LENS, FLASH_ON, FLASH_OFF, FLASH_AUTO, FLASH_TORCH,
+        EXPOSURE_UP, EXPOSURE_DOWN, MODE_PHOTO, MODE_VIDEO,
+        BOKEH_MODE, HDR_MODE, NIGHT_MODE, RETOUCH_MODE, EXTENSION_OFF,
+        PRO_MODE_ON, PRO_MODE_OFF, ISO_UP, ISO_DOWN,
+        FOCUS_NEAR, FOCUS_FAR, WB_AUTO, WB_DAYLIGHT, WB_CLOUDY,
+        RAW_ON, RAW_OFF
     )
 
     /**

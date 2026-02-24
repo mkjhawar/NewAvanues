@@ -23,19 +23,15 @@ kotlin {
     }
 
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
     // Desktop/JVM Target
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -66,6 +62,9 @@ kotlin {
 
                 // AvanueUI v5.1 — Theme + Unified Components (KMP)
                 implementation(project(":Modules:AvanueUI"))
+
+                // SpeechRecognition — SpeechMetricsSnapshot for dashboard card
+                implementation(project(":Modules:SpeechRecognition"))
 
                 // Coroutines
                 implementation(libs.kotlinx.coroutines.core)
@@ -146,7 +145,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.cockpit"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 29

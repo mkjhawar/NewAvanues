@@ -2,28 +2,35 @@ package com.augmentalis.cockpit.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import android.util.Log
+import com.augmentalis.avanueui.theme.AppearanceMode
+import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.theme.MaterialMode
 import com.augmentalis.cockpit.content.ContentRenderer
+import com.augmentalis.cockpit.model.CockpitScreenState
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.LayoutMode
 import com.augmentalis.cockpit.spatial.AndroidSpatialOrientationSource
 import com.augmentalis.cockpit.spatial.SpatialViewportController
 import com.augmentalis.cockpit.viewmodel.CockpitViewModel
+import com.avanues.logging.LoggerFactory
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 
-private const val TAG = "CockpitScreen"
+private val logger = LoggerFactory.getLogger("CockpitScreen")
 
 /**
  * Android entry point for the Cockpit screen.
@@ -36,16 +43,32 @@ private const val TAG = "CockpitScreen"
  * Also creates the spatial orientation pipeline:
  * [AndroidSpatialOrientationSource] → [SpatialViewportController] → SpatialCanvas
  */
+/**
+ * @param deepLinkUri Optional deep link URI to process on first composition.
+ *   Supports: cockpit://session/{id}, cockpit://module/{id},
+ *   cockpit://layout/{mode}, cockpit://template/{id}, cockpit://dashboard
+ */
 @Composable
 fun CockpitScreen(
     viewModel: CockpitViewModel,
     onNavigateBack: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    onSpecialModuleLaunch: (String) -> Unit = {},
+    deepLinkUri: String? = null,
     modifier: Modifier = Modifier
 ) {
     val session by viewModel.activeSession.collectAsState()
     val frames by viewModel.frames.collectAsState()
     val selectedFrameId by viewModel.selectedFrameId.collectAsState()
     val layoutMode by viewModel.layoutMode.collectAsState()
+    val dashboardState by viewModel.dashboardState.collectAsState()
+    val backgroundSceneState by viewModel.backgroundScene.collectAsState()
+
+    // Theme state — local until DataStore persistence is wired
+    var currentPalette by remember { mutableStateOf(AvanueColorPalette.DEFAULT) }
+    var currentMaterial by remember { mutableStateOf(MaterialMode.DEFAULT) }
+    var currentAppearance by remember { mutableStateOf(AppearanceMode.DEFAULT) }
+    var currentPresetId by remember { mutableStateOf<String?>(null) }
 
     // Device-adaptive layout filtering
     val displayProfile = AvanueTheme.displayProfile
@@ -86,12 +109,40 @@ fun CockpitScreen(
         }
     }
 
+    // Handle non-frame module launches (e.g. CursorAvanue → VoiceTouch home)
+    LaunchedEffect(viewModel) {
+        viewModel.specialModuleLaunch.collect { moduleId ->
+            onSpecialModuleLaunch(moduleId)
+        }
+    }
+
+    // Process deep link URI on first composition (once per URI)
+    LaunchedEffect(deepLinkUri) {
+        if (deepLinkUri != null) {
+            val handled = viewModel.handleDeepLink(deepLinkUri)
+            if (!handled) {
+                logger.w { "Unrecognized deep link: $deepLinkUri" }
+            }
+        }
+    }
+
     CockpitScreenContent(
-        sessionName = session?.name ?: "Cockpit",
-        frames = frames,
-        selectedFrameId = selectedFrameId,
-        layoutMode = layoutMode,
+        state = CockpitScreenState(
+            sessionName = session?.name ?: "Cockpit",
+            frames = frames,
+            selectedFrameId = selectedFrameId,
+            layoutMode = layoutMode,
+            dashboardState = dashboardState,
+            availableLayoutModes = availableModes,
+            backgroundScene = backgroundSceneState,
+            currentPalette = currentPalette,
+            currentMaterial = currentMaterial,
+            currentAppearance = currentAppearance,
+            currentPresetId = currentPresetId,
+        ),
         onNavigateBack = onNavigateBack,
+        onReturnToDashboard = { viewModel.returnToDashboard() },
+        onNavigateToSettings = onNavigateToSettings,
         onFrameSelected = { viewModel.selectFrame(it) },
         onFrameMoved = { id, x, y -> viewModel.moveFrame(id, x, y) },
         onFrameResized = { id, w, h -> viewModel.resizeFrame(id, w, h) },
@@ -105,11 +156,29 @@ fun CockpitScreen(
                 frame = frame,
                 onContentStateChanged = { frameId, newContent ->
                     viewModel.updateFrameContent(frameId, newContent)
-                }
+                },
+                // Only the selected frame receives content actions from the CommandBar
+                contentActionFlow = if (frame.id == selectedFrameId) viewModel.contentAction else null
             )
         },
         spatialController = spatialController,
-        availableLayoutModes = availableModes,
+        onPaletteChanged = { currentPalette = it; currentPresetId = null },
+        onMaterialChanged = { currentMaterial = it; currentPresetId = null },
+        onAppearanceChanged = { currentAppearance = it; currentPresetId = null },
+        onPresetApplied = { preset ->
+            preset.palette?.let { currentPalette = it }
+            currentMaterial = preset.materialMode
+            preset.appearance?.let { currentAppearance = it }
+            currentPresetId = preset.id
+        },
+        onBackgroundSceneChanged = { viewModel.setBackgroundScene(it) },
+        onModuleClick = { viewModel.launchModule(it) },
+        onSessionClick = { viewModel.resumeSession(it) },
+        onTemplateClick = { viewModel.launchTemplate(it) },
+        onContentAction = { viewModel.dispatchContentAction(it) },
+        onStepRenamed = { id, title -> viewModel.renameFrame(id, title) },
+        onStepReordered = { id, delta -> viewModel.reorderFrame(id, delta) },
+        onStepDeleted = { viewModel.removeFrame(it) },
         modifier = modifier
     )
 }
@@ -130,7 +199,7 @@ private fun executeCockpitCommand(
     actionType: CommandActionType,
 ): HandlerResult {
     val selected = viewModel.selectedFrameId.value
-    Log.d(TAG, "executeCockpitCommand: $actionType, selectedFrame=$selected")
+    logger.d { "executeCockpitCommand: $actionType, selectedFrame=$selected" }
 
     return when (actionType) {
         // ── Frame Management ──────────────────────────────────────────
@@ -182,8 +251,8 @@ private fun executeCockpitCommand(
             HandlerResult.success("Switched to workflow layout")
         }
         CommandActionType.LAYOUT_PICKER -> {
-            // Cycle through available layout modes
-            val modes = LayoutMode.entries
+            // Cycle through frame-based layout modes (skip DASHBOARD — it's a separate home view)
+            val modes = LayoutMode.FRAME_LAYOUTS.toList()
             val currentIndex = modes.indexOf(viewModel.layoutMode.value)
             val nextMode = modes[(currentIndex + 1) % modes.size]
             viewModel.setLayoutMode(nextMode)
@@ -225,7 +294,7 @@ private fun executeCockpitCommand(
         }
 
         else -> {
-            Log.w(TAG, "Unhandled cockpit action: $actionType")
+            logger.w { "Unhandled cockpit action: $actionType" }
             HandlerResult.failure(
                 "Cockpit action $actionType not handled",
                 recoverable = true

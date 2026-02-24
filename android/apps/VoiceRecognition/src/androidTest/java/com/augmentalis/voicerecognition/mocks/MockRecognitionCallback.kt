@@ -2,7 +2,6 @@
  * MockRecognitionCallback.kt - Mock implementation of IRecognitionCallback for testing
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-08-28
  * 
  * Provides a mock implementation of the AIDL callback interface with tracking

@@ -2,7 +2,6 @@
  * VoiceRecognitionServiceTest.kt - Unit tests for AIDL Voice Recognition Service
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-06
  * 
  * Comprehensive unit tests for VoiceRecognitionService AIDL implementation

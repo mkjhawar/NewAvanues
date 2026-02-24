@@ -26,8 +26,10 @@ import com.augmentalis.foundation.settings.ISettingsStore
 import com.augmentalis.foundation.settings.SettingsMigration
 import com.augmentalis.foundation.settings.models.AvanuesSettings
 import com.augmentalis.foundation.settings.models.PersistedSynonym
+import com.augmentalis.voiceoscore.AdaptiveTimingManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
@@ -57,6 +59,11 @@ class AvanuesSettingsRepository @Inject constructor(
         // Voice command locale
         private val KEY_VOICE_LOCALE = stringPreferencesKey("voice_command_locale")
 
+        // Wake Word
+        private val KEY_WAKE_WORD_ENABLED = booleanPreferencesKey("wake_word_enabled")
+        private val KEY_WAKE_WORD_KEYWORD = stringPreferencesKey("wake_word_keyword")
+        private val KEY_WAKE_WORD_SENSITIVITY = floatPreferencesKey("wake_word_sensitivity")
+
         // VoiceCursor appearance
         private val KEY_CURSOR_SIZE = intPreferencesKey("cursor_size")
         private val KEY_CURSOR_SPEED = intPreferencesKey("cursor_speed")
@@ -78,6 +85,12 @@ class AvanuesSettingsRepository @Inject constructor(
         // Voice command persistence (AVU wire protocol format)
         private val KEY_DISABLED_COMMANDS = stringSetPreferencesKey("vcm_disabled_commands")
         private val KEY_USER_SYNONYMS = stringPreferencesKey("vcm_user_synonyms")
+
+        // Adaptive Timing (learned by AdaptiveTimingManager, persisted across restarts)
+        private val KEY_ADAPTIVE_PROCESSING_DELAY = longPreferencesKey("adaptive_processing_delay_ms")
+        private val KEY_ADAPTIVE_SCROLL_DEBOUNCE = longPreferencesKey("adaptive_scroll_debounce_ms")
+        private val KEY_ADAPTIVE_SPEECH_UPDATE_DEBOUNCE = longPreferencesKey("adaptive_speech_update_debounce_ms")
+        private val KEY_ADAPTIVE_COMMAND_WINDOW = longPreferencesKey("adaptive_command_window_ms")
 
         // Migration functions now in Foundation: SettingsMigration
     }
@@ -111,6 +124,9 @@ class AvanuesSettingsRepository @Inject constructor(
             themeStyle = style,
             themeAppearance = prefs[KEY_THEME_APPEARANCE] ?: AvanuesSettings.DEFAULT_THEME_APPEARANCE,
             voiceLocale = prefs[KEY_VOICE_LOCALE] ?: "en-US",
+            wakeWordEnabled = prefs[KEY_WAKE_WORD_ENABLED] ?: false,
+            wakeWordKeyword = prefs[KEY_WAKE_WORD_KEYWORD] ?: AvanuesSettings.DEFAULT_WAKE_WORD_KEYWORD,
+            wakeWordSensitivity = prefs[KEY_WAKE_WORD_SENSITIVITY] ?: AvanuesSettings.DEFAULT_WAKE_WORD_SENSITIVITY,
             cursorSize = prefs[KEY_CURSOR_SIZE] ?: 48,
             cursorSpeed = prefs[KEY_CURSOR_SPEED] ?: 8,
             showCoordinates = prefs[KEY_SHOW_COORDINATES] ?: false,
@@ -122,7 +138,7 @@ class AvanuesSettingsRepository @Inject constructor(
             vosSftpRemotePath = prefs[KEY_VOS_SFTP_REMOTE_PATH] ?: "/vos",
             vosSftpKeyPath = prefs[KEY_VOS_SFTP_KEY_PATH] ?: "",
             vosLastSyncTime = prefs[KEY_VOS_LAST_SYNC_TIME],
-            vosSftpHostKeyMode = prefs[KEY_VOS_SFTP_HOST_KEY_MODE] ?: "no",
+            vosSftpHostKeyMode = prefs[KEY_VOS_SFTP_HOST_KEY_MODE] ?: "strict",
             vosAutoSyncEnabled = prefs[KEY_VOS_AUTO_SYNC_ENABLED] ?: false,
             vosSyncIntervalHours = prefs[KEY_VOS_SYNC_INTERVAL_HOURS] ?: 4
         )
@@ -139,6 +155,9 @@ class AvanuesSettingsRepository @Inject constructor(
         prefs[KEY_THEME_STYLE] = s.themeStyle
         prefs[KEY_THEME_APPEARANCE] = s.themeAppearance
         prefs[KEY_VOICE_LOCALE] = s.voiceLocale
+        prefs[KEY_WAKE_WORD_ENABLED] = s.wakeWordEnabled
+        prefs[KEY_WAKE_WORD_KEYWORD] = s.wakeWordKeyword
+        prefs[KEY_WAKE_WORD_SENSITIVITY] = s.wakeWordSensitivity
         prefs[KEY_CURSOR_SIZE] = s.cursorSize
         prefs[KEY_CURSOR_SPEED] = s.cursorSpeed
         prefs[KEY_SHOW_COORDINATES] = s.showCoordinates
@@ -227,6 +246,20 @@ class AvanuesSettingsRepository @Inject constructor(
         }
     }
 
+    // ==================== Wake Word Settings ====================
+
+    suspend fun updateWakeWordEnabled(enabled: Boolean) {
+        context.avanuesDataStore.edit { it[KEY_WAKE_WORD_ENABLED] = enabled }
+    }
+
+    suspend fun updateWakeWordKeyword(keyword: String) {
+        context.avanuesDataStore.edit { it[KEY_WAKE_WORD_KEYWORD] = keyword }
+    }
+
+    suspend fun updateWakeWordSensitivity(sensitivity: Float) {
+        context.avanuesDataStore.edit { it[KEY_WAKE_WORD_SENSITIVITY] = sensitivity.coerceIn(0.1f, 0.9f) }
+    }
+
     // ==================== VOS Sync Settings ====================
 
     suspend fun updateVosSyncEnabled(enabled: Boolean) {
@@ -267,6 +300,40 @@ class AvanuesSettingsRepository @Inject constructor(
 
     suspend fun updateVosSyncIntervalHours(hours: Int) {
         context.avanuesDataStore.edit { it[KEY_VOS_SYNC_INTERVAL_HOURS] = hours.coerceIn(1, 24) }
+    }
+
+    // ==================== Adaptive Timing Persistence ====================
+
+    /**
+     * Load persisted adaptive timing values and apply to AdaptiveTimingManager.
+     * Call once on startup after AdaptiveTimingManager is available.
+     */
+    suspend fun loadAdaptiveTimingValues() {
+        context.avanuesDataStore.data.first().let { prefs ->
+            val map = mutableMapOf<String, Long>()
+            prefs[KEY_ADAPTIVE_PROCESSING_DELAY]?.let { map[AdaptiveTimingManager.Keys.PROCESSING_DELAY] = it }
+            prefs[KEY_ADAPTIVE_SCROLL_DEBOUNCE]?.let { map[AdaptiveTimingManager.Keys.SCROLL_DEBOUNCE] = it }
+            prefs[KEY_ADAPTIVE_SPEECH_UPDATE_DEBOUNCE]?.let { map[AdaptiveTimingManager.Keys.SPEECH_UPDATE_DEBOUNCE] = it }
+            prefs[KEY_ADAPTIVE_COMMAND_WINDOW]?.let { map[AdaptiveTimingManager.Keys.COMMAND_WINDOW] = it }
+            if (map.isNotEmpty()) {
+                AdaptiveTimingManager.applyPersistedValues(map)
+            }
+        }
+    }
+
+    /**
+     * Persist current AdaptiveTimingManager learned values to DataStore.
+     * Call periodically (e.g., every 60s) or on app pause/stop.
+     */
+    suspend fun persistAdaptiveTimingValues() {
+        val values = AdaptiveTimingManager.toPersistedMap()
+        context.avanuesDataStore.edit { prefs ->
+            // toPersistedMap() returns non-nullable values; direct assignment is safe
+            prefs[KEY_ADAPTIVE_PROCESSING_DELAY] = values.getValue(AdaptiveTimingManager.Keys.PROCESSING_DELAY)
+            prefs[KEY_ADAPTIVE_SCROLL_DEBOUNCE] = values.getValue(AdaptiveTimingManager.Keys.SCROLL_DEBOUNCE)
+            prefs[KEY_ADAPTIVE_SPEECH_UPDATE_DEBOUNCE] = values.getValue(AdaptiveTimingManager.Keys.SPEECH_UPDATE_DEBOUNCE)
+            prefs[KEY_ADAPTIVE_COMMAND_WINDOW] = values.getValue(AdaptiveTimingManager.Keys.COMMAND_WINDOW)
+        }
     }
 
     // ==================== Voice Command Persistence ====================

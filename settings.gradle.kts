@@ -17,9 +17,12 @@ pluginManagement {
         maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 }
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
@@ -28,6 +31,17 @@ dependencyResolutionManagement {
         maven("https://csspeechstorage.blob.core.windows.net/maven/")
         // Vosk (AlphaCephei) Speech Recognition
         maven("https://alphacephei.com/maven/")
+        // Kotlin/JS toolchain distributions (Node.js + Yarn)
+        ivy("https://nodejs.org/dist") {
+            patternLayout { artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]") }
+            metadataSources { artifact() }
+            content { includeModule("org.nodejs", "node") }
+        }
+        ivy("https://github.com/yarnpkg/yarn/releases/download") {
+            patternLayout { artifact("v[revision]/[artifact](-v[revision]).[ext]") }
+            metadataSources { artifact() }
+            content { includeModule("com.yarnpkg", "yarn") }
+        }
     }
 }
 
@@ -62,8 +76,8 @@ include(":Modules:VoiceOSCore")            // Unified KMP voice control (consoli
 include(":Modules:Voice:WakeWord")         // Wake word detection
 include(":Modules:VoiceIsolation")         // Audio preprocessing (noise suppression, echo cancellation, AGC)
 
-// Actions Module (cross-platform KMP)
-include(":Modules:Actions")                 // Intent handlers, action execution
+// IntentActions — intent-based action execution (renamed from Actions 260223)
+include(":Modules:IntentActions")              // IIntentAction framework, entity extractors, intent handlers
 
 // Foundation Module (cross-platform KMP utilities)
 include(":Modules:Foundation")  // Common utilities: StateFlow, ViewModel, NumberToWords
@@ -146,6 +160,10 @@ include(":Modules:PhotoAvanue")              // KMP camera + video capture (Came
 include(":Modules:RemoteCast")              // KMP screen casting/sharing (MediaProjection + ReplayKit)
 include(":Modules:HTTPAvanue")             // KMP HTTP/1.1 + HTTP/2 server, WebSocket, middleware (NanoHTTPD-inspired)
 include(":Modules:AnnotationAvanue")        // KMP whiteboard/signature/drawing canvas
+include(":Modules:NetAvanue")              // KMP P2P networking: signaling, capabilities, pairing (AvanueCentral client)
+
+// Crypto — Cross-platform AON codec, HMAC, AES-256-GCM (KMP)
+include(":Modules:Crypto")
 
 // Rpc - Cross-platform RPC module
 include(":Modules:Rpc")                  // Root module with KMP + Wire
@@ -197,8 +215,8 @@ include(":android:apps:VoiceRecognition")          // Speech recognition testing
 include(":android:apps:VoiceOSIPCTest")            // IPC testing
 
 // Android Apps - Legacy (for comparison)
-include(":apps:voiceavanue-legacy")                // Legacy VoiceAvanue app
-include(":android:apps:webavanue-legacy")          // Legacy WebAvanue browser
+// include(":apps:voiceavanue-legacy")                // DELETED (2026-02-22) — exact duplicate of :Apps:voiceavanue
+// include(":android:apps:webavanue-legacy")          // DELETED (2026-02-22) — exact duplicate of :android:apps:webavanue
 // include(":android:apps:webavanue-ipc-legacy")   // DISABLED (2026-02-07) — legacy, missing domain layer
 // include(":android:apps:ava-legacy")             // Old AVA app - archived
 // include(":android:apps:browseravanue-legacy")   // Old browser - archived

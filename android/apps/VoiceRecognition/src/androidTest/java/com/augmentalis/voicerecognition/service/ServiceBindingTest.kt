@@ -2,7 +2,6 @@
  * ServiceBindingTest.kt - Integration tests for VoiceRecognitionService binding
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-08-28
  * 
  * Tests for AIDL service binding, callback registration, recognition lifecycle,

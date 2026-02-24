@@ -3,7 +3,6 @@
  *
  * Created: 2025-01-26 02:30 PST
  * Last Modified: 2025-10-10 18:01 PDT
- * Author: VOS4 Development Team
  * Version: 3.0.0
  *
  * Purpose: Voice command routing for VoiceCursor - delegates to CursorActions

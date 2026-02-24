@@ -20,6 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,16 +55,18 @@ fun FeedbackSettingsScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { 
-                        coroutineScope.launch {
-                            // Test feedback on refresh
-                            feedbackManager.provideFeedback(
-                                FeedbackType.INFO,
-                                includeHaptic = true,
-                                includeAudio = true
-                            )
-                        }
-                    }) {
+                    IconButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                feedbackManager.provideFeedback(
+                                    FeedbackType.INFO,
+                                    includeHaptic = true,
+                                    includeAudio = true
+                                )
+                            }
+                        },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Test Feedback" }
+                    ) {
                         Icon(Icons.Default.Refresh, contentDescription = "Test Feedback")
                     }
                 }
@@ -82,27 +86,32 @@ fun FeedbackSettingsScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Overview") }
+                    text = { Text("Overview") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Overview tab" }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Haptic") }
+                    text = { Text("Haptic") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Haptic tab" }
                 )
                 Tab(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    text = { Text("Audio") }
+                    text = { Text("Audio") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Audio tab" }
                 )
                 Tab(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
-                    text = { Text("Visual") }
+                    text = { Text("Visual") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Visual tab" }
                 )
                 Tab(
                     selected = selectedTab == 4,
                     onClick = { selectedTab = 4 },
-                    text = { Text("Presets") }
+                    text = { Text("Presets") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Presets tab" }
                 )
             }
             
@@ -148,7 +157,8 @@ fun FeedbackOverviewTab(
                     )
                     Switch(
                         checked = feedbackState.systemFeedbackEnabled,
-                        onCheckedChange = { feedbackManager.setSystemFeedbackEnabled(it) }
+                        onCheckedChange = { feedbackManager.setSystemFeedbackEnabled(it) },
+                        modifier = Modifier.semantics { contentDescription = "Voice: toggle System Feedback" }
                     )
                 }
             }
@@ -209,7 +219,8 @@ fun HapticSettingsTab(
                     Switch(
                         checked = hapticState.enabled,
                         onCheckedChange = { feedbackManager.setHapticEnabled(it) },
-                        enabled = hapticState.isAvailable
+                        enabled = hapticState.isAvailable,
+                        modifier = Modifier.semantics { contentDescription = "Voice: toggle Haptic Feedback" }
                     )
                 }
                 
@@ -259,28 +270,33 @@ fun HapticSettingsTab(
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     HapticPattern.values().forEach { pattern ->
+                        val patternLabel = pattern.name.lowercase().replaceFirstChar { it.uppercase() }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { feedbackManager.setHapticPattern(pattern) }
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 4.dp)
+                                .semantics { contentDescription = "Voice: select Haptic Pattern $patternLabel" },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = hapticState.pattern == pattern,
-                                onClick = { feedbackManager.setHapticPattern(pattern) }
+                                onClick = { feedbackManager.setHapticPattern(pattern) },
+                                modifier = Modifier.semantics { contentDescription = "Voice: select $patternLabel pattern" }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(pattern.name.lowercase().replaceFirstChar { it.uppercase() })
+                            Text(patternLabel)
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     // Test Button
                     Button(
                         onClick = { feedbackManager.vibrateWithPattern(hapticState.pattern) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = "Voice: click Test Vibration" },
                         enabled = !hapticState.isVibrating
                     ) {
                         if (hapticState.isVibrating) {
@@ -339,7 +355,8 @@ fun AudioSettingsTab(
                     Switch(
                         checked = audioState.enabled,
                         onCheckedChange = { feedbackManager.setAudioEnabled(it) },
-                        enabled = audioState.isAvailable
+                        enabled = audioState.isAvailable,
+                        modifier = Modifier.semantics { contentDescription = "Voice: toggle Audio Feedback" }
                     )
                 }
                 
@@ -389,28 +406,33 @@ fun AudioSettingsTab(
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     AudioToneType.values().forEach { toneType ->
+                        val toneLabel = toneType.name.lowercase().replaceFirstChar { it.uppercase() }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { feedbackManager.setAudioToneType(toneType) }
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 4.dp)
+                                .semantics { contentDescription = "Voice: select Audio Tone $toneLabel" },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = audioState.toneType == toneType,
-                                onClick = { feedbackManager.setAudioToneType(toneType) }
+                                onClick = { feedbackManager.setAudioToneType(toneType) },
+                                modifier = Modifier.semantics { contentDescription = "Voice: select $toneLabel tone" }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(toneType.name.lowercase().replaceFirstChar { it.uppercase() })
+                            Text(toneLabel)
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     // Test Button
                     Button(
                         onClick = { feedbackManager.playTone(audioState.toneType) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = "Voice: click Test Audio" },
                         enabled = !audioState.isPlaying
                     ) {
                         if (audioState.isPlaying) {
@@ -459,7 +481,8 @@ fun VisualSettingsTab(
                     )
                     Switch(
                         checked = visualState.enabled,
-                        onCheckedChange = { feedbackManager.setVisualEnabled(it) }
+                        onCheckedChange = { feedbackManager.setVisualEnabled(it) },
+                        modifier = Modifier.semantics { contentDescription = "Voice: toggle Visual Feedback" }
                     )
                 }
                 
@@ -475,7 +498,8 @@ fun VisualSettingsTab(
                         Text("Screen Flash")
                         Switch(
                             checked = visualState.screenFlashEnabled,
-                            onCheckedChange = { feedbackManager.setScreenFlashEnabled(it) }
+                            onCheckedChange = { feedbackManager.setScreenFlashEnabled(it) },
+                            modifier = Modifier.semantics { contentDescription = "Voice: toggle Screen Flash" }
                         )
                     }
                     
@@ -490,7 +514,8 @@ fun VisualSettingsTab(
                         Text("Animations")
                         Switch(
                             checked = visualState.animationEnabled,
-                            onCheckedChange = { feedbackManager.setAnimationEnabled(it) }
+                            onCheckedChange = { feedbackManager.setAnimationEnabled(it) },
+                            modifier = Modifier.semantics { contentDescription = "Voice: toggle Animations" }
                         )
                     }
                     
@@ -649,21 +674,23 @@ fun QuickActionsCard(feedbackManager: FeedbackManager) {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Button(
-                    onClick = { 
+                    onClick = {
                         feedbackManager.setHapticEnabled(true)
                         feedbackManager.setAudioEnabled(true)
                         feedbackManager.setVisualEnabled(true)
-                    }
+                    },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Enable All Feedback" }
                 ) {
                     Text("Enable All")
                 }
-                
+
                 OutlinedButton(
-                    onClick = { 
+                    onClick = {
                         feedbackManager.setHapticEnabled(false)
                         feedbackManager.setAudioEnabled(false)
                         feedbackManager.setVisualEnabled(false)
-                    }
+                    },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Disable All Feedback" }
                 ) {
                     Text("Disable All")
                 }
@@ -692,14 +719,16 @@ fun FeedbackTestCard(feedbackManager: FeedbackManager) {
             Spacer(modifier = Modifier.height(12.dp))
             
             Button(
-                onClick = { 
+                onClick = {
                     feedbackManager.provideFeedback(
                         FeedbackType.SUCCESS,
                         includeHaptic = true,
                         includeAudio = true
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Voice: click Test All Feedback" }
             ) {
                 Text("Test All Feedback")
             }
@@ -741,12 +770,15 @@ fun FeedbackTestTypeCard(
             }
             
             Button(
-                onClick = { 
+                onClick = {
                     feedbackManager.provideFeedback(
                         type,
                         includeHaptic = feedbackState.haptic.enabled,
                         includeAudio = feedbackState.audio.enabled
                     )
+                },
+                modifier = Modifier.semantics {
+                    contentDescription = "Voice: click Test ${type.name.lowercase().replaceFirstChar { it.uppercase() }} Feedback"
                 }
             ) {
                 Text("Test")
@@ -782,13 +814,15 @@ fun FeedbackPresetButtons(feedbackManager: FeedbackManager) {
                     feedbackManager.setAudioVolume(0.4f)
                     feedbackManager.setAudioDuration(150L)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Voice: click Gentle Preset" }
             ) {
                 Text("Gentle")
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // Standard Preset
             Button(
                 onClick = {
@@ -797,13 +831,15 @@ fun FeedbackPresetButtons(feedbackManager: FeedbackManager) {
                     feedbackManager.setAudioVolume(0.7f)
                     feedbackManager.setAudioDuration(200L)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Voice: click Standard Preset" }
             ) {
                 Text("Standard")
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // Strong Preset
             OutlinedButton(
                 onClick = {
@@ -812,7 +848,9 @@ fun FeedbackPresetButtons(feedbackManager: FeedbackManager) {
                     feedbackManager.setAudioVolume(0.9f)
                     feedbackManager.setAudioDuration(250L)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Voice: click Strong Preset" }
             ) {
                 Text("Strong")
             }

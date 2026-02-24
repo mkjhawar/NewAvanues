@@ -37,18 +37,22 @@ import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.NumbersOverlayMode
 import com.augmentalis.voiceoscore.OverlayNumberingExecutor
 import com.augmentalis.voiceoscore.OverlayStateManager
+import com.augmentalis.voiceoscore.AdaptiveTimingManager
 import com.augmentalis.voiceoscore.SpeechMode
 import com.augmentalis.voiceoscore.TARGET_APPS
+import com.augmentalis.voiceoscore.wireCursorDependencies
 import com.augmentalis.voiceavanue.MainActivity
 import com.augmentalis.avanueui.theme.AvanueModuleAccents
 import com.augmentalis.avanueui.theme.ModuleAccent
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
 import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.foundation.settings.models.DeveloperSettings
-import com.augmentalis.voiceoscore.managers.commandmanager.CommandManager
+import com.augmentalis.voiceoscore.commandmanager.CommandManager
 import com.augmentalis.voicecursor.core.CursorConfig
 import com.augmentalis.voicecursor.core.FilterStrength
 import com.augmentalis.voicecursor.overlay.CursorOverlayService
+import com.augmentalis.devicemanager.DeviceManager
+import com.augmentalis.devicemanager.imu.IMUManager
 import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 import com.augmentalis.voiceoscore.handlers.VoiceControlCallbacks
 import com.augmentalis.voiceoscore.vos.VosFileImporter
@@ -66,6 +70,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import com.augmentalis.webavanue.BrowserVoiceOSCallback
 import com.augmentalis.webavanue.WebCommandExecutorImpl
@@ -97,6 +102,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var webCommandCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var cursorSettingsJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var numbersOverlayModeJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
+    private var adaptiveTimingPersistJob: kotlinx.coroutines.Job? = null  // Periodic persistence
 
     override fun getActionCoordinator(): ActionCoordinator {
         // Prefer VoiceOSCore's coordinator — it has handlers registered
@@ -142,6 +148,15 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
                 boundsResolver = BoundsResolver(this@VoiceAvanueAccessibilityService)
 
+                // Ensure IMU capabilities are injected before any cursor/sensor code.
+                // DeviceManager.imu triggers lazy injectCapabilities() on IMUManager,
+                // so sensor properties resolve correctly on first access.
+                try {
+                    DeviceManager.getInstance(applicationContext).imu
+                } catch (e: Exception) {
+                    Log.w(TAG, "DeviceManager IMU init failed (non-fatal): ${e.message}")
+                }
+
                 // Read developer settings from DataStore
                 val devPrefs = DeveloperPreferencesRepository(applicationContext)
                 val devSettings: DeveloperSettings = devPrefs.settings.first()
@@ -162,6 +177,29 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                     commandRegistry = registry
                 )
                 voiceOSCore?.initialize()
+
+                // Restore previously learned adaptive timing values from DataStore.
+                // Must run after VoiceOSCore.initialize() sets the confidence floor.
+                val settingsRepo = AvanuesSettingsRepository(applicationContext)
+                try {
+                    settingsRepo.loadAdaptiveTimingValues()
+                    Log.i(TAG, "Adaptive timing values restored from DataStore")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load adaptive timing values (using defaults): ${e.message}")
+                }
+
+                // Persist learned adaptive timing values every 60 seconds.
+                // Values survive process death and restore on next startup.
+                adaptiveTimingPersistJob = serviceScope.launch(Dispatchers.IO) {
+                    while (true) {
+                        kotlinx.coroutines.delay(60_000L)
+                        try {
+                            settingsRepo.persistAdaptiveTimingValues()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Adaptive timing persist failed: ${e.message}")
+                        }
+                    }
+                }
 
                 // Initialize CommandManager to build pattern matching cache + populate
                 // StaticCommandRegistry from DB. VoiceOSCore.initialize() already loaded
@@ -191,16 +229,56 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 }
 
                 // Bridge: Collect speech recognition results → route to command execution
-                // Without this, Vivoka emits recognized commands but nobody processes them
-                val confidenceThreshold = devSettings.confidenceThreshold
+                // Without this, Vivoka emits recognized commands but nobody processes them.
+                //
+                // Mode-aware routing:
+                // - COMBINED/STATIC/DYNAMIC: route to processVoiceCommand() (normal)
+                // - MUTED: only wake commands pass through (defense-in-depth — grammar already restricted)
+                // - DICTATION: non-exit text injected into focused input field; exit commands route normally
+                // Use AdaptiveTimingManager as the single source of truth for confidence floor.
+                // This ensures both the collector gate and processVoiceCommand use the same clamped value
+                // (0.3-0.7 range), preventing bypasses via unclamped devSettings access.
                 speechCollectorJob?.cancel()
                 speechCollectorJob = serviceScope.launch {
                     voiceOSCore?.speechResults
                         ?.conflate()  // Drop intermediate results if processing is slow
                         ?.collect { result ->
-                            if (result.isFinal && result.text.isNotBlank() && result.confidence >= confidenceThreshold) {
+                            if (result.isFinal && result.text.isNotBlank() && result.confidence >= AdaptiveTimingManager.getConfidenceFloor()) {
                                 Log.d(TAG, "Voice recognized: '${result.text}' (conf: ${result.confidence})")
-                                processVoiceCommand(result.text, result.confidence)
+
+                                val currentMode = voiceOSCore?.speechMode
+                                when (currentMode) {
+                                    SpeechMode.MUTED -> {
+                                        // In MUTED mode, only wake commands should arrive (grammar is restricted).
+                                        // Route them to processVoiceCommand so VoiceControlHandler triggers onWakeVoice.
+                                        Log.d(TAG, "MUTED mode — routing wake command: '${result.text}'")
+                                        processVoiceCommand(result.text, result.confidence)
+                                    }
+                                    SpeechMode.DICTATION -> {
+                                        // Check if this is an exit command (e.g., "stop dictation")
+                                        val isExitCommand = StaticCommandRegistry.findById("voice_dict_stop")
+                                            ?.let { cmd ->
+                                                cmd.phrases.any { phrase -> phrase.equals(result.text, ignoreCase = true) }
+                                            } ?: false
+
+                                        if (isExitCommand) {
+                                            Log.d(TAG, "DICTATION exit command detected: '${result.text}'")
+                                            processVoiceCommand(result.text, result.confidence)
+                                        } else {
+                                            // Inject recognized text into focused input field
+                                            Log.d(TAG, "DICTATION text injection: '${result.text}'")
+                                            injectDictationText(result.text)
+                                        }
+                                    }
+                                    null -> {
+                                        // VoiceOSCore not initialized yet — ignore speech results
+                                        Log.w(TAG, "VoiceOSCore not initialized, ignoring speech result: '${result.text}'")
+                                    }
+                                    else -> {
+                                        // Normal command mode — route all recognized speech to command processing
+                                        processVoiceCommand(result.text, result.confidence)
+                                    }
+                                }
                             }
                         }
                 }
@@ -210,7 +288,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 // Path 1: Phrases in speech grammar (recognition)
                 // Path 2: QuantizedCommands in CommandRegistry (routing to WebCommandHandler)
                 webCommandCollectorJob?.cancel()
-                webCommandCollectorJob = serviceScope.launch {
+                webCommandCollectorJob = serviceScope.launch(Dispatchers.Default) {
                     BrowserVoiceOSCallback.activeWebPhrases
                         .collect { phrases ->
                             try {
@@ -278,8 +356,14 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         OverlayStateManager.showFeedback("Voice Muted")
                         serviceScope.launch {
                             try {
-                                core?.stopListening()
-                                Log.i(TAG, "Voice muted via callback")
+                                // Build locale-aware wake commands from StaticCommandRegistry
+                                // so the user can say "wake up voice" (or localized equivalent)
+                                // while muted. Fallback to English if registry not loaded.
+                                val wakeCommands = StaticCommandRegistry.findById("voice_wake")?.phrases
+                                    ?: listOf("wake up voice", "start listening", "voice on")
+
+                                core?.setSpeechMode(SpeechMode.MUTED, exitCommands = wakeCommands)
+                                Log.i(TAG, "Voice muted via MUTED mode (wake commands: ${wakeCommands.size})")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to mute voice", e)
                             }
@@ -290,8 +374,9 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         OverlayStateManager.showFeedback("Voice Activated")
                         serviceScope.launch {
                             try {
-                                val result = core?.startListening()
-                                Log.i(TAG, "Voice wake via callback: success=${result?.isSuccess}")
+                                // Restore full command grammar by switching back to COMBINED_COMMAND
+                                core?.setSpeechMode(SpeechMode.COMBINED_COMMAND)
+                                Log.i(TAG, "Voice woke via setSpeechMode(COMBINED_COMMAND)")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to wake voice", e)
                             }
@@ -299,18 +384,18 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                         true
                     }
                     VoiceControlCallbacks.onStartDictation = {
-                        // Switch to dictation mode with minimal exit grammar.
+                        // Switch to dictation mode with locale-aware exit grammar.
                         // The speech engine stays active but only recognizes exit commands
-                        // ("stop dictation", "end dictation", "command mode") so the user
-                        // can return to command mode via voice instead of needing a button.
+                        // so the user can return to command mode via voice.
                         OverlayStateManager.showFeedback("Dictation Mode")
                         serviceScope.launch {
                             try {
-                                core?.setSpeechMode(
-                                    SpeechMode.DICTATION,
-                                    exitCommands = listOf("stop dictation", "end dictation", "command mode")
-                                )
-                                Log.i(TAG, "Dictation mode: switched to DICTATION with exit grammar")
+                                // Build locale-aware exit commands from StaticCommandRegistry
+                                val exitCommands = StaticCommandRegistry.findById("voice_dict_stop")?.phrases
+                                    ?: listOf("stop dictation", "end dictation", "command mode")
+
+                                core?.setSpeechMode(SpeechMode.DICTATION, exitCommands = exitCommands)
+                                Log.i(TAG, "Dictation mode: switched with ${exitCommands.size} exit commands")
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to start dictation", e)
                             }
@@ -378,7 +463,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 // VoiceCommandDaoAdapter is created via CommandDatabase singleton,
                 // which requires VoiceOSDatabase — only available after DB init above.
                 try {
-                    val commandDatabase = com.augmentalis.voiceoscore.managers.commandmanager.database.CommandDatabase
+                    val commandDatabase = com.augmentalis.voiceoscore.commandmanager.database.CommandDatabase
                         .getInstance(applicationContext)
                     val commandDao = commandDatabase.voiceCommandDao()
                     val vosRegistry = db.vosFileRegistry
@@ -401,23 +486,44 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 cursorSettingsJob = serviceScope.launch {
                     val cursorSettingsRepo = AvanuesSettingsRepository(applicationContext)
                     cursorSettingsRepo.settings.collectLatest { settings ->
-                        // Voice command locale switching
+                        // Voice command locale switching — run off Main to avoid blocking UI
                         val newLocale = settings.voiceLocale
                         if (previousVoiceLocale != null && previousVoiceLocale != newLocale) {
                             Log.i(TAG, "Voice locale changed: $previousVoiceLocale → $newLocale")
-                            try {
-                                val cm = CommandManager.getInstance(applicationContext)
-                                val switched = cm.switchLocale(newLocale)
-                                if (switched) {
-                                    Log.i(TAG, "✅ Voice commands switched to $newLocale")
-                                } else {
-                                    Log.w(TAG, "⚠️ Failed to switch voice commands to $newLocale")
+                            withContext(Dispatchers.Default) {
+                                try {
+                                    val cm = CommandManager.getInstance(applicationContext)
+                                    val switched = cm.switchLocale(newLocale)
+                                    if (switched) {
+                                        Log.i(TAG, "Voice commands switched to $newLocale")
+                                    } else {
+                                        Log.w(TAG, "Failed to switch voice commands to $newLocale")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Locale switch failed", e)
                                 }
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Locale switch failed", e)
                             }
                         }
                         previousVoiceLocale = newLocale
+
+                        // Wake word settings → VoiceOSCore lifecycle (off Main)
+                        withContext(Dispatchers.Default) {
+                            try {
+                                val wakePhrase = when (settings.wakeWordKeyword) {
+                                    "HEY_AVA" -> "hey ava"
+                                    "OK_AVA" -> "ok ava"
+                                    "COMPUTER" -> "computer"
+                                    else -> "hey ava"
+                                }
+                                voiceOSCore?.updateWakeWordSettings(
+                                    enabled = settings.wakeWordEnabled,
+                                    wakePhrase = wakePhrase,
+                                    sensitivity = settings.wakeWordSensitivity
+                                )
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Wake word settings update failed", e)
+                            }
+                        }
 
                         // Start/stop CursorOverlayService based on toggle
                         val canOverlay = Settings.canDrawOverlays(applicationContext)
@@ -427,12 +533,16 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                                     val intent = Intent(applicationContext, CursorOverlayService::class.java)
                                     applicationContext.startForegroundService(intent)
                                     Log.i(TAG, "CursorOverlayService started via settings toggle")
+                                    // Wire IMU + CursorActions + ClickDispatcher to the overlay service
+                                    wireCursorDependencies(this@VoiceAvanueAccessibilityService)
                                 } catch (e: Exception) {
                                     Log.e(TAG, "Failed to start CursorOverlayService", e)
                                 }
                             }
                         } else if (!settings.cursorEnabled) {
                             CursorOverlayService.getInstance()?.let {
+                                // Stop IMU tracking before stopping the service to release sensor resources
+                                IMUManager.getInstance(applicationContext).stopIMUTracking("cursor_settings")
                                 applicationContext.stopService(Intent(applicationContext, CursorOverlayService::class.java))
                                 Log.i(TAG, "CursorOverlayService stopped via settings toggle")
                             }
@@ -474,8 +584,8 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
                         CursorOverlayService.getInstance()?.let { cursorService ->
                             cursorService.updateConfig(config)
-                            // Ensure ClickDispatcher is set so "cursor click" voice command works
-                            cursorService.setClickDispatcher(AccessibilityClickDispatcher())
+                            // ClickDispatcher is wired by wireCursorDependencies() when cursor
+                            // is first enabled — no need to re-wire on every settings change
                         }
                     }
                 }
@@ -483,6 +593,52 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 Log.i(TAG, "VoiceOSCore initialized with dev settings: engine=${devSettings.sttEngine}, lang=${devSettings.voiceLanguage}, confidence=${devSettings.confidenceThreshold}")
             } catch (e: Exception) {
                 Log.e(TAG, "Initialization failed", e)
+            }
+        }
+    }
+
+    /**
+     * Inject dictation text into the currently focused input field.
+     * Uses AccessibilityNodeInfo.ACTION_SET_TEXT to append recognized speech.
+     */
+    @Suppress("DEPRECATION") // AccessibilityNodeInfo.recycle() deprecated in API 34+ but needed for compat
+    private fun injectDictationText(text: String) {
+        var focusedNode: android.view.accessibility.AccessibilityNodeInfo? = null
+        try {
+            focusedNode = rootInActiveWindow?.findFocus(
+                android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT
+            )
+            if (focusedNode == null) {
+                Log.w(TAG, "Dictation: no focused input field — cannot inject text")
+                OverlayStateManager.showFeedback("No text field focused")
+                return
+            }
+
+            // Append to existing text (with space separator)
+            val existingText = focusedNode.text?.toString() ?: ""
+            val newText = if (existingText.isNotEmpty()) "$existingText $text" else text
+
+            val args = android.os.Bundle().apply {
+                putCharSequence(
+                    android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                    newText
+                )
+            }
+            val success = focusedNode.performAction(
+                android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT,
+                args
+            )
+            if (success) {
+                Log.d(TAG, "Dictation: injected '${text}' into focused field")
+            } else {
+                Log.w(TAG, "Dictation: ACTION_SET_TEXT failed")
+                OverlayStateManager.showFeedback("Text injection failed")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Dictation text injection error", e)
+        } finally {
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                focusedNode?.recycle()
             }
         }
     }
@@ -554,6 +710,21 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     override fun onDestroy() {
         instance = null
 
+        // Persist adaptive timing values before shutdown.
+        // Fire-and-forget on IO — avoids blocking Main thread (ANR risk).
+        // If the process dies before completion, periodic persist (every 60s) ensures
+        // values are at most ~60s stale on next startup.
+        adaptiveTimingPersistJob?.cancel()
+        adaptiveTimingPersistJob = null
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                AvanuesSettingsRepository(applicationContext).persistAdaptiveTimingValues()
+                Log.i(TAG, "Adaptive timing values persisted on destroy")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to persist adaptive timing on destroy: ${e.message}")
+            }
+        }
+
         // Clear VoiceControlCallbacks to prevent stale references
         VoiceControlCallbacks.clear()
         ModuleCommandCallbacks.clearAll()
@@ -566,6 +737,12 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
         webCommandCollectorJob?.cancel()
         webCommandCollectorJob = null
         BrowserVoiceOSCallback.clearActiveWebPhrases()
+
+        // Stop IMU tracking for any active cursor consumers before service teardown
+        try {
+            IMUManager.getInstance(applicationContext).stopIMUTracking("cursor_voice")
+            IMUManager.getInstance(applicationContext).stopIMUTracking("cursor_settings")
+        } catch (_: Exception) { /* best-effort cleanup */ }
 
         // Cancel cursor settings collection
         cursorSettingsJob?.cancel()

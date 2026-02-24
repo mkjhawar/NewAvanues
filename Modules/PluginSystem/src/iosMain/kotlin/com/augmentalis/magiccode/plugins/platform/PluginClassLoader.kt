@@ -1,197 +1,132 @@
 package com.augmentalis.magiccode.plugins.platform
 
+import com.avanues.avu.dsl.plugin.LoadedPlugin
+import com.avanues.avu.dsl.plugin.PluginLoadResult
+import com.avanues.avu.dsl.plugin.PluginLoader
 import com.augmentalis.magiccode.plugins.core.PluginLog
-import kotlin.reflect.KClass
+import platform.Foundation.NSData
+import platform.Foundation.NSString
+import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.dataWithContentsOfFile
+import platform.Foundation.NSFileManager
 
 /**
- * iOS implementation of PluginClassLoader.
+ * iOS implementation of PluginClassLoader for .avp text plugins.
  *
- * ## iOS Plugin Architecture
+ * Reads .avp plugin files bundled with the iOS app (or in the app's Documents directory
+ * for user-installed plugins) and interprets them via the AVU DSL pipeline.
  *
- * iOS enforces strict security restrictions that prevent runtime code loading.
- * This implementation provides three strategies for iOS plugin support:
+ * Unlike the previous static registry approach, this implementation works with any
+ * .avp file path — whether bundled in the app bundle or placed in the Documents/
+ * directory at runtime. All plugin behaviour is defined in the .avp text; no compiled
+ * Swift or Kotlin code is required.
  *
- * ### Strategy 1: Pre-Bundled Plugins (Production Recommended)
- * Plugins are compiled into the main app bundle as frameworks during build time.
- * Pros: Fully supported, performant, App Store compliant
- * Cons: Cannot load plugins after app release
- *
- * ### Strategy 2: Plugin Registry Pattern (Current Implementation)
- * Plugins register themselves at app startup via static initialization.
- * The PluginClassLoader acts as a lookup registry rather than a dynamic loader.
- * Pros: Simple, no reflection needed, type-safe
- * Cons: All plugins must be known at compile time
- *
- * ### Strategy 3: Interpreted/Scripting Plugins (Future)
- * Use embedded scripting engines (e.g., JavaScript via JavaScriptCore).
- * Pros: True runtime extensibility
- * Cons: Limited to script-based plugins, performance overhead
- *
- * ## Usage
- *
- * ### For Plugin Developers (iOS):
- * ```kotlin
- * // In plugin module, register during static initialization
- * @OptIn(ExperimentalStdlibApi::class)
- * @EagerInitialization
- * private val pluginRegistration = IosPluginClassLoader.register(
- *     className = "com.example.MyPlugin",
- *     factory = { MyPlugin() }
- * )
- * ```
- *
- * ### For App Developers:
- * ```kotlin
- * // At app startup, ensure all plugin modules are linked
- * val loader = IosPluginClassLoader()
- * val plugin = loader.loadClass("com.example.MyPlugin", "")
- * ```
- *
- * @see IosPluginRegistry
- * @since 1.0.0
+ * ## Loading pipeline
+ * 1. Read .avp file text from [pluginPath] via NSFileManager
+ * 2. Run through [PluginLoader.load] (AvuDslLexer → AvuDslParser → manifest extraction → validation)
+ * 3. Store the resulting [LoadedPlugin] keyed by [entrypoint]
  */
 actual class PluginClassLoader {
+
+    private val loadedPlugins = mutableMapOf<String, LoadedPlugin>()
+
     companion object {
-        private const val TAG = "IosPluginClassLoader"
-
-        /**
-         * Global plugin registry for iOS pre-bundled plugins.
-         *
-         * Plugins register themselves here during static initialization.
-         * This is the iOS-specific approach to "loading" plugins without
-         * dynamic code loading capabilities.
-         */
-        private val pluginRegistry = mutableMapOf<String, () -> Any>()
-
-        /**
-         * Register a pre-bundled iOS plugin.
-         *
-         * Call this from your plugin module's static initialization block
-         * to register the plugin factory.
-         *
-         * ## Example
-         * ```kotlin
-         * @OptIn(ExperimentalStdlibApi::class)
-         * @EagerInitialization
-         * private val registration = IosPluginClassLoader.register(
-         *     className = "com.example.ImageFilterPlugin",
-         *     factory = { ImageFilterPlugin() }
-         * )
-         * ```
-         *
-         * @param className Fully qualified class name (must match manifest entrypoint)
-         * @param factory Lambda that creates new plugin instance
-         */
-        fun register(className: String, factory: () -> Any) {
-            PluginLog.d(TAG, "Registering iOS plugin: $className")
-            pluginRegistry[className] = factory
-        }
-
-        /**
-         * Check if a plugin class is registered.
-         *
-         * @param className Fully qualified class name
-         * @return true if plugin is registered and can be loaded
-         */
-        fun isRegistered(className: String): Boolean {
-            return pluginRegistry.containsKey(className)
-        }
-
-        /**
-         * Get all registered plugin class names.
-         *
-         * Useful for debugging and discovering available plugins at runtime.
-         *
-         * @return Set of registered fully qualified class names
-         */
-        fun getRegisteredPlugins(): Set<String> {
-            return pluginRegistry.keys.toSet()
-        }
-
-        /**
-         * Clear all plugin registrations.
-         *
-         * Warning: This will prevent plugins from being loaded.
-         * Only use for testing or cleanup scenarios.
-         */
-        fun clearRegistry() {
-            PluginLog.w(TAG, "Clearing iOS plugin registry")
-            pluginRegistry.clear()
-        }
+        private const val TAG = "IosAvpPluginClassLoader"
     }
 
     /**
-     * Load a class from the iOS plugin registry.
+     * Parse an .avp plugin file and store the resulting [LoadedPlugin].
      *
-     * Unlike Android/JVM, this doesn't load code from disk. Instead,
-     * it looks up a pre-registered factory function and invokes it
-     * to create a new plugin instance.
-     *
-     * ## Important
-     * The `pluginPath` parameter is **ignored on iOS** since all plugins
-     * must be pre-bundled. It's kept for interface compatibility with
-     * Android/JVM implementations.
-     *
-     * @param className Fully qualified class name (must be pre-registered)
-     * @param pluginPath Ignored on iOS (kept for cross-platform compatibility)
-     * @return New instance of the plugin class
-     * @throws ClassNotFoundException if plugin not registered
-     * @throws IllegalStateException if plugin factory fails
+     * @param entrypoint Plugin ID expected in the .avp header `plugin_id` field
+     * @param pluginPath Absolute path to the .avp text file
+     * @return The [LoadedPlugin] containing the parsed AST and sandbox config
+     * @throws ClassNotFoundException if the file is not found or cannot be read
+     * @throws IllegalArgumentException if the .avp content fails AVU validation
      */
-    actual fun loadClass(className: String, pluginPath: String): Any {
-        PluginLog.d(TAG, "Loading iOS plugin: $className")
+    actual fun loadClass(entrypoint: String, pluginPath: String): Any {
+        PluginLog.d(TAG, "Loading .avp plugin: $entrypoint from $pluginPath")
 
-        // Note: pluginPath is intentionally ignored on iOS
-        // All plugins must be pre-bundled and registered
-
-        val factory = pluginRegistry[className]
-            ?: throw ClassNotFoundException(
-                "Plugin not registered: $className. " +
-                "iOS plugins must call IosPluginClassLoader.register() during static initialization. " +
-                "Registered plugins: ${pluginRegistry.keys.joinToString()}"
+        val fileManager = NSFileManager.defaultManager
+        if (!fileManager.fileExistsAtPath(pluginPath)) {
+            throw ClassNotFoundException(
+                "AVP plugin file not found: $pluginPath (plugin: $entrypoint)"
             )
-
-        return try {
-            factory()
-        } catch (e: Exception) {
-            PluginLog.e(TAG, "Failed to instantiate iOS plugin: $className", e)
-            throw IllegalStateException("Plugin factory failed for $className", e)
         }
+
+        val avpContent: String = try {
+            val data = NSData.dataWithContentsOfFile(pluginPath)
+                ?: throw ClassNotFoundException(
+                    "Failed to read data from .avp file: $pluginPath"
+                )
+            NSString.create(data = data, encoding = NSUTF8StringEncoding) as? String
+                ?: throw ClassNotFoundException(
+                    "Failed to decode .avp file as UTF-8: $pluginPath"
+                )
+        } catch (e: ClassNotFoundException) {
+            throw e
+        } catch (e: Exception) {
+            PluginLog.e(TAG, "IO error reading .avp file: $pluginPath", e)
+            throw ClassNotFoundException(
+                "Failed to read .avp file for plugin $entrypoint: ${e.message}", e
+            )
+        }
+
+        val loadResult = PluginLoader.load(avpContent)
+
+        val loadedPlugin = when (loadResult) {
+            is PluginLoadResult.Success -> {
+                val plugin = loadResult.plugin
+                if (plugin.manifest.pluginId != entrypoint) {
+                    throw IllegalArgumentException(
+                        "Plugin ID mismatch in .avp file: expected '$entrypoint', " +
+                            "got '${plugin.manifest.pluginId}' in $pluginPath"
+                    )
+                }
+                PluginLog.i(TAG, "Successfully parsed .avp plugin: ${plugin.pluginId} v${plugin.manifest.version}")
+                plugin
+            }
+            is PluginLoadResult.ParseError -> {
+                val errors = loadResult.errors.joinToString("; ")
+                PluginLog.e(TAG, "AVP parse errors for $entrypoint: $errors")
+                throw IllegalArgumentException(
+                    "AVP parse errors in plugin '$entrypoint': $errors"
+                )
+            }
+            is PluginLoadResult.ValidationError -> {
+                val errors = loadResult.errors.joinToString("; ")
+                PluginLog.e(TAG, "AVP validation errors for $entrypoint: $errors")
+                throw IllegalArgumentException(
+                    "AVP validation errors in plugin '$entrypoint': $errors"
+                )
+            }
+            is PluginLoadResult.PermissionError -> {
+                val errors = loadResult.errors.joinToString("; ")
+                PluginLog.e(TAG, "AVP permission errors for $entrypoint: $errors")
+                throw IllegalArgumentException(
+                    "AVP permission errors in plugin '$entrypoint': $errors"
+                )
+            }
+        }
+
+        loadedPlugins[entrypoint] = loadedPlugin
+        return loadedPlugin
     }
 
     /**
-     * Unload plugin classes.
+     * Retrieve the parsed [LoadedPlugin] for a previously loaded plugin.
      *
-     * On iOS, this is a no-op since plugins are loaded as part of the
-     * main app bundle and cannot be unloaded at runtime. The iOS
-     * memory management system will handle cleanup when plugin
-     * instances are no longer referenced.
+     * @param pluginId The plugin ID (entrypoint passed to [loadClass])
+     * @return The [LoadedPlugin] or null if not yet loaded
+     */
+    actual fun getLoadedPlugin(pluginId: String): LoadedPlugin? {
+        return loadedPlugins[pluginId]
+    }
+
+    /**
+     * Unload all parsed plugins and release memory.
      */
     actual fun unload() {
-        // No-op for iOS - plugins are part of main app bundle
-        // and cannot be unloaded. Memory will be reclaimed by ARC
-        // when plugin instances are no longer referenced.
-        PluginLog.d(TAG, "Unload called (no-op on iOS)")
+        loadedPlugins.clear()
+        PluginLog.d(TAG, "iOS AVP plugin loader cleared")
     }
 }
-
-/**
- * Helper annotation for iOS plugin registration.
- *
- * Apply this to a top-level property in your iOS plugin module
- * to ensure the registration code runs at app startup.
- *
- * ## Example
- * ```kotlin
- * @IosPluginRegistration
- * @OptIn(ExperimentalStdlibApi::class)
- * @EagerInitialization
- * private val register = IosPluginClassLoader.register(
- *     className = "com.example.MyPlugin",
- *     factory = { MyPlugin() }
- * )
- * ```
- */
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.SOURCE)
-annotation class IosPluginRegistration

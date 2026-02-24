@@ -41,6 +41,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -219,7 +221,10 @@ private fun CommandRow(
             ) {
                 Checkbox(
                     checked = command.enabled, onCheckedChange = { onToggle() },
-                    colors = CheckboxDefaults.colors(checkedColor = AvanueTheme.colors.success, uncheckedColor = AvanueTheme.colors.textSecondary)
+                    colors = CheckboxDefaults.colors(checkedColor = AvanueTheme.colors.success, uncheckedColor = AvanueTheme.colors.textSecondary),
+                    modifier = Modifier.semantics {
+                        contentDescription = "Voice: toggle ${command.phrase} command"
+                    }
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
@@ -377,7 +382,9 @@ private fun CommandRow(
                             onValueChange = { aliasText = it },
                             label = { Text("New alias phrase") },
                             singleLine = true,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = "Voice: input Alias Phrase" },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = AvanueTheme.colors.textPrimary,
                                 unfocusedTextColor = AvanueTheme.colors.textPrimary,
@@ -396,7 +403,8 @@ private fun CommandRow(
                                     aliasText = ""
                                     showAliasField = false
                                 }
-                            }
+                            },
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Add Alias" }
                         ) {
                             Text("Add", color = AvanueTheme.colors.primary)
                         }

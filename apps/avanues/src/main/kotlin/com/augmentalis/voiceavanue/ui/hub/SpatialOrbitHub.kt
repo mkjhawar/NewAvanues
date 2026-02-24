@@ -66,6 +66,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.augmentalis.avanueui.components.AvanueCard
@@ -88,6 +90,10 @@ import kotlin.math.sin
  * Canvas draws orbit rings and connection lines behind the positioned composables.
  * Each module node is a clickable circle with icon + label below.
  */
+@Deprecated(
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Cockpit plan at Docs/Plans/Cockpit/",
+    level = DeprecationLevel.WARNING
+)
 @Composable
 fun SpatialOrbitHub(
     onModuleClick: (HubModule) -> Unit,
@@ -252,7 +258,8 @@ fun SpatialOrbitHub(
                             devModeActivated = true
                             tapCount = 0
                         }
-                    },
+                    }
+                    .semantics { contentDescription = "Voice: click VoiceOS Hub" },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -331,7 +338,8 @@ private fun OrbitNode(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
                 onClick = onClick
-            ),
+            )
+            .semantics { contentDescription = "Voice: click Open ${module.displayName}" },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
@@ -397,7 +405,10 @@ private fun OrbitHeader(onSettingsClick: () -> Unit) {
                 color = AvanueTheme.colors.textSecondary
             )
         }
-        IconButton(onClick = onSettingsClick) {
+        IconButton(
+            onClick = onSettingsClick,
+            modifier = Modifier.semantics { contentDescription = "Voice: click Settings" }
+        ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Settings",
@@ -478,6 +489,7 @@ private fun DockItem(
                 interactionSource = remember { MutableInteractionSource() },
                 onClick = onClick
             )
+            .semantics { contentDescription = "Voice: click $label" }
             .padding(horizontal = SpacingTokens.md, vertical = SpacingTokens.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)

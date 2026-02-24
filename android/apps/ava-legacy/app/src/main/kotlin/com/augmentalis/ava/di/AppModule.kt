@@ -10,9 +10,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.work.WorkManager
 import com.augmentalis.ava.core.data.prefs.ChatPreferences
-import com.augmentalis.ava.core.domain.resolution.AppResolverService
-import com.augmentalis.ava.core.domain.resolution.PreferencePromptManager
-import com.augmentalis.actions.ActionsManager
 import com.augmentalis.llm.inference.InferenceManager
 import com.augmentalis.nlu.IntentClassifier
 import com.augmentalis.nlu.ModelManager
@@ -33,7 +30,6 @@ import javax.inject.Singleton
  * - ChatPreferences (user preferences for chat settings)
  * - IntentClassifier (NLU classification engine)
  * - ModelManager (NLU model management)
- * - ActionsManager (actions system wrapper - removes Context from ViewModels)
  * - UserPreferences (app-wide user settings)
  * - Other app-level singletons as needed
  *
@@ -101,30 +97,7 @@ object AppModule {
         return UserPreferences(dataStore)
     }
 
-    /**
-     * Provides ActionsManager singleton
-     *
-     * ActionsManager wraps the Actions system, encapsulating Context dependency.
-     * This allows ViewModels to use actions without needing Context injection.
-     *
-     * Benefits:
-     * - ViewModels no longer need @ApplicationContext
-     * - Easier to test (mock ActionsManager)
-     * - Better separation of concerns
-     *
-     * Note: ActionsManager is automatically provided by Hilt through @Inject constructor,
-     * so this explicit provider is optional. Kept for consistency with other singleton services.
-     */
-    @Provides
-    @Singleton
-    fun provideActionsManager(
-        @ApplicationContext context: Context,
-        appResolverService: AppResolverService,
-        preferencePromptManager: PreferencePromptManager
-    ): ActionsManager {
-        return ActionsManager(context, appResolverService, preferencePromptManager)
-    }
-
+    // ActionsManager removed — replaced by IntentActionRegistry + IntentActionsInitializer (Chapter 110)
     // Issue 5.3: IntentLearningManager removed - all learning via NLUSelfLearner (ADR-013)
 
     // ==================== ADR-013: Self-Learning NLU ====================

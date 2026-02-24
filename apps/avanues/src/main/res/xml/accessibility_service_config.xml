@@ -7,5 +7,5 @@
     android:canPerformGestures="true"
     android:canTakeScreenshot="true"
     android:notificationTimeout="100"
-    android:settingsActivity="com.augmentalis.avaunified.ui.settings.SettingsActivity"
+    android:settingsActivity="com.augmentalis.voiceavanue.MainActivity"
     android:description="@string/accessibility_service_description" />

@@ -11,8 +11,11 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
-import android.util.Log
 import com.augmentalis.ava.core.common.Result
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
+import com.augmentalis.nlu.nluLogWarn
 import com.augmentalis.ava.core.common.backend.InferenceBackendSelector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -64,11 +67,11 @@ class OnnxSessionManager(
         initializationMutex.withLock {
             try {
                 if (isInitialized) {
-                    Log.d(TAG, "Already initialized, skipping")
+                    nluLogDebug(TAG, "Already initialized, skipping")
                     return@withContext Result.Success(Unit)
                 }
 
-                Log.d(TAG, "Initializing ONNX Runtime...")
+                nluLogDebug(TAG, "Initializing ONNX Runtime...")
 
                 // Validate model file
                 val modelFile = File(modelPath)
@@ -90,11 +93,11 @@ class OnnxSessionManager(
                 )
 
                 isInitialized = true
-                Log.i(TAG, "ONNX Runtime initialized successfully")
+                nluLogInfo(TAG, "ONNX Runtime initialized successfully")
 
                 Result.Success(Unit)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize ONNX Runtime: ${e.message}", e)
+                nluLogError(TAG, "Failed to initialize ONNX Runtime: ${e.message}", e)
                 Result.Error(
                     exception = e,
                     message = "Failed to initialize ONNX Runtime: ${e.message}"
@@ -109,27 +112,27 @@ class OnnxSessionManager(
     private fun createSessionOptions(): OrtSession.SessionOptions {
         return OrtSession.SessionOptions().apply {
             val backend = InferenceBackendSelector.selectNLUBackend(context)
-            Log.i(TAG, "Selected NLU backend: ${backend.displayName}")
+            nluLogInfo(TAG, "Selected NLU backend: ${backend.displayName}")
 
             when (backend) {
                 InferenceBackendSelector.Backend.QNN_HTP -> {
                     // Qualcomm QNN for best Snapdragon performance
                     try {
                         addNnapi() // NNAPI as fallback if QNN fails
-                        Log.i(TAG, "Using QNN/HTP backend (Qualcomm optimized)")
+                        nluLogInfo(TAG, "Using QNN/HTP backend (Qualcomm optimized)")
                     } catch (e: Exception) {
-                        Log.w(TAG, "QNN not available, using NNAPI")
+                        nluLogWarn(TAG, "QNN not available, using NNAPI")
                         addNnapi()
                     }
                 }
                 InferenceBackendSelector.Backend.NNAPI -> {
                     // NNAPI for cross-platform GPU/DSP/NPU acceleration
                     addNnapi()
-                    Log.i(TAG, "Using NNAPI backend (hardware accelerated)")
+                    nluLogInfo(TAG, "Using NNAPI backend (hardware accelerated)")
                 }
                 else -> {
                     // CPU fallback with multi-threading
-                    Log.i(TAG, "Using CPU backend (ARM NEON)")
+                    nluLogInfo(TAG, "Using CPU backend (ARM NEON)")
                 }
             }
             setIntraOpNumThreads(4)
@@ -190,9 +193,9 @@ class OnnxSessionManager(
             ortEnvironment?.close()
             ortEnvironment = null
             isInitialized = false
-            Log.d(TAG, "ONNX session closed")
+            nluLogDebug(TAG, "ONNX session closed")
         } catch (e: Exception) {
-            Log.e(TAG, "Error closing ONNX session: ${e.message}", e)
+            nluLogError(TAG, "Error closing ONNX session: ${e.message}", e)
         }
     }
 

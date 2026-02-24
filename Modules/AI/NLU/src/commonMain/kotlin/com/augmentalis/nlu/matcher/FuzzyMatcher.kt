@@ -9,6 +9,7 @@
 
 package com.augmentalis.nlu.matcher
 
+import com.augmentalis.nlu.NluThresholds
 import com.augmentalis.nlu.model.IntentMatch
 import com.augmentalis.nlu.model.MatchMethod
 import com.augmentalis.nlu.model.UnifiedIntent
@@ -22,7 +23,7 @@ import kotlin.math.min
  * For each intent phrase comparison.
  */
 class FuzzyMatcher(
-    private val minSimilarity: Float = 0.7f,
+    private val minSimilarity: Float = NluThresholds.FUZZY_MIN_SIMILARITY,
     private val maxCandidates: Int = 5
 ) {
 
@@ -72,7 +73,7 @@ class FuzzyMatcher(
         }
 
         return candidates
-            .sortedByDescending { it.score * (1 + it.intent.priority * 0.1f) }
+            .sortedByDescending { it.score * (1 + it.intent.priority * NluThresholds.FUZZY_PRIORITY_BOOST) }
             .take(maxCandidates)
     }
 

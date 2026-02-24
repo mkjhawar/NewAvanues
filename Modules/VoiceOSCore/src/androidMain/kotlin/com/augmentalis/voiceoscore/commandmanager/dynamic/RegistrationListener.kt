@@ -5,7 +5,6 @@
  * Provides event-driven notifications for command lifecycle changes
  *
  * @since VOS4 Week 4
- * @author VOS4 Development Team
  */
 
 package com.augmentalis.voiceoscore.commandmanager.dynamic

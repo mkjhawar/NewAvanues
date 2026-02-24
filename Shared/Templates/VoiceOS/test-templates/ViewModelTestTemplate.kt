@@ -2,7 +2,6 @@
  * ViewModelTestTemplate.kt - Advanced ViewModel testing template
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: {{DATE}}
  * 
  * Comprehensive ViewModel testing with LiveData, Coroutines, and StateFlow

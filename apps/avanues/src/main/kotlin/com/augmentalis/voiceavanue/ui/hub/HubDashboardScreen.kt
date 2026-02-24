@@ -22,6 +22,10 @@ import androidx.compose.runtime.Composable
  * Routes module clicks via [onNavigateToRoute], which receives the route string
  * from the clicked [HubModule]. The caller (NavHost) handles actual navigation.
  */
+@Deprecated(
+    message = "Use Cockpit Dashboard (LayoutMode.DASHBOARD) instead. See Cockpit plan at Docs/Plans/Cockpit/",
+    level = DeprecationLevel.WARNING
+)
 @Composable
 fun HubDashboardScreen(
     onNavigateToRoute: (String) -> Unit,

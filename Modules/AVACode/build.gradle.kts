@@ -6,9 +6,9 @@ plugins {
 
 android {
     namespace = "com.augmentalis.avamagic.avacode"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig {
-        minSdk = 26
+        minSdk = 28
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -18,10 +18,8 @@ android {
 
 kotlin {
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -32,7 +30,14 @@ kotlin {
                 implementation(project(":Modules:AvanueUI:Core"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
                 implementation("net.mamoe.yamlkt:yamlkt:0.13.0")
+            }
+        }
+
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
             }
         }
 

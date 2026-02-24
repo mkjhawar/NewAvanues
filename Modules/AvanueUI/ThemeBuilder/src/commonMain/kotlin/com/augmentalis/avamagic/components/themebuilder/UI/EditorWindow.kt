@@ -13,6 +13,7 @@ import com.augmentalis.avamagic.components.themebuilder.Engine.ThemeCompiler
 import com.augmentalis.avamagic.components.themebuilder.Engine.ThemeValidator
 import com.augmentalis.avamagic.components.themebuilder.Engine.ExportFormat
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.datetime.Clock
 
 /**
  * Main Theme Editor Window
@@ -352,7 +353,7 @@ class AutoSaveManager(
      */
     fun shouldSave(): Boolean {
         if (!isEnabled) return false
-        val currentTime = System.currentTimeMillis()
+        val currentTime = Clock.System.now().toEpochMilliseconds()
         val isDirty = stateManager.currentState.isDirty
         return isDirty && (currentTime - lastSaveTime) >= saveInterval
     }
@@ -364,7 +365,7 @@ class AutoSaveManager(
         if (shouldSave()) {
             val theme = stateManager.currentState.currentTheme
             saveCallback(theme)
-            lastSaveTime = System.currentTimeMillis()
+            lastSaveTime = Clock.System.now().toEpochMilliseconds()
             stateManager.save()
         }
     }

@@ -2,7 +2,6 @@
  * MacroStep.kt - Sealed class hierarchy for macro execution steps
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-10-09
  *
  * Purpose: Define different types of macro steps for voice command sequences

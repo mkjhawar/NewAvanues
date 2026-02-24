@@ -41,9 +41,9 @@ class CockpitCommandHandler(
         // Content insertion
         "add web", "add camera", "add note", "add pdf",
         "add image", "add video", "add whiteboard", "add terminal",
-        // In-frame navigation
+        // In-frame navigation — prefixed to avoid collision with NAVIGATION handler (priority 2)
         "page back", "page forward", "page refresh",
-        "scroll up", "scroll down", "zoom in", "zoom out"
+        "frame scroll up", "frame scroll down", "frame zoom in", "frame zoom out"
     )
 
     override suspend fun execute(

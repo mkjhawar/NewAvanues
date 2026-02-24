@@ -255,6 +255,11 @@ enum class ProviderType {
     GOOGLE_AI,
 
     /**
+     * Groq inference API
+     */
+    GROQ,
+
+    /**
      * Cohere API (optional, future)
      */
     COHERE,

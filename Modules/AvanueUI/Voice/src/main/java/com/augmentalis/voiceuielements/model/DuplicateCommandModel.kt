@@ -2,7 +2,6 @@
  * DuplicateCommandModel.kt - Data model for command disambiguation
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-09-04
  * 
  * Represents a command option in disambiguation overlay with position and metadata.

@@ -2,9 +2,12 @@
 
 package com.augmentalis.httpavanue.platform
 
+import com.augmentalis.httpavanue.io.AvanueSource
+import com.augmentalis.httpavanue.io.AvanueSourceIos
+import com.augmentalis.httpavanue.io.AvanueSink
+import com.augmentalis.httpavanue.io.AvanueSinkIos
 import kotlinx.cinterop.*
 import kotlinx.coroutines.*
-import okio.*
 import platform.posix.*
 
 @OptIn(ExperimentalForeignApi::class)
@@ -16,16 +19,16 @@ private fun ntohs(value: UShort): UShort = ((value.toInt() and 0xFF) shl 8 or (v
 actual class Socket internal constructor(
     private val socketFd: Int, private val config: SocketConfig, private val remoteHost: String, private val remotePort: Int,
 ) {
-    private val bufferedSource: BufferedSource
-    private val bufferedSink: BufferedSink
+    private val bufferedSource: AvanueSource
+    private val bufferedSink: AvanueSink
     private var closed = false
     init {
         val optval = nativeHeap.alloc<IntVar>(); optval.value = 1
         if (config.keepAlive) setsockopt(socketFd, SOL_SOCKET, SO_KEEPALIVE, optval.ptr, sizeOf<IntVar>().toUInt())
         if (config.tcpNoDelay) setsockopt(socketFd, IPPROTO_TCP, TCP_NODELAY, optval.ptr, sizeOf<IntVar>().toUInt())
         nativeHeap.free(optval)
-        bufferedSource = SocketSource(socketFd).buffer()
-        bufferedSink = SocketSink(socketFd).buffer()
+        bufferedSource = AvanueSourceIos(socketFd)
+        bufferedSink = AvanueSinkIos(socketFd)
     }
     actual companion object {
         actual suspend fun connect(host: String, port: Int, config: SocketConfig): Socket = withContext(Dispatchers.Default) {
@@ -45,46 +48,14 @@ actual class Socket internal constructor(
             }
         }
     }
-    actual fun source() = bufferedSource
-    actual fun sink() = bufferedSink
+    actual fun source(): AvanueSource = bufferedSource
+    actual fun sink(): AvanueSink = bufferedSink
     actual fun close() { if (!closed) { closed = true; try { bufferedSource.close() } catch (_: Exception) {}; try { bufferedSink.close() } catch (_: Exception) {}; close(socketFd) } }
     actual fun isConnected() = !closed && socketFd >= 0
     actual fun remoteAddress() = "$remoteHost:$remotePort"
     actual fun setReadTimeout(timeoutMs: Long) {
         memScoped { val tv = alloc<timeval>(); tv.tv_sec = (timeoutMs / 1000).convert(); tv.tv_usec = ((timeoutMs % 1000) * 1000).convert(); setsockopt(socketFd, SOL_SOCKET, SO_RCVTIMEO, tv.ptr, sizeOf<timeval>().toUInt()) }
     }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-private class SocketSource(private val fd: Int) : Source {
-    private var closed = false
-    override fun read(sink: Buffer, byteCount: Long): Long {
-        if (closed) return -1; if (byteCount == 0L) return 0
-        val buffer = ByteArray(minOf(byteCount, 8192).toInt())
-        val bytesRead = buffer.usePinned { pinned -> recv(fd, pinned.addressOf(0), buffer.size.toULong(), 0) }
-        return when { bytesRead > 0 -> { sink.write(buffer, 0, bytesRead.toInt()); bytesRead }; bytesRead == 0L -> -1; else -> throw Exception("Read failed: ${strerror(errno)?.toKString()}") }
-    }
-    override fun timeout() = Timeout.NONE
-    override fun close() { closed = true }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-private class SocketSink(private val fd: Int) : Sink {
-    private var closed = false
-    override fun write(source: Buffer, byteCount: Long) {
-        if (closed) throw Exception("Socket closed")
-        var remaining = byteCount
-        while (remaining > 0) {
-            val toWrite = minOf(remaining, 8192).toInt()
-            val buffer = source.readByteArray(toWrite.toLong())
-            val sent = buffer.usePinned { pinned -> send(fd, pinned.addressOf(0), buffer.size.toULong(), 0) }
-            if (sent < 0) throw Exception("Write failed: ${strerror(errno)?.toKString()}")
-            remaining -= sent
-        }
-    }
-    override fun flush() {}
-    override fun timeout() = Timeout.NONE
-    override fun close() { closed = true }
 }
 
 @OptIn(ExperimentalForeignApi::class)

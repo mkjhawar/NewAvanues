@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,37 +26,42 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.augmentalis.avanueui.theme.AppearanceMode
+import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.avanueui.theme.MaterialMode
+import com.augmentalis.avanueui.theme.ThemePreset
+import com.augmentalis.cockpit.model.CockpitScreenState
 import com.augmentalis.cockpit.model.CommandBarState
 import com.augmentalis.cockpit.model.CockpitFrame
 import com.augmentalis.cockpit.model.FrameContent
+import com.augmentalis.avanueui.display.GlassDisplayMode
 import com.augmentalis.cockpit.model.LayoutMode
+import com.augmentalis.cockpit.spatial.PseudoSpatialController
 import com.augmentalis.cockpit.spatial.SpatialViewportController
 
 /**
  * Cross-platform Cockpit screen shell.
  *
- * Contains the SpatialVoice background gradient, TopAppBar, LayoutEngine,
- * and CommandBar. Platform-specific content rendering is injected via the
- * [frameContent] composable lambda parameter.
+ * Layers a [BackgroundSceneRenderer] behind the content Column containing
+ * TopAppBar, LayoutEngine, and CommandBar. The [backgroundScene] parameter
+ * selects between gradient, starfield, scanline grid, or transparent.
  *
- * This composable lives in commonMain — it uses only Compose Multiplatform
- * APIs and AvanueUI tokens. The Android app-level code calls this and
- * passes its ContentRenderer as [frameContent].
+ * Platform-specific content rendering is injected via the [frameContent]
+ * composable lambda parameter. This composable lives in commonMain — it
+ * uses only Compose Multiplatform APIs and AvanueUI tokens.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CockpitScreenContent(
-    sessionName: String,
-    frames: List<CockpitFrame>,
-    selectedFrameId: String?,
-    layoutMode: LayoutMode,
+    state: CockpitScreenState,
     onNavigateBack: () -> Unit,
+    onReturnToDashboard: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     onFrameSelected: (String) -> Unit,
     onFrameMoved: (String, Float, Float) -> Unit,
     onFrameResized: (String, Float, Float) -> Unit,
@@ -66,51 +72,76 @@ fun CockpitScreenContent(
     onAddFrame: (FrameContent, String) -> Unit,
     frameContent: @Composable (CockpitFrame) -> Unit,
     spatialController: SpatialViewportController? = null,
-    availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
+    pseudoSpatialController: PseudoSpatialController? = null,
+    onPaletteChanged: (AvanueColorPalette) -> Unit = {},
+    onMaterialChanged: (MaterialMode) -> Unit = {},
+    onAppearanceChanged: (AppearanceMode) -> Unit = {},
+    onPresetApplied: (ThemePreset) -> Unit = {},
+    onBackgroundSceneChanged: (BackgroundScene) -> Unit = {},
+    onModuleClick: (String) -> Unit = {},
+    onSessionClick: (String) -> Unit = {},
+    onTemplateClick: (String) -> Unit = {},
+    onContentAction: (ContentAction) -> Unit = {},
+    onStepRenamed: (String, String) -> Unit = { _, _ -> },
+    onStepReordered: (String, Int) -> Unit = { _, _ -> },
+    onStepDeleted: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
     var commandBarState by remember { mutableStateOf(CommandBarState.MAIN) }
+    var showThemePanel by remember { mutableStateOf(false) }
 
     // Auto-switch command bar to content-specific state when frame selection changes
-    val selectedFrame = frames.firstOrNull { it.id == selectedFrameId }
-    LaunchedEffect(selectedFrameId) {
+    val selectedFrame = state.frames.firstOrNull { it.id == state.selectedFrameId }
+    LaunchedEffect(state.selectedFrameId) {
         if (selectedFrame != null) {
             commandBarState = CommandBarState.forContentType(selectedFrame.contentType)
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        colors.background,
-                        colors.surface.copy(alpha = 0.6f),
-                        colors.background
-                    )
-                )
-            )
-    ) {
-        // Top app bar — simplified (layout picker moved to CommandBar)
+    Box(modifier = modifier.fillMaxSize()) {
+        // Background scene layer
+        BackgroundSceneRenderer(
+            scene = state.backgroundScene,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Content layer
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+        // Top app bar — context-aware navigation + settings access
         TopAppBar(
             navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = colors.textPrimary
-                    )
+                if (state.layoutMode != LayoutMode.DASHBOARD) {
+                    // In a session: back arrow returns to Dashboard
+                    IconButton(onClick = onReturnToDashboard) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voice: click Back",
+                            tint = colors.textPrimary
+                        )
+                    }
                 }
             },
             title = {
                 Text(
-                    text = sessionName,
+                    text = if (state.layoutMode == LayoutMode.DASHBOARD) "Avanues" else state.sessionName,
                     color = colors.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp
                 )
+            },
+            actions = {
+                if (state.layoutMode == LayoutMode.DASHBOARD) {
+                    IconButton(onClick = { showThemePanel = !showThemePanel }) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Voice: click Settings",
+                            tint = colors.textPrimary.copy(alpha = 0.7f)
+                        )
+                    }
+                }
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent
@@ -118,39 +149,32 @@ fun CockpitScreenContent(
         )
 
         // Main content area
-        if (frames.isEmpty()) {
+        if (state.layoutMode == LayoutMode.DASHBOARD) {
+            // Dashboard takes over the full content area — no frames rendered
+            DashboardLayout(
+                dashboardState = state.dashboardState,
+                onModuleClick = onModuleClick,
+                onSessionClick = onSessionClick,
+                onTemplateClick = onTemplateClick,
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            )
+        } else if (state.frames.isEmpty()) {
             EmptySessionView(
                 onAddFrame = { commandBarState = CommandBarState.ADD_FRAME },
                 modifier = Modifier.weight(1f).fillMaxWidth()
             )
         } else {
             val layoutModifier = Modifier.weight(1f).fillMaxWidth()
-            val isSpatial = layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null
+            val isSpatial = state.layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null
+            val isPseudoSpatial = pseudoSpatialController != null &&
+                state.glassDisplayMode == GlassDisplayMode.FLAT_SCREEN
 
-            if (isSpatial) {
-                SpatialCanvas(
-                    controller = spatialController!!,
-                    modifier = layoutModifier
-                ) {
-                    LayoutEngine(
-                        layoutMode = layoutMode,
-                        frames = frames,
-                        selectedFrameId = selectedFrameId,
-                        onFrameSelected = onFrameSelected,
-                        onFrameMoved = onFrameMoved,
-                        onFrameResized = onFrameResized,
-                        onFrameClose = onFrameClose,
-                        onFrameMinimize = onFrameMinimize,
-                        onFrameMaximize = onFrameMaximize,
-                        frameContent = frameContent,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            } else {
+            // Layout rendering content (shared across all wrapping modes)
+            val layoutContent: @Composable () -> Unit = {
                 LayoutEngine(
-                    layoutMode = layoutMode,
-                    frames = frames,
-                    selectedFrameId = selectedFrameId,
+                    layoutMode = state.layoutMode,
+                    frames = state.frames,
+                    selectedFrameId = state.selectedFrameId,
                     onFrameSelected = onFrameSelected,
                     onFrameMoved = onFrameMoved,
                     onFrameResized = onFrameResized,
@@ -158,13 +182,42 @@ fun CockpitScreenContent(
                     onFrameMinimize = onFrameMinimize,
                     onFrameMaximize = onFrameMaximize,
                     frameContent = frameContent,
-                    modifier = layoutModifier
+                    dashboardState = state.dashboardState,
+                    onModuleClick = onModuleClick,
+                    onSessionClick = onSessionClick,
+                    onTemplateClick = onTemplateClick,
+                    onStepRenamed = onStepRenamed,
+                    onStepReordered = onStepReordered,
+                    onStepDeleted = onStepDeleted,
+                    modifier = Modifier.fillMaxSize()
                 )
+            }
+
+            if (isSpatial) {
+                // Glass/headset: true spatial viewport panning via head tracking
+                SpatialCanvas(
+                    controller = spatialController!!,
+                    modifier = layoutModifier
+                ) {
+                    layoutContent()
+                }
+            } else if (isPseudoSpatial) {
+                // Flat screen: parallax depth illusion with gyroscope + HUD aesthetic
+                PseudoSpatialCanvas(
+                    controller = pseudoSpatialController!!,
+                    modifier = layoutModifier,
+                    foregroundContent = layoutContent
+                )
+            } else {
+                // No spatial effects — render layout directly
+                Box(modifier = layoutModifier) {
+                    layoutContent()
+                }
             }
         }
 
         // Status bar
-        if (frames.isNotEmpty()) {
+        if (state.frames.isNotEmpty()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -174,7 +227,7 @@ fun CockpitScreenContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${frames.size} frame${if (frames.size != 1) "s" else ""} · ${layoutModeLabel(layoutMode)}",
+                    text = "${state.frames.size} frame${if (state.frames.size != 1) "s" else ""} · ${layoutModeLabel(state.layoutMode)}",
                     color = colors.textPrimary.copy(alpha = 0.35f),
                     fontSize = 10.sp
                 )
@@ -184,22 +237,42 @@ fun CockpitScreenContent(
         // Command bar
         CommandBar(
             state = commandBarState,
-            currentLayoutMode = layoutMode,
+            currentLayoutMode = state.layoutMode,
             onStateChange = { commandBarState = it },
             onLayoutSelected = onLayoutModeChanged,
             onAddFrame = onAddFrame,
             onFrameMinimize = {
-                selectedFrameId?.let { onFrameMinimize(it) }
+                state.selectedFrameId?.let { onFrameMinimize(it) }
             },
             onFrameMaximize = {
-                selectedFrameId?.let { onFrameMaximize(it) }
+                state.selectedFrameId?.let { onFrameMaximize(it) }
             },
             onFrameClose = {
-                selectedFrameId?.let { onFrameClose(it) }
+                state.selectedFrameId?.let { onFrameClose(it) }
             },
-            availableLayoutModes = availableLayoutModes
+            onContentAction = onContentAction,
+            availableLayoutModes = state.availableLayoutModes
         )
-    }
+    } // end Column
+
+        // Theme settings panel overlay
+        if (showThemePanel) {
+            ThemeSettingsPanel(
+                currentPalette = state.currentPalette,
+                currentMaterial = state.currentMaterial,
+                currentAppearance = state.currentAppearance,
+                currentPresetId = state.currentPresetId,
+                currentBackgroundScene = state.backgroundScene,
+                onPaletteChanged = onPaletteChanged,
+                onMaterialChanged = onMaterialChanged,
+                onAppearanceChanged = onAppearanceChanged,
+                onPresetApplied = onPresetApplied,
+                onBackgroundSceneChanged = onBackgroundSceneChanged,
+                onDismiss = { showThemePanel = false },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    } // end Box
 }
 
 /**

@@ -6,9 +6,9 @@ plugins {
 
 android {
     namespace = "com.augmentalis.avamagic.magicui.data"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig {
-        minSdk = 26
+        minSdk = 28
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -18,10 +18,8 @@ android {
 
 kotlin {
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
     

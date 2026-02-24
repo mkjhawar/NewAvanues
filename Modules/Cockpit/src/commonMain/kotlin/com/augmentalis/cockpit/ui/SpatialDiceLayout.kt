@@ -1,5 +1,6 @@
 package com.augmentalis.cockpit.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.augmentalis.cockpit.CockpitConstants
@@ -60,12 +62,17 @@ fun SpatialDiceLayout(
     val bottomLeft = cornerFrames.getOrNull(2)
     val bottomRight = cornerFrames.getOrNull(3)
 
-    Row(modifier = modifier.fillMaxSize().padding(4.dp)) {
+    Row(
+        modifier = modifier.fillMaxSize().padding(4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         // Left column (corners TL + BL)
         if (topLeft != null || bottomLeft != null) {
             Column(
                 modifier = Modifier
-                    .weight(CockpitConstants.DICE_CORNER_WEIGHT / 2f)
+                    .weight(CockpitConstants.DICE_CORNER_WEIGHT / 2f),
+                verticalArrangement = Arrangement.Center
             ) {
                 if (topLeft != null) {
                     FrameWindow(
@@ -123,7 +130,8 @@ fun SpatialDiceLayout(
         if (topRight != null || bottomRight != null) {
             Column(
                 modifier = Modifier
-                    .weight(CockpitConstants.DICE_CORNER_WEIGHT / 2f)
+                    .weight(CockpitConstants.DICE_CORNER_WEIGHT / 2f),
+                verticalArrangement = Arrangement.Center
             ) {
                 if (topRight != null) {
                     FrameWindow(

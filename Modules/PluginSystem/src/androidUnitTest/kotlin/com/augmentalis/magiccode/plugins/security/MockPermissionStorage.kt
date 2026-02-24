@@ -48,17 +48,21 @@ class MockPermissionStorage(
     }
 
     suspend fun migrateToEncrypted(): MigrationResult {
+        val count = storage.values.sumOf { it.size }
         return if (migrated) {
-            MigrationResult.AlreadyMigrated
+            MigrationResult.AlreadyMigrated(
+                migratedCount = count,
+                migrationTimestamp = System.currentTimeMillis()
+            )
         } else {
             migrated = true
-            MigrationResult.Success(permissionsMigrated = storage.values.sumOf { it.size })
+            MigrationResult.Success(migratedCount = count)
         }
     }
 }
 
 /**
- * Encryption status information.
+ * Encryption status information for mock testing.
  */
 data class EncryptionStatus(
     val isEncrypted: Boolean,
@@ -66,12 +70,3 @@ data class EncryptionStatus(
     val keyAlgorithm: String,
     val migrationComplete: Boolean
 )
-
-/**
- * Migration result.
- */
-sealed class MigrationResult {
-    data class Success(val permissionsMigrated: Int) : MigrationResult()
-    data class Failure(val reason: String) : MigrationResult()
-    object AlreadyMigrated : MigrationResult()
-}

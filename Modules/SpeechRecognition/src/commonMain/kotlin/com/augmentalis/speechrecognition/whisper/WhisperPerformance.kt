@@ -11,10 +11,15 @@
  */
 package com.augmentalis.speechrecognition.whisper
 
+import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
+import kotlin.concurrent.Volatile
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+
 /**
  * Tracks performance metrics for Whisper transcription operations.
  *
- * Thread-safe via synchronized access to mutable state.
+ * Thread-safe via SynchronizedObject + synchronized blocks (cross-platform).
  * Maintains a rolling window of recent samples for accurate averages.
  *
  * Usage:
@@ -31,7 +36,7 @@ package com.augmentalis.speechrecognition.whisper
  * val metrics = perf.getMetrics()
  * ```
  */
-class WhisperPerformance {
+class WhisperPerformance : SynchronizedObject() {
 
     companion object {
         /** Maximum samples to keep for rolling averages */
@@ -54,6 +59,7 @@ class WhisperPerformance {
     @Volatile var totalAudioProcessedMs: Long = 0; private set
     @Volatile var totalProcessingTimeMs: Long = 0; private set
     @Volatile var totalCharactersTranscribed: Long = 0; private set
+    @Volatile var totalSegments: Long = 0; private set
 
     // Peaks
     @Volatile var peakLatencyMs: Long = 0; private set
@@ -66,17 +72,17 @@ class WhisperPerformance {
     /**
      * Record engine initialization timing.
      */
-    @Synchronized
     fun recordInitialization(initTimeMs: Long, modelSize: WhisperModelSize, attempts: Int = 1) {
-        this.initTimeMs = initTimeMs
-        this.modelSize = modelSize
-        this.initAttempts = attempts
+        synchronized(this) {
+            this.initTimeMs = initTimeMs
+            this.modelSize = modelSize
+            this.initAttempts = attempts
+        }
     }
 
     /**
      * Record a transcription operation's metrics.
      */
-    @Synchronized
     fun recordTranscription(
         audioDurationMs: Long,
         processingTimeMs: Long,
@@ -84,36 +90,38 @@ class WhisperPerformance {
         segmentCount: Int,
         avgConfidence: Float = 0f
     ) {
-        totalTranscriptions++
-        totalAudioProcessedMs += audioDurationMs
-        totalProcessingTimeMs += processingTimeMs
-        totalCharactersTranscribed += textLength
+        synchronized(this) {
+            totalTranscriptions++
+            totalAudioProcessedMs += audioDurationMs
+            totalProcessingTimeMs += processingTimeMs
+            totalCharactersTranscribed += textLength
+            totalSegments += segmentCount
 
-        if (textLength == 0) {
-            emptyTranscriptions++
-        }
+            if (textLength == 0) {
+                emptyTranscriptions++
+            }
 
-        // Latency
-        addSample(latencySamples, processingTimeMs)
-        if (processingTimeMs > peakLatencyMs) peakLatencyMs = processingTimeMs
+            // Latency
+            addSample(latencySamples, processingTimeMs)
+            if (processingTimeMs > peakLatencyMs) peakLatencyMs = processingTimeMs
 
-        // Real-time factor (processing time / audio duration)
-        if (audioDurationMs > 0) {
-            val rtf = processingTimeMs.toFloat() / audioDurationMs
-            addSample(rtfSamples, rtf)
-            if (rtf > peakRTF) peakRTF = rtf
-        }
+            // Real-time factor (processing time / audio duration)
+            if (audioDurationMs > 0) {
+                val rtf = processingTimeMs.toFloat() / audioDurationMs
+                addSample(rtfSamples, rtf)
+                if (rtf > peakRTF) peakRTF = rtf
+            }
 
-        // Confidence
-        if (avgConfidence > 0f) {
-            addSample(confidenceSamples, avgConfidence)
+            // Confidence
+            if (avgConfidence > 0f) {
+                addSample(confidenceSamples, avgConfidence)
+            }
         }
     }
 
     /**
      * Record an empty transcription (silence/noise detected).
      */
-    @Synchronized
     fun recordEmptyTranscription(audioDurationMs: Long, processingTimeMs: Long) {
         recordTranscription(
             audioDurationMs = audioDurationMs,
@@ -126,100 +134,140 @@ class WhisperPerformance {
     /**
      * Record a detected language from whisper auto-detection.
      */
-    @Synchronized
     fun recordLanguageDetection(language: String) {
-        this.detectedLanguage = language
-        languageDetectionCount++
+        synchronized(this) {
+            this.detectedLanguage = language
+            languageDetectionCount++
+        }
     }
 
     /**
      * Get all metrics as a map for logging/reporting.
      */
-    @Synchronized
     fun getMetrics(): Map<String, Any> {
-        val metrics = mutableMapOf<String, Any>(
-            "initTimeMs" to initTimeMs,
-            "initAttempts" to initAttempts,
-            "totalTranscriptions" to totalTranscriptions,
-            "emptyTranscriptions" to emptyTranscriptions,
-            "totalAudioProcessedMs" to totalAudioProcessedMs,
-            "totalProcessingTimeMs" to totalProcessingTimeMs,
-            "totalCharactersTranscribed" to totalCharactersTranscribed,
-            "peakLatencyMs" to peakLatencyMs,
-            "peakRTF" to peakRTF
-        )
+        return synchronized(this) {
+            val metrics = mutableMapOf<String, Any>(
+                "initTimeMs" to initTimeMs,
+                "initAttempts" to initAttempts,
+                "totalTranscriptions" to totalTranscriptions,
+                "emptyTranscriptions" to emptyTranscriptions,
+                "totalAudioProcessedMs" to totalAudioProcessedMs,
+                "totalProcessingTimeMs" to totalProcessingTimeMs,
+                "totalCharactersTranscribed" to totalCharactersTranscribed,
+                "totalSegments" to totalSegments,
+                "peakLatencyMs" to peakLatencyMs,
+                "peakRTF" to peakRTF
+            )
 
-        modelSize?.let { metrics["modelSize"] = it.name }
+            modelSize?.let { metrics["modelSize"] = it.name }
 
-        if (latencySamples.isNotEmpty()) {
-            metrics["avgLatencyMs"] = latencySamples.average().toLong()
-            metrics["recentLatencyMs"] = latencySamples.last()
+            if (latencySamples.isNotEmpty()) {
+                metrics["avgLatencyMs"] = latencySamples.average().toLong()
+                metrics["recentLatencyMs"] = latencySamples.last()
+            }
+
+            if (rtfSamples.isNotEmpty()) {
+                metrics["avgRTF"] = rtfSamples.average().toFloat()
+            }
+
+            if (confidenceSamples.isNotEmpty()) {
+                metrics["avgConfidence"] = confidenceSamples.average().toFloat()
+                metrics["minConfidence"] = confidenceSamples.min()
+            }
+
+            detectedLanguage?.let { metrics["detectedLanguage"] = it }
+
+            val successRate = if (totalTranscriptions > 0) {
+                ((totalTranscriptions - emptyTranscriptions).toFloat() / totalTranscriptions * 100)
+            } else 0f
+            metrics["successRate"] = successRate
+
+            metrics
         }
-
-        if (rtfSamples.isNotEmpty()) {
-            metrics["avgRTF"] = rtfSamples.average().toFloat()
-        }
-
-        if (confidenceSamples.isNotEmpty()) {
-            metrics["avgConfidence"] = confidenceSamples.average().toFloat()
-            metrics["minConfidence"] = confidenceSamples.min()
-        }
-
-        detectedLanguage?.let { metrics["detectedLanguage"] = it }
-
-        val successRate = if (totalTranscriptions > 0) {
-            ((totalTranscriptions - emptyTranscriptions).toFloat() / totalTranscriptions * 100)
-        } else 0f
-        metrics["successRate"] = successRate
-
-        return metrics
     }
 
     /**
      * Get the average latency over the rolling window.
      */
-    @Synchronized
     fun getAverageLatencyMs(): Long {
-        return if (latencySamples.isNotEmpty()) latencySamples.average().toLong() else 0L
+        return synchronized(this) {
+            if (latencySamples.isNotEmpty()) latencySamples.average().toLong() else 0L
+        }
     }
 
     /**
      * Get the average real-time factor over the rolling window.
      * RTF < 1.0 means faster-than-realtime. RTF > 1.0 means slower.
      */
-    @Synchronized
     fun getAverageRTF(): Float {
-        return if (rtfSamples.isNotEmpty()) rtfSamples.average().toFloat() else 0f
+        return synchronized(this) {
+            if (rtfSamples.isNotEmpty()) rtfSamples.average().toFloat() else 0f
+        }
     }
 
     /**
      * Get the average confidence over the rolling window.
      */
-    @Synchronized
     fun getAverageConfidence(): Float {
-        return if (confidenceSamples.isNotEmpty()) confidenceSamples.average().toFloat() else 0f
+        return synchronized(this) {
+            if (confidenceSamples.isNotEmpty()) confidenceSamples.average().toFloat() else 0f
+        }
+    }
+
+    /**
+     * Create an immutable [SpeechMetricsSnapshot] capturing the current state.
+     *
+     * @param engineName Name of the engine ("Whisper", "GoogleCloud")
+     * @param engineState Current engine state name (e.g. "READY", "LISTENING")
+     * @return Frozen snapshot suitable for UI display or serialization
+     */
+    fun toSnapshot(engineName: String, engineState: String, timestampMs: Long = 0): SpeechMetricsSnapshot {
+        return synchronized(this) {
+            val successRate = if (totalTranscriptions > 0) {
+                ((totalTranscriptions - emptyTranscriptions).toFloat() / totalTranscriptions * 100)
+            } else 0f
+
+            SpeechMetricsSnapshot(
+                engineName = engineName,
+                modelSize = modelSize?.name,
+                initTimeMs = initTimeMs,
+                totalTranscriptions = totalTranscriptions,
+                successRate = successRate,
+                avgLatencyMs = if (latencySamples.isNotEmpty()) latencySamples.average().toLong() else 0L,
+                avgRTF = if (rtfSamples.isNotEmpty()) rtfSamples.average().toFloat() else 0f,
+                avgConfidence = if (confidenceSamples.isNotEmpty()) confidenceSamples.average().toFloat() else 0f,
+                peakLatencyMs = peakLatencyMs,
+                peakRTF = peakRTF,
+                totalAudioProcessedMs = totalAudioProcessedMs,
+                detectedLanguage = detectedLanguage,
+                engineState = engineState,
+                timestampMs = timestampMs
+            )
+        }
     }
 
     /**
      * Reset all metrics.
      */
-    @Synchronized
     fun reset() {
-        initTimeMs = 0L
-        modelSize = null
-        initAttempts = 0
-        latencySamples.clear()
-        rtfSamples.clear()
-        confidenceSamples.clear()
-        totalTranscriptions = 0
-        emptyTranscriptions = 0
-        totalAudioProcessedMs = 0
-        totalProcessingTimeMs = 0
-        totalCharactersTranscribed = 0
-        peakLatencyMs = 0
-        peakRTF = 0f
-        detectedLanguage = null
-        languageDetectionCount = 0
+        synchronized(this) {
+            initTimeMs = 0L
+            modelSize = null
+            initAttempts = 0
+            latencySamples.clear()
+            rtfSamples.clear()
+            confidenceSamples.clear()
+            totalTranscriptions = 0
+            emptyTranscriptions = 0
+            totalAudioProcessedMs = 0
+            totalProcessingTimeMs = 0
+            totalCharactersTranscribed = 0
+            totalSegments = 0
+            peakLatencyMs = 0
+            peakRTF = 0f
+            detectedLanguage = null
+            languageDetectionCount = 0
+        }
     }
 
     private fun <T> addSample(deque: ArrayDeque<T>, value: T) {

@@ -2,8 +2,6 @@
  * ConfidenceOverlay.kt - Speech recognition confidence display overlay
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2026-01-06
  *
  * Ported from VoiceOSCore ConfidenceOverlay.kt (297 lines)

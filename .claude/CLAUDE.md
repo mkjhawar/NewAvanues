@@ -1,1 +1,1 @@
-/Volumes/M-Drive/Coding/.claude/CLAUDE.md
+/Volumes/M-Drive/Coding/CodeAvanue/LLMI/CLAUDE.md

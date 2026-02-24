@@ -55,6 +55,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.input.pointer.pointerInput
@@ -695,16 +697,25 @@ fun DeveloperConsoleScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.refreshServices() }) {
+                    IconButton(
+                        onClick = { viewModel.refreshServices() },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Refresh" }
+                    ) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                     Box {
-                        IconButton(onClick = { showExportMenu = true }) {
+                        IconButton(
+                            onClick = { showExportMenu = true },
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Export Report" }
+                        ) {
                             Icon(Icons.Default.FileDownload, contentDescription = "Export")
                         }
                         DropdownMenu(
@@ -714,17 +725,20 @@ fun DeveloperConsoleScreen(
                             DropdownMenuItem(
                                 text = { Text("Share Report") },
                                 leadingIcon = { Icon(Icons.Default.Share, null, modifier = Modifier.size(20.dp)) },
-                                onClick = { showExportMenu = false; viewModel.shareReport() }
+                                onClick = { showExportMenu = false; viewModel.shareReport() },
+                                modifier = Modifier.semantics { contentDescription = "Voice: click Share Report" }
                             )
                             DropdownMenuItem(
                                 text = { Text("Save to Downloads") },
                                 leadingIcon = { Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp)) },
-                                onClick = { showExportMenu = false; viewModel.saveReportToDownloads() }
+                                onClick = { showExportMenu = false; viewModel.saveReportToDownloads() },
+                                modifier = Modifier.semantics { contentDescription = "Voice: click Save to Downloads" }
                             )
                             DropdownMenuItem(
                                 text = { Text("Copy to Clipboard") },
                                 leadingIcon = { Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(20.dp)) },
-                                onClick = { showExportMenu = false; viewModel.copyReportToClipboard() }
+                                onClick = { showExportMenu = false; viewModel.copyReportToClipboard() },
+                                modifier = Modifier.semantics { contentDescription = "Voice: click Copy to Clipboard" }
                             )
                         }
                     }
@@ -850,7 +864,10 @@ fun DeveloperConsoleScreen(
                     title = "DataStore (avanues_settings)",
                     icon = Icons.Default.Storage,
                     action = {
-                        TextButton(onClick = { showResetConfirm = true }) {
+                        TextButton(
+                            onClick = { showResetConfirm = true },
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Reset DataStore" }
+                        ) {
                             Text("RESET", color = AvanueTheme.colors.error, fontSize = 12.sp)
                         }
                     }
@@ -973,15 +990,21 @@ fun DeveloperConsoleScreen(
                         "The app may behave unexpectedly until restarted.")
             },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.clearDataStore()
-                    showResetConfirm = false
-                }) {
+                TextButton(
+                    onClick = {
+                        viewModel.clearDataStore()
+                        showResetConfirm = false
+                    },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Reset" }
+                ) {
                     Text("Reset", color = AvanueTheme.colors.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetConfirm = false }) {
+                TextButton(
+                    onClick = { showResetConfirm = false },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Cancel" }
+                ) {
                     Text("Cancel")
                 }
             }

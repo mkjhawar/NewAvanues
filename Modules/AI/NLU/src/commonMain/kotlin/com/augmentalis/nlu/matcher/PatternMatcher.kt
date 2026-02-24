@@ -9,6 +9,7 @@
 
 package com.augmentalis.nlu.matcher
 
+import com.augmentalis.nlu.NluThresholds
 import com.augmentalis.nlu.model.IntentMatch
 import com.augmentalis.nlu.model.MatchMethod
 import com.augmentalis.nlu.model.UnifiedIntent
@@ -74,7 +75,7 @@ class PatternMatcher {
                     )
                 }
             }
-            .filter { it.score >= 0.8f }
+            .filter { it.score >= NluThresholds.PREFIX_MATCH_MIN_SIMILARITY }
             .sortedByDescending { it.score * it.intent.priority }
 
         return prefixMatches

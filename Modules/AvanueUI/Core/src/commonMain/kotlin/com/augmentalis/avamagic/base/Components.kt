@@ -12,10 +12,7 @@ data class ColumnComponent(
     val horizontalAlignment: Alignment,
     val children: List<Component>
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        // Platform-specific rendering will be implemented in platform modules
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class RowComponent(
@@ -26,9 +23,7 @@ data class RowComponent(
     val verticalAlignment: Alignment,
     val children: List<Component>
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class ContainerComponent(
@@ -38,9 +33,7 @@ data class ContainerComponent(
     val alignment: Alignment,
     val child: Component?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class ScrollViewComponent(
@@ -50,9 +43,7 @@ data class ScrollViewComponent(
     val orientation: Orientation,
     val child: Component?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class CardComponent(
@@ -62,9 +53,7 @@ data class CardComponent(
     val elevation: Int,
     val children: List<Component>
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 // ==================== Basic Components ====================
@@ -80,9 +69,7 @@ data class TextComponent(
     val maxLines: Int?,
     val overflow: TextScope.TextOverflow
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class ButtonComponent(
@@ -96,9 +83,7 @@ data class ButtonComponent(
     val leadingIcon: String?,
     val trailingIcon: String?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class ImageComponent(
@@ -109,9 +94,7 @@ data class ImageComponent(
     val contentDescription: String?,
     val contentScale: ImageScope.ContentScale
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class CheckboxComponent(
@@ -123,9 +106,7 @@ data class CheckboxComponent(
     val enabled: Boolean,
     val onCheckedChange: ((Boolean) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class TextFieldComponent(
@@ -144,9 +125,7 @@ data class TextFieldComponent(
     val maxLength: Int?,
     val onValueChange: ((String) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class SwitchComponent(
@@ -157,9 +136,7 @@ data class SwitchComponent(
     val enabled: Boolean,
     val onCheckedChange: ((Boolean) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class IconComponent(
@@ -170,9 +147,7 @@ data class IconComponent(
     val tint: Color?,
     val contentDescription: String?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 // ==================== Form Components ====================
@@ -187,9 +162,7 @@ data class RadioComponent(
     val orientation: Orientation,
     val onValueChange: ((String) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class RadioOption(
@@ -209,9 +182,7 @@ data class SliderComponent(
     override val modifiers: List<Modifier>,
     val onValueChange: ((Float) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class DropdownComponent(
@@ -224,9 +195,7 @@ data class DropdownComponent(
     override val modifiers: List<Modifier>,
     val onValueChange: ((String) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class DropdownOption(
@@ -246,9 +215,7 @@ data class DatePickerComponent(
     override val modifiers: List<Modifier>,
     val onDateChange: ((Long) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class TimePickerComponent(
@@ -260,9 +227,7 @@ data class TimePickerComponent(
     override val modifiers: List<Modifier>,
     val onTimeChange: ((Int, Int) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class FileUploadComponent(
@@ -275,9 +240,7 @@ data class FileUploadComponent(
     override val modifiers: List<Modifier>,
     val onFilesSelected: ((List<FileData>) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class FileData(
@@ -320,9 +283,7 @@ data class SearchBarComponent(
     val onValueChange: ((String) -> Unit)?,
     val onSearch: ((String) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class RatingComponent(
@@ -336,9 +297,7 @@ data class RatingComponent(
     override val modifiers: List<Modifier>,
     val onRatingChange: ((Float) -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 // ==================== Feedback Components ====================
@@ -354,9 +313,7 @@ data class DialogComponent(
     override val modifiers: List<Modifier>,
     val onDismiss: (() -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class DialogAction(
@@ -379,9 +336,7 @@ data class ToastComponent(
     override val style: ComponentStyle?,
     override val modifiers: List<Modifier>
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 enum class ToastSeverity {
@@ -409,9 +364,7 @@ data class AlertComponent(
     override val modifiers: List<Modifier>,
     val onDismiss: (() -> Unit)?
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 enum class AlertSeverity {
@@ -431,9 +384,7 @@ data class ProgressBarComponent(
         require(value in 0.0f..1.0f) { "Progress value must be between 0.0 and 1.0" }
     }
 
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 data class SpinnerComponent(
@@ -443,9 +394,7 @@ data class SpinnerComponent(
     override val style: ComponentStyle?,
     override val modifiers: List<Modifier>
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 enum class SpinnerSize {
@@ -460,9 +409,7 @@ data class BadgeComponent(
     override val style: ComponentStyle?,
     override val modifiers: List<Modifier>
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 enum class BadgeVariant {
@@ -481,9 +428,7 @@ data class TooltipComponent(
     override val style: ComponentStyle?,
     override val modifiers: List<Modifier>
 ) : Component {
-    override fun render(renderer: Renderer): Any {
-        TODO("Platform rendering not yet implemented")
-    }
+    override fun render(renderer: Renderer): Any = renderer.render(this)
 }
 
 enum class TooltipPosition {

@@ -7,7 +7,7 @@
 
 package com.augmentalis.chat.coordinator
 
-import com.augmentalis.actions.ActionResult
+import com.augmentalis.intentactions.IntentResult
 import com.augmentalis.chat.data.BuiltInIntents
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +39,7 @@ class ActionCoordinatorDesktop : IActionCoordinator {
     private var initialized = false
 
     // Registered action handlers
-    private val actionHandlers = mutableMapOf<String, suspend (String) -> ActionResult>()
+    private val actionHandlers = mutableMapOf<String, suspend (String) -> IntentResult>()
 
     // Execution stats
     private var totalExecutions = 0
@@ -54,88 +54,88 @@ class ActionCoordinatorDesktop : IActionCoordinator {
     private fun registerBuiltInHandlers() {
         // System commands
         actionHandlers[BuiltInIntents.SYSTEM_STOP] = { _ ->
-            ActionResult.success("Stopping current operation")
+            IntentResult.Success("Stopping current operation")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_BACK] = { _ ->
-            ActionResult.success("Going back")
+            IntentResult.Success("Going back")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_CANCEL] = { _ ->
-            ActionResult.success("Cancelled")
+            IntentResult.Success("Cancelled")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_HOME] = { _ ->
-            ActionResult.success("Returning to home")
+            IntentResult.Success("Returning to home")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_HELP] = { _ ->
-            ActionResult.success("Showing help information")
+            IntentResult.Success("Showing help information")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_QUIT] = { _ ->
-            ActionResult.success("Quitting application")
+            IntentResult.Success("Quitting application")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_EXIT] = { _ ->
-            ActionResult.success("Exiting current mode")
+            IntentResult.Success("Exiting current mode")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_PAUSE] = { _ ->
-            ActionResult.success("Paused")
+            IntentResult.Success("Paused")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_RESUME] = { _ ->
-            ActionResult.success("Resumed")
+            IntentResult.Success("Resumed")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_MUTE] = { _ ->
-            ActionResult.success("Muted")
+            IntentResult.Success("Muted")
         }
 
         actionHandlers[BuiltInIntents.SYSTEM_UNMUTE] = { _ ->
-            ActionResult.success("Unmuted")
+            IntentResult.Success("Unmuted")
         }
 
         // Meta commands
         actionHandlers[BuiltInIntents.SHOW_HISTORY] = { _ ->
-            ActionResult.success("Showing conversation history")
+            IntentResult.Success("Showing conversation history")
         }
 
         actionHandlers[BuiltInIntents.NEW_CONVERSATION] = { _ ->
-            ActionResult.success("Starting new conversation")
+            IntentResult.Success("Starting new conversation")
         }
 
         actionHandlers[BuiltInIntents.TEACH_AVA] = { _ ->
-            ActionResult.success("Entering teach mode")
+            IntentResult.Success("Entering teach mode")
         }
 
-        // Information queries (stubs - would integrate with actual services)
-        actionHandlers[BuiltInIntents.CHECK_WEATHER] = { utterance ->
-            ActionResult.success("Weather check requested: $utterance")
+        // Information queries (not available on desktop)
+        actionHandlers[BuiltInIntents.CHECK_WEATHER] = { _ ->
+            IntentResult.Failed("Weather check is not available on desktop")
         }
 
         actionHandlers[BuiltInIntents.SHOW_TIME] = { _ ->
             val time = java.time.LocalTime.now()
-            ActionResult.success("The current time is ${time.hour}:${time.minute.toString().padStart(2, '0')}")
+            IntentResult.Success("The current time is ${time.hour}:${time.minute.toString().padStart(2, '0')}")
         }
 
-        // Productivity (stubs)
-        actionHandlers[BuiltInIntents.SET_ALARM] = { utterance ->
-            ActionResult.success("Alarm setting requested: $utterance")
+        // Productivity (not available on desktop)
+        actionHandlers[BuiltInIntents.SET_ALARM] = { _ ->
+            IntentResult.Failed("Alarms are not available on desktop")
         }
 
-        actionHandlers[BuiltInIntents.SET_REMINDER] = { utterance ->
-            ActionResult.success("Reminder setting requested: $utterance")
+        actionHandlers[BuiltInIntents.SET_REMINDER] = { _ ->
+            IntentResult.Failed("Reminders are not available on desktop")
         }
 
-        // Device control (stubs - would integrate with smart home APIs)
-        actionHandlers[BuiltInIntents.CONTROL_LIGHTS] = { utterance ->
-            ActionResult.success("Light control requested: $utterance")
+        // Device control (not available on desktop)
+        actionHandlers[BuiltInIntents.CONTROL_LIGHTS] = { _ ->
+            IntentResult.Failed("Smart home controls are not available on desktop")
         }
 
-        actionHandlers[BuiltInIntents.CONTROL_TEMPERATURE] = { utterance ->
-            ActionResult.success("Temperature control requested: $utterance")
+        actionHandlers[BuiltInIntents.CONTROL_TEMPERATURE] = { _ ->
+            IntentResult.Failed("Smart home controls are not available on desktop")
         }
 
         println("[ActionCoordinatorDesktop] Registered ${actionHandlers.size} built-in handlers")
@@ -176,17 +176,26 @@ class ActionCoordinatorDesktop : IActionCoordinator {
 
         return try {
             val result = handler(utterance)
-            if (result.success) {
-                successfulExecutions++
-                IActionCoordinator.ActionExecutionResult.Success(
-                    message = result.message ?: "Action completed",
-                    needsAccessibility = false
-                )
-            } else {
-                failedExecutions++
-                IActionCoordinator.ActionExecutionResult.Failure(
-                    message = result.message ?: "Action failed"
-                )
+            when (result) {
+                is IntentResult.Success -> {
+                    successfulExecutions++
+                    IActionCoordinator.ActionExecutionResult.Success(
+                        message = result.message,
+                        needsAccessibility = false
+                    )
+                }
+                is IntentResult.Failed -> {
+                    failedExecutions++
+                    IActionCoordinator.ActionExecutionResult.Failure(
+                        message = result.reason
+                    )
+                }
+                is IntentResult.NeedsMoreInfo -> {
+                    IActionCoordinator.ActionExecutionResult.NeedsResolution(
+                        capability = result.missingEntity.name,
+                        message = result.prompt
+                    )
+                }
             }
         } catch (e: Exception) {
             failedExecutions++
@@ -196,14 +205,14 @@ class ActionCoordinatorDesktop : IActionCoordinator {
         }
     }
 
-    override suspend fun executeAction(intent: String, utterance: String): ActionResult {
+    override suspend fun executeAction(intent: String, utterance: String): IntentResult {
         val handler = actionHandlers[intent]
-            ?: return ActionResult.failure("No handler for intent: $intent")
+            ?: return IntentResult.Failed("No handler for intent: $intent")
 
         return try {
             handler(utterance)
         } catch (e: Exception) {
-            ActionResult.failure("Execution error: ${e.message}")
+            IntentResult.Failed("Execution error: ${e.message}", e)
         }
     }
 
@@ -241,7 +250,7 @@ class ActionCoordinatorDesktop : IActionCoordinator {
      * @param intent Intent identifier
      * @param handler Suspend function to handle the action
      */
-    fun registerHandler(intent: String, handler: suspend (String) -> ActionResult) {
+    fun registerHandler(intent: String, handler: suspend (String) -> IntentResult) {
         actionHandlers[intent] = handler
         println("[ActionCoordinatorDesktop] Registered handler for: $intent")
     }
@@ -260,21 +269,21 @@ class ActionCoordinatorDesktop : IActionCoordinator {
      * Execute a system command (desktop-specific).
      *
      * @param command Command to execute
-     * @return ActionResult with command output
+     * @return IntentResult with command output
      */
-    suspend fun executeSystemCommand(command: List<String>): ActionResult {
+    suspend fun executeSystemCommand(command: List<String>): IntentResult {
         return try {
             val process = ProcessBuilder(command).start()
             val output = process.inputStream.bufferedReader().readText()
             val exitCode = process.waitFor()
 
             if (exitCode == 0) {
-                ActionResult.success(output.ifEmpty { "Command executed successfully" })
+                IntentResult.Success(output.ifEmpty { "Command executed successfully" })
             } else {
-                ActionResult.failure("Command failed with exit code: $exitCode")
+                IntentResult.Failed("Command failed with exit code: $exitCode")
             }
         } catch (e: Exception) {
-            ActionResult.failure("Command execution error: ${e.message}")
+            IntentResult.Failed("Command execution error: ${e.message}", e)
         }
     }
 

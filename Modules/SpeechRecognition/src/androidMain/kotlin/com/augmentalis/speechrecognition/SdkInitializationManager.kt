@@ -2,7 +2,6 @@
  * SdkInitializationManager.kt - Universal SDK Initialization Framework
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-09-06
  * Updated: 2026-01-27 - Migrated to KMP androidMain
  *

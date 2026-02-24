@@ -50,7 +50,9 @@ class WhisperVAD(
     private val maxSpeechDurationMs: Long = 30_000,
     private val hangoverFrames: Int = 5,
     private val paddingMs: Long = 150,
-    private val sampleRate: Int = 16000
+    private val sampleRate: Int = 16000,
+    private val thresholdAlpha: Float = DEFAULT_THRESHOLD_ALPHA,
+    private val minThreshold: Float = DEFAULT_MIN_THRESHOLD
 ) {
     companion object {
         private const val TAG = "WhisperVAD"
@@ -61,11 +63,34 @@ class WhisperVAD(
         /** Initial adaptive threshold if auto-calibration is enabled */
         private const val INITIAL_THRESHOLD = 0.003f
 
-        /** Adaptive threshold smoothing factor (lower = slower adaptation) */
-        private const val THRESHOLD_ALPHA = 0.02f
+        /** Default adaptive threshold smoothing factor (lower = slower adaptation) */
+        const val DEFAULT_THRESHOLD_ALPHA = 0.02f
 
-        /** Minimum threshold floor to prevent silence from zeroing out */
-        private const val MIN_THRESHOLD = 0.001f
+        /** Default minimum threshold floor to prevent silence from zeroing out */
+        const val DEFAULT_MIN_THRESHOLD = 0.001f
+
+        /**
+         * Create a WhisperVAD configured from a [VADProfile].
+         * Applies all profile parameters while allowing overrides for
+         * maxSpeechDurationMs, paddingMs, and sampleRate.
+         */
+        fun fromProfile(
+            profile: VADProfile,
+            maxSpeechDurationMs: Long = 30_000,
+            paddingMs: Long = 150,
+            sampleRate: Int = 16000
+        ): WhisperVAD = WhisperVAD(
+            speechThreshold = 0f, // auto-calibrate
+            vadSensitivity = profile.vadSensitivity,
+            silenceTimeoutMs = profile.silenceTimeoutMs,
+            minSpeechDurationMs = profile.minSpeechDurationMs,
+            maxSpeechDurationMs = maxSpeechDurationMs,
+            hangoverFrames = profile.hangoverFrames,
+            paddingMs = paddingMs,
+            sampleRate = sampleRate,
+            thresholdAlpha = profile.thresholdAlpha,
+            minThreshold = profile.minThreshold
+        )
     }
 
     // State
@@ -279,7 +304,7 @@ class WhisperVAD(
             else noiseFloor * 0.9f + energy * 0.1f
         } else {
             // Running update
-            noiseFloor = noiseFloor * (1f - THRESHOLD_ALPHA) + energy * THRESHOLD_ALPHA
+            noiseFloor = noiseFloor * (1f - thresholdAlpha) + energy * thresholdAlpha
         }
 
         // Set threshold above noise floor, scaled by sensitivity
@@ -288,7 +313,7 @@ class WhisperVAD(
         // sensitivity 1.0 → multiplier 1.5 (most sensitive, picks up quiet speech)
         if (speechThreshold <= 0f) {
             val multiplier = 5.0f - vadSensitivity.coerceIn(0f, 1f) * 3.5f
-            adaptiveThreshold = maxOf(noiseFloor * multiplier, MIN_THRESHOLD)
+            adaptiveThreshold = maxOf(noiseFloor * multiplier, minThreshold)
         }
     }
 }

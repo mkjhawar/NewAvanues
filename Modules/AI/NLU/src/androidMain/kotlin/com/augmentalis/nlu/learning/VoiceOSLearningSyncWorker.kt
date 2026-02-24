@@ -1,9 +1,11 @@
 package com.augmentalis.nlu.learning
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
 import com.augmentalis.nlu.IntentClassifier
 import com.augmentalis.nlu.learning.domain.*
 import dagger.assisted.Assisted
@@ -106,7 +108,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 request
             )
 
-            Log.i(TAG, "Enqueued high-confidence sync (every 5 min)")
+            nluLogInfo(TAG, "Enqueued high-confidence sync (every 5 min)")
         }
 
         /**
@@ -138,7 +140,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 request
             )
 
-            Log.i(TAG, "Enqueued low-confidence sync (every 6 hours)")
+            nluLogInfo(TAG, "Enqueued low-confidence sync (every 6 hours)")
         }
 
         /**
@@ -162,7 +164,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 request
             )
 
-            Log.i(TAG, "Enqueued immediate sync for command: $commandId")
+            nluLogInfo(TAG, "Enqueued immediate sync for command: $commandId")
         }
 
         /**
@@ -186,7 +188,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 request
             )
 
-            Log.i(TAG, "Enqueued user-approved sync")
+            nluLogInfo(TAG, "Enqueued user-approved sync")
         }
 
         /**
@@ -194,7 +196,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
          */
         fun cancelAllSync(workManager: WorkManager) {
             workManager.cancelAllWorkByTag(WORK_TAG)
-            Log.i(TAG, "Cancelled all VoiceOS sync workers")
+            nluLogInfo(TAG, "Cancelled all VoiceOS sync workers")
         }
     }
 
@@ -203,7 +205,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
         val minConfidence = inputData.getFloat(KEY_MIN_CONFIDENCE, HIGH_CONFIDENCE_THRESHOLD)
         val maxCommands = inputData.getInt(KEY_MAX_COMMANDS, DEFAULT_MAX_COMMANDS)
 
-        Log.i(TAG, "Starting sync: type=$syncType, minConfidence=$minConfidence, max=$maxCommands")
+        nluLogInfo(TAG, "Starting sync: type=$syncType, minConfidence=$minConfidence, max=$maxCommands")
 
         try {
             val result = when (syncType) {
@@ -218,7 +220,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 KEY_SKIPPED_COUNT to result.skipped
             )
 
-            Log.i(TAG, "Sync complete: synced=${result.synced}, failed=${result.failed}, skipped=${result.skipped}")
+            nluLogInfo(TAG, "Sync complete: synced=${result.synced}, failed=${result.failed}, skipped=${result.skipped}")
 
             if (result.failed > 0 && result.synced == 0) {
                 Result.retry()
@@ -226,7 +228,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 Result.success(outputData)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Sync failed: ${e.message}", e)
+            nluLogError(TAG, "Sync failed: ${e.message}", e)
             if (runAttemptCount < 3) {
                 Result.retry()
             } else {
@@ -249,7 +251,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
         // Query VoiceOS ContentProvider for commands
         val commands = queryVoiceOSCommands(minConfidence, maxCommands)
 
-        Log.d(TAG, "Found ${commands.size} commands to sync")
+        nluLogDebug(TAG, "Found ${commands.size} commands to sync")
 
         for (command in commands) {
             try {
@@ -271,7 +273,8 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                     failed++
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to sync command '${command.utterance}': ${e.message}")
+                // PII-safe: log utterance length, not content
+                nluLogError(TAG, "Failed to sync command ${command.utterance.length}-char cmd: ${e.message}")
                 failed++
             }
         }
@@ -292,7 +295,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
 
         val commands = queryVoiceOSUserApproved(maxCommands)
 
-        Log.d(TAG, "Found ${commands.size} user-approved commands to sync")
+        nluLogDebug(TAG, "Found ${commands.size} user-approved commands to sync")
 
         for (command in commands) {
             try {
@@ -314,7 +317,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                     failed++
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to sync approved command: ${e.message}")
+                nluLogError(TAG, "Failed to sync approved command: ${e.message}")
                 failed++
             }
         }
@@ -351,7 +354,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 SyncResult(0, 1, 0)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync single command: ${e.message}")
+            nluLogError(TAG, "Failed to sync single command: ${e.message}")
             SyncResult(0, 1, 0)
         }
     }
@@ -389,7 +392,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to query VoiceOS commands: ${e.message}")
+            nluLogError(TAG, "Failed to query VoiceOS commands: ${e.message}")
         }
 
         return commands
@@ -423,7 +426,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to query VoiceOS approved commands: ${e.message}")
+            nluLogError(TAG, "Failed to query VoiceOS approved commands: ${e.message}")
         }
 
         return commands
@@ -446,7 +449,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to query VoiceOS command by ID: ${e.message}")
+            nluLogError(TAG, "Failed to query VoiceOS command by ID: ${e.message}")
         }
 
         return null
@@ -467,9 +470,9 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
             }
 
             context.contentResolver.update(uri, values, null, null)
-            Log.d(TAG, "Marked command $commandId as synced")
+            nluLogDebug(TAG, "Marked command $commandId as synced")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to mark synced in VoiceOS: ${e.message}")
+            nluLogError(TAG, "Failed to mark synced in VoiceOS: ${e.message}")
         }
     }
 
@@ -507,7 +510,7 @@ class VoiceOSLearningSyncWorker @AssistedInject constructor(
                 usageCount = usageCount
             ).copy(id = id)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse cursor to command: ${e.message}")
+            nluLogError(TAG, "Failed to parse cursor to command: ${e.message}")
             null
         }
     }

@@ -27,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.augmentalis.avanueui.components.AvanueButton
@@ -89,7 +91,9 @@ fun PhraseSuggestionDialog(
                     label = { Text("Your suggestion") },
                     placeholder = { Text("e.g., \"open browser\"") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: input Phrase Suggestion" }
                 )
 
                 Spacer(modifier = Modifier.height(SpacingTokens.lg))
@@ -102,14 +106,18 @@ fun PhraseSuggestionDialog(
                         }
                     },
                     enabled = suggestedPhrase.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: click Submit Suggestion" }
                 ) {
                     Text("Submit Suggestion")
                 }
 
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .semantics { contentDescription = "Voice: click Cancel" }
                 ) {
                     Text(
                         "Cancel",

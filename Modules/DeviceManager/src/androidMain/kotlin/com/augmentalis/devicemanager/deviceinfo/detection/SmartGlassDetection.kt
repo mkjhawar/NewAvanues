@@ -3,7 +3,6 @@
  * Path: /libraries/DeviceManager/src/main/java/com/augmentalis/devicemanager/detection/SmartGlassDetection.kt
  * 
  * Created: 2025-09-05
- * Author: VOS4 Development Team
  * Version: 1.0.0
  * 
  * Purpose: Device-specific detection for smart glasses and AR headsets

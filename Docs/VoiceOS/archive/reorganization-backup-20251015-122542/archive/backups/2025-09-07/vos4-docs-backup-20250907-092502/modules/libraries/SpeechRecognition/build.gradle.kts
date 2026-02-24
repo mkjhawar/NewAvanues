@@ -13,7 +13,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.speechrecognition"
-    compileSdk = 34  // Android 14 (API 34) - Latest stable
+    compileSdk = 35  // Android 14 (API 34) - Latest stable
     // compileSdkPreview = "VanillaIceCream"  // Android 15 - will enable when available
 
     defaultConfig {

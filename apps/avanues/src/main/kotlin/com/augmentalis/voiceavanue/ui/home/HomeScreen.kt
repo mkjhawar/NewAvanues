@@ -50,6 +50,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -200,7 +202,10 @@ fun CommandsScreen(
             horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onNavigateBack, modifier = Modifier.size(40.dp)) {
+            IconButton(
+                onClick = onNavigateBack,
+                modifier = Modifier.size(40.dp).semantics { contentDescription = "Voice: click Back" }
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -385,7 +390,10 @@ private fun DashboardHeader(
         horizontalArrangement = Arrangement.spacedBy(SpacingTokens.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onNavigateBack, modifier = Modifier.size(40.dp)) {
+        IconButton(
+            onClick = onNavigateBack,
+            modifier = Modifier.size(40.dp).semantics { contentDescription = "Voice: click Back" }
+        ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
@@ -428,7 +436,10 @@ private fun DashboardHeader(
                 )
             }
         }
-        IconButton(onClick = onNavigateToSettings) {
+        IconButton(
+            onClick = onNavigateToSettings,
+            modifier = Modifier.semantics { contentDescription = "Voice: click Settings" }
+        ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Settings",
@@ -559,12 +570,18 @@ fun ConfirmDeleteDialog(
         title = { Text(title, color = AvanueTheme.colors.textPrimary) },
         text = { Text(message, color = AvanueTheme.colors.textSecondary) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(
+                onClick = onConfirm,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Delete" }
+            ) {
                 Text("Delete", color = AvanueTheme.colors.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Cancel" }
+            ) {
                 Text("Cancel", color = AvanueTheme.colors.textSecondary)
             }
         },

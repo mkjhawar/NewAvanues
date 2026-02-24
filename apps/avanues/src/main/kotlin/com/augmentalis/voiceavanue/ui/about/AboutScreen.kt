@@ -59,6 +59,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -468,6 +470,7 @@ private fun LicenseDetailContent(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { selectedRow = null }
+                        .semantics { contentDescription = "Voice: click Back to Licenses" }
                         .padding(bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -568,6 +571,7 @@ private fun LicenseDetailContent(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { selectedRow = row }
+                                .semantics { contentDescription = "Voice: click ${row.lib.name} License" }
                                 .padding(vertical = 8.dp, horizontal = 4.dp)
                         ) {
                             Text(

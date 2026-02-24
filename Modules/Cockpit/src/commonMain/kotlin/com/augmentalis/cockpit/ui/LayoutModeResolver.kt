@@ -10,6 +10,7 @@ import com.augmentalis.cockpit.model.LayoutMode
  * - **Phone**: Carousel is default (best for small screens, swipe-through)
  * - **Tablet**: Cockpit/Flight Deck is default (full 6-slot instrument panel)
  * - **Glass**: Fullscreen is default (single frame, voice-controlled switching)
+ * - **All**: Dashboard is available on all profiles as the home/launcher view
  *
  * This resolver is used by the UI to:
  * 1. Set the initial layout mode for new sessions
@@ -20,6 +21,8 @@ object LayoutModeResolver {
 
     /**
      * Returns the optimal default layout mode for the given device profile.
+     * This is the default for *active sessions* with frames.
+     * Use [LayoutMode.DASHBOARD] when no session is active or user navigates home.
      */
     fun defaultMode(profile: DisplayProfile): LayoutMode = when {
         profile.isGlass -> LayoutMode.FULLSCREEN
@@ -32,6 +35,9 @@ object LayoutModeResolver {
      * Some modes don't make sense on certain devices (e.g., freeform on glass).
      */
     fun isAvailable(mode: LayoutMode, profile: DisplayProfile): Boolean = when (mode) {
+        // Dashboard is always available — it's the home/launcher
+        LayoutMode.DASHBOARD -> true
+
         // Freeform requires precise touch — not available on glass
         LayoutMode.FREEFORM -> !profile.isGlass
 
@@ -68,12 +74,16 @@ object LayoutModeResolver {
 
         // Gallery works everywhere with adaptive columns
         LayoutMode.GALLERY -> true
+
+        // Triptych needs enough width for 3 panels
+        LayoutMode.TRIPTYCH -> profile != DisplayProfile.GLASS_MICRO
     }
 
     /**
      * Maximum number of frames allowed in the given mode on this device.
      */
     fun maxFrames(mode: LayoutMode, profile: DisplayProfile): Int = when (mode) {
+        LayoutMode.DASHBOARD -> 0   // Dashboard doesn't host frames
         LayoutMode.FULLSCREEN -> 20 // All frames exist, only one shown
         LayoutMode.CAROUSEL -> 20   // Paged, all frames exist
         LayoutMode.GALLERY -> 20    // Scrollable grid
@@ -121,6 +131,8 @@ object LayoutModeResolver {
         }
 
         LayoutMode.SPATIAL_DICE -> 5 // Fixed: 4 corners + 1 center
+
+        LayoutMode.TRIPTYCH -> 3 // Fixed: left + center + right
     }
 
     /**

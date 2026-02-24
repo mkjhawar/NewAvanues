@@ -10,10 +10,8 @@ version = "1.0.0"
 kotlin {
     // Android-only to match Components:Core module
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -58,10 +56,10 @@ kotlin {
 
 android {
     namespace = "com.avanueui.components.input"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 28
     }
 
     compileOptions {

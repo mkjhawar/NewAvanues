@@ -40,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.components.AvanueChip
 import com.augmentalis.avanueui.components.AvanueSurface
@@ -191,9 +193,17 @@ private fun CustomCommandRow(
                     checkedTrackColor = AvanueTheme.colors.success.copy(alpha = 0.3f),
                     uncheckedThumbColor = AvanueTheme.colors.textDisabled,
                     uncheckedTrackColor = AvanueTheme.colors.textDisabled.copy(alpha = 0.3f)
-                )
+                ),
+                modifier = Modifier.semantics {
+                    contentDescription = "Voice: toggle ${command.name} command"
+                }
             )
-            IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(32.dp).semantics {
+                    contentDescription = "Voice: click Remove ${command.name}"
+                }
+            ) {
                 Icon(Icons.Default.Close, "Remove", tint = AvanueTheme.colors.error, modifier = Modifier.size(18.dp))
             }
         }
@@ -241,7 +251,9 @@ private fun AddCustomCommandDialog(
                     onValueChange = { name = it },
                     label = { Text("Command name") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: input Command Name" },
                     colors = textFieldColors
                 )
                 OutlinedTextField(
@@ -249,7 +261,9 @@ private fun AddCustomCommandDialog(
                     onValueChange = { phrasesText = it },
                     label = { Text("Trigger phrases (comma-separated)") },
                     singleLine = false,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: input Trigger Phrases" },
                     colors = textFieldColors
                 )
 
@@ -261,7 +275,10 @@ private fun AddCustomCommandDialog(
                         readOnly = true,
                         label = { Text("Action") },
                         trailingIcon = {
-                            IconButton(onClick = { actionDropdownExpanded = !actionDropdownExpanded }) {
+                            IconButton(
+                                onClick = { actionDropdownExpanded = !actionDropdownExpanded },
+                                modifier = Modifier.semantics { contentDescription = "Voice: click Select Action Type" }
+                            ) {
                                 Icon(
                                     if (actionDropdownExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     "Select action",
@@ -374,13 +391,17 @@ private fun AddCustomCommandDialog(
                             onConfirm(name, phrases, selectedActionType, actionTarget.trim(), emptyList())
                         }
                     }
-                }
+                },
+                modifier = Modifier.semantics { contentDescription = "Voice: click Add Command" }
             ) {
                 Text("Add", color = AvanueTheme.colors.info)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Cancel" }
+            ) {
                 Text("Cancel", color = AvanueTheme.colors.textSecondary)
             }
         },
@@ -427,17 +448,32 @@ private fun MacroStepRow(
                 )
                 Row {
                     onMoveUp?.let {
-                        IconButton(onClick = it, modifier = Modifier.size(28.dp)) {
+                        IconButton(
+                            onClick = it,
+                            modifier = Modifier.size(28.dp).semantics {
+                                contentDescription = "Voice: click Move Step $stepNumber Up"
+                            }
+                        ) {
                             Icon(Icons.Default.KeyboardArrowUp, "Move up", tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                         }
                     }
                     onMoveDown?.let {
-                        IconButton(onClick = it, modifier = Modifier.size(28.dp)) {
+                        IconButton(
+                            onClick = it,
+                            modifier = Modifier.size(28.dp).semantics {
+                                contentDescription = "Voice: click Move Step $stepNumber Down"
+                            }
+                        ) {
                             Icon(Icons.Default.KeyboardArrowDown, "Move down", tint = AvanueTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                         }
                     }
                     if (canDelete) {
-                        IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp).semantics {
+                                contentDescription = "Voice: click Remove Step $stepNumber"
+                            }
+                        ) {
                             Icon(Icons.Default.Close, "Remove step", tint = AvanueTheme.colors.error, modifier = Modifier.size(16.dp))
                         }
                     }
@@ -452,7 +488,12 @@ private fun MacroStepRow(
                     readOnly = true,
                     label = { Text("Action", style = MaterialTheme.typography.labelSmall) },
                     trailingIcon = {
-                        IconButton(onClick = { stepDropdownExpanded = !stepDropdownExpanded }, modifier = Modifier.size(24.dp)) {
+                        IconButton(
+                            onClick = { stepDropdownExpanded = !stepDropdownExpanded },
+                            modifier = Modifier
+                                .size(24.dp)
+                                .semantics { contentDescription = "Voice: click Select Step $stepNumber Action" }
+                        ) {
                             Icon(
                                 if (stepDropdownExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                 "Select",
@@ -498,7 +539,9 @@ private fun MacroStepRow(
                         )
                     },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: input Step $stepNumber Target" },
                     colors = textFieldColors,
                     textStyle = MaterialTheme.typography.bodySmall
                 )

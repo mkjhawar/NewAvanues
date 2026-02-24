@@ -2,6 +2,7 @@ package com.augmentalis.nlu.aon
 
 import android.content.Context
 import com.augmentalis.ava.core.common.Result
+import com.augmentalis.nlu.nluLogWarn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -30,7 +31,7 @@ import java.io.File
  *         // Insert into database
  *     }
  *     is Result.Error -> {
- *         Log.e(TAG, "Failed to parse: ${result.message}")
+ *         nluLogError(TAG, "Failed to parse: ${result.message}")
  *     }
  * }
  * ```
@@ -304,7 +305,7 @@ class AonFileParser(private val context: Context) {
                 when (val result = parseAonFile(filePath)) {
                     is Result.Success -> results.add(result.data)
                     is Result.Error -> {
-                        android.util.Log.w(TAG, "Failed to parse $filePath: ${result.message}")
+                        nluLogWarn(TAG, "Failed to parse $filePath: ${result.message}")
                     }
                 }
             }

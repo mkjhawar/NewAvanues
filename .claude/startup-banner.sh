@@ -41,6 +41,10 @@ if [[ "$ideacode_version" == "?" ]] && [[ -f "/Volumes/M-Drive/Coding/ideacode/v
     ideacode_version=$(jq -r '.framework_version // "?"' /Volumes/M-Drive/Coding/ideacode/version-info.json 2>/dev/null)
 fi
 
+# Save session CC version (for statusline dual-version detection)
+CC_SESSION_VER=$(claude --version 2>/dev/null | sed 's/ .*//' || echo "?")
+echo "$CC_SESSION_VER" > "$HOME/.claude/.session-version"
+
 # Get repo info
 repo_name="unknown"
 branch="unknown"

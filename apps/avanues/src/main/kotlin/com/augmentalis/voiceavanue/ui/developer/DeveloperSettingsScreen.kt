@@ -45,6 +45,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.augmentalis.avanueui.components.settings.SettingsDropdownRow
@@ -67,7 +69,10 @@ fun DeveloperSettingsScreen(
             TopAppBar(
                 title = { Text("Developer Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -75,7 +80,10 @@ fun DeveloperSettingsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.resetToDefaults() }) {
+                    IconButton(
+                        onClick = { viewModel.resetToDefaults() },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Reset to Defaults" }
+                    ) {
                         Icon(
                             imageVector = Icons.Default.RestartAlt,
                             contentDescription = "Reset to defaults",

@@ -1,5 +1,6 @@
 package com.augmentalis.magiccode.plugins.marketplace
 
+import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 
 /**
@@ -192,7 +193,7 @@ data class PluginDetails(
      * @return String like "2 days ago", "1 month ago", etc.
      */
     fun getTimeSinceUpdate(): String {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val diff = now - lastUpdated
 
         val seconds = diff / 1000
@@ -293,7 +294,7 @@ data class VersionInfo(
     fun getFormattedDate(): String {
         // KMP-compatible: return relative time instead of formatted date
         // Platform-specific implementations can override for exact dates
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val diff = now - releasedAt
 
         val seconds = diff / 1000

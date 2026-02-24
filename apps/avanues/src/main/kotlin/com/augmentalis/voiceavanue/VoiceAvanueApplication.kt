@@ -21,6 +21,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import android.util.Log
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
 import com.augmentalis.voiceoscore.VivokaEngineFactory
 import com.augmentalis.voiceoscore.rpc.VoiceOSAvuRpcServer
@@ -28,6 +30,7 @@ import com.augmentalis.voiceoscore.rpc.VoiceOSServerConfig
 import com.augmentalis.webavanue.rpc.WebAvanueJsonRpcServer
 import com.augmentalis.webavanue.rpc.WebAvanueServerConfig
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,7 +39,14 @@ import kotlinx.coroutines.launch
 private const val TAG = "VoiceAvanue"
 
 @HiltAndroidApp
-class VoiceAvanueApplication : Application() {
+class VoiceAvanueApplication : Application(), Configuration.Provider {
+
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 

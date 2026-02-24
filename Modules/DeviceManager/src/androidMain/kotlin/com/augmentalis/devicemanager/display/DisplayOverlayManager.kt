@@ -48,11 +48,7 @@ class DisplayOverlayManager(private val context: Context) {
      * Check if overlay permission is granted
      */
     fun hasOverlayPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(context)
-        } else {
-            true
-        }
+        return Settings.canDrawOverlays(context) // minSdk=26 >= M(23)
     }
     
     /**
@@ -71,18 +67,13 @@ class DisplayOverlayManager(private val context: Context) {
         val params = WindowManager.LayoutParams().apply {
             this.width = width
             this.height = height
-            this.type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-            }
+            this.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY // minSdk=26 >= O(26)
             this.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             this.format = PixelFormat.TRANSLUCENT
             this.gravity = position.toGravity()
         }
-        
+
         try {
             windowManager.addView(view, params)
             overlays[id] = view
@@ -91,7 +82,7 @@ class DisplayOverlayManager(private val context: Context) {
             return false
         }
     }
-    
+
     /**
      * Update overlay position
      */
@@ -148,19 +139,16 @@ class DisplayOverlayManager(private val context: Context) {
         val (isHdr, isWideColorGamut) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Android 11+ has better display capabilities API
             val display = context.display
-            if (display != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (display != null) {
                 Pair(display.isHdr, display.isWideColorGamut)
             } else {
                 Pair(false, false)
             }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Android 8-10 (API 26-29)
+        } else {
+            // Android 8-10 (API 26-29), minSdk=26
             @Suppress("DEPRECATION")
             val display = windowManager.defaultDisplay
             Pair(display.isHdr, display.isWideColorGamut)
-        } else {
-            // Android 7 and below
-            Pair(false, false)
         }
         
         return DisplayConfig(
@@ -234,21 +222,12 @@ class DisplayOverlayManager(private val context: Context) {
         val params = WindowManager.LayoutParams().apply {
             this.width = width
             this.height = height
-            this.type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-            }
+            this.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY // minSdk=26 >= O(26)
             this.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             this.format = PixelFormat.TRANSLUCENT
             this.gravity = position.toGravity()
-            
-            // Set display for Android 8+
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                this.preferredDisplayModeId = display.mode.modeId
-            }
+            this.preferredDisplayModeId = display.mode.modeId
         }
         
         try {
@@ -267,14 +246,9 @@ class DisplayOverlayManager(private val context: Context) {
     fun extendToExternalDisplay(displayId: Int): Boolean {
         val display = displayManager?.getDisplay(displayId) ?: return false
         
-        // Create a presentation context for the external display
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            val presentationContext = context.createDisplayContext(display)
-            // Your VoiceUI can now be extended to this display using presentationContext
-            return true
-        }
-        
-        return false
+        // Create a presentation context for the external display (minSdk=26 >= JELLY_BEAN_MR1)
+        val presentationContext = context.createDisplayContext(display)
+        return true
     }
     
     /**

@@ -20,7 +20,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.voiceaccessibility"
-    compileSdk = 34
+    compileSdk = 35
     
     lint {
         // Temporarily disable lint errors to allow build

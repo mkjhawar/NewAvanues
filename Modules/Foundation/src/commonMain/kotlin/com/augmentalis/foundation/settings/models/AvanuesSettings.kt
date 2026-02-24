@@ -34,6 +34,11 @@ data class AvanuesSettings(
     val voiceFeedback: Boolean = true,
     val voiceLocale: String = DEFAULT_VOICE_LOCALE,
 
+    // Wake Word
+    val wakeWordEnabled: Boolean = false,
+    val wakeWordKeyword: String = DEFAULT_WAKE_WORD_KEYWORD,
+    val wakeWordSensitivity: Float = DEFAULT_WAKE_WORD_SENSITIVITY,
+
     // Boot
     val autoStartOnBoot: Boolean = false,
 
@@ -67,6 +72,10 @@ data class AvanuesSettings(
 
         // Voice defaults
         const val DEFAULT_VOICE_LOCALE = "en-US"
+
+        // Wake Word defaults
+        const val DEFAULT_WAKE_WORD_KEYWORD = "HEY_AVA"
+        const val DEFAULT_WAKE_WORD_SENSITIVITY = 0.5f
 
         // VOS Sync defaults
         const val DEFAULT_SFTP_PORT = 22

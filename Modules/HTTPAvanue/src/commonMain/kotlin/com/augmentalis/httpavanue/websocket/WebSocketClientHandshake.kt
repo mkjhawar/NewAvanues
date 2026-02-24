@@ -1,16 +1,17 @@
 package com.augmentalis.httpavanue.websocket
 
-import okio.ByteString.Companion.toByteString
+import com.augmentalis.httpavanue.io.sha1Digest
+import com.augmentalis.httpavanue.io.toBase64
 import kotlin.random.Random
 
 /**
  * Client-side WebSocket handshake (RFC 6455).
- * Uses Okio's ByteString.sha1() instead of platform expect/actual.
+ * Uses AvanueByteString extensions for SHA-1 and Base64.
  */
 object WebSocketClientHandshake {
     private const val WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-    fun generateKey(): String = Random.nextBytes(16).toByteString().base64()
+    fun generateKey(): String = Random.nextBytes(16).toBase64()
 
     fun createHandshakeRequest(config: WebSocketClientConfig, key: String): String {
         val url = config.parsedUrl
@@ -47,7 +48,7 @@ object WebSocketClientHandshake {
 
     private fun generateExpectedAcceptKey(clientKey: String): String {
         val concatenated = clientKey + WEBSOCKET_GUID
-        return concatenated.encodeToByteArray().toByteString().sha1().base64()
+        return concatenated.encodeToByteArray().sha1Digest().toBase64()
     }
 }
 

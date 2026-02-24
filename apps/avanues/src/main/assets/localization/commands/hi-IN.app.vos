@@ -40,6 +40,10 @@ voice_num_auto|numbers auto|numbers automatic,auto numbers|Sirf lists ke liye nu
 voice_cursor_show|cursor dikhao|cursor on,cursor chalu karo|Voice cursor overlay dikhao
 voice_cursor_hide|cursor chupao|cursor off,cursor band karo|Voice cursor overlay chupao
 voice_cursor_click|cursor click karo|yahan click karo,click here|Cursor position par click karo
+voice_cursor_up|cursor upar|cursor upar le jao|Cursor upar ki taraf le jao
+voice_cursor_down|cursor neeche|cursor neeche le jao|Cursor neeche ki taraf le jao
+voice_cursor_left|cursor bayen|cursor bayen le jao|Cursor bayen taraf le jao
+voice_cursor_right|cursor dayen|cursor dayen le jao|Cursor dayen taraf le jao
 acc_click|click karo|tap karo,dabao|Kisi named ya numbered element par click karo
 acc_long_click|der tak dabao|long press karo,long click karo,daba kar rakho|Element par long press karo
 acc_zoom_in|zoom in karo|bada karo,zoom badhao|Zoom in karo

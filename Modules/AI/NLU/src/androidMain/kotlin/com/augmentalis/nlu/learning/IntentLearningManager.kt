@@ -1,8 +1,10 @@
 package com.augmentalis.nlu.learning
 
 import android.content.Context
-import android.util.Log
 import com.augmentalis.ava.core.data.db.AVADatabase
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
 import com.augmentalis.ava.core.data.db.DatabaseDriverFactory
 import com.augmentalis.ava.core.data.db.createDatabase
 import com.augmentalis.nlu.IntentClassifier
@@ -91,25 +93,25 @@ class IntentLearningManager(
             val hint = extractIntentHint(llmResponse)
 
             if (hint == null) {
-                Log.d(TAG, "No intent hint found in LLM response")
+                nluLogDebug(TAG, "No intent hint found in LLM response")
                 return@withContext false
             }
 
-            Log.i(TAG, "Extracted intent hint: ${hint.intentName} (confidence: ${hint.confidence})")
+            nluLogInfo(TAG, "Extracted intent hint: ${hint.intentName} (confidence: ${hint.confidence})")
 
             // 2. Validate confidence threshold
             if (hint.confidence < LEARNING_CONFIDENCE_THRESHOLD) {
-                Log.d(TAG, "Intent confidence too low for learning: ${hint.confidence} < $LEARNING_CONFIDENCE_THRESHOLD")
+                nluLogDebug(TAG, "Intent confidence too low for learning: ${hint.confidence} < $LEARNING_CONFIDENCE_THRESHOLD")
                 return@withContext false
             }
 
             // 3. Learn the intent
             learnIntent(userMessage, hint.intentName)
 
-            Log.i(TAG, "Successfully learned: \"$userMessage\" → ${hint.intentName}")
+            nluLogInfo(TAG, "Successfully learned: \"$userMessage\" → ${hint.intentName}")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to learn from LLM response: ${e.message}", e)
+            nluLogError(TAG, "Failed to learn from LLM response: ${e.message}", e)
             false
         }
     }
@@ -174,10 +176,10 @@ class IntentLearningManager(
 
         if (existingIntent != null) {
             // Intent exists - add new example
-            Log.d(TAG, "Adding example to existing intent: $intentName")
+            nluLogDebug(TAG, "Adding example to existing intent: $intentName")
         } else {
             // Intent doesn't exist - create new intent
-            Log.d(TAG, "Creating new intent: $intentName")
+            nluLogDebug(TAG, "Creating new intent: $intentName")
         }
 
         // Insert into database using SQLDelight
@@ -198,13 +200,13 @@ class IntentLearningManager(
             last_used = null
         )
 
-        Log.i(TAG, "Stored new example in database: \"$userExample\" → $intentName")
+        nluLogInfo(TAG, "Stored new example in database: \"$userExample\" → $intentName")
 
         // Re-initialize classifier to recompute embeddings
         val modelPath = context.getExternalFilesDir(null)?.absolutePath + "/models/AVA-384-Base-INT8.AON"
         IntentClassifier.getInstance(context).initialize(modelPath)
 
-        Log.i(TAG, "Recomputed embeddings with new example")
+        nluLogInfo(TAG, "Recomputed embeddings with new example")
     }
 
     /**
@@ -242,7 +244,7 @@ class IntentLearningManager(
             learnIntent(userText, intentId, source)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to save learned example: ${e.message}", e)
+            nluLogError(TAG, "Failed to save learned example: ${e.message}", e)
             false
         }
     }
@@ -268,7 +270,7 @@ class IntentLearningManager(
                 "learned_intent_list" to learnedIntents
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get stats: ${e.message}", e)
+            nluLogError(TAG, "Failed to get stats: ${e.message}", e)
             mapOf("error" to (e.message ?: "Unknown error"))
         }
     }

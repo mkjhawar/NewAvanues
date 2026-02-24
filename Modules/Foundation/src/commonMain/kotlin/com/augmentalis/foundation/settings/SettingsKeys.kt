@@ -36,6 +36,13 @@ object SettingsKeys {
     const val VOICE_COMMAND_LOCALE = "voice_command_locale"
 
     // ══════════════════════════════════════════
+    // Wake Word Settings
+    // ══════════════════════════════════════════
+    const val WAKE_WORD_ENABLED = "wake_word_enabled"
+    const val WAKE_WORD_KEYWORD = "wake_word_keyword"
+    const val WAKE_WORD_SENSITIVITY = "wake_word_sensitivity"
+
+    // ══════════════════════════════════════════
     // Boot / Lifecycle
     // ══════════════════════════════════════════
     const val AUTO_START_ON_BOOT = "auto_start_on_boot"
@@ -67,6 +74,14 @@ object SettingsKeys {
     // ══════════════════════════════════════════
     const val DISABLED_COMMANDS = "vcm_disabled_commands"
     const val USER_SYNONYMS = "vcm_user_synonyms"
+
+    // ══════════════════════════════════════════
+    // Adaptive Timing (learned by AdaptiveTimingManager)
+    // ══════════════════════════════════════════
+    const val ADAPTIVE_PROCESSING_DELAY_MS = "adaptive_processing_delay_ms"
+    const val ADAPTIVE_SCROLL_DEBOUNCE_MS = "adaptive_scroll_debounce_ms"
+    const val ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS = "adaptive_speech_update_debounce_ms"
+    const val ADAPTIVE_COMMAND_WINDOW_MS = "adaptive_command_window_ms"
 
     // ══════════════════════════════════════════
     // Developer Settings

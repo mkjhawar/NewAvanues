@@ -1,6 +1,6 @@
 package com.augmentalis.chat.coordinator
 
-import com.augmentalis.actions.ActionResult
+import com.augmentalis.intentactions.IntentResult
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -104,7 +104,7 @@ interface IActionCoordinator {
     /**
      * Execute action directly without routing (for built-in intents).
      */
-    suspend fun executeAction(intent: String, utterance: String): ActionResult
+    suspend fun executeAction(intent: String, utterance: String): IntentResult
 
     // ==================== Accessibility State ====================
 

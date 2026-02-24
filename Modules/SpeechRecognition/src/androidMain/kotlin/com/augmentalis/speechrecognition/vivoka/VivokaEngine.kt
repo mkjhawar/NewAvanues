@@ -43,6 +43,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -751,6 +752,52 @@ class VivokaEngine(
     }
 
     /**
+     * Suspending version of setDynamicCommands that WAITS for compilation to complete.
+     *
+     * Unlike setDynamicCommands() which fires and forgets via coroutineScope.launch,
+     * this method:
+     * 1. Waits for any in-progress compilation to finish (spins on atomic guard)
+     * 2. Registers and compiles the new grammar synchronously
+     * 3. Only returns AFTER compilation is complete
+     *
+     * Used by VivokaAndroidEngine.updateCommands() for mode transitions (MUTED → COMBINED)
+     * where startListening() must NOT run until the grammar is ready.
+     */
+    suspend fun setDynamicCommandsAwait(commands: List<String>): Boolean {
+        // Wait for any in-progress compilation to finish (with timeout to prevent
+        // indefinite blocking if the VSDK hangs during grammar compilation)
+        val acquired = withTimeoutOrNull(5_000L) {
+            while (!isSettingDynamicCommands.compareAndSet(false, true)) {
+                delay(50) // yield, let the current compilation finish
+            }
+            true
+        }
+        if (acquired == null) {
+            Log.w(TAG, "setDynamicCommandsAwait: timed out waiting for compilation lock (5s)")
+            return false
+        }
+        try {
+            Log.d(TAG, "setDynamicCommandsAwait: ${commands.size} commands")
+            registeredCommands.clear()
+            registeredCommands.addAll(commands)
+
+            // Register with model component
+            model.registerCommands(commands)
+
+            // Register with learning system
+            learning.registerCommands(commands)
+
+            // Compile models if not sleeping and initialized
+            if (!voiceStateManager.isVoiceSleeping() && voiceStateManager.isInitialized()) {
+                return model.compileModelWithCommands(registeredCommands)
+            }
+            return true // registered but not compiled (sleeping or uninitialized)
+        } finally {
+            isSettingDynamicCommands.set(false)
+        }
+    }
+
+    /**
      * Set listeners
      */
     fun setResultListener(listener: OnSpeechResultListener) {
@@ -764,6 +811,23 @@ class VivokaEngine(
     fun setErrorListener(listener: OnSpeechErrorListener) {
         errorListener = listener
         Log.d(TAG, "Error listener registered")
+    }
+
+    /**
+     * Set the processing delay on the recognizer.
+     * Wired to AdaptiveTimingManager by the caller (VivokaAndroidEngine).
+     */
+    fun setProcessingDelay(delayMs: Long) {
+        recognizerProcessor.processingDelayMs = delayMs
+    }
+
+    /**
+     * Set a dynamic delay provider that the recognizer calls on each command.
+     * This ensures the recognizer always reads the latest adaptive value,
+     * even between updateCommands() calls when the delay may have changed.
+     */
+    fun setProcessingDelayProvider(provider: () -> Long) {
+        recognizerProcessor.processingDelayProvider = provider
     }
 
     // ========== IRecognizerListener Implementation ==========
@@ -868,7 +932,7 @@ class VivokaEngine(
      * Handle mode switches with model management
      */
     private suspend fun handleModeSwitch(mode: Any) {
-        Log.d(TAG, "handleModeSwitch = $mode , extra = $ ")
+        Log.d(TAG, "handleModeSwitch = $mode")
         when (mode.toString()) {
             "FREE_SPEECH_START", "FREE_SPEECH_RUNNING" -> {
                 // Switch to dictation model

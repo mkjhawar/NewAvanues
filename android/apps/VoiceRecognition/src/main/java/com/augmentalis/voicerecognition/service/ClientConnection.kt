@@ -2,7 +2,6 @@
  * ClientConnection.kt - Data class for tracking client connections
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-28
  * 
  * Purpose: Simple data structure for managing client connection metadata

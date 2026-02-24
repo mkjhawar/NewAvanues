@@ -13,6 +13,7 @@
 
 package com.augmentalis.nlu.service
 
+import com.augmentalis.nlu.NluThresholds
 import com.augmentalis.nlu.classifier.CalibrationData
 import com.augmentalis.nlu.classifier.ClassificationContext
 import com.augmentalis.nlu.classifier.ClassificationResult
@@ -187,7 +188,7 @@ class NluService(
 
                     return if (bertIntent == classifiedIntent) {
                         // Agreement - boost confidence
-                        val boostedConfidence = (classificationResult.confidence + bertConfidence) / 2 * 1.1f
+                        val boostedConfidence = (classificationResult.confidence + bertConfidence) / 2 * NluThresholds.BERT_AGREEMENT_BOOST_MULTIPLIER
                         VerifiedClassificationResult(
                             result = classificationResult.copy(
                                 confidence = boostedConfidence.coerceIn(0f, 1f)
@@ -210,7 +211,7 @@ class NluService(
                         VerifiedClassificationResult(
                             result = classificationResult.copy(
                                 matches = finalMatches,
-                                confidence = bertConfidence * 0.95f,
+                                confidence = bertConfidence * NluThresholds.BERT_OVERRIDE_CONFIDENCE_FACTOR,
                                 method = MatchMethod.SEMANTIC
                             ),
                             wasVerified = true,

@@ -11,6 +11,7 @@ import com.augmentalis.avamagic.core.MaterialSystem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.datetime.Clock
 
 /**
  * Preview mode for the theme builder
@@ -107,7 +108,7 @@ data class ThemeBuilderState(
  */
 data class HistoryEntry(
     val theme: Theme,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = Clock.System.now().toEpochMilliseconds(),
     val description: String
 )
 
@@ -259,7 +260,7 @@ class ThemeBuilderStateManager {
     fun save() {
         _state.value = _state.value.copy(
             isDirty = false,
-            lastSaved = System.currentTimeMillis()
+            lastSaved = Clock.System.now().toEpochMilliseconds()
         )
     }
 

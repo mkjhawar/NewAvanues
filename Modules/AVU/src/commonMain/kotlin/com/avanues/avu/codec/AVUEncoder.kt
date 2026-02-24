@@ -64,8 +64,9 @@ object AVUEncoder {
     const val CODE_CONFIG_KEY = "KEY"       // KEY:name:type:default:description
     const val CODE_HOOK = "HKS"             // HKS:event:handler
 
-    // Protocol codes - App Category Database (ACD Format v1.0)
-    const val CODE_APP_CATEGORY_DB = "ACD"  // ACD:version:timestamp:author (header)
+    // Protocol codes - App Category Database (ACB Format v1.0)
+    // NOTE: was "ACD" but that collides with CODE_ACCEPT_DATA. Renamed to "ACB" (App Category dataBase).
+    const val CODE_APP_CATEGORY_DB = "ACB"  // ACB:version:timestamp:author (header)
     const val CODE_APP_PKG_CATEGORY = "APC" // APC:packageName:category:source:confidence
     const val CODE_APP_PATTERN_GROUP = "APG" // APG:category:pattern1|pattern2|pattern3
 
@@ -516,8 +517,8 @@ object AVUEncoder {
     /**
      * Encode app category database header line.
      *
-     * Format: ACD:version:timestamp:author
-     * Example: ACD:1.0.0:1706300000000:augmentalis
+     * Format: ACB:version:timestamp:author
+     * Example: ACB:1.0.0:1706300000000:augmentalis
      */
     fun encodeAppCategoryHeader(
         version: String,

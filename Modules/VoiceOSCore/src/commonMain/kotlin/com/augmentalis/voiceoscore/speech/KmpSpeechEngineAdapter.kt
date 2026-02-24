@@ -219,15 +219,28 @@ class KmpSpeechEngineAdapter(
     // =========================================================================
 
     /**
-     * Map VoiceOSCore SpeechMode to SpeechRecognition SpeechMode
+     * Map VoiceOSCore SpeechMode to SpeechRecognition SpeechMode.
+     *
+     * Key design notes:
+     * - MUTED maps to STATIC_COMMAND at the engine level because the engine still
+     *   needs to recognize wake commands ("wake up voice", etc.). Grammar filtering
+     *   (restricting to exit/wake commands only) is handled upstream in
+     *   VoiceOSCore.setSpeechMode() via engine.updateCommands(exitCommands).
+     * - COMBINED_COMMAND maps to STATIC_COMMAND because the combined static+dynamic
+     *   command matching is handled by VoiceOSCore's ActionCoordinator, not the
+     *   speech engine. The engine just needs restricted grammar recognition.
+     * - The SpeechRecognition module's SpeechMode enum intentionally omits MUTED
+     *   and COMBINED_COMMAND because those are VoiceOSCore-level orchestration
+     *   concerns, not speech engine concerns.
      */
     private fun mapModeToKmp(mode: SpeechMode): com.augmentalis.speechrecognition.SpeechMode {
         return when (mode) {
             SpeechMode.STATIC_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND
             SpeechMode.DYNAMIC_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.DYNAMIC_COMMAND
-            SpeechMode.COMBINED_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.HYBRID
+            SpeechMode.COMBINED_COMMAND -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND
             SpeechMode.DICTATION -> com.augmentalis.speechrecognition.SpeechMode.DICTATION
             SpeechMode.FREE_SPEECH -> com.augmentalis.speechrecognition.SpeechMode.FREE_SPEECH
+            SpeechMode.MUTED -> com.augmentalis.speechrecognition.SpeechMode.STATIC_COMMAND
             SpeechMode.HYBRID -> com.augmentalis.speechrecognition.SpeechMode.HYBRID
         }
     }

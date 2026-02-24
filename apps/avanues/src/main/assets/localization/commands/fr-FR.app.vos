@@ -40,6 +40,10 @@ voice_num_auto|numeros auto|numeros automatiques,auto numeros|Afficher les numer
 voice_cursor_show|afficher le curseur|curseur on,activer le curseur|Afficher le curseur vocal
 voice_cursor_hide|masquer le curseur|curseur off,desactiver le curseur|Masquer le curseur vocal
 voice_cursor_click|clic curseur|cliquer ici|Cliquer a la position du curseur
+voice_cursor_up|curseur haut|deplacer curseur haut|Deplacer le curseur vers le haut
+voice_cursor_down|curseur bas|deplacer curseur bas|Deplacer le curseur vers le bas
+voice_cursor_left|curseur gauche|deplacer curseur gauche|Deplacer le curseur vers la gauche
+voice_cursor_right|curseur droite|deplacer curseur droite|Deplacer le curseur vers la droite
 acc_click|cliquer|appuyer,toucher,taper|Cliquer sur un element nomme ou numerote
 acc_long_click|appui long|clic long,maintenir,rester appuye|Appui long sur un element
 acc_zoom_in|zoomer|agrandir,zoom avant,rapprocher|Zoomer

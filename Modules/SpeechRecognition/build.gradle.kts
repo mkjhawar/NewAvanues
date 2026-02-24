@@ -27,59 +27,51 @@ plugins {
 kotlin {
     // Android target
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("macos", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets with whisper_bridge cinterop
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach {
-            it.binaries.framework {
-                baseName = "SpeechRecognition"
-                isStatic = true
-                // Link against whisper_bridge static library when available
-                // Build: cd Modules/Whisper && ./build-xcframework.sh
-                // The library must be placed at:
-                //   libs/ios-arm64/libwhisper_bridge.a (device)
-                //   libs/ios-x64/libwhisper_bridge.a (simulator x64)
-                //   libs/ios-sim-arm64/libwhisper_bridge.a (simulator arm64)
-            }
+    // iOS targets with whisper_bridge cinterop
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "SpeechRecognition"
+            isStatic = true
+            // Link against whisper_bridge static library when available
+            // Build: cd Modules/Whisper && ./build-xcframework.sh
+            // The library must be placed at:
+            //   libs/ios-arm64/libwhisper_bridge.a (device)
+            //   libs/ios-x64/libwhisper_bridge.a (simulator x64)
+            //   libs/ios-sim-arm64/libwhisper_bridge.a (simulator arm64)
+        }
 
-            // Generate Kotlin bindings via cinterop
-            it.compilations.getByName("main") {
-                cinterops {
-                    // whisper.cpp bridge for offline speech recognition
-                    val whisper by creating {
-                        defFile("src/nativeInterop/cinterop/whisper.def")
-                        includeDirs("src/nativeInterop/cinterop")
-                    }
-                    // CommonCrypto for VSM model file encryption/decryption
-                    val commoncrypto by creating {
-                        defFile("src/nativeInterop/cinterop/commoncrypto.def")
-                    }
+        // Generate Kotlin bindings via cinterop
+        it.compilations.getByName("main") {
+            cinterops {
+                // whisper.cpp bridge for offline speech recognition
+                val whisper by creating {
+                    defFile("src/nativeInterop/cinterop/whisper.def")
+                    includeDirs("src/nativeInterop/cinterop")
+                }
+                // CommonCrypto for VSM model file encryption/decryption
+                val commoncrypto by creating {
+                    defFile("src/nativeInterop/cinterop/commoncrypto.def")
                 }
             }
         }
-
-        // macOS targets — Apple Speech via SFSpeechRecognizer (macOS 10.15+)
-        macosX64()
-        macosArm64()
     }
+
+    // macOS targets — Apple Speech via SFSpeechRecognizer (macOS 10.15+)
+    macosX64()
+    macosArm64()
     // Desktop target (JVM)
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -98,6 +90,15 @@ kotlin {
 
                 // NLU module for CommandMatchingService
                 implementation(project(":Modules:AI:NLU"))
+
+                // Foundation for ModuleSettingsProvider
+                implementation(project(":Modules:Foundation"))
+
+                // Crypto module for AON codec (AVX model encryption/decryption)
+                implementation(project(":Modules:Crypto"))
+
+                // Atomicfu for cross-platform thread-safe primitives
+                implementation(libs.kotlinx.atomicfu)
             }
         }
 
@@ -171,7 +172,7 @@ kotlin {
                 implementation(libs.gson)
 
                 // Firebase
-                implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
+                implementation(project.dependencies.platform("com.google.firebase:firebase-bom:34.3.0"))
                 implementation("com.google.firebase:firebase-config")
                 implementation("com.google.firebase:firebase-auth")
 
@@ -190,35 +191,31 @@ kotlin {
             }
         }
 
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("macos", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
-            val iosMain by creating {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-                dependencies {
-                    implementation(libs.kotlinx.atomicfu)
-                    // Compose runtime needed for kotlin.compose plugin on native targets
-                    implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
-                }
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                implementation(libs.kotlinx.atomicfu)
+                // Compose runtime needed for kotlin.compose plugin on native targets
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
             }
+        }
 
-            // macOS source set — Apple Speech via SFSpeechRecognizer
-            val macosX64Main by getting
-            val macosArm64Main by getting
-            val macosMain by creating {
-                dependsOn(commonMain)
-                macosX64Main.dependsOn(this)
-                macosArm64Main.dependsOn(this)
-                dependencies {
-                    implementation(libs.kotlinx.atomicfu)
-                    implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
-                }
+        // macOS source set — Apple Speech via SFSpeechRecognizer
+        val macosX64Main by getting
+        val macosArm64Main by getting
+        val macosMain by creating {
+            dependsOn(commonMain)
+            macosX64Main.dependsOn(this)
+            macosArm64Main.dependsOn(this)
+            dependencies {
+                implementation(libs.kotlinx.atomicfu)
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
             }
         }
         val desktopMain by getting {
@@ -242,10 +239,10 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.speechrecognition"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 28  // Must match NLU dependency (minSdk 28)
         multiDexEnabled = true
 
         buildConfigField("String", "MODULE_VERSION", "\"3.0.0\"")

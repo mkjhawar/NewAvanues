@@ -2,7 +2,6 @@
  * MagicVoiceHandlerRegistry.kt - Registry for MagicVoiceHandlers integration with VoiceOSCore
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-28
  *
  * Purpose: Wire all MagicVoiceHandlers to VoiceOSCore's HandlerRegistry

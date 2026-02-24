@@ -18,6 +18,7 @@ class SpatialAudio(private val context: Context) {
     }
     
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    @Suppress("DEPRECATION") // Virtualizer deprecated in API 35; used as fallback for pre-API 31 devices
     private var virtualizer: Virtualizer? = null
     
     private val _spatialEnabled = MutableStateFlow(false)
@@ -62,6 +63,7 @@ class SpatialAudio(private val context: Context) {
     /**
      * Enable virtualizer as spatial audio fallback
      */
+    @Suppress("DEPRECATION") // Virtualizer deprecated in API 35; no per-session replacement exists
     private fun enableVirtualizer(audioSessionId: Int): Boolean {
         return try {
             virtualizer?.release()
@@ -121,6 +123,7 @@ class SpatialAudio(private val context: Context) {
     /**
      * Set spatial audio strength (for virtualizer mode)
      */
+    @Suppress("DEPRECATION") // Virtualizer.setStrength deprecated in API 35
     fun setStrength(strength: Int): Boolean {
         return try {
             virtualizer?.setStrength(strength.coerceIn(0, 1000).toShort())

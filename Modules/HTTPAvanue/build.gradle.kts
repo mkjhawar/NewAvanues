@@ -20,15 +20,20 @@ kotlin {
     }
 
     androidTarget {
-        compilations.all {
-            kotlinOptions { jvmTarget = "17" }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions { jvmTarget = "17" }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
+    }
+
+    js(IR) {
+        browser()
+        nodejs()
     }
 
     listOf(
@@ -48,7 +53,6 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
-                implementation(libs.okio)
             }
         }
 
@@ -89,12 +93,16 @@ kotlin {
             iosArm64Main.dependsOn(this)
             iosSimulatorArm64Main.dependsOn(this)
         }
+
+        val jsMain by getting {
+            dependsOn(commonMain)
+        }
     }
 }
 
 android {
     namespace = "com.augmentalis.httpavanue"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig { minSdk = 29 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

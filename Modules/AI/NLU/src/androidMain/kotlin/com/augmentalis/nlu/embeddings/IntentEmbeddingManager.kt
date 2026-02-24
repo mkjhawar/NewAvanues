@@ -8,8 +8,10 @@
 package com.augmentalis.nlu.embeddings
 
 import android.content.Context
-import android.util.Log
 import com.augmentalis.ava.core.data.db.AVADatabase
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
 import com.augmentalis.ava.core.data.db.DatabaseDriverFactory
 import com.augmentalis.ava.core.data.db.createDatabase
 import kotlinx.coroutines.Dispatchers
@@ -192,7 +194,7 @@ class IntentEmbeddingManager(
      */
     suspend fun loadTrainedEmbeddings() = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Loading trained embeddings from database...")
+            nluLogDebug(TAG, "Loading trained embeddings from database...")
 
             // Load from intent_embedding table (pre-computed embeddings)
             val storedEmbeddings = database.intentEmbeddingQueries.selectAll().executeAsList()
@@ -201,13 +203,13 @@ class IntentEmbeddingManager(
                 val embedding = bytesToFloatArray(stored.embedding_vector)
                 if (embedding.isNotEmpty()) {
                     intentEmbeddings[stored.intent_id] = embedding
-                    Log.d(TAG, "Loaded embedding: ${stored.intent_id}")
+                    nluLogDebug(TAG, "Loaded embedding: ${stored.intent_id}")
                 }
             }
 
-            Log.i(TAG, "Loaded ${storedEmbeddings.size} embeddings from database")
+            nluLogInfo(TAG, "Loaded ${storedEmbeddings.size} embeddings from database")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load embeddings: ${e.message}", e)
+            nluLogError(TAG, "Failed to load embeddings: ${e.message}", e)
         }
     }
 
@@ -252,10 +254,10 @@ class IntentEmbeddingManager(
             // Using synchronized map ensures thread-safe update
             intentEmbeddings[intentName] = embedding
 
-            Log.d(TAG, "Saved trained embedding: $intentName")
+            nluLogDebug(TAG, "Saved trained embedding: $intentName")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to save trained embedding: ${e.message}", e)
+            nluLogError(TAG, "Failed to save trained embedding: ${e.message}", e)
             false
         }
     }
@@ -267,20 +269,20 @@ class IntentEmbeddingManager(
      */
     fun markPreComputationComplete() {
         _isPreComputationComplete.value = true
-        Log.i(TAG, "Pre-computation complete. Loaded ${intentEmbeddings.size} embeddings")
+        nluLogInfo(TAG, "Pre-computation complete. Loaded ${intentEmbeddings.size} embeddings")
     }
 
     /**
      * Log embedding status summary.
      */
     fun logEmbeddingStatus() {
-        Log.i(TAG, "=== Embedding Status ===")
-        Log.i(TAG, "Total embeddings: ${intentEmbeddings.size}")
+        nluLogInfo(TAG, "=== Embedding Status ===")
+        nluLogInfo(TAG, "Total embeddings: ${intentEmbeddings.size}")
         intentEmbeddings.keys.take(10).forEach { intent ->
-            Log.d(TAG, "  ✓ $intent")
+            nluLogDebug(TAG, "  ✓ $intent")
         }
         if (intentEmbeddings.size > 10) {
-            Log.d(TAG, "  ... and ${intentEmbeddings.size - 10} more")
+            nluLogDebug(TAG, "  ... and ${intentEmbeddings.size - 10} more")
         }
     }
 

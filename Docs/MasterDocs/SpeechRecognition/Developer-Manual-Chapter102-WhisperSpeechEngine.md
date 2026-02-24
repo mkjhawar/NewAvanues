@@ -2,9 +2,9 @@
 
 **Module**: `Modules/SpeechRecognition/`
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
-**Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
+**Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple), Sherpa-ONNX (AVX engine), Crypto/AONCodec (AVX model encryption)
 **Created**: 2026-02-20
-**Updated**: 2026-02-22 — Whisper engine full sweep (vadSensitivity, unified confidence, platform perf fixes), VLM encryption (Section 14), Google Cloud STT v2 (Section 15)
+**Updated**: 2026-02-24 — AdaptiveTimingManager review fixes: unified confidence gate, persistence wiring, key consolidation, isDuplicate mutation fix (Section 21.5, 21.7). AVX (AvaVox) Command Engine (Section 20, 20.1-20.8), Distil-Whisper models (Section 20.2), initial_prompt biasing (Section 20.1), Pre-filter architecture (Section 20.5), Vivoka wake-word detection with lifecycle wiring (Section 19, 19.1-19.6), P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
 
 ---
 
@@ -24,10 +24,11 @@ The Whisper Speech Engine provides **fully offline** speech recognition using Op
 
 | Engine | Android | iOS | macOS | Desktop (JVM) |
 |---|---|---|---|---|
-| **Whisper** | JNI (WhisperEngine) | cinterop (IosWhisperEngine) | — | JNI (DesktopWhisperEngine) |
+| **Whisper** | JNI (WhisperEngine) | cinterop (IosWhisperEngine) | cinterop (shared iosMain) | JNI (DesktopWhisperEngine) |
 | **Apple Speech** | — | SFSpeechRecognizer | SFSpeechRecognizer | — |
 | **Android STT** | Built-in | — | — | — |
 | **Vivoka** | VSDK AAR | — | — | — |
+| **AVX (AvaVox)** | AvxEngine (Sherpa-ONNX JNI) | — (future) | — | DesktopAvxEngine (Sherpa-ONNX JNI) |
 | **Google Cloud** | GoogleCloudEngine (VAD_BATCH + STREAMING) | — | — | — |
 
 ### Why Whisper?
@@ -49,9 +50,12 @@ The Whisper Speech Engine provides **fully offline** speech recognition using Op
 
 ```
 Modules/SpeechRecognition/src/
+    commonMain/kotlin/.../
+        SpeechMetricsSnapshot.kt  # Immutable metrics snapshot for dashboard/UI
     commonMain/kotlin/.../whisper/
         WhisperModels.kt          # Shared enums + data classes
         WhisperVAD.kt             # Voice Activity Detection algorithm
+        VADProfile.kt             # VAD presets (COMMAND/CONVERSATION/DICTATION)
         ModelDownloadState.kt     # Download state machine
         WhisperPerformance.kt     # Performance metrics tracker
         vsm/VSMFormat.kt          # VSM file format constants + header
@@ -85,8 +89,12 @@ Modules/SpeechRecognition/src/
 
     macosMain/kotlin/.../
         MacosSpeechRecognitionService.kt  # SFSpeechRecognizer (macOS 10.15+)
-        PlatformUtils.macos.kt           # NSLog + atomicfu
+        PlatformUtils.macos.kt           # NSLog + atomicfu SynchronizedObject
         SpeechRecognitionServiceFactory.macos.kt
+
+    NOTE: commoncrypto.def was removed (260224) — CommonCrypto imports
+    are resolved via platform.CoreCrypto.* in Kotlin/Native without a
+    separate cinterop definition.
 
     desktopMain/kotlin/.../whisper/
         DesktopWhisperEngine.kt         # Desktop engine orchestrator
@@ -97,7 +105,6 @@ Modules/SpeechRecognition/src/
 
     nativeInterop/cinterop/
         whisper.def               # K/N cinterop definition for whisper_bridge
-        commoncrypto.def          # K/N cinterop definition for CommonCrypto (VSM)
         whisper_bridge.h          # C header for whisper.cpp bindings
         whisper_bridge.c          # C implementation wrapping whisper.cpp
 
@@ -209,7 +216,7 @@ UNINITIALIZED
     |
     | initialize(config)
     v
-LOADING_MODEL  --[auto-download if missing]-->
+LOADING_MODEL  --[memory check → may downgrade model]--> [auto-download if missing]-->
     |
     | model loaded + audio initialized
     v
@@ -270,6 +277,24 @@ val config = IosWhisperConfig.autoTuned(language = "en")
 
 **Key differences from Android**: Model storage at `NSSearchPathForDirectoriesInDomains(DocumentDirectory)`, downloads via `NSURLSession.downloadTaskWithRequest` (streams to disk — avoids OOM for large models), audio via `AVAudioEngine` with FIR anti-aliasing filter for downsampling.
 
+**AVAudioEngine Error Handling (Kotlin/Native)**
+
+iOS audio initialization uses `startAndReturnError()` with Kotlin/Native's `memScoped` pattern for safe NSError capture:
+
+```kotlin
+@OptIn(BetaInteropApi::class)
+memScoped {
+    val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+    val started = audioEngine.startAndReturnError(errorPtr.ptr)
+    if (!started) {
+        val error = errorPtr.value
+        logError(TAG, "AVAudioEngine start failed: ${error?.localizedDescription}")
+    }
+}
+```
+
+5 call sites use this pattern across `IosWhisperAudio.kt`, `IosSpeechRecognitionService.kt`, and `MacosSpeechRecognitionService.kt`. The `@OptIn(BetaInteropApi::class)` annotation is required for `ObjCObjectVar` access in Kotlin 2.1.0.
+
 ### 3.3 Desktop — DesktopWhisperConfig
 
 ```kotlin
@@ -315,6 +340,41 @@ val config = GoogleCloudConfig.fromSpeechConfig(speechConfig)
 | MEDIUM_EN | 1500 MB | 2 GB | Very Slow | Excellent | Yes |
 
 **Auto-selection**: `WhisperModelSize.forAvailableRAM(ramMB, englishOnly)` picks the best model that fits in 50% of available RAM.
+
+### 3.6 Memory-Aware Runtime Model Selection (Android)
+
+`WhisperConfig.autoTuned()` selects a model based on `totalMem` (total device RAM), which is a **static** value. However, `availMem` (currently free RAM) can be much lower when other apps are running. Loading a model that exceeds available RAM triggers a page fault storm that can cause ANR.
+
+**Runtime guard in `performInitialization()`** (added 2026-02-24, fix for ANR ErrorId `54caaec6`):
+
+Before model loading, `WhisperEngine.performInitialization()` checks `ActivityManager.MemoryInfo`:
+
+| Condition | Action |
+|-----------|--------|
+| `memInfo.lowMemory == true` | Force TINY model (or TINY_EN if English-only) |
+| `availMem < model.minRAMMB` | Auto-downgrade via `WhisperModelSize.forAvailableRAM(availMB, isEnglish)` |
+| Otherwise | Use model from config as-is |
+
+```kotlin
+// Step 2c in performInitialization():
+val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+val memInfo = ActivityManager.MemoryInfo()
+activityManager.getMemoryInfo(memInfo)
+val availableMB = (memInfo.availMem / (1024 * 1024)).toInt()
+
+if (memInfo.lowMemory) {
+    // Force smallest model to prevent ANR
+    val tinyModel = if (config.modelSize.isEnglishOnly) WhisperModelSize.TINY_EN else WhisperModelSize.TINY
+    config = config.copy(modelSize = tinyModel)
+} else if (availableMB < config.modelSize.minRAMMB) {
+    // Downgrade to fit available memory
+    config = config.copy(modelSize = WhisperModelSize.forAvailableRAM(availableMB, isEnglish))
+}
+```
+
+**Why this matters**: A device with 8GB total RAM might only have 400MB available at app startup. `autoTuned()` would select SMALL (needs 1024MB), but the runtime check downgrades to BASE (needs 512MB) or TINY (needs 256MB) based on actual availability. This prevents the 146K+ minor page faults that were causing ANR in production.
+
+**Note**: `forAvailableRAM()` uses a 2x safety margin — it requires `availMem >= 2 * model.minRAMMB` (i.e., filters out any model where `minRAMMB > availableMB / 2`). This accounts for whisper.cpp working memory during inference. The runtime check is conservative and may downgrade even when technically sufficient memory exists, which is the correct tradeoff (slightly worse accuracy vs. app crash).
 
 ---
 
@@ -386,10 +446,27 @@ sealed class ModelDownloadState {
     )  // Also exposes: progressPercent, downloadedMB, totalMB, speedMBPerSec, estimatedRemainingSeconds
     data class Verifying(val modelSize)
     data class Completed(val modelSize, val filePath)
+    data class Retrying(
+        val modelSize: WhisperModelSize,
+        val attempt: Int,
+        val maxAttempts: Int,
+        val delayMs: Long
+    )
     data class Failed(val modelSize, val error)
     data class Cancelled(val modelSize)
 }
 ```
+
+### 4.5 Download Retry with Exponential Backoff
+
+Both `WhisperModelManager` (Android) and `IosWhisperModelManager` (iOS) use exponential backoff for transient download failures:
+
+- **Base delay**: 2 seconds, multiplied by 2^(attempt-1), capped at 30 seconds
+- **Maximum attempts**: 3 before transitioning to `Failed` state
+- **Progression**: 2s → 4s → 8s (would be 16s, 32s→30s if more attempts were configured)
+- **Cancellation handling**: `CancellationException` is re-thrown immediately (never retried) to respect coroutine cancellation
+- **State transitions**: `Downloading` → `Retrying(attempt=1, delayMs=2000)` → `Downloading` → `Retrying(attempt=2, delayMs=4000)` → ... → `Failed`
+- **UI feedback**: The `ModelDownloadState.Retrying` state is emitted to `modelDownloadState` StateFlow so UI can show retry countdown
 
 ---
 
@@ -518,6 +595,7 @@ perf.getAverageRTF()          // Real-time factor (< 1.0 = faster than real-time
 perf.getAverageConfidence()   // Rolling average confidence
 perf.totalTranscriptions      // Total count
 perf.emptyTranscriptions      // Silence/noise count
+perf.totalSegments            // Cumulative segment count across all transcriptions
 perf.peakLatencyMs            // Worst-case latency
 perf.detectedLanguage         // Last detected language
 perf.getMetrics()             // Full map for logging/reporting
@@ -532,25 +610,63 @@ perf.getMetrics()             // Full map for logging/reporting
 | Confidence | Token probability average | 0.6 - 0.95 |
 | Success Rate | Non-empty / total transcriptions | > 80% |
 
+### 8.3 Test Coverage
+
+- **Test file**: `Modules/SpeechRecognition/src/commonTest/kotlin/com/augmentalis/speechrecognition/whisper/WhisperPerformanceTest.kt`
+- **38 tests** covering:
+  - Rolling window behavior (window size, oldest eviction)
+  - Peak latency tracking
+  - Real-time factor (RTF) calculation
+  - Success rate computation
+  - Empty transcription counting
+  - Total segments accumulation
+  - Reset behavior
+  - Edge cases (zero duration, empty results, single entry)
+- **Run command**: `./gradlew :Modules:SpeechRecognition:desktopTest`
+- **All tests** are in commonTest (run on JVM via desktopTest)
+
 ---
 
 ## 9. Thread Safety
 
-### 9.1 JNI Serialization
+### 9.1 Cross-Platform Synchronization (atomicfu)
 
-whisper.cpp contexts are **NOT thread-safe**. All native calls are serialized through a single `synchronized(this)` lock in `WhisperNative`/`DesktopWhisperNative`.
+whisper.cpp contexts are **NOT thread-safe**. All native calls are serialized through synchronized blocks.
+
+**KMP approach**: `WhisperPerformance` (commonMain) extends `kotlinx.atomicfu.locks.SynchronizedObject` and uses `synchronized(this) { }` blocks. This compiles to:
+- **JVM**: `java.util.concurrent` intrinsic monitor locks
+- **Native (iOS/macOS)**: `pthread_mutex_lock`/`unlock`
+- **JS**: No-op (single-threaded)
+
+Mutable fields use `@Volatile` for visibility across threads without requiring the full lock.
+
+### 9.2 JNI Serialization (Android/Desktop)
+
+All JNI calls are serialized through `synchronized(this)` in `WhisperNative`/`DesktopWhisperNative`.
 
 Overhead: ~50ns per uncontended lock + ~5us JNI crossing. This is <0.001% of whisper inference time (200-2000ms).
 
-### 9.2 transcribeToText() Atomicity
+### 9.3 cinterop Serialization (iOS)
+
+`IosWhisperNative` uses a `SynchronizedObject` lock with `synchronized(lock) { }` blocks. The entire transcribe+read cycle runs atomically — same pattern as JNI but via K/N cinterop.
+
+Pointer handling: Context pointers are stored as `Long` and converted back to `COpaquePointer` via `kotlinx.cinterop.toCPointer<COpaque>()` for each native call. Null guards prevent crashes on 0L sentinel values.
+
+### 9.4 transcribeToText() Atomicity
 
 The entire transcribe+read cycle runs in one synchronized block:
-1. `fullTranscribe()` — run inference
-2. `getTextSegmentCount()` — read segment count
-3. For each segment: `getTextSegment()`, `getTextSegmentT0()`, `getTextSegmentT1()`, token probabilities
-4. `getDetectedLanguage()` — read language
+1. `fullTranscribe()` / `whisper_bridge_transcribe()` — run inference
+2. `getTextSegmentCount()` / `whisper_bridge_segment_count()` — read segment count
+3. For each segment: text, timestamps, token probabilities
+4. `getDetectedLanguage()` / `whisper_bridge_detected_language()` — read language
 
 This prevents interleaving from concurrent callers.
+
+### 9.5 PII-Safe Logging
+
+Transcribed text is **never logged verbatim** in production builds. All log statements use character counts instead of raw text:
+- `logInfo(TAG, "Transcribed ${result.text.length} chars ...")` (NOT `"Transcribed: '${result.text}'"`)
+- This applies to all platforms (Android, iOS, macOS, Desktop)
 
 ---
 
@@ -1232,11 +1348,18 @@ class GoogleCloudStreamingClient(
         audioQueue.trySend(audioData)  // Non-blocking
     }
 
-    // Stop streaming
+    // Stop streaming — closes queue for this session
     fun stopStreaming() {
         audioQueue.close()
         streamJob?.cancel()
     }
+
+    // IMPORTANT (260222 fix): audioQueue MUST be rebuilt at the start of each
+    // streaming session. Google Cloud STT v2 has a ~5 min stream limit; on
+    // reconnect, a new session calls startStreaming() which must create a fresh
+    // Channel. Without this, the closed channel silently drops all audio after
+    // the first session rotation.
+    // Fix: audioQueue = Channel(Channel.UNLIMITED) at top of each session start.
 
     // Collect results
     fun getResults(): Flow<RecognitionResult> = resultFlow.asSharedFlow()
@@ -1547,3 +1670,599 @@ Firebase Auth is recommended for production — no API key storage required.
 - `com.google.code.gson:gson` — for JSON parsing (already included)
 
 No new dependencies required beyond existing stack.
+
+### 15.10 Phrase Hints (Adaptation)
+
+Google Cloud STT v2 supports **phrase hints** via the `adaptation.phraseSets` field, which biases the recognition model toward expected phrases. This significantly improves command recognition accuracy.
+
+**Integration**: Both `GoogleCloudApiClient.recognize()` and `GoogleCloudStreamingClient.startStreaming()` accept a `phraseHints: List<String>` parameter. The `GoogleCloudEngine` automatically forwards `commandCache.getAllCommands()` (current screen's voice commands) to both clients.
+
+**Wire format** (inside `config`):
+```json
+{
+  "adaptation": {
+    "phraseSets": [{
+      "phrases": [
+        { "value": "click save", "boost": 10.0 },
+        { "value": "scroll down", "boost": 10.0 }
+      ]
+    }]
+  }
+}
+```
+
+- **Boost value**: 10.0 (strong bias toward expected commands)
+- **Cap**: 500 phrases per request (Google API limit)
+- **Source**: `CommandCache.getAllCommands()` — includes static + dynamic (UI-scraped) commands
+
+### 15.11 Settings Provider
+
+`GoogleCloudSettingsProvider` implements `ModuleSettingsProvider` for the Unified Adaptive Settings screen.
+
+| Section | Settings |
+|---------|----------|
+| Project Configuration | GCP Project ID, Location |
+| Authentication | Auth mode (API Key / Firebase), API key |
+| Recognition | Model (latest_short/latest_long), Streaming toggle, Language |
+| Advanced | Punctuation, Profanity filter, Word timestamps |
+
+**DataStore keys**: Prefixed with `gcp_stt_` (e.g., `gcp_stt_project_id`, `gcp_stt_api_key`).
+
+**Build dependency**: `implementation(project(":Modules:Foundation"))` added for `ModuleSettingsProvider` interface.
+
+---
+
+## 16. VAD Profile Presets
+
+### 16.1 Motivation
+
+WhisperVAD had two hardcoded constants — `THRESHOLD_ALPHA` (EMA smoothing factor for noise floor) and `MIN_THRESHOLD` (minimum energy threshold) — that were not configurable. Different speech modes (short commands vs dictation) need different silence/speech detection characteristics.
+
+### 16.2 VADProfile Enum
+
+`VADProfile` (`commonMain/whisper/VADProfile.kt`) provides three tuned presets:
+
+| Profile | silenceTimeoutMs | minSpeechDurationMs | hangoverFrames | vadSensitivity | thresholdAlpha | minThreshold |
+|---------|-----------------|--------------------:|---------------:|---------------:|---------------:|-------------:|
+| **COMMAND** | 400 | 200 | 3 | 0.5 | 0.03 | 0.002 |
+| **CONVERSATION** | 700 | 300 | 5 | 0.6 | 0.02 | 0.001 |
+| **DICTATION** | 1200 | 400 | 8 | 0.7 | 0.015 | 0.0005 |
+
+- **COMMAND**: Aggressive — short timeout, fast response, optimized for `STATIC_COMMAND` / `DYNAMIC_COMMAND` speech modes.
+- **CONVERSATION**: Balanced — matches original WhisperVAD defaults exactly. Maps to `FREE_SPEECH` / `HYBRID`.
+- **DICTATION**: Patient — long timeout, tolerates pauses, low alpha for stable noise floor.
+
+### 16.3 SpeechMode Mapping
+
+`VADProfile.forSpeechMode(SpeechMode)` auto-selects the appropriate profile:
+
+| SpeechMode | VADProfile |
+|---|---|
+| STATIC_COMMAND | COMMAND |
+| DYNAMIC_COMMAND | COMMAND |
+| DICTATION | DICTATION |
+| FREE_SPEECH | CONVERSATION |
+| HYBRID | CONVERSATION |
+
+### 16.4 Integration
+
+Each `*WhisperConfig` now accepts an optional `vadProfile: VADProfile?`. When set, `effective*` getters resolve profile values; when null, individual constructor params are used (backward-compatible).
+
+```kotlin
+// Option A: Use profile presets
+val config = WhisperConfig(vadProfile = VADProfile.COMMAND)
+
+// Option B: Fine-tune individual params (overrides profile)
+val config = WhisperConfig(
+    silenceThresholdMs = 500,
+    minSpeechDurationMs = 250,
+    vadSensitivity = 0.55f
+)
+```
+
+Engine constructors pass effective values to `WhisperVAD`:
+```kotlin
+vad = WhisperVAD(
+    silenceTimeoutMs = config.effectiveSilenceThresholdMs,
+    minSpeechDurationMs = config.effectiveMinSpeechDurationMs,
+    hangoverFrames = config.effectiveHangoverFrames,
+    speechThreshold = config.effectiveVadSensitivity,
+    thresholdAlpha = config.effectiveThresholdAlpha,
+    minThreshold = config.effectiveMinThreshold
+)
+```
+
+### 16.5 Exposed Constants
+
+`WhisperVAD.DEFAULT_THRESHOLD_ALPHA` (0.02f) and `WhisperVAD.DEFAULT_MIN_THRESHOLD` (0.001f) are now `public const` in the companion object, available for custom configurations that don't use profiles.
+
+---
+
+## 17. Google Cloud Streaming Hardening
+
+### 17.1 singleUtterance Support
+
+`GoogleCloudConfig.singleUtterance: Boolean = false` — when true, the server auto-detects end of speech and sends `END_OF_SINGLE_UTTERANCE`. Set true for COMMAND speech modes (short voice commands) to reduce server-side latency.
+
+Serialized in the streaming config JSON:
+```json
+{
+  "streamingConfig": {
+    "config": { ... },
+    "singleUtterance": true
+  }
+}
+```
+
+### 17.2 Speech Event Parsing
+
+`GoogleCloudStreamingClient.parseStreamingResponse()` now handles the `speechEventType` field:
+
+| Event | Handling |
+|---|---|
+| `END_OF_SINGLE_UTTERANCE` | Graceful stop — sets `singleUtteranceEndReceived = true`, triggers clean session close |
+| `SPEECH_ACTIVITY_BEGIN` | Logged at debug level |
+| `SPEECH_ACTIVITY_END` | Logged at debug level |
+| `SPEECH_ACTIVITY_TIMEOUT` | Emits `SpeechError(ERROR_SPEECH_TIMEOUT)` |
+
+Previously, all speech events were silently ignored — only the `results` array was parsed.
+
+### 17.3 Bounded Audio Channel
+
+Changed `Channel<ByteArray>(Channel.UNLIMITED)` to `Channel<ByteArray>(64)`.
+
+- 64 buffers x 100ms chunks = 6.4 seconds of audio backlog before backpressure
+- `trySend()` already handles full channels gracefully (returns ChannelResult.failure, no exception)
+- Prevents unbounded memory growth if the server is slow or connection degrades
+
+### 17.4 Polling Optimization
+
+Replaced `Thread.sleep(10)` with `LockSupport.parkNanos(1_000_000)` (1ms) in the `writeTo()` OkHttp callback.
+
+- Cannot use coroutine `delay()` — `writeTo()` is OkHttp's synchronous `RequestBody.writeTo()` callback running on OkHttp's thread pool
+- Reduces polling latency from 10ms to 1ms while still yielding CPU
+- `LockSupport.parkNanos()` is the JVM primitive for sub-millisecond parking
+
+---
+
+## 18. Performance Dashboard (SpeechMetricsSnapshot)
+
+### 18.1 Data Model
+
+`SpeechMetricsSnapshot` (`commonMain/SpeechMetricsSnapshot.kt`) — immutable data class capturing engine metrics at a point in time:
+
+| Field | Type | Description |
+|---|---|---|
+| engineName | String | "Whisper" or "GoogleCloud" |
+| modelSize | String? | Whisper model name (TINY, BASE, etc.) |
+| initTimeMs | Long | Engine initialization time |
+| totalTranscriptions | Int | Total transcription attempts |
+| successRate | Float | Non-empty / total * 100 |
+| avgLatencyMs | Long | Rolling average processing time |
+| avgRTF | Float | Rolling average real-time factor |
+| avgConfidence | Float | Rolling average confidence |
+| peakLatencyMs | Long | Worst-case processing time |
+| peakRTF | Float | Worst-case real-time factor |
+| totalAudioProcessedMs | Long | Total audio duration processed |
+| detectedLanguage | String? | Last detected language |
+| engineState | String | Current engine state name |
+| timestampMs | Long | Snapshot capture time (caller-provided) |
+
+**Note**: Plain data class (no `@Serializable`) to avoid adding kotlinx.serialization as a dependency to the SpeechRecognition module.
+
+### 18.2 Health Status
+
+Computed property `healthStatus: HealthStatus`:
+
+| Status | Condition |
+|---|---|
+| IDLE | totalTranscriptions == 0 |
+| GOOD | successRate >= 80% AND avgLatencyMs < 2000ms |
+| WARNING | successRate >= 50% AND avgLatencyMs < 5000ms |
+| CRITICAL | successRate < 50% OR avgLatencyMs >= 5000ms |
+
+### 18.3 Engine Integration
+
+Each engine exposes a `metricsSnapshot: StateFlow<SpeechMetricsSnapshot?>`:
+
+- **WhisperEngine** (Android): emits after every `recordTranscription()` / `recordEmptyTranscription()`
+- **DesktopWhisperEngine**: same pattern
+- **GoogleCloudEngine** (Android): added `WhisperPerformance` instance, records metrics around `client.recognize()` API calls with accurate timing
+
+`timestampMs` is provided by the caller (`System.currentTimeMillis()` on JVM) rather than requiring `kotlinx.datetime` as a dependency.
+
+### 18.4 Cockpit Dashboard Card
+
+`SpeechPerformanceCard` in `Modules/Cockpit/src/commonMain/.../ui/SpeechPerformanceCard.kt`:
+
+- Uses `AvanueTheme.colors.*` and `AvanueCard` (v5.1 theme compliant)
+- AVID: `Modifier.semantics { contentDescription = "Voice: speech performance" }`
+- 2x3 metric grid: Latency, RTF, Confidence, Success Rate, Total, Language
+- Health status dot + label (green/yellow/red/gray)
+
+### 18.5 Wiring
+
+```
+Engine.metricsSnapshot (StateFlow)
+    │ platform bridge collects
+    v
+CockpitViewModel.updateSpeechMetrics(snapshot)
+    │ combine(_sessions, _activeSession, _speechMetrics)
+    v
+DashboardState.speechMetrics (@Transient)
+    │
+    v
+DashboardLayout → SpeechPerformanceCard (when metrics != null)
+```
+
+`DashboardState.speechMetrics` uses `@Transient` to avoid serialization issues — it's runtime-only data not persisted to the database.
+
+**Build dependency**: `implementation(project(":Modules:SpeechRecognition"))` added to Cockpit's `commonMain` dependencies.
+
+---
+
+## 19. Vivoka Wake-Word Detection
+
+### 19.1 Concept
+
+Vivoka VSDK has no dedicated wake-word API. Instead, we repurpose grammar-based recognition with a **restricted single-phrase grammar**. This mirrors the existing mute/unmute pattern (`handleMuteCommand()` compiles only "wake up"; wake-word mode compiles only the wake phrase).
+
+```
+enableWakeWord("hey ava", sensitivity=0.5)
+  → compile grammar with ONLY "hey ava"
+  → continuous listening (tiny grammar = low CPU)
+  → on detection (confidence >= sensitivity):
+      emit WakeWordEvent
+      → recompile with FULL command grammar
+      → listen for commands (4s window, resets per command)
+      → timeout → recompile back to wake-word grammar
+```
+
+### 19.2 Settings
+
+| Field | DataStore Key | Type | Default | Range |
+|-------|--------------|------|---------|-------|
+| `wakeWordEnabled` | `wake_word_enabled` | Boolean | false | — |
+| `wakeWordKeyword` | `wake_word_keyword` | String | "HEY_AVA" | HEY_AVA, OK_AVA, COMPUTER |
+| `wakeWordSensitivity` | `wake_word_sensitivity` | Float | 0.5 | 0.1–0.9 |
+
+Settings defined in `AvanuesSettings` (Foundation commonMain), persisted via `AvanuesSettingsRepository` (DataStore), exposed in `VoiceControlSettingsProvider` (toggle + dropdown + slider).
+
+### 19.3 VivokaAndroidEngine Implementation
+
+Key additions to `VivokaAndroidEngine`:
+
+- **`activeWakeWord: String?`** — phrase being listened for
+- **`wakeWordSensitivity: Float`** — confidence threshold
+- **`isInCommandWindow: Boolean`** — post-detection state flag
+- **`lastCommandList: AtomicReference<List<String>>`** — cached full grammar
+
+**`enableWakeWord(phrase, sensitivity)`**: Compiles restricted grammar (1 phrase), sets `_isWakeWordEnabled = true`.
+
+**`handleRecognitionResult(result)`**: Central intercept:
+- Wake-word mode + not in command window → check result matches phrase at sensitivity → `transitionToCommandMode()`
+- In command window → pass result through, reset timeout
+- Normal mode → pass through
+
+**`transitionToCommandMode()`**: Emits `WakeWordEvent`, recompiles full grammar, starts 4s timeout.
+
+**`returnToWakeWordMode()`**: Recompiles restricted grammar after timeout.
+
+**`updateCommands()`**: Caches commands but skips grammar push while in wake-word mode (prevents overwriting the restricted grammar).
+
+### 19.4 Coexistence with PhonemeASR (Future)
+
+```
+IWakeWordDetector (commonMain interface, Modules/Voice/WakeWord/)
+    ├── VivokaWakeWordAdapter (Android, wraps VivokaAndroidEngine)
+    └── PhonemeWakeWordDetector (All platforms, ONNX TinyML — future)
+```
+
+Runtime selection via DI/settings. Settings (`wakeWordEnabled`, `wakeWordKeyword`, `wakeWordSensitivity`) are engine-agnostic — both implementations consume the same Foundation settings.
+
+### 19.5 UI
+
+`VoiceControlSettingsProvider` renders a dedicated wake word `SettingsGroupCard`:
+
+1. **`SettingsSwitchRow`** — Wake Word on/off
+2. **`SettingsDropdownRow`** — Wake Phrase selector (conditionally visible)
+3. **`SettingsSliderRow`** — Sensitivity 10%-90% (conditionally visible)
+
+All interactive elements include AVID voice semantics.
+
+### 19.6 Lifecycle Wiring
+
+Settings flow reactively from DataStore through the accessibility service to the engine:
+
+```
+AvanuesSettingsRepository (DataStore)
+  → Flow<AvanuesSettings> (collectLatest in AccessibilityService)
+    → VoiceOSCore.updateWakeWordSettings(enabled, wakePhrase, sensitivity)
+      → speechEngine as? IWakeWordCapable
+        → enableWakeWord(wakePhrase, sensitivity)  // or disableWakeWord()
+```
+
+**`VoiceOSCore.updateWakeWordSettings()`** performs a runtime `as? IWakeWordCapable` cast — this makes wake-word support engine-agnostic. Any engine implementing `IWakeWordCapable` (Vivoka today, PhonemeASR future) receives wake-word commands without coordinator code changes.
+
+**Keyword mapping** (accessibility service): `"HEY_AVA"` → `"hey ava"`, `"OK_AVA"` → `"ok ava"`, `"COMPUTER"` → `"computer"`.
+
+**StubVivokaEngine**: Updated to match the `enableWakeWord(wakeWord: String, sensitivity: Float)` signature (returns `Result.failure(UnsupportedOperationException)` on all platforms without Vivoka).
+
+**Error handling**: Wake word settings update failures are caught and logged but do not interrupt the main settings observation loop.
+
+---
+
+## 20. AVX (AvaVox) Command Engine
+
+AVX is a lightweight, multilingual ONNX-based command recognition engine that uses Sherpa-ONNX under the hood. It targets command recognition specifically (not open-vocabulary dictation) and supports **hot words boosting** — known commands get a score multiplier, dramatically improving command recognition accuracy without grammar compilation.
+
+### 20.1 Whisper initial_prompt Biasing
+
+Before AVX was added, `initialPrompt` fields were added to all three platform Whisper configs to bias Whisper's decoder toward expected vocabulary:
+
+- `WhisperConfig.kt` (Android) — `initialPrompt: String?` + `forCommandMode()` factory
+- `DesktopWhisperConfig.kt` — `initialPrompt: String?` + `forCommandMode()` factory
+- `IosWhisperConfig.kt` — `initialPrompt: String?`
+
+**`InitialPromptBuilder`** (commonMain `WhisperModels.kt`) builds a comma-separated prompt from active commands, capped at ~200 tokens. When Whisper processes audio, the decoder is primed with these tokens, making it more likely to transcribe matching words.
+
+> **JNI note**: The `initialPrompt` field is stored in config but the whisper.cpp JNI bridge (`WhisperNative.fullTranscribe`) does not yet pass it to the C API. This requires exposing the `initial_prompt` parameter in the native bridge.
+
+### 20.2 Distil-Whisper Models
+
+Two Distil-Whisper GGML models were added to `WhisperModelSize`:
+
+| Model | Enum | Size | Min RAM | Speed |
+|---|---|---|---|---|
+| Distil-Small.en | `DISTIL_SMALL_EN` | 350MB | 512MB | 1.2x |
+| Distil-Medium.en | `DISTIL_MEDIUM_EN` | 700MB | 1024MB | 4.0x |
+
+- `isDistilled` computed property identifies Distil models
+- `forAvailableRAM()` excludes Distil models (general transcription)
+- `forCommandMode()` prefers Distil models for English (faster inference, <1% WER degradation)
+
+### 20.3 AVX Architecture
+
+```
+Audio (16kHz) → AVX Engine (Sherpa-ONNX OnlineRecognizer, streaming transducer)
+                    ↓
+              acceptWaveform → decode → isEndpoint?
+                    ↓ YES (utterance complete)
+              getResult() → text + tokens + timestamps
+                    ↓
+              CommandMatchingService (existing 6-stage pipeline)
+                    ↓
+              Matched command
+```
+
+Key differences from Whisper:
+- **Per-language transducer models** (encoder + decoder + joiner, tuned for that language's phonetics)
+- **Hot words boosting** (via `modified_beam_search` decoding, instant update via stream recreation)
+- **True streaming** (built-in endpoint detection, partial results as speech progresses)
+- **Smaller int8 models** (~44-121MB vs Whisper's 75-500MB)
+- **Command-optimized** (not designed for open-vocabulary dictation)
+
+**Critical constraint:** Hot words ONLY work with transducer models + `modified_beam_search`. CTC and paraformer models do NOT support hot words.
+
+### 20.3.1 Language Tiers
+
+Not all target languages have dedicated streaming transducer models. Languages are organized by capability tier:
+
+| Tier | Languages | Hot Words | Model Type |
+|---|---|---|---|
+| **FULL** | EN, ZH, KO, FR | Yes | Dedicated per-language zipformer transducer |
+| **BILINGUAL** | ZH+EN (combined) | Yes | Shared bilingual transducer |
+| **PLANNED** | DE, ES, IT, PT, NL, RU, JA, AR, HI, TR, PL | No | Awaiting transducer models — falls back to Whisper |
+
+**Actual model sizes (int8 quantized):**
+
+| Language | Model | Total Size | Encoder |
+|---|---|---|---|
+| English (20M) | streaming-zipformer-en-20M | ~44MB | 42.8MB |
+| Chinese (multi) | streaming-zipformer-multi-zh-hans | ~67MB | ~65MB |
+| Korean | streaming-zipformer-korean-2024 | ~121MB | ~119MB |
+| French | streaming-zipformer-fr | ~70MB | ~68MB |
+| Chinese+English | streaming-zipformer-bilingual-zh-en | ~315MB | ~312MB |
+
+### 20.4 Source Set Layout
+
+```
+Modules/SpeechRecognition/src/
+├── commonMain/.../avx/
+│   ├── AvxModels.kt         # AvxEngineState, AvxLanguage (5 tiers), HotWord, AvxModelInfo,
+│   │                        # AvxTranscriptionResult, AvxModelPaths, AvxModelFiles, AvxModelTier
+│   └── AvxConfig.kt         # Config: language, threads, hotWords, decodingMethod, maxActivePaths
+├── androidMain/.../avx/
+│   ├── AvxEngine.kt         # Full Android engine: streaming recognition via OnlineRecognizer
+│   ├── AvxNative.kt         # Thread-safe wrapper around OnlineRecognizer (NOT raw JNI)
+│   └── AvxModelManager.kt   # Download model files → zip → AON encrypt → store
+└── desktopMain/.../avx/
+    ├── DesktopAvxEngine.kt   # Desktop JVM engine (primary command engine on Desktop)
+    └── DesktopAvxNative.kt   # Desktop JNI wrapper (needs rework for Sherpa JVM API)
+```
+
+**Key architectural change (v1.1.0):** `AvxNative` no longer uses custom JNI `external fun` declarations. It wraps the official Sherpa-ONNX Kotlin API (`OnlineRecognizer`, `OnlineStream`) which handles native library loading internally via the bundled AAR.
+
+### 20.5 Pre-Filter Architecture (Android Only)
+
+On Android where both AVX and Vivoka are available, AVX acts as a lightweight first pass:
+
+```
+Audio → AVX Engine (hot words boosted)
+            ↓
+        confidence >= 0.85? ──YES──→ Accept result → CommandMatchingService
+            ↓ NO
+        Forward to Vivoka (grammar-based, higher accuracy)
+            ↓
+        Vivoka result → CommandMatchingService
+```
+
+**`AvxPreFilterEngine`** (VoiceOSCore androidMain):
+- `PreFilterMode` enum: `DISABLED`, `COMMAND_ONLY`, `ALL_EXCEPT_DICTATION`
+- Lazy-loads AVX engine to save memory
+- Tracks metrics: `avxAcceptRate`, `avxAcceptCount`, `vivokaFallbackCount`
+- Only active in COMMAND modes (`STATIC_COMMAND`, `DYNAMIC_COMMAND`, `COMBINED_COMMAND`), never DICTATION
+
+**When pre-filter is active by mode:**
+
+| Speech Mode | Pre-filter | Engine |
+|---|---|---|
+| STATIC_COMMAND | Active | AVX first, Vivoka fallback |
+| DYNAMIC_COMMAND | Active | AVX first, Vivoka fallback |
+| COMBINED_COMMAND | Active | AVX first, Vivoka fallback |
+| DICTATION | Disabled | Whisper only |
+| WAKE_WORD | Disabled | Vivoka grammar (Section 19) |
+
+### 20.6 Model Storage & Encryption
+
+All AVX models are encrypted with AON codec (AES-256-GCM + HMAC-SHA256) from `Modules/Crypto/`.
+
+**Naming convention:** `Ava-AvxS-{LangCode}.aon`
+
+| Platform | Storage Path |
+|---|---|
+| Android | `/sdcard/ava-ai-models/avx/` |
+| Desktop | `~/.augmentalis/models/avx/` |
+| iOS (future) | `{Documents}/ava-ai-models/avx/` |
+
+**Download pipeline** (`AvxModelManager`):
+
+```
+1. Download raw ONNX from CDN → temp file
+2. AONCodec.wrap(tempBytes) → encrypted .aon
+3. Store in platform-specific avx/ directory
+4. Delete temp file
+5. Register in local model inventory
+```
+
+**Priority languages (15):** English, French, German, Spanish, Italian, Portuguese, Dutch, Russian, Chinese, Japanese, Korean, Arabic, Hindi, Turkish, Polish.
+
+**Auto-download on first run:** Device locale language + English.
+
+### 20.7 ConfidenceScorer Integration
+
+AVX is registered in the scoring pipeline:
+
+- `RecognitionEngine.AVX` — identifies AVX-originated results
+- `ScoringMethod.AVX_ONNX` — AVX confidence already normalized 0-1 (same scale as Google/Android)
+- `normalizeConfidence()` — AVX uses identity mapping (ONNX scores are already normalized)
+
+### 20.8 Remaining Work
+
+- [ ] Add Sherpa-ONNX AAR to Android dependencies (requires version selection)
+- [ ] Build native JNI bridge for sherpa-onnx (or use pre-built binaries)
+- [ ] Wire pre-filter into VoiceOSCore's `SpeechEngineManager`
+- [ ] Add AVX settings to UnifiedSettingsScreen (language selection, pre-filter toggle)
+- [ ] Whisper JNI: expose `initial_prompt` parameter in `fullTranscribe()`
+- [ ] iOS AVX engine implementation
+
+---
+
+## 21. AdaptiveTimingManager — Self-Tuning Voice Pipeline
+
+Added 2026-02-24. Addresses 5 compounding latency sources in the voice pipeline with a feedback-driven adaptive system inspired by TCP congestion control (AIMD).
+
+### 21.1 Problem Statement
+
+| Issue | Root Cause | Impact |
+|-------|-----------|--------|
+| 200ms hardcoded delay | `VivokaRecognizer.PROCESSING_DELAY = 200L` | Every command delayed 200ms unnecessarily |
+| Double confidence gate | Engine uses 0.45f, service hardcodes 0.5f | Commands at 0.45-0.50 silently dropped |
+| Scroll debounce too high | Same as content debounce (400-800ms) | Sluggish scroll overlay refresh |
+| Static grammar debounce | 300ms hardcoded | Not tuned to actual device compile speed |
+| No adaptation | All timing values static | No learning from real conditions |
+
+### 21.2 Architecture
+
+**Location:** `VoiceOSCore/src/commonMain/.../AdaptiveTimingManager.kt` (KMP singleton)
+
+```
+Signals In:                    Timing Values Out:
+─────────────                  ──────────────────
+commandSuccess()    ──┐        getProcessingDelayMs()    → VivokaRecognizer
+commandDuplicate()  ──┤        getConfidenceFloor()      → VoiceOSAccessibilityService
+confidenceNearMiss()──┼──→ EMA → getScrollDebounceMs()   → DeviceCapabilityManager
+grammarCompiled(ms) ──┤        getSpeechUpdateDebounceMs()→ DeviceCapabilityManager
+wakeWordHit(ms)     ──┤        getCommandWindowMs()      → VivokaAndroidEngine
+wakeWordTimeout()   ──┘
+```
+
+**EMA formula:** `newValue = 0.15 * sample + 0.85 * currentValue` (settles in ~15 samples)
+
+### 21.3 Timing Values & Ranges
+
+| Value | Start | Min | Max | Adapts To |
+|-------|-------|-----|-----|-----------|
+| processingDelayMs | 50 | 10 | 300 | Duplicate rate (*0.95 on success, +25ms on duplicate, -15ms decay after 30s cooldown) |
+| confidenceFloor | 0.45 | 0.3 | 0.7 | From DeveloperSettings (single source of truth) |
+| scrollDebounceMs | 200 | 100 | 500 | Separate from content; lighter operation |
+| speechUpdateDebounceMs | 200 | 100 | 500 | EMA of grammar compile time * 0.8 |
+| commandWindowMs | 4000 | 2000 | 8000 | Wake word: EMA of user response time * 1.5 |
+
+### 21.4 Signal → Adaptation Rules
+
+| Signal | Detection | Effect |
+|--------|-----------|--------|
+| Command success | Handler returns Success | processingDelay *= 0.95 (decrease toward min) |
+| Duplicate command | Same text within 500ms window | processingDelay += 25ms (increase) |
+| Success streak (10+) | 10 consecutive successes | processingDelay -= 10ms (bonus decrease) |
+| Grammar compile time | Measured ms from setDynamicCommandsAwait | speechUpdateDebounce = EMA(compileTime * 0.8) |
+| Wake word command hit | Command arrives within window | commandWindowMs = EMA(responseTime * 1.5) |
+| Wake word timeout | Window expires unused | commandWindowMs *= 0.9 (reduce waste) |
+| Confidence near-miss | Between floor-0.05 and floor | Tracked for metrics; no timing change |
+| Duplicate cooldown (30s) | 30s since last duplicate when success fires | processingDelay -= 15ms (clears stale penalty) |
+
+### 21.5 Integration Points
+
+| File | Change |
+|------|--------|
+| `VivokaRecognizer.kt` | `processingDelayProvider: (() -> Long)?` lambda reads live adaptive value on each command; falls back to static `processingDelayMs` |
+| `VivokaEngine.kt` | Added `setProcessingDelayProvider(provider)` + `setProcessingDelay(ms)` |
+| `VivokaAndroidEngine.kt` | Wires `{ AdaptiveTimingManager.getProcessingDelayMs() }` as provider + grammar compile tracking + wake word timing |
+| `VoiceOSAccessibilityService.kt` | Replaced hardcoded `0.5f` with `AdaptiveTimingManager.getConfidenceFloor()` |
+| `VoiceAvanueAccessibilityService.kt` | Unified confidence gate: speech collector uses `AdaptiveTimingManager.getConfidenceFloor()` instead of raw `devSettings.confidenceThreshold` (eliminates dual-path bypass). Wires `loadAdaptiveTimingValues()` on init and 60s periodic `persistAdaptiveTimingValues()` |
+| `PlatformActual.kt` | `getScrollDebounceMs()` and SPEECH_ENGINE_UPDATE → delegate to manager |
+| `ActionCoordinator.kt` | Feeds success/duplicate signals in `recordResult()` |
+| `VoiceOSCore.kt` | Initializes confidence floor from `ServiceConfiguration` at startup |
+| `AvanuesSettingsRepository.kt` | `loadAdaptiveTimingValues()` / `persistAdaptiveTimingValues()` with `getValue()` (non-nullable) for persist writes |
+
+### 21.6 Wake Word Adaptive Command Window
+
+Extends Section 19 (Vivoka Wake-Word Detection). The 4000ms static command window is replaced with adaptive timing:
+
+```
+[Wake Word Mode] ─── "hey ava" detected ───→ [Command Window: adaptive ms]
+       ↑                                              │
+       │                                    ┌─────────┴──────────┐
+       │                               command arrives      timeout expires
+       │                               recordWakeWordHit()  recordWakeWordTimeout()
+       │                               execute command       │
+       └──────────────────────────────────────────────────────┘
+                                    returnToWakeWordMode()
+```
+
+- If users respond in ~1.5s consistently → window converges to ~2.5s (less idle grammar)
+- If users need 3s → window stays at ~5s
+- Each timeout shrinks window by 10% (multiplicative decrease)
+- `commandWindowOpenedAt` timestamp tracks response time for EMA input
+
+### 21.7 Persistence
+
+Learned values survive app restarts via DataStore:
+
+| DataStore Key | SettingsKeys Constant |
+|--------------|----------------------|
+| `adaptive_processing_delay_ms` | `ADAPTIVE_PROCESSING_DELAY_MS` |
+| `adaptive_scroll_debounce_ms` | `ADAPTIVE_SCROLL_DEBOUNCE_MS` |
+| `adaptive_speech_update_debounce_ms` | `ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS` |
+| `adaptive_command_window_ms` | `ADAPTIVE_COMMAND_WINDOW_MS` |
+
+Load: `AvanuesSettingsRepository.loadAdaptiveTimingValues()` — called in `VoiceAvanueAccessibilityService.onServiceReady()` after `VoiceOSCore.initialize()`.
+Save: `AvanuesSettingsRepository.persistAdaptiveTimingValues()` — called every 60 seconds via `adaptiveTimingPersistJob` and on service destroy (fire-and-forget on `Dispatchers.IO`).
+Reset: `AdaptiveTimingManager.reset()` returns all values to defaults.
+
+Key consolidation: `AdaptiveTimingManager.Keys` delegates to `SettingsKeys` in Foundation (single source of truth). `AvanuesSettingsRepository` uses `AdaptiveTimingManager.Keys.*` for map construction and `getValue()` for non-nullable persist writes.
+
+### 21.8 Thread Safety
+
+`@Volatile` fields provide visibility. Compound read-modify-write operations (e.g., `processingDelayMs *= 0.95`) are intentionally NOT synchronized — rare lost updates are acceptable for a convergent heuristic. If precise counting is needed for dashboard metrics, add synchronization later.

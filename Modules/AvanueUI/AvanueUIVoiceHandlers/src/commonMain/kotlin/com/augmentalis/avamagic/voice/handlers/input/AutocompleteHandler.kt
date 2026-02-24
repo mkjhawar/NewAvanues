@@ -2,7 +2,6 @@
  * AutocompleteHandler.kt - Voice handler for Autocomplete/Combobox interactions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-28
  *
  * Purpose: Voice-driven autocomplete and combobox control with suggestion selection

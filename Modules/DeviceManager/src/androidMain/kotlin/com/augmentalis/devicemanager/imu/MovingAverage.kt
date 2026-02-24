@@ -3,7 +3,6 @@
  * Path: /libraries/DeviceManager/src/main/java/com/augmentalis/devicemanager/sensors/imu/MovingAverage.kt
  *
  * Created: 2025-09-19 14:35 IST
- * Author: VOS4 Development Team
  * Version: 1.0.0
  *
  * Purpose: Moving average implementation for sensor data smoothing

@@ -2,7 +2,6 @@
  * DatePickerHandler.kt - Voice handler for DatePicker interactions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-27
  *
  * Purpose: Voice-driven date picker control with natural language date parsing

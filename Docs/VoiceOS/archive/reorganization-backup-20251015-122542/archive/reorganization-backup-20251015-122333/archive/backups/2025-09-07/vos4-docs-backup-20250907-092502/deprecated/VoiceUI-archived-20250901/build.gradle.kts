@@ -11,7 +11,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.voiceui"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28

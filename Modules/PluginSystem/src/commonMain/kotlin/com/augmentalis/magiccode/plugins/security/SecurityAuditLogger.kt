@@ -14,6 +14,7 @@ import com.augmentalis.magiccode.plugins.core.PluginLog
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.datetime.Clock
 
 /**
  * Categories of security events for filtering and analysis.
@@ -238,7 +239,7 @@ class SecurityAuditLogger private constructor(
          * Generate a unique event ID.
          */
         private fun generateEventId(): String {
-            return "SEC_${System.currentTimeMillis()}_${eventCounter++}"
+            return "SEC_${Clock.System.now().toEpochMilliseconds()}_${eventCounter++}"
         }
     }
 
@@ -583,7 +584,7 @@ class SecurityAuditLogger private constructor(
             category = category,
             severity = severity,
             message = message,
-            timestamp = System.currentTimeMillis(),
+            timestamp = Clock.System.now().toEpochMilliseconds(),
             pluginId = pluginId,
             details = details
         )

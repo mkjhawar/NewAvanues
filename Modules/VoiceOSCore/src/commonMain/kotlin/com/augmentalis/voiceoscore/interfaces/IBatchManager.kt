@@ -2,7 +2,6 @@
  * IBatchManager.kt - Batch processing management interface for JIT processing
  *
  * Copyright (C) 2026 Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-16
  *
  * Defines the contract for managing batch processing of voice commands.

@@ -3,7 +3,6 @@
  *
  * Created: 2026-01-27
  * Last Modified: 2026-01-28
- * Author: VOS4 Development Team
  * Version: 2.0.0
  *
  * Purpose: Voice command handler for tree view navigation and manipulation

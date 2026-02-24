@@ -67,11 +67,11 @@ actual class IntentClassifier private constructor(
         initializationMutex.withLock {
             try {
                 if (isInitialized) {
-                    android.util.Log.d("IntentClassifier", "Already initialized, skipping")
+                    nluLogDebug("IntentClassifier", "Already initialized, skipping")
                     return@withContext Result.Success(Unit)
                 }
 
-                android.util.Log.d("IntentClassifier", "Starting initialization...")
+                nluLogDebug("IntentClassifier", "Starting initialization...")
 
                 // Delegate ONNX session initialization to manager
                 val onnxResult = onnxSessionManager.initialize(modelPath)
@@ -89,7 +89,7 @@ actual class IntentClassifier private constructor(
                 embeddingManager.loadTrainedEmbeddings()
 
                 // Log embedding status
-                android.util.Log.i("IntentClassifier", "=== NLU Initialization Complete ===")
+                nluLogInfo("IntentClassifier", "=== NLU Initialization Complete ===")
                 embeddingManager.logEmbeddingStatus()
 
                 isInitialized = true
@@ -244,9 +244,10 @@ actual class IntentClassifier private constructor(
                 val queryEmbedding = embeddingManager.l2Normalize(pooledEmbedding)
 
                 // Log classification start
-                android.util.Log.i("IntentClassifier", "=== Classifying: \"$utterance\" ===")
-                android.util.Log.d("IntentClassifier", "Candidate intents: ${candidateIntents.joinToString()}")
-                android.util.Log.d("IntentClassifier", "Using method: ${if (embeddingManager.hasEmbeddings()) "Semantic Similarity" else "Keyword Matching"}")
+                // PII-safe: log utterance length, not content
+                nluLogInfo("IntentClassifier", "=== Classifying: ${utterance.length}-char input ===")
+                nluLogDebug("IntentClassifier", "Candidate intents: ${candidateIntents.joinToString()}")
+                nluLogDebug("IntentClassifier", "Using method: ${if (embeddingManager.hasEmbeddings()) "Semantic Similarity" else "Keyword Matching"}")
 
                 // Calculate cosine similarity with pre-computed intent embeddings
                 val scores = if (embeddingManager.hasEmbeddings()) {
@@ -262,7 +263,7 @@ actual class IntentClassifier private constructor(
                     }
                 } else {
                     // Fallback to improved keyword matching if embeddings failed to load
-                    android.util.Log.w("IntentClassifier", "⚠️ Using keyword matching fallback (embeddings not loaded)")
+                    nluLogWarn("IntentClassifier", "⚠️ Using keyword matching fallback (embeddings not loaded)")
                     candidateIntents.map { intent ->
                         computeKeywordScore(intent, utterance)
                     }
@@ -270,19 +271,19 @@ actual class IntentClassifier private constructor(
 
                 // Log all scores
                 candidateIntents.forEachIndexed { index, intent ->
-                    android.util.Log.d("IntentClassifier", "  $intent: ${scores[index]}")
+                    nluLogDebug("IntentClassifier", "  $intent: ${scores[index]}")
                 }
 
                 // Find best matching intent by ranking
                 val bestIntentIndex = scores.indices.maxByOrNull { scores[it] } ?: 0
                 val confidence = scores[bestIntentIndex]
 
-                android.util.Log.i("IntentClassifier", "Best match: ${candidateIntents[bestIntentIndex]} (confidence: $confidence)")
+                nluLogInfo("IntentClassifier", "Best match: ${candidateIntents[bestIntentIndex]} (confidence: $confidence)")
 
                 // Select intent if confidence is above threshold
                 // For cosine similarity: threshold of 0.6 means 60% semantic similarity
                 // For keyword matching fallback: threshold of 0.5 means 50% keyword overlap
-                val threshold = if (embeddingManager.hasEmbeddings()) 0.6f else 0.5f
+                val threshold = if (embeddingManager.hasEmbeddings()) NluThresholds.SEMANTIC_CONFIDENCE_THRESHOLD else NluThresholds.KEYWORD_CONFIDENCE_THRESHOLD
                 val isAboveThreshold = confidence >= threshold && bestIntentIndex < candidateIntents.size
                 val intent = if (isAboveThreshold) {
                     candidateIntents[bestIntentIndex]
@@ -290,29 +291,29 @@ actual class IntentClassifier private constructor(
                     "unknown"
                 }
 
-                android.util.Log.i("IntentClassifier", "Threshold: $threshold, Confidence: $confidence")
-                android.util.Log.i("IntentClassifier", "FINAL DECISION: $intent")
+                nluLogInfo("IntentClassifier", "Threshold: $threshold, Confidence: $confidence")
+                nluLogInfo("IntentClassifier", "FINAL DECISION: $intent")
 
                 // H-03: Enhanced unknown intent handling
                 if (intent == "unknown") {
-                    android.util.Log.w("IntentClassifier", "⚠️ Unknown intent detected!")
-                    android.util.Log.w("IntentClassifier", "  Confidence: $confidence (threshold: $threshold)")
-                    android.util.Log.w("IntentClassifier", "  Input: \"$utterance\"")
+                    nluLogWarn("IntentClassifier", "⚠️ Unknown intent detected!")
+                    nluLogWarn("IntentClassifier", "  Confidence: $confidence (threshold: $threshold)")
+                    nluLogWarn("IntentClassifier", "  Input: ${utterance.length}-char input")
 
                     // Log top 3 candidates for debugging
                     val topCandidates = candidateIntents.zip(scores)
                         .sortedByDescending { it.second }
                         .take(3)
-                    android.util.Log.w("IntentClassifier", "  Top candidates:")
+                    nluLogWarn("IntentClassifier", "  Top candidates:")
                     topCandidates.forEachIndexed { index, (candidateIntent, score) ->
-                        android.util.Log.w("IntentClassifier", "    ${index + 1}. $candidateIntent (${String.format("%.3f", score)})")
+                        nluLogWarn("IntentClassifier", "    ${index + 1}. $candidateIntent (${String.format("%.3f", score)})")
                     }
 
-                    android.util.Log.w("IntentClassifier", "  Reason: ${if (confidence < threshold) "Low confidence" else "No valid intent"}")
-                    android.util.Log.w("IntentClassifier", "  Fallback: Will use LLM for flexible handling")
+                    nluLogWarn("IntentClassifier", "  Reason: ${if (confidence < threshold) "Low confidence" else "No valid intent"}")
+                    nluLogWarn("IntentClassifier", "  Fallback: Will use LLM for flexible handling")
                 }
 
-                android.util.Log.i("IntentClassifier", "=== Classification Complete (${inferenceTime}ms) ===")
+                nluLogInfo("IntentClassifier", "=== Classification Complete (${inferenceTime}ms) ===")
 
                 Result.Success(
                     IntentClassification(
@@ -455,10 +456,10 @@ actual class IntentClassifier private constructor(
         // Calculate final score: Jaccard similarity with bonus for exact matches
         // Exact matches get higher weight to prefer "lights" in "turn on lights" 
         // over partial matches
-        val exactMatchBonus = (exactMatches.toFloat() / intentKeywords.size.toFloat()) * 0.3f
+        val exactMatchBonus = (exactMatches.toFloat() / intentKeywords.size.toFloat()) * NluThresholds.KEYWORD_EXACT_MATCH_BONUS_WEIGHT
         val finalScore = (jaccardScore + exactMatchBonus).coerceIn(0.0f, 1.0f)
         
-        android.util.Log.d("IntentClassifier", "    Keyword score for '$intent': " +
+        nluLogDebug("IntentClassifier", "    Keyword score for '$intent': " +
             "jaccard=$jaccardScore, exact=$exactMatches/${intentKeywords.size}, final=$finalScore")
         
         return finalScore
@@ -564,12 +565,12 @@ actual class IntentClassifier private constructor(
      */
     private suspend fun precomputeIntentEmbeddings() = withContext(Dispatchers.IO) {
         try {
-            android.util.Log.d("IntentClassifier", "Loading intent embeddings from database...")
+            nluLogDebug("IntentClassifier", "Loading intent embeddings from database...")
 
             val locale = localeManager.getCurrentLocale()
             val fallbackChain = localeManager.getFallbackChain(locale)
 
-            android.util.Log.d("IntentClassifier", "Loading embeddings for locale chain: $fallbackChain")
+            nluLogDebug("IntentClassifier", "Loading embeddings for locale chain: $fallbackChain")
 
             // Open the database, query all needed data, then close the driver immediately.
             val cachedEmbeddings = withDatabase { database ->
@@ -583,9 +584,9 @@ actual class IntentClassifier private constructor(
 
             if (cachedEmbeddings.isNotEmpty()) {
                 val loadedLocale = cachedEmbeddings.firstOrNull()?.locale ?: locale
-                android.util.Log.i("IntentClassifier", "=== AVA 2.0 Semantic NLU ===")
-                android.util.Log.i("IntentClassifier", "Loading ${cachedEmbeddings.size} pre-computed embeddings from database")
-                android.util.Log.i("IntentClassifier", "Locale: $loadedLocale (from fallback chain: $fallbackChain)")
+                nluLogInfo("IntentClassifier", "=== AVA 2.0 Semantic NLU ===")
+                nluLogInfo("IntentClassifier", "Loading ${cachedEmbeddings.size} pre-computed embeddings from database")
+                nluLogInfo("IntentClassifier", "Locale: $loadedLocale (from fallback chain: $fallbackChain)")
 
                 // Load embeddings directly - already L2-normalized and ready to use!
                 for (embedding in cachedEmbeddings) {
@@ -596,27 +597,27 @@ actual class IntentClassifier private constructor(
                         val vector = FloatArray(embedding.embedding_dimension.toInt()) { buffer.float }
                         // Delegate to embedding manager
                         embeddingManager.addEmbedding(embedding.intent_id, vector)
-                        android.util.Log.d("IntentClassifier", "  ✓ Loaded embedding for ${embedding.intent_id} (${vector.size}-dim)")
+                        nluLogDebug("IntentClassifier", "  ✓ Loaded embedding for ${embedding.intent_id} (${vector.size}-dim)")
                     } catch (e: Exception) {
-                        android.util.Log.w("IntentClassifier", "  ✗ Failed to load embedding for ${embedding.intent_id}: ${e.message}")
+                        nluLogWarn("IntentClassifier", "  ✗ Failed to load embedding for ${embedding.intent_id}: ${e.message}")
                     }
                 }
 
-                android.util.Log.i("IntentClassifier", "Fast loading complete: ${embeddingManager.getEmbeddingCount()} intents ready")
+                nluLogInfo("IntentClassifier", "Fast loading complete: ${embeddingManager.getEmbeddingCount()} intents ready")
                 return@withContext
             }
 
             // Database is empty - this should only happen on corrupted DB or development
-            android.util.Log.w("IntentClassifier", "=== No embeddings in database ===")
-            android.util.Log.w("IntentClassifier", "Bundled embeddings should be pre-populated via SQLDelight migration.")
-            android.util.Log.w("IntentClassifier", "Run: python tools/embedding-generator/generate_embeddings.py")
-            android.util.Log.w("IntentClassifier", "Classification will use keyword matching fallback until embeddings are available.")
+            nluLogWarn("IntentClassifier", "=== No embeddings in database ===")
+            nluLogWarn("IntentClassifier", "Bundled embeddings should be pre-populated via SQLDelight migration.")
+            nluLogWarn("IntentClassifier", "Run: python tools/embedding-generator/generate_embeddings.py")
+            nluLogWarn("IntentClassifier", "Classification will use keyword matching fallback until embeddings are available.")
 
             // Try to load from .aot backup file if database is corrupted
             loadFromAotBackup()
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "Failed to load embeddings from database: ${e.message}", e)
-            android.util.Log.w("IntentClassifier", "Classification will use keyword matching fallback.")
+            nluLogError("IntentClassifier", "Failed to load embeddings from database: ${e.message}", e)
+            nluLogWarn("IntentClassifier", "Classification will use keyword matching fallback.")
             loadFromAotBackup()
         }
     }
@@ -638,7 +639,7 @@ actual class IntentClassifier private constructor(
                 val magic = ByteArray(4)
                 buffer.get(magic)
                 if (!magic.contentEquals(byteArrayOf('A'.code.toByte(), 'O'.code.toByte(), 'T'.code.toByte(), 0))) {
-                    android.util.Log.w("IntentClassifier", "Invalid .aot magic header")
+                    nluLogWarn("IntentClassifier", "Invalid .aot magic header")
                     return@withContext
                 }
 
@@ -649,7 +650,7 @@ actual class IntentClassifier private constructor(
                 // Skip model version (32 bytes)
                 buffer.position(buffer.position() + 32)
 
-                android.util.Log.i("IntentClassifier", "Loading from .aot backup: $count embeddings, ${dimension}-dim, v$version")
+                nluLogInfo("IntentClassifier", "Loading from .aot backup: $count embeddings, ${dimension}-dim, v$version")
 
                 // Read embeddings
                 repeat(count) {
@@ -661,15 +662,15 @@ actual class IntentClassifier private constructor(
                     val embedding = FloatArray(dimension) { buffer.float }
                     // Delegate to embedding manager
                     embeddingManager.addEmbedding(intentId, embedding)
-                    android.util.Log.d("IntentClassifier", "  ✓ Loaded from .aot: $intentId")
+                    nluLogDebug("IntentClassifier", "  ✓ Loaded from .aot: $intentId")
                 }
 
-                android.util.Log.i("IntentClassifier", ".aot backup loaded: ${embeddingManager.getEmbeddingCount()} intents ready")
+                nluLogInfo("IntentClassifier", ".aot backup loaded: ${embeddingManager.getEmbeddingCount()} intents ready")
             }
         } catch (e: java.io.FileNotFoundException) {
-            android.util.Log.d("IntentClassifier", "No .aot backup file found (expected on first build)")
+            nluLogDebug("IntentClassifier", "No .aot backup file found (expected on first build)")
         } catch (e: Exception) {
-            android.util.Log.w("IntentClassifier", "Failed to load .aot backup: ${e.message}")
+            nluLogWarn("IntentClassifier", "Failed to load .aot backup: ${e.message}")
         }
     }
 
@@ -694,7 +695,7 @@ actual class IntentClassifier private constructor(
         }
 
         try {
-            android.util.Log.i("IntentClassifier", "Computing embedding for new intent: $intentId (${examples.size} examples)")
+            nluLogInfo("IntentClassifier", "Computing embedding for new intent: $intentId (${examples.size} examples)")
 
             // Compute RAW embeddings for all examples (mean-pooled but NOT normalized)
             val exampleEmbeddings = mutableListOf<FloatArray>()
@@ -703,7 +704,7 @@ actual class IntentClassifier private constructor(
                     val rawEmbedding = computeRawEmbedding(example)
                     exampleEmbeddings.add(rawEmbedding)
                 } catch (e: Exception) {
-                    android.util.Log.w("IntentClassifier", "Failed to embed '$example': ${e.message}")
+                    nluLogWarn("IntentClassifier", "Failed to embed '$example': ${e.message}")
                 }
             }
 
@@ -739,7 +740,7 @@ actual class IntentClassifier private constructor(
                 saveIntentEmbeddingToDatabase(database, intentId, normalizedAvg, examples.size)
             }
 
-            android.util.Log.i("IntentClassifier", "  ✓ Saved embedding for $intentId (${normalizedAvg.size}-dim)")
+            nluLogInfo("IntentClassifier", "  ✓ Saved embedding for $intentId (${normalizedAvg.size}-dim)")
             Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(
@@ -761,14 +762,14 @@ actual class IntentClassifier private constructor(
      */
     suspend fun computeEmbedding(text: String): FloatArray? {
         if (!isInitialized) {
-            android.util.Log.w("IntentClassifier", "computeEmbedding called but not initialized")
+            nluLogWarn("IntentClassifier", "computeEmbedding called but not initialized")
             return null
         }
         return try {
             val raw = computeRawEmbedding(text)
             l2Normalize(raw)
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "Failed to compute embedding: ${e.message}")
+            nluLogError("IntentClassifier", "Failed to compute embedding: ${e.message}")
             null
         }
     }
@@ -785,7 +786,7 @@ actual class IntentClassifier private constructor(
                 database.trainExampleQueries.findByUtteranceWithEmbedding(utterance).executeAsOneOrNull()
             }?.embedding_vector
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "findEmbeddingByUtterance error: ${e.message}")
+            nluLogError("IntentClassifier", "findEmbeddingByUtterance error: ${e.message}")
             null
         }
     }
@@ -835,10 +836,11 @@ actual class IntentClassifier private constructor(
             // Delegate to embedding manager for in-memory cache
             embeddingManager.addEmbedding("trained_${exampleHash}", embedding)
 
-            android.util.Log.i("IntentClassifier", "Saved trained embedding: '$utterance' -> $intent (conf=$confidence)")
+            // PII-safe: log utterance length, not content
+            nluLogInfo("IntentClassifier", "Saved trained embedding: ${utterance.length}-char input -> $intent (conf=$confidence)")
             true
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "saveTrainedEmbedding error: ${e.message}")
+            nluLogError("IntentClassifier", "saveTrainedEmbedding error: ${e.message}")
             false
         }
     }
@@ -854,9 +856,9 @@ actual class IntentClassifier private constructor(
             withDatabase { database ->
                 database.trainExampleQueries.confirmUtterance(utterance)
             }
-            android.util.Log.i("IntentClassifier", "Confirmed embedding: '$utterance'")
+            nluLogInfo("IntentClassifier", "Confirmed embedding: ${utterance.length}-char input")
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "confirmTrainedEmbedding error: ${e.message}")
+            nluLogError("IntentClassifier", "confirmTrainedEmbedding error: ${e.message}")
         }
     }
 
@@ -875,9 +877,9 @@ actual class IntentClassifier private constructor(
             val hash = utterance.hashCode().toString()
             embeddingManager.removeEmbedding("trained_$hash")
 
-            android.util.Log.i("IntentClassifier", "Deleted embedding: '$utterance'")
+            nluLogInfo("IntentClassifier", "Deleted embedding: ${utterance.length}-char input")
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "deleteTrainedEmbedding error: ${e.message}")
+            nluLogError("IntentClassifier", "deleteTrainedEmbedding error: ${e.message}")
         }
     }
 
@@ -916,7 +918,7 @@ actual class IntentClassifier private constructor(
                 confirmed = (stats.confirmed ?: 0L).toInt()
             )
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "getLearningStats error: ${e.message}")
+            nluLogError("IntentClassifier", "getLearningStats error: ${e.message}")
             LearningStatsResult(0, 0, 0, 0, 0)
         }
     }
@@ -936,9 +938,9 @@ actual class IntentClassifier private constructor(
                 .filter { it.startsWith("trained_") }
                 .forEach { embeddingManager.removeEmbedding(it) }
 
-            android.util.Log.w("IntentClassifier", "Cleared all learned embeddings")
+            nluLogWarn("IntentClassifier", "Cleared all learned embeddings")
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "clearAllTrainedEmbeddings error: ${e.message}")
+            nluLogError("IntentClassifier", "clearAllTrainedEmbeddings error: ${e.message}")
         }
     }
 
@@ -955,7 +957,7 @@ actual class IntentClassifier private constructor(
                 database.trainExampleQueries.selectAllWithEmbeddings().executeAsList()
             }
 
-            android.util.Log.i("IntentClassifier", "Loading ${trainedExamples.size} trained embeddings")
+            nluLogInfo("IntentClassifier", "Loading ${trainedExamples.size} trained embeddings")
 
             for (example in trainedExamples) {
                 try {
@@ -965,13 +967,13 @@ actual class IntentClassifier private constructor(
                     // Delegate to embedding manager
                     embeddingManager.addEmbedding("trained_${example.example_hash}", vector)
                 } catch (e: Exception) {
-                    android.util.Log.w("IntentClassifier", "Failed to load trained embedding ${example.id}: ${e.message}")
+                    nluLogWarn("IntentClassifier", "Failed to load trained embedding ${example.id}: ${e.message}")
                 }
             }
 
-            android.util.Log.i("IntentClassifier", "Loaded ${trainedExamples.size} trained embeddings")
+            nluLogInfo("IntentClassifier", "Loaded ${trainedExamples.size} trained embeddings")
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "loadTrainedEmbeddings error: ${e.message}")
+            nluLogError("IntentClassifier", "loadTrainedEmbeddings error: ${e.message}")
         }
     }
 
@@ -1093,15 +1095,16 @@ actual class IntentClassifier private constructor(
                 return@withContext CommandClassificationResult.NoMatch
             }
 
-            android.util.Log.d("IntentClassifier", "=== classifyCommand: \"$utterance\" ===")
-            android.util.Log.d("IntentClassifier", "Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
+            // PII-safe: log utterance length, not content
+            nluLogDebug("IntentClassifier", "=== classifyCommand: ${utterance.length}-char input ===")
+            nluLogDebug("IntentClassifier", "Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
 
             // Step 1: Try exact/fuzzy matching first (fast path)
             val normalizedUtterance = utterance.trim().lowercase()
             for ((index, phrase) in commandPhrases.withIndex()) {
                 val normalizedPhrase = phrase.trim().lowercase()
                 if (normalizedUtterance == normalizedPhrase) {
-                    android.util.Log.i("IntentClassifier", "Exact match: $phrase (index $index)")
+                    nluLogInfo("IntentClassifier", "Exact match: $phrase (index $index)")
                     return@withContext CommandClassificationResult.Match(
                         commandId = phrase,
                         confidence = 1.0f,
@@ -1134,11 +1137,11 @@ actual class IntentClassifier private constructor(
                     val topScore = sortedScores[0].value
                     val topCommand = sortedScores[0].key
 
-                    android.util.Log.d("IntentClassifier", "Top: $topCommand ($topScore), Threshold: $confidenceThreshold")
+                    nluLogDebug("IntentClassifier", "Top: $topCommand ($topScore), Threshold: $confidenceThreshold")
 
                     // Check if below confidence threshold
                     if (topScore < confidenceThreshold) {
-                        android.util.Log.i("IntentClassifier", "NoMatch: top score $topScore < threshold $confidenceThreshold")
+                        nluLogInfo("IntentClassifier", "NoMatch: top score $topScore < threshold $confidenceThreshold")
                         return@withContext CommandClassificationResult.NoMatch
                     }
 
@@ -1148,7 +1151,7 @@ actual class IntentClassifier private constructor(
                         .map { CommandCandidate(commandId = it.key, confidence = it.value) }
 
                     if (ambiguousCandidates.size > 1) {
-                        android.util.Log.i("IntentClassifier", "Ambiguous: ${ambiguousCandidates.size} candidates within $ambiguityThreshold")
+                        nluLogInfo("IntentClassifier", "Ambiguous: ${ambiguousCandidates.size} candidates within $ambiguityThreshold")
                         return@withContext CommandClassificationResult.Ambiguous(
                             candidates = ambiguousCandidates
                         )
@@ -1160,7 +1163,7 @@ actual class IntentClassifier private constructor(
                         else -> MatchMethod.FUZZY
                     }
 
-                    android.util.Log.i("IntentClassifier", "Match: $topCommand (confidence: $topScore, method: $matchMethod)")
+                    nluLogInfo("IntentClassifier", "Match: $topCommand (confidence: $topScore, method: $matchMethod)")
                     return@withContext CommandClassificationResult.Match(
                         commandId = topCommand,
                         confidence = topScore,
@@ -1169,7 +1172,7 @@ actual class IntentClassifier private constructor(
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("IntentClassifier", "classifyCommand error: ${e.message}", e)
+            nluLogError("IntentClassifier", "classifyCommand error: ${e.message}", e)
             CommandClassificationResult.Error(
                 "Command classification failed: ${e.message}"
             )
@@ -1201,7 +1204,7 @@ actual class IntentClassifier private constructor(
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: IntentClassifier(context.applicationContext).also {
                     INSTANCE = it
-                    android.util.Log.i("IntentClassifier", "Singleton instance created")
+                    nluLogInfo("IntentClassifier", "Singleton instance created")
                 }
             }
         }
@@ -1218,11 +1221,11 @@ actual class IntentClassifier private constructor(
         fun setInstance(instance: IntentClassifier) {
             synchronized(this) {
                 if (INSTANCE != null && INSTANCE !== instance) {
-                    android.util.Log.w("IntentClassifier",
+                    nluLogWarn("IntentClassifier",
                         "Replacing existing instance - this indicates Hilt/Singleton conflict!")
                 }
                 INSTANCE = instance
-                android.util.Log.i("IntentClassifier", "Instance set from Hilt")
+                nluLogInfo("IntentClassifier", "Instance set from Hilt")
             }
         }
 

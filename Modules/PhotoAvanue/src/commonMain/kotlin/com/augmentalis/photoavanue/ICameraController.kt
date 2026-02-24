@@ -1,6 +1,7 @@
 package com.augmentalis.photoavanue
 
 import com.augmentalis.photoavanue.model.CameraState
+import com.augmentalis.photoavanue.model.CaptureMode
 import com.augmentalis.photoavanue.model.FlashMode
 import kotlinx.coroutines.flow.StateFlow
 
@@ -24,6 +25,7 @@ interface ICameraController {
 
     // ── Controls ─────────────────────────────────────────────────────
     fun switchLens()
+    fun setCaptureMode(mode: CaptureMode)
     fun setFlashMode(mode: FlashMode)
     fun zoomIn()
     fun zoomOut()

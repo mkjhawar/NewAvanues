@@ -74,12 +74,29 @@ class AndroidExternalAppResolver(private val context: Context) : IExternalAppRes
     override fun launchAdjacent(packageName: String, activityName: String) {
         if (packageName.isBlank()) return
 
+        val pm = context.packageManager
         val intent = if (activityName.isNotBlank()) {
-            Intent().apply {
-                setClassName(packageName, activityName)
+            // Verify the explicit Activity exists and is exported before launching
+            val component = android.content.ComponentName(packageName, activityName)
+            val activityExists = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getActivityInfo(component, PackageManager.ComponentInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getActivityInfo(component, 0)
+                }
+                true
+            } catch (_: PackageManager.NameNotFoundException) {
+                false
+            }
+            if (activityExists) {
+                Intent().apply { setClassName(packageName, activityName) }
+            } else {
+                // Explicit Activity not resolvable — fall back to default launcher
+                pm.getLaunchIntentForPackage(packageName) ?: return
             }
         } else {
-            context.packageManager.getLaunchIntentForPackage(packageName) ?: return
+            pm.getLaunchIntentForPackage(packageName) ?: return
         }
 
         intent.addFlags(

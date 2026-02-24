@@ -2,7 +2,6 @@
  * MultiSelectHandler.kt - Handles multi-select component voice interactions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-27
  *
  * KMP handler for multi-select component voice interactions.
