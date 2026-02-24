@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-24 — KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric
+**Updated**: 2026-02-24 — KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3)
 
 ---
 
@@ -273,6 +273,24 @@ val config = IosWhisperConfig.autoTuned(language = "en")
 
 **Key differences from Android**: Model storage at `NSSearchPathForDirectoriesInDomains(DocumentDirectory)`, downloads via `NSURLSession.downloadTaskWithRequest` (streams to disk — avoids OOM for large models), audio via `AVAudioEngine` with FIR anti-aliasing filter for downsampling.
 
+**AVAudioEngine Error Handling (Kotlin/Native)**
+
+iOS audio initialization uses `startAndReturnError()` with Kotlin/Native's `memScoped` pattern for safe NSError capture:
+
+```kotlin
+@OptIn(BetaInteropApi::class)
+memScoped {
+    val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+    val started = audioEngine.startAndReturnError(errorPtr.ptr)
+    if (!started) {
+        val error = errorPtr.value
+        logError(TAG, "AVAudioEngine start failed: ${error?.localizedDescription}")
+    }
+}
+```
+
+5 call sites use this pattern across `IosWhisperAudio.kt`, `IosSpeechRecognitionService.kt`, and `MacosSpeechRecognitionService.kt`. The `@OptIn(BetaInteropApi::class)` annotation is required for `ObjCObjectVar` access in Kotlin 2.1.0.
+
 ### 3.3 Desktop — DesktopWhisperConfig
 
 ```kotlin
@@ -389,10 +407,27 @@ sealed class ModelDownloadState {
     )  // Also exposes: progressPercent, downloadedMB, totalMB, speedMBPerSec, estimatedRemainingSeconds
     data class Verifying(val modelSize)
     data class Completed(val modelSize, val filePath)
+    data class Retrying(
+        val modelSize: WhisperModelSize,
+        val attempt: Int,
+        val maxAttempts: Int,
+        val delayMs: Long
+    )
     data class Failed(val modelSize, val error)
     data class Cancelled(val modelSize)
 }
 ```
+
+### 4.5 Download Retry with Exponential Backoff
+
+Both `WhisperModelManager` (Android) and `IosWhisperModelManager` (iOS) use exponential backoff for transient download failures:
+
+- **Base delay**: 2 seconds, multiplied by 2^(attempt-1), capped at 30 seconds
+- **Maximum attempts**: 3 before transitioning to `Failed` state
+- **Progression**: 2s → 4s → 8s (would be 16s, 32s→30s if more attempts were configured)
+- **Cancellation handling**: `CancellationException` is re-thrown immediately (never retried) to respect coroutine cancellation
+- **State transitions**: `Downloading` → `Retrying(attempt=1, delayMs=2000)` → `Downloading` → `Retrying(attempt=2, delayMs=4000)` → ... → `Failed`
+- **UI feedback**: The `ModelDownloadState.Retrying` state is emitted to `modelDownloadState` StateFlow so UI can show retry countdown
 
 ---
 
@@ -535,6 +570,21 @@ perf.getMetrics()             // Full map for logging/reporting
 | Latency | Processing time per chunk | < 500ms (TINY), < 2s (SMALL) |
 | Confidence | Token probability average | 0.6 - 0.95 |
 | Success Rate | Non-empty / total transcriptions | > 80% |
+
+### 8.3 Test Coverage
+
+- **Test file**: `Modules/SpeechRecognition/src/commonTest/kotlin/com/augmentalis/speechrecognition/whisper/WhisperPerformanceTest.kt`
+- **38 tests** covering:
+  - Rolling window behavior (window size, oldest eviction)
+  - Peak latency tracking
+  - Real-time factor (RTF) calculation
+  - Success rate computation
+  - Empty transcription counting
+  - Total segments accumulation
+  - Reset behavior
+  - Edge cases (zero duration, empty results, single entry)
+- **Run command**: `./gradlew :Modules:SpeechRecognition:desktopTest`
+- **All tests** are in commonTest (run on JVM via desktopTest)
 
 ---
 
