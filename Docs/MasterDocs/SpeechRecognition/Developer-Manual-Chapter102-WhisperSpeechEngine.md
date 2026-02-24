@@ -2024,9 +2024,11 @@ Two Distil-Whisper GGML models were added to `WhisperModelSize`:
 ### 20.3 AVX Architecture
 
 ```
-Audio (16kHz) → AVX Engine (ONNX Runtime via Sherpa-ONNX, ~60-80MB per language)
+Audio (16kHz) → AVX Engine (Sherpa-ONNX OnlineRecognizer, streaming transducer)
                     ↓
-              Raw transcription + confidence + N-best alternatives
+              acceptWaveform → decode → isEndpoint?
+                    ↓ YES (utterance complete)
+              getResult() → text + tokens + timestamps
                     ↓
               CommandMatchingService (existing 6-stage pipeline)
                     ↓
@@ -2034,27 +2036,52 @@ Audio (16kHz) → AVX Engine (ONNX Runtime via Sherpa-ONNX, ~60-80MB per languag
 ```
 
 Key differences from Whisper:
-- **Per-language models** (tuned for that language's phonetics, not generic multilingual)
-- **Hot words boosting** (instant, no grammar compilation delay like Vivoka's 3-8s)
-- **N-best candidates** (top-5 hypotheses matched against command list)
-- **Smaller models** (~70MB vs Whisper's 75-500MB)
+- **Per-language transducer models** (encoder + decoder + joiner, tuned for that language's phonetics)
+- **Hot words boosting** (via `modified_beam_search` decoding, instant update via stream recreation)
+- **True streaming** (built-in endpoint detection, partial results as speech progresses)
+- **Smaller int8 models** (~44-121MB vs Whisper's 75-500MB)
 - **Command-optimized** (not designed for open-vocabulary dictation)
+
+**Critical constraint:** Hot words ONLY work with transducer models + `modified_beam_search`. CTC and paraformer models do NOT support hot words.
+
+### 20.3.1 Language Tiers
+
+Not all target languages have dedicated streaming transducer models. Languages are organized by capability tier:
+
+| Tier | Languages | Hot Words | Model Type |
+|---|---|---|---|
+| **FULL** | EN, ZH, KO, FR | Yes | Dedicated per-language zipformer transducer |
+| **BILINGUAL** | ZH+EN (combined) | Yes | Shared bilingual transducer |
+| **PLANNED** | DE, ES, IT, PT, NL, RU, JA, AR, HI, TR, PL | No | Awaiting transducer models — falls back to Whisper |
+
+**Actual model sizes (int8 quantized):**
+
+| Language | Model | Total Size | Encoder |
+|---|---|---|---|
+| English (20M) | streaming-zipformer-en-20M | ~44MB | 42.8MB |
+| Chinese (multi) | streaming-zipformer-multi-zh-hans | ~67MB | ~65MB |
+| Korean | streaming-zipformer-korean-2024 | ~121MB | ~119MB |
+| French | streaming-zipformer-fr | ~70MB | ~68MB |
+| Chinese+English | streaming-zipformer-bilingual-zh-en | ~315MB | ~312MB |
 
 ### 20.4 Source Set Layout
 
 ```
 Modules/SpeechRecognition/src/
 ├── commonMain/.../avx/
-│   ├── AvxModels.kt         # AvxEngineState, AvxLanguage (15 languages), HotWord, AvxModelInfo
-│   └── AvxConfig.kt         # Configuration: language, threads, hotWords, confidenceThreshold
+│   ├── AvxModels.kt         # AvxEngineState, AvxLanguage (5 tiers), HotWord, AvxModelInfo,
+│   │                        # AvxTranscriptionResult, AvxModelPaths, AvxModelFiles, AvxModelTier
+│   └── AvxConfig.kt         # Config: language, threads, hotWords, decodingMethod, maxActivePaths
 ├── androidMain/.../avx/
-│   ├── AvxEngine.kt         # Full Android engine: lifecycle, VAD, audio, transcription
-│   ├── AvxNative.kt         # Thread-safe JNI wrapper for Sherpa-ONNX
-│   └── AvxModelManager.kt   # Download → AON encrypt → store pipeline
+│   ├── AvxEngine.kt         # Full Android engine: streaming recognition via OnlineRecognizer
+│   ├── AvxNative.kt         # Thread-safe wrapper around OnlineRecognizer (NOT raw JNI)
+│   └── AvxModelManager.kt   # Download model files → zip → AON encrypt → store
 └── desktopMain/.../avx/
     ├── DesktopAvxEngine.kt   # Desktop JVM engine (primary command engine on Desktop)
-    └── DesktopAvxNative.kt   # Desktop JNI wrapper (loads from java.library.path)
+    └── DesktopAvxNative.kt   # Desktop JNI wrapper (needs rework for Sherpa JVM API)
 ```
+
+**Key architectural change (v1.1.0):** `AvxNative` no longer uses custom JNI `external fun` declarations. It wraps the official Sherpa-ONNX Kotlin API (`OnlineRecognizer`, `OnlineStream`) which handles native library loading internally via the bundled AAR.
 
 ### 20.5 Pre-Filter Architecture (Android Only)
 
@@ -2166,7 +2193,7 @@ wakeWordTimeout()   ──┘
 
 | Value | Start | Min | Max | Adapts To |
 |-------|-------|-----|-----|-----------|
-| processingDelayMs | 50 | 0 | 300 | Duplicate rate (AIMD: *0.95 on success, +25ms on duplicate) |
+| processingDelayMs | 50 | 10 | 300 | Duplicate rate (*0.95 on success, +25ms on duplicate, -15ms decay after 30s cooldown) |
 | confidenceFloor | 0.45 | 0.3 | 0.7 | From DeveloperSettings (single source of truth) |
 | scrollDebounceMs | 200 | 100 | 500 | Separate from content; lighter operation |
 | speechUpdateDebounceMs | 200 | 100 | 500 | EMA of grammar compile time * 0.8 |
@@ -2183,14 +2210,15 @@ wakeWordTimeout()   ──┘
 | Wake word command hit | Command arrives within window | commandWindowMs = EMA(responseTime * 1.5) |
 | Wake word timeout | Window expires unused | commandWindowMs *= 0.9 (reduce waste) |
 | Confidence near-miss | Between floor-0.05 and floor | Tracked for metrics; no timing change |
+| Duplicate cooldown (30s) | 30s since last duplicate when success fires | processingDelay -= 15ms (clears stale penalty) |
 
 ### 21.5 Integration Points
 
 | File | Change |
 |------|--------|
-| `VivokaRecognizer.kt` | `PROCESSING_DELAY` constant → `var processingDelayMs` (set by engine) |
-| `VivokaEngine.kt` | Added `setProcessingDelay(ms)` to delegate to recognizer |
-| `VivokaAndroidEngine.kt` | Wires adaptive processing delay + grammar compile tracking + wake word timing |
+| `VivokaRecognizer.kt` | `processingDelayProvider: (() -> Long)?` lambda reads live adaptive value on each command; falls back to static `processingDelayMs` |
+| `VivokaEngine.kt` | Added `setProcessingDelayProvider(provider)` + `setProcessingDelay(ms)` |
+| `VivokaAndroidEngine.kt` | Wires `{ AdaptiveTimingManager.getProcessingDelayMs() }` as provider + grammar compile tracking + wake word timing |
 | `VoiceOSAccessibilityService.kt` | Replaced hardcoded `0.5f` with `AdaptiveTimingManager.getConfidenceFloor()` |
 | `VoiceAvanueAccessibilityService.kt` | Unified confidence gate: speech collector uses `AdaptiveTimingManager.getConfidenceFloor()` instead of raw `devSettings.confidenceThreshold` (eliminates dual-path bypass). Wires `loadAdaptiveTimingValues()` on init and 60s periodic `persistAdaptiveTimingValues()` |
 | `PlatformActual.kt` | `getScrollDebounceMs()` and SPEECH_ENGINE_UPDATE → delegate to manager |

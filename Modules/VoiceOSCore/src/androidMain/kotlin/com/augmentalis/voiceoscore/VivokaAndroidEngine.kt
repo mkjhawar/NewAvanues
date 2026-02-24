@@ -247,8 +247,9 @@ class VivokaAndroidEngine(
             val success = vivokaEngine?.initialize(srConfig) ?: false
 
             if (success) {
-                // Wire adaptive processing delay from AdaptiveTimingManager
-                vivokaEngine?.setProcessingDelay(AdaptiveTimingManager.getProcessingDelayMs())
+                // Wire adaptive processing delay provider — recognizer reads live value on each command.
+                // This eliminates the stale-delay problem where adaptation happens between grammar updates.
+                vivokaEngine?.setProcessingDelayProvider { AdaptiveTimingManager.getProcessingDelayMs() }
 
                 // Set up result listener — intercepts wake word results, passes others through
                 vivokaEngine?.setResultListener { result ->
@@ -345,8 +346,8 @@ class VivokaAndroidEngine(
      */
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
         return try {
-            // Refresh processing delay from AdaptiveTimingManager (may have adapted)
-            vivokaEngine?.setProcessingDelay(AdaptiveTimingManager.getProcessingDelayMs())
+            // Processing delay is now read live via processingDelayProvider (set in initialize()).
+            // No need to push the value here — the recognizer reads the latest on each command.
 
             // Always cache the full command list for wake-word → command-mode recompilation
             lastCommandList.set(commands.toList())

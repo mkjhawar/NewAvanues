@@ -821,6 +821,15 @@ class VivokaEngine(
         recognizerProcessor.processingDelayMs = delayMs
     }
 
+    /**
+     * Set a dynamic delay provider that the recognizer calls on each command.
+     * This ensures the recognizer always reads the latest adaptive value,
+     * even between updateCommands() calls when the delay may have changed.
+     */
+    fun setProcessingDelayProvider(provider: () -> Long) {
+        recognizerProcessor.processingDelayProvider = provider
+    }
+
     // ========== IRecognizerListener Implementation ==========
 
     override fun onEvent(codeString: String?, message: String?, time: String?) {

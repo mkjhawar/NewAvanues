@@ -17,6 +17,7 @@
 package com.augmentalis.voiceoscore
 
 import com.augmentalis.foundation.settings.SettingsKeys
+import kotlinx.datetime.Clock
 import kotlin.concurrent.Volatile
 import kotlin.math.max
 import kotlin.math.min
@@ -43,9 +44,11 @@ object AdaptiveTimingManager {
     /** EMA smoothing factor — settles in ~15 samples */
     private const val ALPHA = 0.15f
 
-    // Processing delay: time between recognition result and emission
+    // Processing delay: time between recognition result and emission.
+    // Min 10ms provides a safety buffer against rapid-fire execution from
+    // engine reconnection or partial-result bursts. Zero was too aggressive.
     private const val PROCESSING_DELAY_START = 50L
-    private const val PROCESSING_DELAY_MIN = 0L
+    private const val PROCESSING_DELAY_MIN = 10L
     private const val PROCESSING_DELAY_MAX = 300L
 
     // Confidence floor: minimum confidence to accept a command
@@ -74,6 +77,10 @@ object AdaptiveTimingManager {
 
     // Success streak threshold for bonus decrease
     private const val SUCCESS_STREAK_THRESHOLD = 10
+
+    // Time-based decay: if no duplicate has occurred for this duration,
+    // apply extra delay reduction on next success (clears stale penalty)
+    private const val DUPLICATE_COOLDOWN_MS = 30_000L
 
     // ═══════════════════════════════════════════════════════════════════
     // Adaptive values (hot path reads — @Volatile for visibility)
@@ -106,6 +113,9 @@ object AdaptiveTimingManager {
 
     @Volatile
     private var lastCommandTimeMs: Long = 0
+
+    @Volatile
+    private var lastDuplicateTimeMs: Long = 0
 
     @Volatile
     private var totalCommands: Long = 0
@@ -154,6 +164,17 @@ object AdaptiveTimingManager {
         totalCommands++
         consecutiveSuccesses++
 
+        // Time-based decay: if no duplicate for 30+ seconds, the penalty is stale.
+        // Apply an extra reduction to recover from burst-of-duplicates faster.
+        val now = Clock.System.now().toEpochMilliseconds()
+        if (lastDuplicateTimeMs > 0 && (now - lastDuplicateTimeMs) > DUPLICATE_COOLDOWN_MS) {
+            processingDelayMs = max(
+                PROCESSING_DELAY_MIN,
+                processingDelayMs - 15
+            )
+            lastDuplicateTimeMs = 0 // reset so decay only fires once per cooldown
+        }
+
         // Multiplicative decrease — ramp down aggressively on success
         processingDelayMs = max(
             PROCESSING_DELAY_MIN,
@@ -178,6 +199,7 @@ object AdaptiveTimingManager {
     fun recordCommandDuplicate() {
         totalDuplicates++
         consecutiveSuccesses = 0
+        lastDuplicateTimeMs = Clock.System.now().toEpochMilliseconds()
 
         // Additive increase — conservative backoff
         processingDelayMs = min(
@@ -353,6 +375,7 @@ object AdaptiveTimingManager {
         consecutiveSuccesses = 0
         lastCommandText = ""
         lastCommandTimeMs = 0
+        lastDuplicateTimeMs = 0
         totalCommands = 0
         totalDuplicates = 0
         totalNearMisses = 0
