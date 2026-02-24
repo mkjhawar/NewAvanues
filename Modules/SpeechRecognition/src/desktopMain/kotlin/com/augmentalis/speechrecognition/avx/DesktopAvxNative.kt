@@ -51,11 +51,26 @@ class DesktopAvxNative {
         /**
          * Ensure the Sherpa-ONNX native library is loaded.
          * Must be called before creating any OnlineRecognizer.
+         *
+         * Returns false if Sherpa-ONNX classes aren't on the classpath
+         * or the native library can't be found.
          */
         fun ensureLoaded(): Boolean {
             if (isLibraryLoaded) return true
             return synchronized(this) {
                 if (isLibraryLoaded) return@synchronized true
+
+                // Verify Sherpa-ONNX classes are on the classpath first
+                try {
+                    Class.forName("com.k2fsa.sherpa.onnx.OnlineRecognizer")
+                } catch (_: ClassNotFoundException) {
+                    logWarn(TAG, "Sherpa-ONNX classes not on classpath — AVX unavailable")
+                    return@synchronized false
+                } catch (_: NoClassDefFoundError) {
+                    logWarn(TAG, "Sherpa-ONNX class loading failed — AVX unavailable")
+                    return@synchronized false
+                }
+
                 try {
                     System.loadLibrary("sherpa-onnx-jni")
                     isLibraryLoaded = true

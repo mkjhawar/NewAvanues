@@ -46,6 +46,10 @@ import java.util.zip.ZipInputStream
  *
  * On Desktop, AVX is the PRIMARY command engine (no Vivoka available).
  * Whisper remains for dictation. No pre-filter needed.
+ *
+ * Sherpa-ONNX is an OPTIONAL dependency — if the classes.jar or native
+ * libraries aren't present, the engine gracefully reports unavailable
+ * (initialize() returns false) without crashing the system.
  */
 class DesktopAvxEngine {
     companion object {
@@ -59,6 +63,21 @@ class DesktopAvxEngine {
             System.getProperty("user.home", "."),
             ".augmentalis/models/avx"
         )
+
+        /**
+         * Check if Sherpa-ONNX runtime classes are available on the classpath.
+         * Call this BEFORE creating DesktopAvxNative or touching any Sherpa types.
+         */
+        fun isSherpaAvailable(): Boolean {
+            return try {
+                Class.forName("com.k2fsa.sherpa.onnx.OnlineRecognizer")
+                true
+            } catch (_: ClassNotFoundException) {
+                false
+            } catch (_: NoClassDefFoundError) {
+                false
+            }
+        }
     }
 
     private val engineState = AtomicReference(AvxEngineState.UNINITIALIZED)
@@ -104,6 +123,13 @@ class DesktopAvxEngine {
 
         return withContext(Dispatchers.IO) {
             try {
+                // Check Sherpa-ONNX availability before touching any Sherpa classes
+                if (!isSherpaAvailable()) {
+                    logWarn(TAG, "Sherpa-ONNX classes not on classpath — AVX engine disabled")
+                    engineState.set(AvxEngineState.ERROR)
+                    return@withContext false
+                }
+
                 if (!DesktopAvxNative.ensureLoaded()) {
                     throw IllegalStateException("Failed to load sherpa-onnx native library on Desktop")
                 }
@@ -132,6 +158,11 @@ class DesktopAvxEngine {
                 true
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: NoClassDefFoundError) {
+                // Sherpa-ONNX classes missing at runtime — engine not available
+                engineState.set(AvxEngineState.ERROR)
+                logWarn(TAG, "Sherpa-ONNX runtime missing — AVX disabled: ${e.message}")
+                false
             } catch (e: Exception) {
                 engineState.set(AvxEngineState.ERROR)
                 logError(TAG, "Desktop AVX initialization failed: ${e.message}", e)
@@ -279,7 +310,7 @@ class DesktopAvxEngine {
      *
      * @return Paths to the 4 extracted model files
      */
-    private fun decryptAndExtractModel(aonFile: File): AvxModelPaths {
+    private suspend fun decryptAndExtractModel(aonFile: File): AvxModelPaths {
         val aonBytes = aonFile.readBytes()
         val zipBytes = AONCodec.unwrap(aonBytes)
 

@@ -81,6 +81,25 @@ class AvxEngine(
             Environment.getExternalStorageDirectory(),
             "ava-ai-models/avx"
         )
+
+        /**
+         * Check if Sherpa-ONNX runtime classes are available on the classpath.
+         * Call this BEFORE creating AvxNative or touching any Sherpa types.
+         *
+         * The Sherpa-ONNX AAR is a compileOnly dependency — it must be included
+         * in the app's runtime classpath for AVX to work. If not, this returns
+         * false and AVX gracefully disables.
+         */
+        fun isSherpaAvailable(): Boolean {
+            return try {
+                Class.forName("com.k2fsa.sherpa.onnx.OnlineRecognizer")
+                true
+            } catch (_: ClassNotFoundException) {
+                false
+            } catch (_: NoClassDefFoundError) {
+                false
+            }
+        }
     }
 
     // State
@@ -132,6 +151,13 @@ class AvxEngine(
             return true
         }
 
+        // Check Sherpa-ONNX availability before touching any Sherpa classes
+        if (!isSherpaAvailable()) {
+            Log.w(TAG, "Sherpa-ONNX AAR not on classpath — AVX engine disabled")
+            engineState.set(AvxEngineState.ERROR)
+            return false
+        }
+
         if (!avxConfig.language.hasTransducerModel) {
             Log.e(TAG, "Language ${avxConfig.language.displayName} has no transducer model (tier=${avxConfig.language.tier})")
             return false
@@ -162,6 +188,11 @@ class AvxEngine(
                     }
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: NoClassDefFoundError) {
+                    // Sherpa-ONNX classes missing at runtime — don't retry
+                    lastError = RuntimeException("Sherpa-ONNX runtime missing: ${e.message}", e)
+                    Log.w(TAG, "Sherpa-ONNX runtime missing — AVX disabled: ${e.message}")
+                    break
                 } catch (e: Exception) {
                     lastError = e
                     Log.w(TAG, "Init attempt $attempt failed: ${e.message}")
