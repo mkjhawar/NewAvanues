@@ -69,6 +69,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import com.augmentalis.webavanue.BrowserVoiceOSCallback
 import com.augmentalis.webavanue.WebCommandExecutorImpl
@@ -260,7 +261,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 // Path 1: Phrases in speech grammar (recognition)
                 // Path 2: QuantizedCommands in CommandRegistry (routing to WebCommandHandler)
                 webCommandCollectorJob?.cancel()
-                webCommandCollectorJob = serviceScope.launch {
+                webCommandCollectorJob = serviceScope.launch(Dispatchers.Default) {
                     BrowserVoiceOSCallback.activeWebPhrases
                         .collect { phrases ->
                             try {
@@ -458,39 +459,43 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 cursorSettingsJob = serviceScope.launch {
                     val cursorSettingsRepo = AvanuesSettingsRepository(applicationContext)
                     cursorSettingsRepo.settings.collectLatest { settings ->
-                        // Voice command locale switching
+                        // Voice command locale switching — run off Main to avoid blocking UI
                         val newLocale = settings.voiceLocale
                         if (previousVoiceLocale != null && previousVoiceLocale != newLocale) {
                             Log.i(TAG, "Voice locale changed: $previousVoiceLocale → $newLocale")
-                            try {
-                                val cm = CommandManager.getInstance(applicationContext)
-                                val switched = cm.switchLocale(newLocale)
-                                if (switched) {
-                                    Log.i(TAG, "✅ Voice commands switched to $newLocale")
-                                } else {
-                                    Log.w(TAG, "⚠️ Failed to switch voice commands to $newLocale")
+                            withContext(Dispatchers.Default) {
+                                try {
+                                    val cm = CommandManager.getInstance(applicationContext)
+                                    val switched = cm.switchLocale(newLocale)
+                                    if (switched) {
+                                        Log.i(TAG, "Voice commands switched to $newLocale")
+                                    } else {
+                                        Log.w(TAG, "Failed to switch voice commands to $newLocale")
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Locale switch failed", e)
                                 }
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Locale switch failed", e)
                             }
                         }
                         previousVoiceLocale = newLocale
 
-                        // Wake word settings → VoiceOSCore lifecycle
-                        try {
-                            val wakePhrase = when (settings.wakeWordKeyword) {
-                                "HEY_AVA" -> "hey ava"
-                                "OK_AVA" -> "ok ava"
-                                "COMPUTER" -> "computer"
-                                else -> "hey ava"
+                        // Wake word settings → VoiceOSCore lifecycle (off Main)
+                        withContext(Dispatchers.Default) {
+                            try {
+                                val wakePhrase = when (settings.wakeWordKeyword) {
+                                    "HEY_AVA" -> "hey ava"
+                                    "OK_AVA" -> "ok ava"
+                                    "COMPUTER" -> "computer"
+                                    else -> "hey ava"
+                                }
+                                voiceOSCore?.updateWakeWordSettings(
+                                    enabled = settings.wakeWordEnabled,
+                                    wakePhrase = wakePhrase,
+                                    sensitivity = settings.wakeWordSensitivity
+                                )
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Wake word settings update failed", e)
                             }
-                            voiceOSCore?.updateWakeWordSettings(
-                                enabled = settings.wakeWordEnabled,
-                                wakePhrase = wakePhrase,
-                                sensitivity = settings.wakeWordSensitivity
-                            )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Wake word settings update failed", e)
                         }
 
                         // Start/stop CursorOverlayService based on toggle
