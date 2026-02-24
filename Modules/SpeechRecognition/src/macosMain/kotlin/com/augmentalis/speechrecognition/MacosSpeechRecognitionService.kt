@@ -32,7 +32,7 @@ import platform.Speech.*
  *
  * macOS 10.15+ required for SFSpeechRecognizer support.
  */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalCoroutinesApi::class)
 class MacosSpeechRecognitionService : SpeechRecognitionService {
 
     companion object {

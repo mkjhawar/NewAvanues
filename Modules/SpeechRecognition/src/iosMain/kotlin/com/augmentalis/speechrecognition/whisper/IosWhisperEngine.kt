@@ -27,8 +27,11 @@ import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.logWarn
 import com.augmentalis.speechrecognition.whisper.vsm.IosVSMCodec
 import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
+import kotlin.concurrent.Volatile
+import kotlin.math.roundToInt
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -326,6 +329,7 @@ class IosWhisperEngine {
     /**
      * Perform the actual initialization: verify cinterop + load model.
      */
+    @OptIn(ExperimentalForeignApi::class)
     private suspend fun performInitialization(): Boolean {
         // Step 1: Verify native library is linked
         if (!IosWhisperNative.ensureAvailable()) {
@@ -509,9 +513,11 @@ class IosWhisperEngine {
                 performance.recordLanguageDetection(lang)
             }
 
+            val rtfStr = ((realTimeFactor * 100).roundToInt() / 100.0).toString()
+            val confStr = ((result.confidence * 100).roundToInt() / 100.0).toString()
             logInfo(TAG, "Transcribed: '${result.text}' " +
                     "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, " +
-                    "RTF=${"%.2f".format(realTimeFactor)}, conf=${"%.2f".format(result.confidence)})")
+                    "RTF=$rtfStr, conf=$confStr)")
 
             // Build word timestamps from segments with actual confidence
             val wordTimestamps = result.segments.map { seg ->

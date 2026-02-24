@@ -93,6 +93,9 @@ kotlin {
 
                 // Foundation for ModuleSettingsProvider
                 implementation(project(":Modules:Foundation"))
+
+                // Atomicfu for cross-platform thread-safe primitives
+                implementation(libs.kotlinx.atomicfu)
             }
         }
 
