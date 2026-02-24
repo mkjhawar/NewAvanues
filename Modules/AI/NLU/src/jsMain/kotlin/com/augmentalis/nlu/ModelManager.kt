@@ -10,6 +10,8 @@ import org.w3c.dom.events.Event
 import org.w3c.fetch.Response
 import kotlin.js.Promise
 
+private const val TAG = "ModelManager"
+
 /**
  * JS/Web implementation of ModelManager
  *
@@ -81,12 +83,12 @@ actual class ModelManager {
                 cachedModelBuffer = cachedModel
                 cachedVocabText = decodeArrayBufferToString(cachedVocab)
                 modelAvailable = true
-                console.log("[ModelManager] Loaded ${activeModelType.displayName} from IndexedDB cache")
+                nluLogInfo(TAG, "Loaded ${activeModelType.displayName} from IndexedDB cache")
                 onProgress(1.0f)
                 return Result.Success(Unit)
             }
 
-            console.log("[ModelManager] Downloading ${activeModelType.displayName}...")
+            nluLogInfo(TAG, "Downloading ${activeModelType.displayName}...")
             onProgress(0.05f)
 
             // Determine URLs based on active model
@@ -140,10 +142,10 @@ actual class ModelManager {
             modelAvailable = true
 
             onProgress(1.0f)
-            console.log("[ModelManager] Download complete: ${activeModelType.displayName}")
+            nluLogInfo(TAG, "Download complete: ${activeModelType.displayName}")
             Result.Success(Unit)
         } catch (e: Exception) {
-            console.error("[ModelManager] Download failed: ${e.message}")
+            nluLogError(TAG, "Download failed: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Failed to download models: ${e.message}"
@@ -180,7 +182,7 @@ actual class ModelManager {
             cachedModelBuffer = null
             cachedVocabText = null
             modelAvailable = false
-            console.log("[ModelManager] Cleared all cached models")
+            nluLogInfo(TAG, "Cleared all cached models")
             Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(
@@ -234,7 +236,7 @@ actual class ModelManager {
     suspend fun switchModel(modelType: ModelType) {
         if (modelType == activeModelType && modelAvailable) return
 
-        console.log("[ModelManager] Switching from ${activeModelType.displayName} to ${modelType.displayName}")
+        nluLogInfo(TAG, "Switching from ${activeModelType.displayName} to ${modelType.displayName}")
         activeModelType = modelType
         cachedModelBuffer = null
         cachedVocabText = null
@@ -248,7 +250,7 @@ actual class ModelManager {
             cachedModelBuffer = cachedModel
             cachedVocabText = decodeArrayBufferToString(cachedVocab)
             modelAvailable = true
-            console.log("[ModelManager] Loaded ${modelType.displayName} from IndexedDB cache")
+            nluLogInfo(TAG, "Loaded ${modelType.displayName} from IndexedDB cache")
         }
     }
 
@@ -290,7 +292,7 @@ actual class ModelManager {
             db.close()
             result
         } catch (e: Exception) {
-            console.warn("[ModelManager] IndexedDB get failed for $key: ${e.message}")
+            nluLogWarn(TAG, "IndexedDB get failed for $key: ${e.message}")
             null
         }
     }
@@ -310,7 +312,7 @@ actual class ModelManager {
             }.await()
             db.close()
         } catch (e: Exception) {
-            console.warn("[ModelManager] IndexedDB put failed for $key: ${e.message}")
+            nluLogWarn(TAG, "IndexedDB put failed for $key: ${e.message}")
         }
     }
 

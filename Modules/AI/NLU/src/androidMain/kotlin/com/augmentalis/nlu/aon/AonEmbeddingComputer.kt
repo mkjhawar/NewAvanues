@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import com.augmentalis.nlu.BertTokenizer
 import com.augmentalis.nlu.IntentClassifier
+import com.augmentalis.nlu.NluThresholds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -374,7 +375,7 @@ class AonEmbeddingComputer(
             }
             norm = kotlin.math.sqrt(norm)
 
-            if (kotlin.math.abs(norm - 1.0f) > 0.01f) {
+            if (kotlin.math.abs(norm - 1.0f) > NluThresholds.EMBEDDING_NORM_TOLERANCE) {
                 android.util.Log.w(TAG, "  ✗ L2 norm not normalized: $norm (expected ~1.0)")
                 return false
             }

@@ -87,8 +87,8 @@ expect class IntentClassifier {
     suspend fun classifyCommand(
         utterance: String,
         commandPhrases: List<String>,
-        confidenceThreshold: Float = 0.6f,
-        ambiguityThreshold: Float = 0.15f
+        confidenceThreshold: Float = NluThresholds.SEMANTIC_CONFIDENCE_THRESHOLD,
+        ambiguityThreshold: Float = NluThresholds.DEFAULT_AMBIGUITY_THRESHOLD
     ): CommandClassificationResult
 
     companion object {

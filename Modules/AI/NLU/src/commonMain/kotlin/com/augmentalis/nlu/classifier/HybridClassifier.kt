@@ -18,6 +18,7 @@
 
 package com.augmentalis.nlu.classifier
 
+import com.augmentalis.nlu.NluThresholds
 import com.augmentalis.nlu.Synchronized
 import kotlinx.datetime.Clock
 import com.augmentalis.nlu.matcher.EmbeddingProvider
@@ -84,7 +85,7 @@ class HybridClassifier(
         for (intent in intents) {
             if (!intentCalibration.containsKey(intent.id)) {
                 intentCalibration[intent.id] = CalibrationData(
-                    baseConfidence = 0.8f,
+                    baseConfidence = NluThresholds.DEFAULT_BASE_CONFIDENCE,
                     patternBoost = 1.0f,
                     fuzzyBoost = 1.0f,
                     semanticBoost = 1.0f,
@@ -376,16 +377,16 @@ class HybridClassifier(
 
         // Boost the method that worked
         when (method) {
-            MatchMethod.EXACT -> calibration.patternBoost = minOf(1.2f, calibration.patternBoost + 0.01f)
-            MatchMethod.FUZZY -> calibration.fuzzyBoost = minOf(1.2f, calibration.fuzzyBoost + 0.01f)
-            MatchMethod.SEMANTIC -> calibration.semanticBoost = minOf(1.2f, calibration.semanticBoost + 0.01f)
+            MatchMethod.EXACT -> calibration.patternBoost = minOf(NluThresholds.MAX_SIGNAL_BOOST, calibration.patternBoost + NluThresholds.SIGNAL_BOOST_INCREMENT)
+            MatchMethod.FUZZY -> calibration.fuzzyBoost = minOf(NluThresholds.MAX_SIGNAL_BOOST, calibration.fuzzyBoost + NluThresholds.SIGNAL_BOOST_INCREMENT)
+            MatchMethod.SEMANTIC -> calibration.semanticBoost = minOf(NluThresholds.MAX_SIGNAL_BOOST, calibration.semanticBoost + NluThresholds.SIGNAL_BOOST_INCREMENT)
             else -> {}
         }
 
         // Record context transition
         if (previousIntent != null && previousIntent != intentId) {
             val boost = calibration.contextBoost.getOrPut(previousIntent!!) { 1.0f }
-            calibration.contextBoost[previousIntent!!] = minOf(1.3f, boost + 0.02f)
+            calibration.contextBoost[previousIntent!!] = minOf(NluThresholds.MAX_CONTEXT_BOOST, boost + NluThresholds.CONTEXT_BOOST_INCREMENT)
         }
 
         intentCalibration[intentId] = calibration
@@ -405,7 +406,7 @@ class HybridClassifier(
     fun recordIncorrect(input: String, wrongIntentId: String, correctIntentId: String?) {
         // Reduce confidence for the wrong intent
         val wrongCalibration = intentCalibration.getOrPut(wrongIntentId) { CalibrationData() }
-        wrongCalibration.baseConfidence = maxOf(0.5f, wrongCalibration.baseConfidence - 0.05f)
+        wrongCalibration.baseConfidence = maxOf(NluThresholds.MIN_BASE_CONFIDENCE, wrongCalibration.baseConfidence - NluThresholds.CONFIDENCE_PENALTY_DECREMENT)
         intentCalibration[wrongIntentId] = wrongCalibration
 
         // If no correct intent, this might be a negative sample
@@ -415,7 +416,7 @@ class HybridClassifier(
         } else {
             // Boost the correct intent
             val correctCalibration = intentCalibration.getOrPut(correctIntentId) { CalibrationData() }
-            correctCalibration.baseConfidence = minOf(1.0f, correctCalibration.baseConfidence + 0.03f)
+            correctCalibration.baseConfidence = minOf(NluThresholds.MAX_BASE_CONFIDENCE, correctCalibration.baseConfidence + NluThresholds.CONFIDENCE_REWARD_INCREMENT)
             intentCalibration[correctIntentId] = correctCalibration
         }
     }
@@ -500,14 +501,14 @@ class HybridClassifier(
  * Enhanced configuration
  */
 data class EnhancedConfig(
-    val fastPathThreshold: Float = 0.95f,
-    val verificationRange: ClosedFloatingPointRange<Float> = 0.6f..0.85f,
-    val fuzzyMinSimilarity: Float = 0.65f,
-    val semanticMinSimilarity: Float = 0.55f,
+    val fastPathThreshold: Float = NluThresholds.FAST_PATH_THRESHOLD,
+    val verificationRange: ClosedFloatingPointRange<Float> = NluThresholds.VERIFICATION_RANGE_LOW..NluThresholds.VERIFICATION_RANGE_HIGH,
+    val fuzzyMinSimilarity: Float = NluThresholds.ENHANCED_FUZZY_MIN_SIMILARITY,
+    val semanticMinSimilarity: Float = NluThresholds.ENHANCED_SEMANTIC_MIN_SIMILARITY,
     val patternWeight: Float = 1.0f,
-    val fuzzyWeight: Float = 0.85f,
-    val semanticWeight: Float = 0.9f,
-    val agreementBonus: Float = 0.1f,
+    val fuzzyWeight: Float = NluThresholds.ENHANCED_FUZZY_WEIGHT,
+    val semanticWeight: Float = NluThresholds.ENHANCED_SEMANTIC_WEIGHT,
+    val agreementBonus: Float = NluThresholds.AGREEMENT_BONUS,
     val maxCandidates: Int = 5
 )
 
@@ -515,7 +516,7 @@ data class EnhancedConfig(
  * Per-intent calibration data
  */
 data class CalibrationData(
-    var baseConfidence: Float = 0.8f,
+    var baseConfidence: Float = NluThresholds.DEFAULT_BASE_CONFIDENCE,
     var patternBoost: Float = 1.0f,
     var fuzzyBoost: Float = 1.0f,
     var semanticBoost: Float = 1.0f,
@@ -587,7 +588,7 @@ data class EnhancedClassificationResult(
 ) {
     val topMatch: IntentMatch? get() = matches.firstOrNull()
     val hasMatch: Boolean get() = matches.isNotEmpty()
-    val isHighConfidence: Boolean get() = confidence >= 0.85f
+    val isHighConfidence: Boolean get() = confidence >= NluThresholds.HIGH_CONFIDENCE
 
     companion object {
         fun empty() = EnhancedClassificationResult(

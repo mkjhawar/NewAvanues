@@ -282,7 +282,7 @@ actual class IntentClassifier private constructor(
                 // Select intent if confidence is above threshold
                 // For cosine similarity: threshold of 0.6 means 60% semantic similarity
                 // For keyword matching fallback: threshold of 0.5 means 50% keyword overlap
-                val threshold = if (embeddingManager.hasEmbeddings()) 0.6f else 0.5f
+                val threshold = if (embeddingManager.hasEmbeddings()) NluThresholds.SEMANTIC_CONFIDENCE_THRESHOLD else NluThresholds.KEYWORD_CONFIDENCE_THRESHOLD
                 val isAboveThreshold = confidence >= threshold && bestIntentIndex < candidateIntents.size
                 val intent = if (isAboveThreshold) {
                     candidateIntents[bestIntentIndex]
@@ -455,7 +455,7 @@ actual class IntentClassifier private constructor(
         // Calculate final score: Jaccard similarity with bonus for exact matches
         // Exact matches get higher weight to prefer "lights" in "turn on lights" 
         // over partial matches
-        val exactMatchBonus = (exactMatches.toFloat() / intentKeywords.size.toFloat()) * 0.3f
+        val exactMatchBonus = (exactMatches.toFloat() / intentKeywords.size.toFloat()) * NluThresholds.KEYWORD_EXACT_MATCH_BONUS_WEIGHT
         val finalScore = (jaccardScore + exactMatchBonus).coerceIn(0.0f, 1.0f)
         
         android.util.Log.d("IntentClassifier", "    Keyword score for '$intent': " +

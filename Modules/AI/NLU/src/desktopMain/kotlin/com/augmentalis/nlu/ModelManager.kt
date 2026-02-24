@@ -17,6 +17,8 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
+private const val TAG = "ModelManager"
+
 /**
  * Desktop (JVM) implementation of ModelManager
  *
@@ -68,7 +70,7 @@ actual class ModelManager {
             val homeModelFile = File(homeModelsDir, type.modelFileName)
             if (homeModelFile.exists()) {
                 activeModelFile = homeModelFile
-                println("[ModelManager] Using shared model: ${homeModelFile.absolutePath}")
+                nluLogInfo(TAG, "Using shared model: ${homeModelFile.absolutePath}")
                 return activeModelFile
             }
         }
@@ -78,7 +80,7 @@ actual class ModelManager {
             val currentModelFile = File(currentDirModelsDir, type.modelFileName)
             if (currentModelFile.exists()) {
                 activeModelFile = currentModelFile
-                println("[ModelManager] Using local model: ${currentModelFile.absolutePath}")
+                nluLogInfo(TAG, "Using local model: ${currentModelFile.absolutePath}")
                 return activeModelFile
             }
         }
@@ -89,12 +91,12 @@ actual class ModelManager {
             val file = File(currentDirModelsDir, name)
             if (file.exists()) {
                 activeModelFile = file
-                println("[ModelManager] Using legacy model: ${file.absolutePath}")
+                nluLogInfo(TAG, "Using legacy model: ${file.absolutePath}")
                 return activeModelFile
             }
         }
 
-        println("[ModelManager] No local model found - download required")
+        nluLogWarn(TAG, "No local model found - download required")
         return null
     }
 
@@ -153,7 +155,7 @@ actual class ModelManager {
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (isModelAvailable()) {
-                println("[ModelManager] Models already available")
+                nluLogDebug(TAG, "Models already available")
                 return@withContext Result.Success(Unit)
             }
 
@@ -166,7 +168,7 @@ actual class ModelManager {
 
             // Download MobileBERT model
             if (!modelFile.exists()) {
-                println("[ModelManager] Downloading MobileBERT model...")
+                nluLogInfo(TAG, "Downloading MobileBERT model...")
                 onProgress(0.1f)
 
                 val modelResult = downloadFile(
@@ -186,7 +188,7 @@ actual class ModelManager {
 
             // Download vocabulary
             if (!vocabFile.exists()) {
-                println("[ModelManager] Downloading vocabulary...")
+                nluLogInfo(TAG, "Downloading vocabulary...")
                 onProgress(0.9f)
 
                 val vocabResult = downloadFile(
@@ -206,10 +208,10 @@ actual class ModelManager {
 
             onProgress(1.0f)
             detectBestModel()
-            println("[ModelManager] Download complete")
+            nluLogInfo(TAG, "Download complete")
             Result.Success(Unit)
         } catch (e: Exception) {
-            println("[ModelManager] Download failed: ${e.message}")
+            nluLogError(TAG, "Download failed: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Failed to download models: ${e.message}"
@@ -226,7 +228,7 @@ actual class ModelManager {
         onProgress: (Float) -> Unit
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            println("[ModelManager] Downloading from: $url")
+            nluLogInfo(TAG, "Downloading from: $url")
 
             val connection = URL(url).openConnection() as? HttpURLConnection
                 ?: return@withContext Result.Error(
@@ -275,10 +277,10 @@ actual class ModelManager {
                 )
             }
 
-            println("[ModelManager] Downloaded: ${destination.name} (${destination.length() / 1024 / 1024} MB)")
+            nluLogInfo(TAG, "Downloaded: ${destination.name} (${destination.length() / 1024 / 1024} MB)")
             Result.Success(Unit)
         } catch (e: Exception) {
-            println("[ModelManager] Download error: ${e.message}")
+            nluLogError(TAG, "Download error: ${e.message}", e)
             if (destination.exists()) {
                 destination.delete()
             }
@@ -296,7 +298,7 @@ actual class ModelManager {
      */
     actual suspend fun copyModelFromAssets(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            println("[ModelManager] Copying models from classpath resources...")
+            nluLogInfo(TAG, "Copying models from classpath resources...")
 
             if (!currentDirModelsDir.exists()) {
                 currentDirModelsDir.mkdirs()
@@ -316,7 +318,7 @@ actual class ModelManager {
                         input.copyTo(output)
                     }
                 }
-                println("[ModelManager] Copied model from resources: ${modelFile.length() / 1024 / 1024} MB")
+                nluLogInfo(TAG, "Copied model from resources: ${modelFile.length() / 1024 / 1024} MB")
             }
 
             val vocabStream = this::class.java.getResourceAsStream(vocabResourcePath)
@@ -326,13 +328,13 @@ actual class ModelManager {
                         input.copyTo(output)
                     }
                 }
-                println("[ModelManager] Copied vocabulary from resources")
+                nluLogInfo(TAG, "Copied vocabulary from resources")
             }
 
             detectBestModel()
             Result.Success(Unit)
         } catch (e: Exception) {
-            println("[ModelManager] Failed to copy from resources: ${e.message}")
+            nluLogError(TAG, "Failed to copy from resources: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Failed to copy models from resources: ${e.message}"
@@ -350,17 +352,17 @@ actual class ModelManager {
                 val modelFile = File(currentDirModelsDir, type.modelFileName)
                 if (modelFile.exists()) {
                     modelFile.delete()
-                    println("[ModelManager] Deleted ${type.displayName} model file")
+                    nluLogInfo(TAG, "Deleted ${type.displayName} model file")
                 }
             }
             if (vocabFile.exists()) {
                 vocabFile.delete()
-                println("[ModelManager] Deleted vocabulary file")
+                nluLogInfo(TAG, "Deleted vocabulary file")
             }
             activeModelFile = null
             Result.Success(Unit)
         } catch (e: Exception) {
-            println("[ModelManager] Failed to clear models: ${e.message}")
+            nluLogError(TAG, "Failed to clear models: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Failed to clear models: ${e.message}"

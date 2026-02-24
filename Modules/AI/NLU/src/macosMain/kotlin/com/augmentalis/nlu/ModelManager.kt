@@ -17,6 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.Foundation.*
 
+private const val TAG = "ModelManager"
+
 @OptIn(ExperimentalForeignApi::class)
 actual class ModelManager {
 
@@ -56,7 +58,7 @@ actual class ModelManager {
                 error = null
             )
         } catch (e: Exception) {
-            println("ModelManager: Failed to create models directory: ${e.message}")
+            nluLogError(TAG, "Failed to create models directory: ${e.message}", e)
         }
     }
 
@@ -82,7 +84,7 @@ actual class ModelManager {
         // Fallback to bundled model
         getBundleModelPath()?.let { return it }
 
-        println("ModelManager: No model found")
+        nluLogWarn(TAG, "No model found")
         return ""
     }
 
@@ -120,7 +122,7 @@ actual class ModelManager {
                 return@withContext Result.Success(Unit)
             }
 
-            println("ModelManager: Models not available and no download configured")
+            nluLogWarn(TAG, "Models not available and no download configured")
             return@withContext Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(
@@ -135,7 +137,7 @@ actual class ModelManager {
      */
     actual suspend fun copyModelFromAssets(): Result<Unit> = withContext(Dispatchers.Default) {
         try {
-            println("ModelManager: Copying model from bundle...")
+            nluLogInfo(TAG, "Copying model from bundle...")
 
             val fileManager = NSFileManager.defaultManager
 
@@ -146,9 +148,9 @@ actual class ModelManager {
 
                 try {
                     fileManager.copyItemAtURL(sourceUrl, toURL = destUrl, error = null)
-                    println("ModelManager: Model copied successfully")
+                    nluLogInfo(TAG, "Model copied successfully")
                 } catch (e: Exception) {
-                    println("ModelManager: Failed to copy model: ${e.message}")
+                    nluLogError(TAG, "Failed to copy model: ${e.message}", e)
                 }
             }
 
@@ -170,9 +172,9 @@ actual class ModelManager {
 
             try {
                 fileManager.removeItemAtPath(modelsDir, error = null)
-                println("ModelManager: Models cleared")
+                nluLogInfo(TAG, "Models cleared")
             } catch (e: Exception) {
-                println("ModelManager: Failed to clear models: ${e.message}")
+                nluLogError(TAG, "Failed to clear models: ${e.message}", e)
             }
 
             Result.Success(Unit)
@@ -208,19 +210,19 @@ actual class ModelManager {
 
         // Try mALBERT first (better quality)
         bundle.pathForResource("intent_classifier_malbert.mlpackage", ofType = null)?.let {
-            println("ModelManager: Found mALBERT in bundle")
+            nluLogDebug(TAG, "Found mALBERT in bundle")
             return it
         }
 
         // Fallback to MobileBERT
         bundle.pathForResource("intent_classifier_mobilebert.mlpackage", ofType = null)?.let {
-            println("ModelManager: Found MobileBERT in bundle")
+            nluLogDebug(TAG, "Found MobileBERT in bundle")
             return it
         }
 
         // Try without extension (for raw model files)
         bundle.pathForResource("intent_classifier", ofType = "mlmodel")?.let {
-            println("ModelManager: Found .mlmodel in bundle")
+            nluLogDebug(TAG, "Found .mlmodel in bundle")
             return it
         }
 
@@ -234,14 +236,14 @@ actual class ModelManager {
         // Try mALBERT first
         val malbertPath = "$modelsDir/${malbertModel}"
         if (fileExists(malbertPath)) {
-            println("ModelManager: Found mALBERT in Application Support")
+            nluLogDebug(TAG, "Found mALBERT in Application Support")
             return malbertPath
         }
 
         // Fallback to MobileBERT
         val mobilebertPath = "$modelsDir/${mobileBertModel}"
         if (fileExists(mobilebertPath)) {
-            println("ModelManager: Found MobileBERT in Application Support")
+            nluLogDebug(TAG, "Found MobileBERT in Application Support")
             return mobilebertPath
         }
 

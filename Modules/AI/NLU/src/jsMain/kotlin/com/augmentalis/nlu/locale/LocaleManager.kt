@@ -1,6 +1,9 @@
 package com.augmentalis.nlu.locale
 
+import com.augmentalis.nlu.nluLogWarn
 import kotlinx.browser.window
+
+private const val TAG = "LocaleManager"
 
 /**
  * JS/Web implementation of LocaleManager
@@ -123,7 +126,7 @@ actual class LocaleManager {
             }
         } catch (_: Exception) {
             // localStorage may be unavailable — silently ignore
-            console.warn("[LocaleManager] localStorage unavailable, locale override not persisted")
+            nluLogWarn(TAG, "localStorage unavailable, locale override not persisted")
         }
     }
 

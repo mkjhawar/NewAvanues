@@ -5,6 +5,8 @@ import kotlinx.coroutines.await
 import org.w3c.fetch.Response
 import kotlin.js.Promise
 
+private const val TAG = "BertTokenizer"
+
 /**
  * JS/Web implementation of BERT tokenizer using WordPiece algorithm
  *
@@ -168,14 +170,14 @@ actual class BertTokenizer(
         try {
             val response: Response = window.fetch(url).await()
             if (!response.ok) {
-                console.error("[BertTokenizer] Failed to fetch vocab from $url: HTTP ${response.status}")
+                nluLogError(TAG, "Failed to fetch vocab from $url: HTTP ${response.status}")
                 return
             }
             val text = response.text().await()
             loadVocabFromText(text)
-            console.log("[BertTokenizer] Loaded vocab from URL: ${vocab.size} tokens")
+            nluLogInfo(TAG, "Loaded vocab from URL: ${vocab.size} tokens")
         } catch (e: Exception) {
-            console.error("[BertTokenizer] Error loading vocab from URL: ${e.message}")
+            nluLogError(TAG, "Error loading vocab from URL: ${e.message}", e)
         }
     }
 

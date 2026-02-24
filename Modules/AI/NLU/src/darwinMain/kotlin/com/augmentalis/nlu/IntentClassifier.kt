@@ -43,11 +43,11 @@ actual class IntentClassifier private constructor() {
         initializationMutex.withLock {
             try {
                 if (isInitialized) {
-                    println("IntentClassifier: Already initialized, skipping")
+                    nluLogDebug(TAG, "Already initialized, skipping")
                     return@withContext Result.Success(Unit)
                 }
 
-                println("IntentClassifier: Starting initialization with model: $modelPath")
+                nluLogInfo(TAG, "Starting initialization with model: $modelPath")
 
                 // Initialize Core ML model manager
                 modelManager = CoreMLModelManager()
@@ -70,7 +70,7 @@ actual class IntentClassifier private constructor() {
                 precomputeIntentEmbeddings()
 
                 isInitialized = true
-                println("IntentClassifier: Initialization complete, loaded ${intentEmbeddings.size} intent embeddings")
+                nluLogInfo(TAG, "Initialization complete, loaded ${intentEmbeddings.size} intent embeddings")
                 Result.Success(Unit)
             } catch (e: Exception) {
                 Result.Error(
@@ -159,7 +159,7 @@ actual class IntentClassifier private constructor() {
             val bestIntentIndex = scores.indices.maxByOrNull { scores[it] } ?: 0
             val confidence = scores[bestIntentIndex]
 
-            val threshold = if (intentEmbeddings.isNotEmpty()) 0.6f else 0.5f
+            val threshold = if (intentEmbeddings.isNotEmpty()) NluThresholds.SEMANTIC_CONFIDENCE_THRESHOLD else NluThresholds.KEYWORD_CONFIDENCE_THRESHOLD
             val intent = if (confidence >= threshold && bestIntentIndex < candidateIntents.size) {
                 candidateIntents[bestIntentIndex]
             } else {
@@ -167,7 +167,7 @@ actual class IntentClassifier private constructor() {
             }
 
             // PII-safe: log utterance length, not content
-            println("IntentClassifier: Classified ${utterance.length}-char input -> $intent (confidence: $confidence, time: ${inferenceTime}ms)")
+            nluLogDebug(TAG, "Classified ${utterance.length}-char input -> $intent (confidence: $confidence, time: ${inferenceTime}ms)")
 
             Result.Success(
                 IntentClassification(
@@ -229,17 +229,17 @@ actual class IntentClassifier private constructor() {
             utteranceWords.contains(keyword)
         }
 
-        val exactMatchBonus = (exactMatches.toFloat() / intentKeywords.size.toFloat()) * 0.3f
+        val exactMatchBonus = (exactMatches.toFloat() / intentKeywords.size.toFloat()) * NluThresholds.KEYWORD_EXACT_MATCH_BONUS_WEIGHT
         return (jaccardScore + exactMatchBonus).coerceIn(0.0f, 1.0f)
     }
 
     private suspend fun precomputeIntentEmbeddings() {
         try {
-            println("IntentClassifier: Pre-computing intent embeddings...")
+            nluLogInfo(TAG, "Pre-computing intent embeddings...")
             // Embeddings loaded from database when available
-            println("IntentClassifier: Pre-computation complete: ${intentEmbeddings.size} intents")
+            nluLogInfo(TAG, "Pre-computation complete: ${intentEmbeddings.size} intents")
         } catch (e: Exception) {
-            println("IntentClassifier: Warning - failed to pre-compute embeddings: ${e.message}")
+            nluLogWarn(TAG, "Failed to pre-compute embeddings: ${e.message}")
         }
     }
 
@@ -250,7 +250,7 @@ actual class IntentClassifier private constructor() {
             tokenizer = null
             intentEmbeddings.clear()
             isInitialized = false
-            println("IntentClassifier: Cleaned up resources")
+            nluLogDebug(TAG, "Cleaned up resources")
         }
     }
 
@@ -285,15 +285,15 @@ actual class IntentClassifier private constructor() {
             }
 
             // PII-safe: log utterance length, not content
-            println("IntentClassifier: classifyCommand: ${utterance.length}-char input")
-            println("IntentClassifier: Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
+            nluLogDebug(TAG, "classifyCommand: ${utterance.length}-char input")
+            nluLogDebug(TAG, "Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
 
             // Step 1: Try exact matching first (fast path)
             val normalizedUtterance = utterance.trim().lowercase()
             for ((index, phrase) in commandPhrases.withIndex()) {
                 val normalizedPhrase = phrase.trim().lowercase()
                 if (normalizedUtterance == normalizedPhrase) {
-                    println("IntentClassifier: Exact match: $phrase (index $index)")
+                    nluLogDebug(TAG, "Exact match: $phrase (index $index)")
                     return@withContext CommandClassificationResult.Match(
                         commandId = phrase,
                         confidence = 1.0f,
@@ -325,10 +325,10 @@ actual class IntentClassifier private constructor() {
                     val topScore = sortedScores[0].value
                     val topCommand = sortedScores[0].key
 
-                    println("IntentClassifier: Top: $topCommand ($topScore), Threshold: $confidenceThreshold")
+                    nluLogDebug(TAG, "Top: $topCommand ($topScore), Threshold: $confidenceThreshold")
 
                     if (topScore < confidenceThreshold) {
-                        println("IntentClassifier: NoMatch: top score $topScore < threshold $confidenceThreshold")
+                        nluLogDebug(TAG, "NoMatch: top score $topScore < threshold $confidenceThreshold")
                         return@withContext CommandClassificationResult.NoMatch
                     }
 
@@ -337,7 +337,7 @@ actual class IntentClassifier private constructor() {
                         .map { CommandCandidate(commandId = it.key, confidence = it.value) }
 
                     if (ambiguousCandidates.size > 1) {
-                        println("IntentClassifier: Ambiguous: ${ambiguousCandidates.size} candidates within $ambiguityThreshold")
+                        nluLogDebug(TAG, "Ambiguous: ${ambiguousCandidates.size} candidates within $ambiguityThreshold")
                         return@withContext CommandClassificationResult.Ambiguous(
                             candidates = ambiguousCandidates
                         )
@@ -348,7 +348,7 @@ actual class IntentClassifier private constructor() {
                         else -> MatchMethod.FUZZY
                     }
 
-                    println("IntentClassifier: Match: $topCommand (confidence: $topScore, method: $matchMethod)")
+                    nluLogDebug(TAG, "Match: $topCommand (confidence: $topScore, method: $matchMethod)")
                     return@withContext CommandClassificationResult.Match(
                         commandId = topCommand,
                         confidence = topScore,
@@ -357,7 +357,7 @@ actual class IntentClassifier private constructor() {
                 }
             }
         } catch (e: Exception) {
-            println("IntentClassifier: classifyCommand error: ${e.message}")
+            nluLogError(TAG, "classifyCommand error: ${e.message}", e)
             CommandClassificationResult.Error(
                 "Command classification failed: ${e.message}"
             )
@@ -366,6 +366,7 @@ actual class IntentClassifier private constructor() {
 
     // No @ThreadLocal — Kotlin 2.1.0 new memory model handles companion objects correctly
     actual companion object {
+        private const val TAG = "IntentClassifier"
         private var INSTANCE: IntentClassifier? = null
         private val lock = SynchronizedObject()
 
@@ -373,7 +374,7 @@ actual class IntentClassifier private constructor() {
             return INSTANCE ?: synchronized(lock) {
                 INSTANCE ?: IntentClassifier().also {
                     INSTANCE = it
-                    println("IntentClassifier: Singleton instance created")
+                    nluLogInfo(TAG, "Singleton instance created")
                 }
             }
         }

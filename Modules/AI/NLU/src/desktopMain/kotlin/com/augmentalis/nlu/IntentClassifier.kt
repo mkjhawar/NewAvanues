@@ -22,6 +22,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.LongBuffer
 
+private const val TAG = "IntentClassifier"
+
 /**
  * Desktop (JVM) implementation of IntentClassifier using ONNX Runtime
  *
@@ -67,15 +69,15 @@ actual class IntentClassifier private constructor() {
         initializationMutex.withLock {
             try {
                 if (isInitialized) {
-                    println("[IntentClassifier] Already initialized, skipping")
+                    nluLogDebug(TAG, "Already initialized, skipping")
                     return@withContext Result.Success(Unit)
                 }
 
-                println("[IntentClassifier] Starting initialization...")
+                nluLogInfo(TAG, "Starting initialization...")
 
                 // Initialize ONNX Runtime environment
                 ortEnvironment = OrtEnvironment.getEnvironment()
-                println("[IntentClassifier] ONNX Runtime environment initialized")
+                nluLogInfo(TAG, "ONNX Runtime environment initialized")
 
                 // Load model
                 val modelFile = File(modelPath)
@@ -98,7 +100,7 @@ actual class IntentClassifier private constructor() {
                     modelFile.absolutePath,
                     sessionOptions
                 )
-                println("[IntentClassifier] ONNX model loaded: ${modelFile.name} (${modelFile.length() / 1024 / 1024} MB)")
+                nluLogInfo(TAG, "ONNX model loaded: ${modelFile.name} (${modelFile.length() / 1024 / 1024} MB)")
 
                 // Initialize tokenizer
                 tokenizer = BertTokenizer()
@@ -106,11 +108,10 @@ actual class IntentClassifier private constructor() {
                 isInitialized = true
                 _isPreComputationComplete.value = true
 
-                println("[IntentClassifier] === Initialization Complete ===")
+                nluLogInfo(TAG, "=== Initialization Complete ===")
                 Result.Success(Unit)
             } catch (e: Exception) {
-                println("[IntentClassifier] Initialization failed: ${e.message}")
-                e.printStackTrace()
+                nluLogError(TAG, "Initialization failed: ${e.message}", e)
                 Result.Error(
                     exception = e,
                     message = "Failed to initialize ONNX Runtime: ${e.message}"
@@ -248,13 +249,13 @@ actual class IntentClassifier private constructor() {
                 val pooledEmbedding = meanPooling(allTokenEmbeddings, attentionMask, seqLen, hiddenSize)
                 val queryEmbedding = l2Normalize(pooledEmbedding)
 
-                println("[IntentClassifier] Classifying: \"$utterance\"")
-                println("[IntentClassifier] Candidates: ${candidateIntents.joinToString()}")
+                nluLogDebug(TAG, "Classifying: \"$utterance\"")
+                nluLogDebug(TAG, "Candidates: ${candidateIntents.joinToString()}")
 
                 // Calculate similarity scores
                 val scores = if (intentEmbeddings.isNotEmpty()) {
                     // Use semantic similarity (pre-computed embeddings)
-                    println("[IntentClassifier] Using semantic similarity (${intentEmbeddings.size} embeddings)")
+                    nluLogDebug(TAG, "Using semantic similarity (${intentEmbeddings.size} embeddings)")
                     candidateIntents.map { intent ->
                         val intentEmbed = intentEmbeddings[intent]
                         if (intentEmbed != null) {
@@ -265,7 +266,7 @@ actual class IntentClassifier private constructor() {
                     }
                 } else {
                     // Fallback to keyword matching
-                    println("[IntentClassifier] Using keyword matching (no pre-computed embeddings)")
+                    nluLogDebug(TAG, "Using keyword matching (no pre-computed embeddings)")
                     candidateIntents.map { intent ->
                         computeKeywordScore(intent, utterance)
                     }
@@ -273,7 +274,7 @@ actual class IntentClassifier private constructor() {
 
                 // Log all scores
                 candidateIntents.forEachIndexed { index, intent ->
-                    println("[IntentClassifier]   $intent: ${String.format("%.3f", scores[index])}")
+                    nluLogDebug(TAG, "  $intent: ${String.format("%.3f", scores[index])}")
                 }
 
                 // Find best matching intent
@@ -281,15 +282,15 @@ actual class IntentClassifier private constructor() {
                 val confidence = scores[bestIntentIndex]
 
                 // Select intent if confidence is above threshold
-                val threshold = if (intentEmbeddings.isNotEmpty()) 0.6f else 0.5f
+                val threshold = if (intentEmbeddings.isNotEmpty()) NluThresholds.SEMANTIC_CONFIDENCE_THRESHOLD else NluThresholds.KEYWORD_CONFIDENCE_THRESHOLD
                 val intent = if (confidence >= threshold && bestIntentIndex < candidateIntents.size) {
                     candidateIntents[bestIntentIndex]
                 } else {
                     "unknown"
                 }
 
-                println("[IntentClassifier] Best: ${candidateIntents[bestIntentIndex]} (confidence: $confidence)")
-                println("[IntentClassifier] Threshold: $threshold, Decision: $intent (${inferenceTime}ms)")
+                nluLogDebug(TAG, "Best: ${candidateIntents[bestIntentIndex]} (confidence: $confidence)")
+                nluLogDebug(TAG, "Threshold: $threshold, Decision: $intent (${inferenceTime}ms)")
 
                 Result.Success(
                     IntentClassification(
@@ -307,8 +308,7 @@ actual class IntentClassifier private constructor() {
                 outputs?.close()
             }
         } catch (e: Exception) {
-            println("[IntentClassifier] Classification failed: ${e.message}")
-            e.printStackTrace()
+            nluLogError(TAG, "Classification failed: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Intent classification failed: ${e.message}"
@@ -404,7 +404,7 @@ actual class IntentClassifier private constructor() {
             utteranceWords.contains(keyword)
         }
 
-        val exactMatchBonus = (exactMatches.toFloat() / intentKeywords.size.toFloat()) * 0.3f
+        val exactMatchBonus = (exactMatches.toFloat() / intentKeywords.size.toFloat()) * NluThresholds.KEYWORD_EXACT_MATCH_BONUS_WEIGHT
         return (jaccardScore + exactMatchBonus).coerceIn(0.0f, 1.0f)
     }
 
@@ -481,7 +481,7 @@ actual class IntentClassifier private constructor() {
     fun addIntentEmbedding(intent: String, embedding: FloatArray) {
         require(embedding.size == 384) { "Desktop NLU expects 384-dim embeddings (MobileBERT), got ${embedding.size}" }
         intentEmbeddings[intent] = embedding
-        println("[IntentClassifier] Added embedding for intent: $intent (${embedding.size}-dim)")
+        nluLogDebug(TAG, "Added embedding for intent: $intent (${embedding.size}-dim)")
     }
 
     /**
@@ -499,9 +499,9 @@ actual class IntentClassifier private constructor() {
                 val normalized = l2Normalize(embedding)
                 intentEmbeddings[intentId] = normalized
                 count++
-                println("[IntentClassifier] Pre-computed embedding for: $intentId")
+                nluLogDebug(TAG, "Pre-computed embedding for: $intentId")
             } catch (e: Exception) {
-                System.err.println("[IntentClassifier] Failed to compute embedding for $intentId: ${e.message}")
+                nluLogError(TAG, "Failed to compute embedding for $intentId: ${e.message}", e)
             }
         }
         return count
@@ -516,7 +516,7 @@ actual class IntentClassifier private constructor() {
             ortSession.close()
             ortEnvironment.close()
             isInitialized = false
-            println("[IntentClassifier] Resources released")
+            nluLogDebug(TAG, "Resources released")
         }
     }
 
@@ -566,15 +566,15 @@ actual class IntentClassifier private constructor() {
                 return@withContext CommandClassificationResult.NoMatch
             }
 
-            println("[IntentClassifier] classifyCommand: \"$utterance\"")
-            println("[IntentClassifier] Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
+            nluLogDebug(TAG, "classifyCommand: \"$utterance\"")
+            nluLogDebug(TAG, "Phrases: ${commandPhrases.size}, Threshold: $confidenceThreshold, Ambiguity: $ambiguityThreshold")
 
             // Step 1: Try exact matching first (fast path)
             val normalizedUtterance = utterance.trim().lowercase()
             for ((index, phrase) in commandPhrases.withIndex()) {
                 val normalizedPhrase = phrase.trim().lowercase()
                 if (normalizedUtterance == normalizedPhrase) {
-                    println("[IntentClassifier] Exact match: $phrase (index $index)")
+                    nluLogDebug(TAG, "Exact match: $phrase (index $index)")
                     return@withContext CommandClassificationResult.Match(
                         commandId = phrase,
                         confidence = 1.0f,
@@ -607,11 +607,11 @@ actual class IntentClassifier private constructor() {
                     val topScore = sortedScores[0].value
                     val topCommand = sortedScores[0].key
 
-                    println("[IntentClassifier] Top: $topCommand ($topScore), Threshold: $confidenceThreshold")
+                    nluLogDebug(TAG, "Top: $topCommand ($topScore), Threshold: $confidenceThreshold")
 
                     // Check if below confidence threshold
                     if (topScore < confidenceThreshold) {
-                        println("[IntentClassifier] NoMatch: top score $topScore < threshold $confidenceThreshold")
+                        nluLogDebug(TAG, "NoMatch: top score $topScore < threshold $confidenceThreshold")
                         return@withContext CommandClassificationResult.NoMatch
                     }
 
@@ -621,7 +621,7 @@ actual class IntentClassifier private constructor() {
                         .map { CommandCandidate(commandId = it.key, confidence = it.value) }
 
                     if (ambiguousCandidates.size > 1) {
-                        println("[IntentClassifier] Ambiguous: ${ambiguousCandidates.size} candidates within $ambiguityThreshold")
+                        nluLogDebug(TAG, "Ambiguous: ${ambiguousCandidates.size} candidates within $ambiguityThreshold")
                         return@withContext CommandClassificationResult.Ambiguous(
                             candidates = ambiguousCandidates
                         )
@@ -633,7 +633,7 @@ actual class IntentClassifier private constructor() {
                         else -> MatchMethod.FUZZY
                     }
 
-                    println("[IntentClassifier] Match: $topCommand (confidence: $topScore, method: $matchMethod)")
+                    nluLogDebug(TAG, "Match: $topCommand (confidence: $topScore, method: $matchMethod)")
                     return@withContext CommandClassificationResult.Match(
                         commandId = topCommand,
                         confidence = topScore,
@@ -642,8 +642,7 @@ actual class IntentClassifier private constructor() {
                 }
             }
         } catch (e: Exception) {
-            System.err.println("[IntentClassifier] classifyCommand error: ${e.message}")
-            e.printStackTrace()
+            nluLogError(TAG, "classifyCommand error: ${e.message}", e)
             CommandClassificationResult.Error(
                 "Command classification failed: ${e.message}"
             )
@@ -662,7 +661,7 @@ actual class IntentClassifier private constructor() {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: IntentClassifier().also {
                     INSTANCE = it
-                    println("[IntentClassifier] Singleton instance created")
+                    nluLogInfo(TAG, "Singleton instance created")
                 }
             }
         }

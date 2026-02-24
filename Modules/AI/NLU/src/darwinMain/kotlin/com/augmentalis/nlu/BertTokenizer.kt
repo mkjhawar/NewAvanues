@@ -13,7 +13,15 @@ package com.augmentalis.nlu
  */
 actual class BertTokenizer {
 
+    private var stubWarningEmitted = false
+
     actual fun tokenize(text: String, maxLength: Int): TokenizationResult {
+        if (!stubWarningEmitted) {
+            nluLogWarn("BertTokenizer", "Darwin BertTokenizer is a stub — returning zero arrays. " +
+                "BERT-based semantic verification will be skipped. " +
+                "Configure CoreML tensor interop to enable full tokenization.")
+            stubWarningEmitted = true
+        }
         return TokenizationResult(
             inputIds = LongArray(maxLength),
             attentionMask = LongArray(maxLength),

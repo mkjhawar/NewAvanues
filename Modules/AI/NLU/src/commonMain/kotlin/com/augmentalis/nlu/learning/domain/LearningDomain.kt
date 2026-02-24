@@ -1,5 +1,7 @@
 package com.augmentalis.nlu.learning.domain
 
+import com.augmentalis.nlu.NluThresholds
+
 /**
  * Unified Learning Domain - Core abstractions for VoiceOS-AVA integration
  *
@@ -159,7 +161,7 @@ data class LearnedCommand(
     val hasEmbedding: Boolean get() = embedding != null && embedding.isNotEmpty()
 
     /** Check if this is a high-confidence command */
-    val isHighConfidence: Boolean get() = confidence >= 0.85f
+    val isHighConfidence: Boolean get() = confidence >= NluThresholds.HIGH_CONFIDENCE
 
     /** Check if this came from VoiceOS */
     val isVoiceOSCommand: Boolean
@@ -475,7 +477,7 @@ interface IUnifiedLearningRepository {
     /**
      * Get all high-confidence commands
      */
-    suspend fun getHighConfidence(minConfidence: Float = 0.8f): List<LearnedCommand>
+    suspend fun getHighConfidence(minConfidence: Float = NluThresholds.HIGH_CONFIDENCE_QUERY_DEFAULT): List<LearnedCommand>
 
     /**
      * Get commands needing embedding computation

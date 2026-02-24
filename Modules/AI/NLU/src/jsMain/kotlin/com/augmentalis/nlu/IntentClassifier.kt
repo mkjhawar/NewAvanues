@@ -9,6 +9,8 @@ import org.khronos.webgl.get
 import kotlin.js.Promise
 import kotlin.math.sqrt
 
+private const val TAG = "IntentClassifier"
+
 /**
  * JS/Web implementation of IntentClassifier using ONNX Runtime Web
  *
@@ -50,22 +52,22 @@ actual class IntentClassifier private constructor() {
     actual suspend fun initialize(modelPath: String): Result<Unit> {
         return try {
             if (isInitialized) {
-                console.log("[IntentClassifier] Already initialized, skipping")
+                nluLogDebug(TAG, "Already initialized, skipping")
                 return Result.Success(Unit)
             }
 
-            console.log("[IntentClassifier] Starting initialization...")
+            nluLogInfo(TAG, "Starting initialization...")
 
             // Initialize model manager and ensure model is downloaded
             val mgr = ModelManager()
             modelManager = mgr
 
             val downloadResult = mgr.downloadModelsIfNeeded { progress ->
-                console.log("[IntentClassifier] Download progress: ${(progress * 100).toInt()}%")
+                nluLogDebug(TAG, "Download progress: ${(progress * 100).toInt()}%")
             }
 
             if (downloadResult is Result.Error) {
-                console.warn("[IntentClassifier] Model download failed, will use keyword fallback")
+                nluLogWarn(TAG, "Model download failed, will use keyword fallback")
                 // Don't fail initialization — keyword matching still works
             }
 
@@ -74,9 +76,9 @@ actual class IntentClassifier private constructor() {
             val vocabText = mgr.getVocabText()
             if (vocabText != null) {
                 tok.loadVocabFromText(vocabText)
-                console.log("[IntentClassifier] Tokenizer loaded with ${tok.getVocabSize()} tokens")
+                nluLogInfo(TAG, "Tokenizer loaded with ${tok.getVocabSize()} tokens")
             } else {
-                console.warn("[IntentClassifier] No vocabulary available, tokenizer using stub vocab")
+                nluLogWarn(TAG, "No vocabulary available, tokenizer using stub vocab")
             }
             tokenizer = tok
 
@@ -84,16 +86,16 @@ actual class IntentClassifier private constructor() {
             val modelBuffer = mgr.getModelArrayBuffer()
             if (modelBuffer != null) {
                 ortSession = createOnnxSession(modelBuffer)
-                console.log("[IntentClassifier] ONNX session created (${mgr.getActiveModelType().displayName})")
+                nluLogInfo(TAG, "ONNX session created (${mgr.getActiveModelType().displayName})")
             } else {
-                console.warn("[IntentClassifier] No model buffer, semantic classification unavailable")
+                nluLogWarn(TAG, "No model buffer, semantic classification unavailable")
             }
 
             isInitialized = true
-            console.log("[IntentClassifier] === Initialization Complete ===")
+            nluLogInfo(TAG, "Initialization complete")
             Result.Success(Unit)
         } catch (e: Exception) {
-            console.error("[IntentClassifier] Initialization failed: ${e.message}")
+            nluLogError(TAG, "Initialization failed: ${e.message}", e)
             // Mark as initialized anyway — keyword fallback is available
             isInitialized = true
             Result.Success(Unit)
@@ -146,7 +148,7 @@ actual class IntentClassifier private constructor() {
             val bestIndex = scores.indices.maxByOrNull { scores[it] } ?: 0
             val confidence = scores[bestIndex]
 
-            val threshold = if (ortSession != null) 0.6f else 0.5f
+            val threshold = if (ortSession != null) NluThresholds.SEMANTIC_CONFIDENCE_THRESHOLD else NluThresholds.KEYWORD_CONFIDENCE_THRESHOLD
             val intent = if (confidence >= threshold && bestIndex < candidateIntents.size) {
                 candidateIntents[bestIndex]
             } else {
@@ -162,7 +164,7 @@ actual class IntentClassifier private constructor() {
                 )
             )
         } catch (e: Exception) {
-            console.error("[IntentClassifier] Classification failed: ${e.message}")
+            nluLogError(TAG, "Classification failed: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Intent classification failed: ${e.message}"
@@ -185,7 +187,7 @@ actual class IntentClassifier private constructor() {
         isInitialized = false
         intentEmbeddings.clear()
         localeEmbeddings.clear()
-        console.log("[IntentClassifier] Resources released")
+        nluLogDebug(TAG, "Resources released")
     }
 
     /**
@@ -277,7 +279,7 @@ actual class IntentClassifier private constructor() {
                 }
             }
         } catch (e: Exception) {
-            console.error("[IntentClassifier] classifyCommand error: ${e.message}")
+            nluLogError(TAG, "classifyCommand error: ${e.message}", e)
             CommandClassificationResult.Error("Command classification failed: ${e.message}")
         }
     }
@@ -401,7 +403,7 @@ actual class IntentClassifier private constructor() {
             // L2 normalize
             l2Normalize(pooled)
         } catch (e: Exception) {
-            console.error("[IntentClassifier] ONNX inference failed: ${e.message}")
+            nluLogError(TAG, "ONNX inference failed: ${e.message}", e)
             null
         }
     }
@@ -516,7 +518,7 @@ actual class IntentClassifier private constructor() {
         // Bonus for exact keyword matches
         val exactMatches = intentKeywords.count { keyword -> utteranceWords.contains(keyword) }
         val exactMatchBonus = if (intentKeywords.isNotEmpty()) {
-            (exactMatches.toFloat() / intentKeywords.size.toFloat()) * 0.3f
+            (exactMatches.toFloat() / intentKeywords.size.toFloat()) * NluThresholds.KEYWORD_EXACT_MATCH_BONUS_WEIGHT
         } else {
             0.0f
         }

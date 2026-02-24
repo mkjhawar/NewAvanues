@@ -14,6 +14,8 @@
 package com.augmentalis.nlu.coreml
 
 import com.augmentalis.ava.core.common.Result
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogInfo
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -24,6 +26,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.CoreML.*
 import platform.Foundation.*
+
+private const val TAG = "CoreMLModelManager"
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
 internal class CoreMLModelManager {
@@ -59,7 +63,7 @@ internal class CoreMLModelManager {
         computeBackend: ComputeBackend = ComputeBackend.Auto
     ): Result<Unit> {
         try {
-            println("CoreMLModelManager: Loading model from: $modelPath")
+            nluLogInfo(TAG, "Loading model from: $modelPath")
 
             this.computeBackend = computeBackend
 
@@ -99,8 +103,8 @@ internal class CoreMLModelManager {
             }
 
             isLoaded = true
-            println("CoreMLModelManager: Model loaded successfully")
-            println("CoreMLModelManager: Using compute backend: $computeBackend")
+            nluLogInfo(TAG, "Model loaded successfully")
+            nluLogDebug(TAG, "Using compute backend: $computeBackend")
 
             return Result.Success(Unit)
         } catch (e: Exception) {
@@ -117,19 +121,19 @@ internal class CoreMLModelManager {
         when (computeBackend) {
             ComputeBackend.ANE -> {
                 config.computeUnits = MLComputeUnitsAll
-                println("CoreMLModelManager: Configured for Apple Neural Engine")
+                nluLogDebug(TAG, "Configured for Apple Neural Engine")
             }
             ComputeBackend.GPU -> {
                 config.computeUnits = MLComputeUnitsCPUAndGPU
-                println("CoreMLModelManager: Configured for GPU + CPU fallback")
+                nluLogDebug(TAG, "Configured for GPU + CPU fallback")
             }
             ComputeBackend.CPU -> {
                 config.computeUnits = MLComputeUnitsCPUOnly
-                println("CoreMLModelManager: Configured for CPU only")
+                nluLogDebug(TAG, "Configured for CPU only")
             }
             ComputeBackend.Auto -> {
                 config.computeUnits = MLComputeUnitsAll
-                println("CoreMLModelManager: Configured for automatic backend selection")
+                nluLogDebug(TAG, "Configured for automatic backend selection")
             }
         }
 
@@ -181,6 +185,6 @@ internal class CoreMLModelManager {
         model = null
         modelUrl = null
         isLoaded = false
-        println("CoreMLModelManager: Cleaned up resources")
+        nluLogDebug(TAG, "Cleaned up resources")
     }
 }
