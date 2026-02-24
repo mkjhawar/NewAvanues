@@ -36,6 +36,13 @@ object SettingsKeys {
     const val VOICE_COMMAND_LOCALE = "voice_command_locale"
 
     // ══════════════════════════════════════════
+    // Wake Word Settings
+    // ══════════════════════════════════════════
+    const val WAKE_WORD_ENABLED = "wake_word_enabled"
+    const val WAKE_WORD_KEYWORD = "wake_word_keyword"
+    const val WAKE_WORD_SENSITIVITY = "wake_word_sensitivity"
+
+    // ══════════════════════════════════════════
     // Boot / Lifecycle
     // ══════════════════════════════════════════
     const val AUTO_START_ON_BOOT = "auto_start_on_boot"
