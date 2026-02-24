@@ -14,6 +14,7 @@ package com.augmentalis.speechrecognition.whisper
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
 import kotlin.concurrent.Volatile
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.COpaque
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.allocArrayOf
@@ -207,7 +208,7 @@ object IosWhisperNative {
      * Get average token probability for a segment as confidence [0,1].
      * Called from within synchronized block — no lock needed.
      */
-    private fun getSegmentConfidenceUnsafe(contextPtr: Any?, segmentIndex: Int): Float {
+    private fun getSegmentConfidenceUnsafe(contextPtr: COpaquePointer?, segmentIndex: Int): Float {
         return try {
             val tokenCount = com.augmentalis.speechrecognition.native.whisper.whisper_bridge_segment_token_count(contextPtr, segmentIndex)
             if (tokenCount <= 0) return CONFIDENCE_UNAVAILABLE
@@ -225,7 +226,7 @@ object IosWhisperNative {
      * Convert Long back to opaque C pointer for cinterop calls.
      * Uses kotlinx.cinterop.toCPointer extension (Long → CPointer<COpaque>?).
      */
-    private fun Long.toNativePtr(): Any? {
+    private fun Long.toNativePtr(): COpaquePointer? {
         if (this == 0L) return null
         return this.toCPointer<COpaque>()
     }

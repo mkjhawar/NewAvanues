@@ -106,7 +106,7 @@ class IosWhisperAudio {
 
             // Target format: 16kHz, mono, float32
             val targetFormat = AVAudioFormat(
-                commonFormat = AVAudioCommonFormat.AVAudioPCMFormatFloat32,
+                commonFormat = AVAudioPCMFormatFloat32,
                 sampleRate = SAMPLE_RATE.toDouble(),
                 channels = 1u,
                 interleaved = false

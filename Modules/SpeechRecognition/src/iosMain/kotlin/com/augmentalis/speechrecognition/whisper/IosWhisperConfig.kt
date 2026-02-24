@@ -16,6 +16,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSProcessInfo
+import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 
 /**
@@ -122,10 +123,10 @@ data class IosWhisperConfig(
          */
         private fun getDocumentsDirectory(): String {
             val fileManager = NSFileManager.defaultManager
-            return fileManager.URLsForDirectory(
+            return (fileManager.URLsForDirectory(
                 NSDocumentDirectory,
                 NSUserDomainMask
-            ).firstOrNull()?.path ?: ""
+            ).firstOrNull() as? NSURL)?.path ?: ""
         }
     }
 
