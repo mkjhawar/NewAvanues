@@ -12,10 +12,11 @@ package com.augmentalis.speechrecognition.whisper
 import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
 import com.augmentalis.speechrecognition.whisper.vsm.vsmFileName
+import kotlinx.cinterop.ExperimentalForeignApi
+import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSSearchPathDirectory
-import platform.Foundation.NSSearchPathDomainMask
 import platform.Foundation.NSProcessInfo
+import platform.Foundation.NSUserDomainMask
 
 /**
  * Configuration for the iOS Whisper engine.
@@ -29,6 +30,7 @@ import platform.Foundation.NSProcessInfo
  * @param minSpeechDurationMs Minimum utterance length to transcribe
  * @param maxChunkDurationMs Maximum chunk duration before forced transcription
  */
+@OptIn(ExperimentalForeignApi::class)
 data class IosWhisperConfig(
     val modelSize: WhisperModelSize = WhisperModelSize.TINY_EN,
     val language: String = "en",
@@ -121,8 +123,8 @@ data class IosWhisperConfig(
         private fun getDocumentsDirectory(): String {
             val fileManager = NSFileManager.defaultManager
             return fileManager.URLsForDirectory(
-                NSSearchPathDirectory.NSDocumentDirectory,
-                NSSearchPathDomainMask.NSUserDomainMask
+                NSDocumentDirectory,
+                NSUserDomainMask
             ).firstOrNull()?.path ?: ""
         }
     }

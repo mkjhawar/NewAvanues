@@ -18,12 +18,15 @@ import com.augmentalis.speechrecognition.logWarn
 import com.augmentalis.speechrecognition.whisper.vsm.IosVSMCodec
 import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
 import com.augmentalis.speechrecognition.whisper.vsm.vsmFileName
+import kotlin.time.TimeSource
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import platform.Foundation.*
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSUserDomainMask
 
 /**
  * Manages Whisper model downloads and local storage on iOS.
@@ -215,8 +218,8 @@ class IosWhisperModelManager {
     fun getAvailableStorageMB(): Long {
         val fileManager = NSFileManager.defaultManager
         val documentsDir = fileManager.URLsForDirectory(
-            NSSearchPathDirectory.NSDocumentDirectory,
-            NSSearchPathDomainMask.NSUserDomainMask
+            NSDocumentDirectory,
+            NSUserDomainMask
         ).firstOrNull() as? NSURL ?: return 0L
 
         val resourceValues = documentsDir.resourceValuesForKeys(
@@ -342,18 +345,18 @@ class IosWhisperModelManager {
             // Launch progress monitoring coroutine
             val progressJob = CoroutineScope(Dispatchers.Default).launch {
                 var lastBytesReceived = 0L
-                var lastTimestampNs = kotlin.system.getTimeNanos()
+                var lastMark = TimeSource.Monotonic.markNow()
                 while (isActive) {
                     val received = task.countOfBytesReceived
                     val expected = task.countOfBytesExpectedToReceive
                     if (expected > 0 && received > 0) {
-                        val now = kotlin.system.getTimeNanos()
-                        val elapsedMs = (now - lastTimestampNs) / 1_000_000L
+                        val now = TimeSource.Monotonic.markNow()
+                        val elapsedMs = (now - lastMark).inWholeMilliseconds
                         val bytesPerSec = if (elapsedMs > 0) {
                             (received - lastBytesReceived) * 1000L / elapsedMs
                         } else 0L
                         lastBytesReceived = received
-                        lastTimestampNs = now
+                        lastMark = now
                         _downloadState.value = ModelDownloadState.Downloading(
                             modelSize, received, expected, bytesPerSec
                         )
