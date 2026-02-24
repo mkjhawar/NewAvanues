@@ -1,12 +1,16 @@
 /**
- * DesktopAvxEngine.kt - AVX (AvaVox) ONNX-based command engine for Desktop
+ * DesktopAvxEngine.kt - AVX (AvaVox) ONNX-based command engine for Desktop JVM
  *
  * Copyright (C) Augmentalis Inc, Intelligent Devices LLC
  * Created: 2026-02-24
  *
- * Desktop JVM implementation of the AVX command engine.
- * Uses Sherpa-ONNX via ONNX Runtime JNI (same native bindings as Android,
- * loaded from java.library.path instead of jniLibs).
+ * Desktop JVM implementation of the AVX command engine using Sherpa-ONNX
+ * streaming transducer recognition. On Desktop, AVX is the PRIMARY command
+ * engine (no Vivoka available) — no pre-filter needed.
+ *
+ * Architecture:
+ * Audio (DesktopWhisperAudio) → OnlineRecognizer (streaming) → endpoint detection
+ *     → getResult() → RecognitionResult flow
  *
  * Model storage: ~/.augmentalis/models/avx/Ava-AvxS-{Lang}.aon
  */
@@ -20,9 +24,6 @@ import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.logWarn
 import com.augmentalis.speechrecognition.whisper.DesktopWhisperAudio
-import com.augmentalis.speechrecognition.whisper.WhisperVAD
-import com.augmentalis.speechrecognition.whisper.VADState
-import com.augmentalis.speechrecognition.whisper.OnSpeechChunkReady
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,29 +32,27 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
+import java.util.zip.ZipInputStream
 
 /**
- * Desktop AVX engine using Sherpa-ONNX Runtime via JNI.
+ * Desktop AVX engine using Sherpa-ONNX streaming transducer recognition.
  *
  * On Desktop, AVX is the PRIMARY command engine (no Vivoka available).
- * No pre-filter needed — AVX processes commands directly, Whisper for dictation.
+ * Whisper remains for dictation. No pre-filter needed.
  */
 class DesktopAvxEngine {
     companion object {
         private const val TAG = "DesktopAvxEngine"
         private const val ENGINE_NAME = "AVX"
-        private const val ENGINE_VERSION = "1.0.0"
-        private const val LISTEN_POLL_MS = 80L
+        private const val ENGINE_VERSION = "1.1.0"
+        private const val LISTEN_POLL_MS = 60L
 
         /** Desktop model storage */
         val MODEL_DIR: File = File(
@@ -68,11 +67,10 @@ class DesktopAvxEngine {
     private var config = AvxConfig()
     private var speechMode: SpeechMode = SpeechMode.DYNAMIC_COMMAND
 
-    @Volatile
-    private var sessionPtr: Long = 0L
+    private var avxNative: DesktopAvxNative? = null
+    private var extractedModelDir: File? = null
 
     private val audio = DesktopWhisperAudio()
-    private var vad: WhisperVAD? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var listenJob: Job? = null
@@ -85,6 +83,13 @@ class DesktopAvxEngine {
 
     /**
      * Initialize the Desktop AVX engine.
+     *
+     * Pipeline:
+     * 1. Load Sherpa-ONNX native library
+     * 2. Initialize audio capture
+     * 3. Locate and decrypt AON model file
+     * 4. Unzip model archive → extract encoder/decoder/joiner/tokens
+     * 5. Create OnlineRecognizer with transducer model config
      */
     suspend fun initialize(avxConfig: AvxConfig = AvxConfig()): Boolean {
         if (engineState.get() == AvxEngineState.READY) return true
@@ -107,52 +112,23 @@ class DesktopAvxEngine {
                     throw IllegalStateException("Failed to initialize audio capture")
                 }
 
-                vad = WhisperVAD(
-                    speechThreshold = 0f,
-                    vadSensitivity = 0.7f,
-                    silenceTimeoutMs = 500,
-                    minSpeechDurationMs = 150,
-                    maxSpeechDurationMs = 10_000,
-                    hangoverFrames = 3,
-                    paddingMs = 100
-                )
-
-                val modelPath = resolveModelPath()
+                val aonFile = resolveModelFile()
                     ?: throw IllegalStateException("AVX model not found for ${config.language.displayName}")
 
-                logInfo(TAG, "Loading AVX model: $modelPath")
+                logInfo(TAG, "Loading AVX model: ${aonFile.absolutePath}")
 
-                val modelBytes = File(modelPath).readBytes()
-                val decryptedBytes = AONCodec.unwrap(modelBytes)
+                val modelPaths = decryptAndExtractModel(aonFile)
 
-                val tempDir = File(System.getProperty("java.io.tmpdir"), "avx_tmp")
-                tempDir.mkdirs()
-                val tempModel = File(tempDir, "model.onnx")
-
-                try {
-                    tempModel.writeBytes(decryptedBytes)
-                    sessionPtr = DesktopAvxNative.createSession(
-                        modelPath = tempModel.absolutePath,
-                        numThreads = config.effectiveThreadCount(isAndroid = false),
-                        sampleRate = config.sampleRate
-                    )
-                    if (sessionPtr == 0L) {
-                        throw IllegalStateException("Failed to create ONNX Runtime session")
-                    }
-                } finally {
-                    tempModel.delete()
+                val native = DesktopAvxNative()
+                val created = native.createRecognizer(modelPaths, config)
+                if (!created) {
+                    throw IllegalStateException("Failed to create OnlineRecognizer")
                 }
 
-                if (config.hotWords.isNotEmpty()) {
-                    DesktopAvxNative.setHotWords(
-                        sessionPtr,
-                        config.hotWords.map { it.phrase }.toTypedArray(),
-                        config.hotWords.map { it.boost }.toFloatArray()
-                    )
-                }
-
+                avxNative = native
                 engineState.set(AvxEngineState.READY)
-                logInfo(TAG, "Desktop AVX engine initialized: ${config.language.displayName}")
+                logInfo(TAG, "Desktop AVX engine initialized: ${config.language.displayName}, " +
+                        "model=${aonFile.name}")
                 true
             } catch (e: CancellationException) {
                 throw e
@@ -174,7 +150,7 @@ class DesktopAvxEngine {
 
         engineState.set(AvxEngineState.LISTENING)
         listenJob?.cancel()
-        listenJob = scope.launch { listenLoop() }
+        listenJob = scope.launch { streamingListenLoop() }
         return true
     }
 
@@ -187,98 +163,167 @@ class DesktopAvxEngine {
         }
     }
 
+    /**
+     * Update known commands as hot words for decoder biasing.
+     * Instant update — no recompilation needed (unlike Vivoka grammar).
+     */
     fun updateCommands(commands: List<String>) {
         config = config.withCommands(commands)
+        avxNative?.updateHotWords(config.hotWords)
     }
 
     fun destroy() {
         listenJob?.cancel()
         audio.release()
-        if (sessionPtr != 0L) {
-            DesktopAvxNative.freeSession(sessionPtr)
-            sessionPtr = 0L
-        }
+        avxNative?.release()
+        avxNative = null
+        extractedModelDir?.deleteRecursively()
+        extractedModelDir = null
         engineState.set(AvxEngineState.DESTROYED)
         scope.cancel()
     }
 
-    private fun resolveModelPath(): String? {
-        config.customModelPath?.let { path ->
-            if (File(path).exists()) return path
-        }
-        val modelFile = File(MODEL_DIR, config.language.aonFileName)
-        if (modelFile.exists() && modelFile.length() > 0) return modelFile.absolutePath
-        logWarn(TAG, "AVX model not found: ${config.language.aonFileName}")
-        return null
-    }
-
-    private suspend fun listenLoop() {
-        val activeVad = vad ?: return
-
-        activeVad.onSpeechChunkReady = OnSpeechChunkReady { audioData, _ ->
-            scope.launch {
-                engineState.set(AvxEngineState.PROCESSING)
-                transcribeChunk(audioData)
-                if (engineState.get() == AvxEngineState.PROCESSING) {
-                    engineState.set(AvxEngineState.LISTENING)
-                }
-            }
-        }
-
-        activeVad.reset()
+    /**
+     * Streaming recognition loop using OnlineRecognizer.
+     *
+     * Unlike the old VAD-chunked approach, this feeds audio continuously to the
+     * recognizer and relies on Sherpa-ONNX's built-in endpoint detection to
+     * determine when an utterance is complete.
+     */
+    private suspend fun streamingListenLoop() {
+        val native = avxNative ?: return
+        var lastPartialText = ""
 
         while (scope.isActive && engineState.get() == AvxEngineState.LISTENING) {
             delay(LISTEN_POLL_MS)
+
             val samples = audio.drainBuffer()
-            if (samples.isNotEmpty()) {
-                activeVad.processAudio(samples, System.currentTimeMillis())
+            if (samples.isEmpty()) continue
+
+            native.acceptWaveform(samples, config.sampleRate)
+            native.decode()
+
+            // Emit partial results for UI feedback
+            val partial = native.getResult()
+            if (partial.text.isNotEmpty() && partial.text != lastPartialText) {
+                lastPartialText = partial.text
+                _resultFlow.emit(RecognitionResult(
+                    text = partial.text,
+                    confidence = partial.confidence,
+                    isPartial = true,
+                    isFinal = false,
+                    engine = ENGINE_NAME,
+                    mode = speechMode.name,
+                    metadata = mapOf(
+                        "language" to config.language.langCode,
+                        "streaming" to true
+                    )
+                ))
+            }
+
+            // Check for endpoint (end of utterance)
+            if (native.isEndpoint()) {
+                val finalResult = native.getResult()
+                if (finalResult.text.isNotEmpty()) {
+                    engineState.set(AvxEngineState.PROCESSING)
+
+                    _resultFlow.emit(RecognitionResult(
+                        text = finalResult.text,
+                        confidence = finalResult.confidence,
+                        isPartial = false,
+                        isFinal = true,
+                        alternatives = finalResult.alternatives,
+                        engine = ENGINE_NAME,
+                        mode = speechMode.name,
+                        metadata = mapOf(
+                            "language" to config.language.langCode,
+                            "hotWordsCount" to config.hotWords.size,
+                            "tokens" to finalResult.tokens.joinToString(" "),
+                            "streaming" to true
+                        )
+                    ))
+
+                    if (engineState.get() == AvxEngineState.PROCESSING) {
+                        engineState.set(AvxEngineState.LISTENING)
+                    }
+                }
+
+                native.reset()
+                lastPartialText = ""
             }
         }
-
-        activeVad.flush()
     }
 
-    private suspend fun transcribeChunk(audioData: FloatArray) {
-        val ptr = sessionPtr
-        if (ptr == 0L) return
-
-        try {
-            val startMs = System.currentTimeMillis()
-
-            if (config.hotWords.isNotEmpty()) {
-                DesktopAvxNative.setHotWords(
-                    ptr,
-                    config.hotWords.map { it.phrase }.toTypedArray(),
-                    config.hotWords.map { it.boost }.toFloatArray()
-                )
-            }
-
-            val result = withContext(Dispatchers.Default) {
-                DesktopAvxNative.transcribe(ptr, audioData, config.nBestCount)
-            }
-
-            if (result.text.isBlank()) return
-
-            val processingTimeMs = System.currentTimeMillis() - startMs
-
-            _resultFlow.emit(RecognitionResult(
-                text = result.text,
-                confidence = result.confidence,
-                isPartial = false,
-                isFinal = true,
-                alternatives = result.alternatives,
-                engine = ENGINE_NAME,
-                mode = speechMode.name,
-                metadata = mapOf(
-                    "processingTimeMs" to processingTimeMs,
-                    "language" to config.language.langCode,
-                    "hotWordsCount" to config.hotWords.size
-                )
-            ))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            logError(TAG, "Desktop AVX transcription error: ${e.message}", e)
+    /**
+     * Locate the AON model file for the configured language.
+     */
+    private fun resolveModelFile(): File? {
+        config.customModelPath?.let { path ->
+            val file = File(path)
+            if (file.exists()) return file
         }
+        val modelFile = File(MODEL_DIR, config.language.aonFileName)
+        if (modelFile.exists() && modelFile.length() > 0) return modelFile
+        logWarn(TAG, "AVX model not found: ${config.language.aonFileName} in ${MODEL_DIR.absolutePath}")
+        return null
+    }
+
+    /**
+     * Decrypt AON file and extract transducer model files.
+     *
+     * Pipeline:
+     * 1. Read .aon file bytes
+     * 2. AONCodec.unwrap() → decrypted zip bytes
+     * 3. Unzip → 4 model files (encoder, decoder, joiner, tokens)
+     * 4. Verify all expected files exist
+     *
+     * @return Paths to the 4 extracted model files
+     */
+    private fun decryptAndExtractModel(aonFile: File): AvxModelPaths {
+        val aonBytes = aonFile.readBytes()
+        val zipBytes = AONCodec.unwrap(aonBytes)
+
+        val extractDir = File(System.getProperty("java.io.tmpdir"), "avx_model_${config.language.langCode}")
+        if (extractDir.exists()) extractDir.deleteRecursively()
+        extractDir.mkdirs()
+        extractedModelDir = extractDir
+
+        ZipInputStream(zipBytes.inputStream()).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory) {
+                    val outFile = File(extractDir, entry.name)
+                    outFile.parentFile?.mkdirs()
+                    outFile.outputStream().use { out ->
+                        zis.copyTo(out)
+                    }
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        }
+
+        val modelFiles = config.language.modelFiles
+        val encoderPath = File(extractDir, modelFiles.encoderFilename).absolutePath
+        val decoderPath = File(extractDir, modelFiles.decoderFilename).absolutePath
+        val joinerPath = File(extractDir, modelFiles.joinerFilename).absolutePath
+        val tokensPath = File(extractDir, modelFiles.tokensFilename).absolutePath
+
+        val missingFiles = listOf(encoderPath, decoderPath, joinerPath, tokensPath)
+            .filter { !File(it).exists() }
+        if (missingFiles.isNotEmpty()) {
+            throw IllegalStateException("Missing model files after extraction: $missingFiles")
+        }
+
+        logInfo(TAG, "Model extracted to ${extractDir.absolutePath}: " +
+                "${File(encoderPath).length() / 1024}KB encoder, " +
+                "${File(tokensPath).length()} bytes tokens")
+
+        return AvxModelPaths(
+            encoderPath = encoderPath,
+            decoderPath = decoderPath,
+            joinerPath = joinerPath,
+            tokensPath = tokensPath
+        )
     }
 }

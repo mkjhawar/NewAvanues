@@ -1,155 +1,316 @@
 /**
- * DesktopAvxNative.kt - Thread-safe JNI wrapper for Sherpa-ONNX on Desktop JVM
+ * DesktopAvxNative.kt - Thread-safe wrapper around Sherpa-ONNX OnlineRecognizer for Desktop JVM
  *
  * Copyright (C) Augmentalis Inc, Intelligent Devices LLC
  * Created: 2026-02-24
  *
- * Desktop JVM equivalent of Android's AvxNative. Loads the Sherpa-ONNX native
- * library from java.library.path or well-known Desktop locations.
+ * Desktop JVM equivalent of Android's AvxNative. Uses the same Sherpa-ONNX
+ * Kotlin API (OnlineRecognizer, OnlineStream) with Desktop-specific native
+ * library loading.
  *
- * Native library naming:
+ * Native library naming per platform:
  * - macOS:   libsherpa-onnx-jni.dylib
  * - Linux:   libsherpa-onnx-jni.so
  * - Windows: sherpa-onnx-jni.dll
+ *
+ * Native library search order:
+ * 1. java.library.path (standard JVM mechanism)
+ * 2. {workingDir}/lib/
+ * 3. {workingDir}/natives/
+ * 4. ~/.avanues/lib/
  */
 package com.augmentalis.speechrecognition.avx
 
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
+import com.augmentalis.speechrecognition.logWarn
+import com.k2fsa.sherpa.onnx.EndpointConfig
+import com.k2fsa.sherpa.onnx.EndpointRule
+import com.k2fsa.sherpa.onnx.FeatureConfig
+import com.k2fsa.sherpa.onnx.OnlineModelConfig
+import com.k2fsa.sherpa.onnx.OnlineRecognizer
+import com.k2fsa.sherpa.onnx.OnlineRecognizerConfig
+import com.k2fsa.sherpa.onnx.OnlineStream
+import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig
+import java.io.File
 
 /**
- * Thread-safe JNI wrapper for Sherpa-ONNX on Desktop JVM.
+ * Thread-safe wrapper around Sherpa-ONNX OnlineRecognizer for Desktop JVM.
+ *
+ * Mirrors Android's AvxNative but handles native library loading for
+ * macOS/Linux/Windows instead of relying on the Android AAR.
  */
-object DesktopAvxNative {
+class DesktopAvxNative {
 
-    private const val TAG = "DesktopAvxNative"
+    companion object {
+        private const val TAG = "DesktopAvxNative"
 
-    @Volatile
-    private var isLibraryLoaded = false
+        @Volatile
+        private var isLibraryLoaded = false
 
-    fun ensureLoaded(): Boolean {
-        if (isLibraryLoaded) return true
-        return synchronized(this) {
-            if (isLibraryLoaded) return@synchronized true
-            try {
-                System.loadLibrary("sherpa-onnx-jni")
-                isLibraryLoaded = true
-                logInfo(TAG, "sherpa-onnx-jni loaded on desktop")
-                true
-            } catch (e: UnsatisfiedLinkError) {
-                tryLoadFromPath()
-            }
-        }
-    }
-
-    private fun tryLoadFromPath(): Boolean {
-        val osName = System.getProperty("os.name", "").lowercase()
-        val libName = when {
-            osName.contains("mac") || osName.contains("darwin") -> "libsherpa-onnx-jni.dylib"
-            osName.contains("win") -> "sherpa-onnx-jni.dll"
-            else -> "libsherpa-onnx-jni.so"
-        }
-
-        val searchPaths = listOf(
-            System.getProperty("user.dir"),
-            System.getProperty("user.dir") + "/lib",
-            System.getProperty("user.dir") + "/natives",
-            System.getProperty("user.home") + "/.avanues/lib"
-        )
-
-        for (basePath in searchPaths) {
-            val fullPath = "$basePath/$libName"
-            val file = java.io.File(fullPath)
-            if (file.exists()) {
+        /**
+         * Ensure the Sherpa-ONNX native library is loaded.
+         * Must be called before creating any OnlineRecognizer.
+         */
+        fun ensureLoaded(): Boolean {
+            if (isLibraryLoaded) return true
+            return synchronized(this) {
+                if (isLibraryLoaded) return@synchronized true
                 try {
-                    System.load(file.absolutePath)
+                    System.loadLibrary("sherpa-onnx-jni")
                     isLibraryLoaded = true
-                    logInfo(TAG, "sherpa-onnx-jni loaded from: $fullPath")
-                    return true
+                    logInfo(TAG, "sherpa-onnx-jni loaded via java.library.path")
+                    true
                 } catch (e: UnsatisfiedLinkError) {
-                    logError(TAG, "Failed to load from $fullPath: ${e.message}")
+                    tryLoadFromSearchPaths()
                 }
             }
         }
 
-        logError(TAG, "sherpa-onnx-jni native library not found. Searched: $searchPaths")
-        return false
+        private fun tryLoadFromSearchPaths(): Boolean {
+            val osName = System.getProperty("os.name", "").lowercase()
+            val libName = when {
+                osName.contains("mac") || osName.contains("darwin") -> "libsherpa-onnx-jni.dylib"
+                osName.contains("win") -> "sherpa-onnx-jni.dll"
+                else -> "libsherpa-onnx-jni.so"
+            }
+
+            val searchPaths = listOf(
+                System.getProperty("user.dir"),
+                System.getProperty("user.dir") + "/lib",
+                System.getProperty("user.dir") + "/natives",
+                System.getProperty("user.home") + "/.avanues/lib"
+            )
+
+            for (basePath in searchPaths) {
+                val fullPath = "$basePath/$libName"
+                val file = File(fullPath)
+                if (file.exists()) {
+                    try {
+                        System.load(file.absolutePath)
+                        isLibraryLoaded = true
+                        logInfo(TAG, "sherpa-onnx-jni loaded from: $fullPath")
+                        return true
+                    } catch (e: UnsatisfiedLinkError) {
+                        logError(TAG, "Failed to load from $fullPath: ${e.message}")
+                    }
+                }
+            }
+
+            logError(TAG, "sherpa-onnx-jni native library not found. Searched: $searchPaths")
+            return false
+        }
     }
 
-    // --- JNI External Declarations ---
+    private val lock = Any()
 
-    @JvmStatic
-    private external fun nativeCreateSession(modelPath: String, numThreads: Int, sampleRate: Int): Long
+    @Volatile
+    private var recognizer: OnlineRecognizer? = null
 
-    @JvmStatic
-    private external fun nativeFreeSession(sessionPtr: Long)
+    @Volatile
+    private var stream: OnlineStream? = null
 
-    @JvmStatic
-    private external fun nativeSetHotWords(sessionPtr: Long, phrases: Array<String>, boosts: FloatArray)
+    @Volatile
+    private var hotWordsFile: File? = null
 
-    @JvmStatic
-    private external fun nativeTranscribe(sessionPtr: Long, audioData: FloatArray, nBest: Int): String
-
-    @JvmStatic
-    private external fun nativeGetSystemInfo(): String
-
-    // --- Public Thread-Safe API ---
-
-    fun createSession(modelPath: String, numThreads: Int, sampleRate: Int): Long {
-        if (!ensureLoaded()) return 0L
-        return synchronized(this) {
+    /**
+     * Create and configure the OnlineRecognizer with a transducer model.
+     *
+     * @param modelPaths Paths to the decrypted model files (encoder, decoder, joiner, tokens)
+     * @param config AVX engine configuration
+     * @return true if recognizer was created successfully
+     */
+    fun createRecognizer(modelPaths: AvxModelPaths, config: AvxConfig): Boolean {
+        return synchronized(lock) {
             try {
-                nativeCreateSession(modelPath, numThreads, sampleRate)
+                releaseInternal()
+
+                val hwFile = writeHotWordsFile(config.hotWords)
+
+                val transducerConfig = OnlineTransducerModelConfig(
+                    encoder = modelPaths.encoderPath,
+                    decoder = modelPaths.decoderPath,
+                    joiner = modelPaths.joinerPath
+                )
+
+                val modelConfig = OnlineModelConfig(
+                    transducer = transducerConfig,
+                    tokens = modelPaths.tokensPath,
+                    numThreads = config.effectiveThreadCount(isAndroid = false),
+                    debug = false,
+                    provider = "cpu"
+                )
+
+                val endpointConfig = EndpointConfig(
+                    rule1 = EndpointRule(
+                        mustContainNonSilence = false,
+                        minTrailingSilence = 2.4f,
+                        minUtteranceLength = 0f
+                    ),
+                    rule2 = EndpointRule(
+                        mustContainNonSilence = true,
+                        minTrailingSilence = 0.8f,
+                        minUtteranceLength = 0f
+                    ),
+                    rule3 = EndpointRule(
+                        mustContainNonSilence = false,
+                        minTrailingSilence = 0f,
+                        minUtteranceLength = 15f
+                    )
+                )
+
+                val recognizerConfig = OnlineRecognizerConfig(
+                    featConfig = FeatureConfig(sampleRate = config.sampleRate, featureDim = 80),
+                    modelConfig = modelConfig,
+                    endpointConfig = endpointConfig,
+                    enableEndpoint = config.enableEndpoint,
+                    decodingMethod = config.decodingMethod,
+                    maxActivePaths = config.maxActivePaths,
+                    hotwordsFile = hwFile?.absolutePath ?: "",
+                    hotwordsScore = config.defaultHotWordBoost,
+                    blankPenalty = config.blankPenalty
+                )
+
+                recognizer = OnlineRecognizer(config = recognizerConfig)
+                stream = recognizer?.createStream()
+                hotWordsFile = hwFile
+
+                logInfo(TAG, "Desktop OnlineRecognizer created: lang=${config.language.langCode}, " +
+                        "threads=${config.effectiveThreadCount(isAndroid = false)}, " +
+                        "hotWords=${config.hotWords.size}, " +
+                        "decoding=${config.decodingMethod}")
+                true
             } catch (e: Exception) {
-                logError(TAG, "createSession failed: $modelPath", e)
-                0L
+                logError(TAG, "Failed to create Desktop OnlineRecognizer", e)
+                releaseInternal()
+                false
             }
         }
     }
 
-    fun freeSession(sessionPtr: Long) {
-        if (sessionPtr == 0L) return
-        synchronized(this) {
+    fun acceptWaveform(samples: FloatArray, sampleRate: Int = 16000) {
+        synchronized(lock) {
+            val s = stream ?: return
             try {
-                nativeFreeSession(sessionPtr)
+                s.acceptWaveform(samples, sampleRate)
             } catch (e: Exception) {
-                logError(TAG, "freeSession failed", e)
+                logError(TAG, "acceptWaveform failed", e)
             }
         }
     }
 
-    fun setHotWords(sessionPtr: Long, phrases: Array<String>, boosts: FloatArray) {
-        if (sessionPtr == 0L) return
-        synchronized(this) {
+    fun decode() {
+        synchronized(lock) {
+            val r = recognizer ?: return
+            val s = stream ?: return
             try {
-                nativeSetHotWords(sessionPtr, phrases, boosts)
+                while (r.isReady(s)) {
+                    r.decode(s)
+                }
             } catch (e: Exception) {
-                logError(TAG, "setHotWords failed", e)
+                logError(TAG, "decode failed", e)
             }
         }
     }
 
-    fun transcribe(sessionPtr: Long, audioData: FloatArray, nBest: Int = 5): AvxTranscriptionResult {
-        if (sessionPtr == 0L) return AvxTranscriptionResult("", 0f)
-        return synchronized(this) {
+    fun getResult(): AvxTranscriptionResult {
+        return synchronized(lock) {
+            val r = recognizer ?: return AvxTranscriptionResult("", 0f)
+            val s = stream ?: return AvxTranscriptionResult("", 0f)
             try {
-                val raw = nativeTranscribe(sessionPtr, audioData, nBest)
-                parseResult(raw)
+                val result = r.getResult(s)
+                val text = result.text.trim()
+
+                val confidence = if (text.isNotEmpty()) {
+                    val tokenBonus = (result.tokens.size.coerceAtMost(10) * 0.03f)
+                    (0.7f + tokenBonus).coerceAtMost(1.0f)
+                } else {
+                    0f
+                }
+
+                AvxTranscriptionResult(
+                    text = text,
+                    confidence = confidence,
+                    alternatives = emptyList(),
+                    tokens = result.tokens.toList(),
+                    timestamps = result.timestamps.toList()
+                )
             } catch (e: Exception) {
-                logError(TAG, "transcribe failed", e)
+                logError(TAG, "getResult failed", e)
                 AvxTranscriptionResult("", 0f)
             }
         }
     }
 
-    private fun parseResult(raw: String): AvxTranscriptionResult {
-        if (raw.isBlank()) return AvxTranscriptionResult("", 0f)
-        val parts = raw.split("|")
-        val text = parts.getOrElse(0) { "" }.trim()
-        val confidence = parts.getOrElse(1) { "0" }.toFloatOrNull() ?: 0f
-        val alternatives = if (parts.size > 2) {
-            parts.subList(2, parts.size).map { it.trim() }.filter { it.isNotBlank() }
-        } else emptyList()
-        return AvxTranscriptionResult(text, confidence, alternatives)
+    fun isEndpoint(): Boolean {
+        return synchronized(lock) {
+            val r = recognizer ?: return false
+            val s = stream ?: return false
+            try {
+                r.isEndpoint(s)
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
+
+    fun reset() {
+        synchronized(lock) {
+            val r = recognizer ?: return
+            val s = stream ?: return
+            try {
+                r.reset(s)
+            } catch (e: Exception) {
+                logError(TAG, "reset failed", e)
+            }
+        }
+    }
+
+    fun updateHotWords(hotWords: List<HotWord>) {
+        synchronized(lock) {
+            val r = recognizer ?: return
+            try {
+                val hotWordsStr = hotWords.joinToString("\n") { "${it.phrase} :${it.boost}" }
+                stream = r.createStream(hotWordsStr)
+                logInfo(TAG, "Desktop hot words updated: ${hotWords.size} phrases")
+            } catch (e: Exception) {
+                logError(TAG, "updateHotWords failed", e)
+            }
+        }
+    }
+
+    fun isReady(): Boolean = recognizer != null && stream != null
+
+    fun release() {
+        synchronized(lock) {
+            releaseInternal()
+        }
+    }
+
+    private fun releaseInternal() {
+        try {
+            stream = null
+            recognizer?.release()
+            recognizer = null
+            hotWordsFile?.delete()
+            hotWordsFile = null
+            logInfo(TAG, "Desktop OnlineRecognizer released")
+        } catch (e: Exception) {
+            logError(TAG, "release failed", e)
+        }
+    }
+
+    private fun writeHotWordsFile(hotWords: List<HotWord>): File? {
+        if (hotWords.isEmpty()) return null
+
+        val cacheDir = File(System.getProperty("java.io.tmpdir"), "avx_hw")
+        cacheDir.mkdirs()
+        val hwFile = File(cacheDir, "hotwords.txt")
+
+        val content = hotWords.joinToString("\n") { "${it.phrase} :${it.boost}" }
+        hwFile.writeText(content)
+
+        logInfo(TAG, "Hot words file written: ${hwFile.absolutePath} (${hotWords.size} entries)")
+        return hwFile
     }
 }

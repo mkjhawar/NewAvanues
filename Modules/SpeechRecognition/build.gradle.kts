@@ -7,7 +7,7 @@
  * Structure:
  * - commonMain: Shared API, models, and logic
  * - jvmMain: Shared JVM code for Android + Desktop (VSM encryption via javax.crypto)
- * - androidMain: Android-specific engines (Vosk, Vivoka, Google, Whisper)
+ * - androidMain: Android-specific engines (Vosk, Vivoka, Google, Whisper, AVX/Sherpa-ONNX)
  * - iosMain: iOS-specific engines (Apple Speech + Whisper via cinterop)
  * - macosMain: macOS-specific engines (Apple Speech via SFSpeechRecognizer)
  * - desktopMain: Desktop-specific engines (Whisper via JNI)
@@ -167,6 +167,11 @@ kotlin {
                 compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
                 compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
 
+                // Sherpa-ONNX - AVX command engine (streaming transducer ASR + hot words)
+                // compileOnly until AAR is downloaded to sherpa-onnx/ directory
+                // Switch to implementation() when bundling in release builds
+                compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx.aar"))
+
                 // OkHttp & Gson
                 implementation(libs.okhttp)
                 implementation(libs.gson)
@@ -225,6 +230,14 @@ kotlin {
                 // Compose runtime needed for kotlin.compose plugin on JVM target
                 // (same as iosMain/macosMain — compiler plugin applied to all targets)
                 implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+
+                // Sherpa-ONNX - AVX command engine (Desktop JVM)
+                // Requires sherpa-onnx-classes.jar extracted from the Android AAR:
+                //   unzip sherpa-onnx.aar classes.jar -d sherpa-onnx/
+                //   mv sherpa-onnx/classes.jar sherpa-onnx/sherpa-onnx-classes.jar
+                // Native libraries (.dylib/.so/.dll) must be on java.library.path at runtime.
+                // See sherpa-onnx/README.md for setup instructions.
+                compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx-classes.jar"))
             }
         }
 
