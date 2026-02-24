@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-24 — P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
+**Updated**: 2026-02-24 — Vivoka wake-word detection (Section 19), P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
 
 ---
 
@@ -1897,3 +1897,74 @@ DashboardLayout → SpeechPerformanceCard (when metrics != null)
 `DashboardState.speechMetrics` uses `@Transient` to avoid serialization issues — it's runtime-only data not persisted to the database.
 
 **Build dependency**: `implementation(project(":Modules:SpeechRecognition"))` added to Cockpit's `commonMain` dependencies.
+
+---
+
+## 19. Vivoka Wake-Word Detection
+
+### 19.1 Concept
+
+Vivoka VSDK has no dedicated wake-word API. Instead, we repurpose grammar-based recognition with a **restricted single-phrase grammar**. This mirrors the existing mute/unmute pattern (`handleMuteCommand()` compiles only "wake up"; wake-word mode compiles only the wake phrase).
+
+```
+enableWakeWord("hey ava", sensitivity=0.5)
+  → compile grammar with ONLY "hey ava"
+  → continuous listening (tiny grammar = low CPU)
+  → on detection (confidence >= sensitivity):
+      emit WakeWordEvent
+      → recompile with FULL command grammar
+      → listen for commands (4s window, resets per command)
+      → timeout → recompile back to wake-word grammar
+```
+
+### 19.2 Settings
+
+| Field | DataStore Key | Type | Default | Range |
+|-------|--------------|------|---------|-------|
+| `wakeWordEnabled` | `wake_word_enabled` | Boolean | false | — |
+| `wakeWordKeyword` | `wake_word_keyword` | String | "HEY_AVA" | HEY_AVA, OK_AVA, COMPUTER |
+| `wakeWordSensitivity` | `wake_word_sensitivity` | Float | 0.5 | 0.1–0.9 |
+
+Settings defined in `AvanuesSettings` (Foundation commonMain), persisted via `AvanuesSettingsRepository` (DataStore), exposed in `VoiceControlSettingsProvider` (toggle + dropdown + slider).
+
+### 19.3 VivokaAndroidEngine Implementation
+
+Key additions to `VivokaAndroidEngine`:
+
+- **`activeWakeWord: String?`** — phrase being listened for
+- **`wakeWordSensitivity: Float`** — confidence threshold
+- **`isInCommandWindow: Boolean`** — post-detection state flag
+- **`lastCommandList: AtomicReference<List<String>>`** — cached full grammar
+
+**`enableWakeWord(phrase, sensitivity)`**: Compiles restricted grammar (1 phrase), sets `_isWakeWordEnabled = true`.
+
+**`handleRecognitionResult(result)`**: Central intercept:
+- Wake-word mode + not in command window → check result matches phrase at sensitivity → `transitionToCommandMode()`
+- In command window → pass result through, reset timeout
+- Normal mode → pass through
+
+**`transitionToCommandMode()`**: Emits `WakeWordEvent`, recompiles full grammar, starts 4s timeout.
+
+**`returnToWakeWordMode()`**: Recompiles restricted grammar after timeout.
+
+**`updateCommands()`**: Caches commands but skips grammar push while in wake-word mode (prevents overwriting the restricted grammar).
+
+### 19.4 Coexistence with PhonemeASR (Future)
+
+```
+IWakeWordDetector (commonMain interface, Modules/Voice/WakeWord/)
+    ├── VivokaWakeWordAdapter (Android, wraps VivokaAndroidEngine)
+    └── PhonemeWakeWordDetector (All platforms, ONNX TinyML — future)
+```
+
+Runtime selection via DI/settings. Settings (`wakeWordEnabled`, `wakeWordKeyword`, `wakeWordSensitivity`) are engine-agnostic — both implementations consume the same Foundation settings.
+
+### 19.5 UI
+
+`VoiceControlSettingsProvider` renders a dedicated wake word `SettingsGroupCard`:
+
+1. **`SettingsSwitchRow`** — Wake Word on/off
+2. **`SettingsDropdownRow`** — Wake Phrase selector (conditionally visible)
+3. **`SettingsSliderRow`** — Sensitivity 10%-90% (conditionally visible)
+
+All interactive elements include AVID voice semantics.
