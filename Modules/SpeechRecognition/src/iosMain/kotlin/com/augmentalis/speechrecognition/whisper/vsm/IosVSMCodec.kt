@@ -16,12 +16,8 @@ package com.augmentalis.speechrecognition.whisper.vsm
 
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
-import com.augmentalis.speechrecognition.native.crypto.*
 import kotlinx.cinterop.*
-import platform.CoreCrypto.CC_MD5
-import platform.CoreCrypto.CC_MD5_DIGEST_LENGTH
-import platform.CoreCrypto.CC_SHA512
-import platform.CoreCrypto.CC_SHA512_DIGEST_LENGTH
+import platform.CoreCrypto.*
 import platform.Foundation.*
 import platform.posix.*
 import kotlin.random.Random as KRandom
@@ -209,30 +205,28 @@ class IosVSMCodec {
 
     private fun deriveKey(fileHash: ByteArray, timestamp: Long): ByteArray {
         val keyMaterial = VSMFormat.MASTER_SEED + fileHash.copyOf(16) + longToLEBytes(timestamp)
-        val salt = VSMFormat.SALT.toByteArray(Charsets.UTF_8)
+        val salt = VSMFormat.SALT.encodeToByteArray()
         val derivedKey = ByteArray(32) // 256 bits
 
         // Convert keyMaterial to ISO-8859-1 string (1:1 byte-to-char mapping) to match JVM behavior
         val password = keyMaterial.map { (it.toInt() and 0xFF).toChar() }.toCharArray()
-        val passwordString = String(password)
+        val passwordString = password.concatToString()
         val passwordBytes = passwordString.encodeToByteArray()
 
         memScoped {
-            passwordBytes.usePinned { pinnedPwd ->
-                salt.usePinned { pinnedSalt ->
-                    derivedKey.usePinned { pinnedKey ->
-                        CCKeyDerivationPBKDF(
-                            kCCPBKDF2,
-                            pinnedPwd.addressOf(0).reinterpret(),
-                            passwordBytes.size.convert(),
-                            pinnedSalt.addressOf(0).reinterpret(),
-                            salt.size.convert(),
-                            kCCPRFHmacAlgSHA256,
-                            VSMFormat.PBKDF2_ITERATIONS.convert(),
-                            pinnedKey.addressOf(0).reinterpret(),
-                            derivedKey.size.convert()
-                        )
-                    }
+            salt.usePinned { pinnedSalt ->
+                derivedKey.usePinned { pinnedKey ->
+                    CCKeyDerivationPBKDF(
+                        kCCPBKDF2,
+                        passwordString,
+                        passwordBytes.size.convert(),
+                        pinnedSalt.addressOf(0).reinterpret<UByteVar>(),
+                        salt.size.convert(),
+                        kCCPRFHmacAlgSHA256,
+                        VSMFormat.PBKDF2_ITERATIONS.convert(),
+                        pinnedKey.addressOf(0).reinterpret<UByteVar>(),
+                        derivedKey.size.convert()
+                    )
                 }
             }
         }
