@@ -516,8 +516,13 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      * @param confidence Speech recognition confidence (0.0-1.0)
      */
     fun processVoiceCommand(utterance: String, confidence: Float = 1.0f) {
-        if (confidence < 0.5f) {
-            Log.d(TAG, "Command rejected: confidence too low ($confidence)")
+        val floor = AdaptiveTimingManager.getConfidenceFloor()
+        if (confidence < floor) {
+            Log.d(TAG, "Command rejected: confidence $confidence < floor $floor")
+            // Track near-misses (within 0.05 of floor) for metrics
+            if (confidence >= floor - 0.05f) {
+                AdaptiveTimingManager.recordConfidenceNearMiss(confidence)
+            }
             return
         }
 

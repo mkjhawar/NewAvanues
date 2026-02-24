@@ -127,8 +127,6 @@ class VivokaAndroidEngine(
 
     companion object {
         private const val TAG = "VivokaAndroidEngine"
-        /** Duration of the command window after wake word detection (ms) */
-        private const val WAKE_WORD_COMMAND_WINDOW_MS = 4000L
     }
 
     /** The wake phrase currently being listened for (e.g. "hey ava") */
@@ -145,6 +143,10 @@ class VivokaAndroidEngine(
 
     /** Cached copy of the full command list for recompilation after command window */
     private val lastCommandList = AtomicReference<List<String>>(emptyList())
+
+    /** Timestamp when command window opened — used to measure response time for adaptive timing */
+    @Volatile
+    private var commandWindowOpenedAt: Long = 0L
 
     /**
      * Check if Vivoka models are available at external storage paths.
@@ -245,6 +247,9 @@ class VivokaAndroidEngine(
             val success = vivokaEngine?.initialize(srConfig) ?: false
 
             if (success) {
+                // Wire adaptive processing delay from AdaptiveTimingManager
+                vivokaEngine?.setProcessingDelay(AdaptiveTimingManager.getProcessingDelayMs())
+
                 // Set up result listener — intercepts wake word results, passes others through
                 vivokaEngine?.setResultListener { result ->
                     scope.launch {
@@ -340,6 +345,9 @@ class VivokaAndroidEngine(
      */
     override suspend fun updateCommands(commands: List<String>): Result<Unit> {
         return try {
+            // Refresh processing delay from AdaptiveTimingManager (may have adapted)
+            vivokaEngine?.setProcessingDelay(AdaptiveTimingManager.getProcessingDelayMs())
+
             // Always cache the full command list for wake-word → command-mode recompilation
             lastCommandList.set(commands.toList())
 
@@ -357,10 +365,14 @@ class VivokaAndroidEngine(
                 return Result.success(Unit)
             }
 
+            val compileStart = System.currentTimeMillis()
             val compiled = vivokaEngine?.setDynamicCommandsAwait(commands) ?: true
+            val compileDuration = System.currentTimeMillis() - compileStart
             // Only cache hash if compilation succeeded, so next call retries on failure
             if (compiled) {
                 lastCommandsHash.set(newHash)
+                // Feed grammar compile time to adaptive timing
+                AdaptiveTimingManager.recordGrammarCompile(compileDuration)
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -499,6 +511,13 @@ class VivokaAndroidEngine(
             // In command window — pass result through AND reset the timeout
             // (the user is actively speaking commands)
             wakeWordTimeoutJob?.cancel()
+
+            // Record wake word hit with response time for adaptive timing
+            val responseTime = System.currentTimeMillis() - commandWindowOpenedAt
+            if (responseTime > 0 && commandWindowOpenedAt > 0) {
+                AdaptiveTimingManager.recordWakeWordHit(responseTime)
+            }
+
             _results.emit(toSpeechResult(result))
             // Restart the command window timeout after each command
             startCommandWindowTimeout()
@@ -526,6 +545,7 @@ class VivokaAndroidEngine(
         )
 
         isInCommandWindow = true
+        commandWindowOpenedAt = System.currentTimeMillis()
 
         // Recompile with full command grammar
         val commands = lastCommandList.get()
@@ -548,13 +568,15 @@ class VivokaAndroidEngine(
 
     /**
      * Start (or restart) the command window timeout.
-     * After [WAKE_WORD_COMMAND_WINDOW_MS] of silence, returns to wake-word-only grammar.
+     * Uses adaptive duration from AdaptiveTimingManager (learns from user behavior).
      */
     private fun startCommandWindowTimeout() {
         wakeWordTimeoutJob?.cancel()
+        val windowMs = AdaptiveTimingManager.getCommandWindowMs()
         wakeWordTimeoutJob = scope.launch {
-            delay(WAKE_WORD_COMMAND_WINDOW_MS)
-            Log.i(TAG, "Command window timeout — returning to wake word mode")
+            delay(windowMs)
+            Log.i(TAG, "Command window timeout (${windowMs}ms) — returning to wake word mode")
+            AdaptiveTimingManager.recordWakeWordTimeout()
             returnToWakeWordMode()
         }
     }

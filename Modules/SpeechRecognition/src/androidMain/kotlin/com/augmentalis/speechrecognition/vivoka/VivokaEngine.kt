@@ -813,6 +813,14 @@ class VivokaEngine(
         Log.d(TAG, "Error listener registered")
     }
 
+    /**
+     * Set the processing delay on the recognizer.
+     * Wired to AdaptiveTimingManager by the caller (VivokaAndroidEngine).
+     */
+    fun setProcessingDelay(delayMs: Long) {
+        recognizerProcessor.processingDelayMs = delayMs
+    }
+
     // ========== IRecognizerListener Implementation ==========
 
     override fun onEvent(codeString: String?, message: String?, time: String?) {

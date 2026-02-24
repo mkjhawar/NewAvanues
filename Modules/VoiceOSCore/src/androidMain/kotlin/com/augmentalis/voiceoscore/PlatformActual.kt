@@ -63,11 +63,10 @@ actual object DeviceCapabilityManager {
     }
 
     actual fun getScrollDebounceMs(): Long {
-        return when (getDeviceSpeed()) {
-            DeviceSpeed.FAST -> 400L
-            DeviceSpeed.MEDIUM -> 600L
-            DeviceSpeed.SLOW -> 800L
-        }
+        // Delegate to AdaptiveTimingManager for learned value.
+        // Scroll is a lightweight operation (offset + overlay refresh),
+        // so it uses a separate, faster debounce than content changes.
+        return AdaptiveTimingManager.getScrollDebounceMs()
     }
 
     actual fun setUserDebounceMs(ms: Long?) {
@@ -139,8 +138,8 @@ actual object DeviceCapabilityManager {
                 minIntervalMs = 100L
             )
             TimingOperation.SPEECH_ENGINE_UPDATE -> TimingConfig(
-                debounceMs = 300L,
-                minIntervalMs = 200L
+                debounceMs = AdaptiveTimingManager.getSpeechUpdateDebounceMs(),
+                minIntervalMs = 100L
             )
         }
     }

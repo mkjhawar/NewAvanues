@@ -170,6 +170,11 @@ class VoiceOSCore private constructor(
                 }
             }
 
+            stateManager.transition(ServiceState.Initializing(0.35f, "Initializing adaptive timing"))
+
+            // Initialize AdaptiveTimingManager with confidence threshold from config
+            AdaptiveTimingManager.setConfidenceFloor(configuration.confidenceThreshold)
+
             stateManager.transition(ServiceState.Initializing(0.4f, "Initializing synonyms"))
 
             // Wire up synonym provider for fuzzy matching

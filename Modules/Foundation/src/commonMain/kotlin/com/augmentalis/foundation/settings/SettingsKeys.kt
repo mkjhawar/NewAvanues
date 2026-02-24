@@ -76,6 +76,14 @@ object SettingsKeys {
     const val USER_SYNONYMS = "vcm_user_synonyms"
 
     // ══════════════════════════════════════════
+    // Adaptive Timing (learned by AdaptiveTimingManager)
+    // ══════════════════════════════════════════
+    const val ADAPTIVE_PROCESSING_DELAY_MS = "adaptive_processing_delay_ms"
+    const val ADAPTIVE_SCROLL_DEBOUNCE_MS = "adaptive_scroll_debounce_ms"
+    const val ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS = "adaptive_speech_update_debounce_ms"
+    const val ADAPTIVE_COMMAND_WINDOW_MS = "adaptive_command_window_ms"
+
+    // ══════════════════════════════════════════
     // Developer Settings
     // ══════════════════════════════════════════
     const val DEV_STT_TIMEOUT_MS = "dev_stt_timeout_ms"

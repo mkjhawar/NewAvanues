@@ -873,7 +873,7 @@ class ActionCoordinator(
     }
 
     /**
-     * Record execution result for metrics.
+     * Record execution result for metrics and adaptive timing signals.
      */
     private suspend fun recordResult(command: QuantizedCommand, result: HandlerResult, durationMs: Long) {
         val timestamp = currentTimeMillis()
@@ -885,6 +885,17 @@ class ActionCoordinator(
         )
 
         _results.emit(actionResult)
+
+        // Feed adaptive timing signals
+        if (result.isSuccess) {
+            // Check for duplicates before recording success
+            if (AdaptiveTimingManager.isDuplicate(command.phrase, timestamp)) {
+                AdaptiveTimingManager.recordCommandDuplicate()
+            } else {
+                AdaptiveTimingManager.recordCommandSuccess()
+            }
+        }
+        // Failures and NotHandled don't affect timing (not a timing issue)
 
         // Convert to CommandExecutionResult for metrics recording
         val metricsResult = CommandExecutionResult(
