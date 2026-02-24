@@ -20,7 +20,7 @@ package com.augmentalis.voiceoscore
 import android.content.Context
 import android.util.Log
 import com.augmentalis.speechrecognition.RecognitionResult
-import com.augmentalis.voiceoscore.speech.SpeechMode
+import com.augmentalis.voiceoscore.SpeechMode
 import com.augmentalis.speechrecognition.avx.AvxConfig
 import com.augmentalis.speechrecognition.avx.AvxEngine
 import com.augmentalis.speechrecognition.avx.AvxEngineState
