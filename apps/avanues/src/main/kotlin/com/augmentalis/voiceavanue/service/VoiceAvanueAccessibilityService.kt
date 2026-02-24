@@ -90,7 +90,10 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     }
 
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    // ANR fix: Default dispatcher prevents grammar compilation (3-8s),
+    // speech collection, and settings observers from blocking the Main thread.
+    // withContext(Dispatchers.Main) used only where Android APIs require it.
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private var voiceOSCore: VoiceOSCore? = null
     private var actionCoordinator: ActionCoordinator? = null
