@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple)
 **Created**: 2026-02-20
-**Updated**: 2026-02-24 — KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3)
+**Updated**: 2026-02-24 — KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
 
 ---
 
@@ -212,7 +212,7 @@ UNINITIALIZED
     |
     | initialize(config)
     v
-LOADING_MODEL  --[auto-download if missing]-->
+LOADING_MODEL  --[memory check → may downgrade model]--> [auto-download if missing]-->
     |
     | model loaded + audio initialized
     v
@@ -336,6 +336,41 @@ val config = GoogleCloudConfig.fromSpeechConfig(speechConfig)
 | MEDIUM_EN | 1500 MB | 2 GB | Very Slow | Excellent | Yes |
 
 **Auto-selection**: `WhisperModelSize.forAvailableRAM(ramMB, englishOnly)` picks the best model that fits in 50% of available RAM.
+
+### 3.6 Memory-Aware Runtime Model Selection (Android)
+
+`WhisperConfig.autoTuned()` selects a model based on `totalMem` (total device RAM), which is a **static** value. However, `availMem` (currently free RAM) can be much lower when other apps are running. Loading a model that exceeds available RAM triggers a page fault storm that can cause ANR.
+
+**Runtime guard in `performInitialization()`** (added 2026-02-24, fix for ANR ErrorId `54caaec6`):
+
+Before model loading, `WhisperEngine.performInitialization()` checks `ActivityManager.MemoryInfo`:
+
+| Condition | Action |
+|-----------|--------|
+| `memInfo.lowMemory == true` | Force TINY model (or TINY_EN if English-only) |
+| `availMem < model.minRAMMB` | Auto-downgrade via `WhisperModelSize.forAvailableRAM(availMB, isEnglish)` |
+| Otherwise | Use model from config as-is |
+
+```kotlin
+// Step 2c in performInitialization():
+val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+val memInfo = ActivityManager.MemoryInfo()
+activityManager.getMemoryInfo(memInfo)
+val availableMB = (memInfo.availMem / (1024 * 1024)).toInt()
+
+if (memInfo.lowMemory) {
+    // Force smallest model to prevent ANR
+    val tinyModel = if (config.modelSize.isEnglishOnly) WhisperModelSize.TINY_EN else WhisperModelSize.TINY
+    config = config.copy(modelSize = tinyModel)
+} else if (availableMB < config.modelSize.minRAMMB) {
+    // Downgrade to fit available memory
+    config = config.copy(modelSize = WhisperModelSize.forAvailableRAM(availableMB, isEnglish))
+}
+```
+
+**Why this matters**: A device with 8GB total RAM might only have 400MB available at app startup. `autoTuned()` would select SMALL (needs 1024MB), but the runtime check downgrades to BASE (needs 512MB) or TINY (needs 256MB) based on actual availability. This prevents the 146K+ minor page faults that were causing ANR in production.
+
+**Note**: `forAvailableRAM()` uses a 2x safety margin — it requires `availMem >= 2 * model.minRAMMB` (i.e., filters out any model where `minRAMMB > availableMB / 2`). This accounts for whisper.cpp working memory during inference. The runtime check is conservative and may downgrade even when technically sufficient memory exists, which is the correct tradeoff (slightly worse accuracy vs. app crash).
 
 ---
 

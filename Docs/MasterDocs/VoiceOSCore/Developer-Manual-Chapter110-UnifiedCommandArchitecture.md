@@ -628,4 +628,33 @@ Safe fields shown as presence flags: `query=present`, `url=present`, `app=<name>
 
 ---
 
-*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar bridge, IActionCoordinator DI pattern)*
+## Hilt DI: runBlocking Elimination (260224)
+
+Hilt `@Provides @Singleton` methods run on the **main thread** during `SingletonComponent` initialization. Any `runBlocking` in these methods directly blocks the main thread during app startup.
+
+**ALCModule** (4 LLM provider bindings) originally used `runBlocking { apiKeyManager.getApiKey(provider) }` to resolve API keys. Since `ApiKeyManager.getApiKey()` had zero actual suspension points (just `System.getenv()` + `EncryptedSharedPreferences.getString()`), a synchronous `getApiKeyBlocking()` was extracted and all 4 providers now call it directly:
+
+```kotlin
+// ALCModule.kt — resolveApiKey helper (no coroutines needed)
+private fun resolveApiKey(apiKeyManager: ApiKeyManager, provider: LLMProviderType): String? {
+    return when (val result = apiKeyManager.getApiKeyBlocking(provider)) {
+        is LLMResult.Success -> result.data
+        is LLMResult.Error -> { Timber.w("..."); null }
+    }
+}
+```
+
+**CommandManager.getCurrentLocale()** similarly used `runBlocking { commandLocalizer.currentLocale.first() }`. Since `CommandLocalizer.currentLocale` is already typed as `StateFlow<String>` (backed by `MutableStateFlow`), synchronous `.value` access is safe — the previous `runBlocking { .first() }` call was unnecessary:
+
+```kotlin
+// CommandManager.kt — synchronous locale access
+fun getCurrentLocale(): String = commandLocalizer.currentLocale.value
+```
+
+**Rule**: Never use `runBlocking` in Hilt `@Provides` methods or in any function called from the main thread. If a `suspend` function has zero suspension points, extract a non-suspend version.
+
+See: `docs/fixes/avanues/Avanues-Fix-ANRMainThreadBlocking-260224-V1.md` for full analysis.
+
+---
+
+*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar bridge, IActionCoordinator DI pattern, runBlocking elimination)*
