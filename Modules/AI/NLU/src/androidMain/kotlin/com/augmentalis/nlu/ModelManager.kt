@@ -99,7 +99,7 @@ actual class ModelManager(private val context: Context) {
         } catch (e: Exception) {
             activeModelType = null
             activeModelFile = null
-            android.util.Log.w(TAG, "No NLU model found at startup — NLU features disabled until a model is installed. Reason: ${e.message}")
+            nluLogWarn(TAG, "No NLU model found at startup — NLU features disabled until a model is installed. Reason: ${e.message}")
         }
     }
 
@@ -118,37 +118,37 @@ actual class ModelManager(private val context: Context) {
      * @return Detected model type
      */
     private fun detectBestModel(): ModelType {
-        android.util.Log.d(TAG, "Detecting best model (package: $packageName, debug: $isDebugBuild)")
+        nluLogDebug(TAG, "Detecting best model (package: $packageName, debug: $isDebugBuild)")
 
         val detected = when {
             // Priority 1: MobileBERT from APK assets (bundled, always available)
             apkAssetExists() -> {
                 activeModelFile = internalMobilebertFile // Will be copied from assets
-                android.util.Log.i(TAG, "Using bundled MobileBERT from APK assets")
+                nluLogInfo(TAG, "Using bundled MobileBERT from APK assets")
                 ModelType.MOBILEBERT
             }
             // Priority 2: mALBERT from package-specific paths (handles .debug suffix)
             findModelInPackagePaths(ModelType.MALBERT.modelFileName) != null -> {
                 activeModelFile = findModelInPackagePaths(ModelType.MALBERT.modelFileName)
-                android.util.Log.i(TAG, "Using package-data mALBERT: ${activeModelFile?.absolutePath}")
+                nluLogInfo(TAG, "Using package-data mALBERT: ${activeModelFile?.absolutePath}")
                 ModelType.MALBERT
             }
             // Priority 3: MobileBERT from package-specific paths
             findModelInPackagePaths(ModelType.MOBILEBERT.modelFileName) != null -> {
                 activeModelFile = findModelInPackagePaths(ModelType.MOBILEBERT.modelFileName)
-                android.util.Log.i(TAG, "Using package-data MobileBERT: ${activeModelFile?.absolutePath}")
+                nluLogInfo(TAG, "Using package-data MobileBERT: ${activeModelFile?.absolutePath}")
                 ModelType.MOBILEBERT
             }
             // Priority 4: mALBERT external (shared across AVA apps, best quality)
             findModelFileCaseInsensitive(externalModelsDir, ModelType.MALBERT.modelFileName) != null -> {
                 activeModelFile = findModelFileCaseInsensitive(externalModelsDir, ModelType.MALBERT.modelFileName)
-                android.util.Log.i(TAG, "Using external mALBERT: ${activeModelFile?.absolutePath}")
+                nluLogInfo(TAG, "Using external mALBERT: ${activeModelFile?.absolutePath}")
                 ModelType.MALBERT
             }
             // Priority 5: MobileBERT external (shared)
             findModelFileCaseInsensitive(externalModelsDir, ModelType.MOBILEBERT.modelFileName) != null -> {
                 activeModelFile = findModelFileCaseInsensitive(externalModelsDir, ModelType.MOBILEBERT.modelFileName)
-                android.util.Log.i(TAG, "Using external MobileBERT: ${activeModelFile?.absolutePath}")
+                nluLogInfo(TAG, "Using external MobileBERT: ${activeModelFile?.absolutePath}")
                 ModelType.MOBILEBERT
             }
             // Priority 6: mALBERT internal (downloaded - future)
@@ -166,11 +166,11 @@ actual class ModelManager(private val context: Context) {
             // causing confusing downstream initialization failures.
             else -> {
                 activeModelFile = null
-                android.util.Log.e(TAG, "CRITICAL: No NLU model found in any location")
+                nluLogError(TAG, "CRITICAL: No NLU model found in any location")
                 logSearchedPaths()
 
                 val errorMsg = buildModelNotFoundErrorMessage()
-                android.util.Log.e(TAG, errorMsg)
+                nluLogError(TAG, errorMsg)
 
                 // Throw with clear instructions for developers/users
                 throw IllegalStateException(errorMsg)
@@ -178,7 +178,7 @@ actual class ModelManager(private val context: Context) {
         }
 
         activeModelType = detected
-        android.util.Log.i(TAG, "Detected model: ${detected.displayName} (${detected.embeddingDimension}-dim)")
+        nluLogInfo(TAG, "Detected model: ${detected.displayName} (${detected.embeddingDimension}-dim)")
         return detected
     }
 
@@ -189,7 +189,7 @@ actual class ModelManager(private val context: Context) {
         for (path in packageDataPaths) {
             val found = findModelFileCaseInsensitive(path, fileName)
             if (found != null) {
-                android.util.Log.d(TAG, "Found model in package path: ${found.absolutePath}")
+                nluLogDebug(TAG, "Found model in package path: ${found.absolutePath}")
                 return found
             }
         }
@@ -200,14 +200,14 @@ actual class ModelManager(private val context: Context) {
      * Log all searched paths for debugging when model not found
      */
     private fun logSearchedPaths() {
-        android.util.Log.w(TAG, "=== Model Search Paths ===")
-        android.util.Log.w(TAG, "Package: $packageName (debug: $isDebugBuild)")
+        nluLogWarn(TAG, "=== Model Search Paths ===")
+        nluLogWarn(TAG, "Package: $packageName (debug: $isDebugBuild)")
 
         val allPaths = packageDataPaths + listOf(externalModelsDir, internalModelsDir)
         allPaths.forEachIndexed { index, dir ->
             val exists = dir.exists()
             val files = if (exists) dir.listFiles()?.size ?: 0 else 0
-            android.util.Log.w(TAG, "[$index] ${dir.absolutePath} (exists: $exists, files: $files)")
+            nluLogWarn(TAG, "[$index] ${dir.absolutePath} (exists: $exists, files: $files)")
         }
     }
 
@@ -288,7 +288,7 @@ actual class ModelManager(private val context: Context) {
             val targetFileName = ModelType.MOBILEBERT.modelFileName
             assetFiles.any { it.equals(targetFileName, ignoreCase = true) }
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to check APK assets", e)
+            nluLogError(TAG, "Failed to check APK assets", e)
             false
         }
     }
@@ -336,7 +336,7 @@ actual class ModelManager(private val context: Context) {
         try {
             // First try to copy from APK assets
             if (apkAssetExists() && !internalMobilebertFile.exists()) {
-                android.util.Log.i(TAG, "Copying model from APK assets...")
+                nluLogInfo(TAG, "Copying model from APK assets...")
                 val copyResult = copyModelFromAssetsInternal()
                 if (copyResult is Result.Success) {
                     onProgress(1.0f)
@@ -364,7 +364,7 @@ actual class ModelManager(private val context: Context) {
                 |Contact support for model files.
             """.trimMargin()
 
-            android.util.Log.e(TAG, errorMessage)
+            nluLogError(TAG, errorMessage)
 
             Result.Error(
                 exception = AVAException.ModelException(errorMessage),
@@ -398,7 +398,7 @@ actual class ModelManager(private val context: Context) {
                         input.copyTo(output)
                     }
                 }
-                android.util.Log.i(TAG, "Model copied from assets: ${internalMobilebertFile.length() / 1024 / 1024} MB")
+                nluLogInfo(TAG, "Model copied from assets: ${internalMobilebertFile.length() / 1024 / 1024} MB")
             }
 
             // Copy vocabulary if exists
@@ -409,16 +409,16 @@ actual class ModelManager(private val context: Context) {
                             input.copyTo(output)
                         }
                     }
-                    android.util.Log.i(TAG, "Vocabulary copied from assets")
+                    nluLogInfo(TAG, "Vocabulary copied from assets")
                 } catch (e: Exception) {
-                    android.util.Log.w(TAG, "Vocabulary not found in assets, will need external source")
+                    nluLogWarn(TAG, "Vocabulary not found in assets, will need external source")
                 }
             }
 
             detectBestModel()
             Result.Success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to copy from assets", e)
+            nluLogError(TAG, "Failed to copy from assets", e)
             Result.Error(e, "Failed to copy from assets: ${e.message}")
         }
     }
@@ -486,7 +486,7 @@ actual class ModelManager(private val context: Context) {
      */
     actual suspend fun copyModelFromAssets(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            android.util.Log.i("ModelManager", "Copying MobileBERT from APK assets...")
+            nluLogInfo("ModelManager", "Copying MobileBERT from APK assets...")
 
             // Copy MobileBERT model from assets
             if (!internalMobilebertFile.exists()) {
@@ -495,7 +495,7 @@ actual class ModelManager(private val context: Context) {
                         input.copyTo(output)
                     }
                 }
-                android.util.Log.i("ModelManager", "MobileBERT copied: ${internalMobilebertFile.length() / 1024 / 1024} MB")
+                nluLogInfo("ModelManager", "MobileBERT copied: ${internalMobilebertFile.length() / 1024 / 1024} MB")
             }
 
             // Copy vocabulary
@@ -505,7 +505,7 @@ actual class ModelManager(private val context: Context) {
                         input.copyTo(output)
                     }
                 }
-                android.util.Log.i("ModelManager", "Vocabulary copied")
+                nluLogInfo("ModelManager", "Vocabulary copied")
             }
 
             // Re-detect model after copying from assets
@@ -513,7 +513,7 @@ actual class ModelManager(private val context: Context) {
 
             Result.Success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e("ModelManager", "Failed to copy from assets", e)
+            nluLogError("ModelManager", "Failed to copy from assets", e)
             Result.Error(
                 exception = e,
                 message = "Failed to copy models from assets: ${e.message}"
@@ -589,13 +589,13 @@ actual class ModelManager(private val context: Context) {
             val status = when {
                 // New install - no metadata exists
                 storedMetadata == null -> {
-                    android.util.Log.i(TAG, "New install - no embeddings yet")
+                    nluLogInfo(TAG, "New install - no embeddings yet")
                     VersionStatus.NewInstall
                 }
 
                 // Model dimension changed (e.g., 384 → 768)
                 storedMetadata.embedding_dimension.toInt() != currentModel.dimension -> {
-                    android.util.Log.w(TAG, "Dimension mismatch: ${storedMetadata.embedding_dimension} → ${currentModel.dimension}")
+                    nluLogWarn(TAG, "Dimension mismatch: ${storedMetadata.embedding_dimension} → ${currentModel.dimension}")
                     VersionStatus.NeedsMigration(
                         fromModel = storedMetadata.model_name,
                         fromVersion = storedMetadata.model_version,
@@ -607,7 +607,7 @@ actual class ModelManager(private val context: Context) {
 
                 // Model name changed (e.g., MobileBERT → mALBERT)
                 storedMetadata.model_name != currentModel.name -> {
-                    android.util.Log.w(TAG, "Model changed: ${storedMetadata.model_name} → ${currentModel.name}")
+                    nluLogWarn(TAG, "Model changed: ${storedMetadata.model_name} → ${currentModel.name}")
                     VersionStatus.NeedsMigration(
                         fromModel = storedMetadata.model_name,
                         fromVersion = storedMetadata.model_version,
@@ -619,7 +619,7 @@ actual class ModelManager(private val context: Context) {
 
                 // Model version changed (e.g., v1.0 → v1.1)
                 storedMetadata.model_version != currentModel.version -> {
-                    android.util.Log.w(TAG, "Version changed: ${storedMetadata.model_version} → ${currentModel.version}")
+                    nluLogWarn(TAG, "Version changed: ${storedMetadata.model_version} → ${currentModel.version}")
                     VersionStatus.NeedsMigration(
                         fromModel = storedMetadata.model_name,
                         fromVersion = storedMetadata.model_version,
@@ -631,7 +631,7 @@ actual class ModelManager(private val context: Context) {
 
                 // Model checksum changed (file replaced)
                 storedMetadata.model_checksum != currentModel.checksum && currentModel.checksum != "unknown" -> {
-                    android.util.Log.w(TAG, "Checksum changed: ${storedMetadata.model_checksum} → ${currentModel.checksum}")
+                    nluLogWarn(TAG, "Checksum changed: ${storedMetadata.model_checksum} → ${currentModel.checksum}")
                     VersionStatus.NeedsMigration(
                         fromModel = storedMetadata.model_name,
                         fromVersion = storedMetadata.model_version,
@@ -643,14 +643,14 @@ actual class ModelManager(private val context: Context) {
 
                 // All matches - no migration needed
                 else -> {
-                    android.util.Log.i(TAG, "Model version current: ${currentModel.name} ${currentModel.version}")
+                    nluLogInfo(TAG, "Model version current: ${currentModel.name} ${currentModel.version}")
                     VersionStatus.Current
                 }
             }
 
             Result.Success(status)
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Version check failed", e)
+            nluLogError(TAG, "Version check failed", e)
             Result.Error(e, "Version check failed: ${e.message}")
         }
     }
@@ -696,7 +696,7 @@ actual class ModelManager(private val context: Context) {
         }
 
         return try {
-            android.util.Log.d(TAG, "Calculating checksum for: $currentPath")
+            nluLogDebug(TAG, "Calculating checksum for: $currentPath")
             val startTime = System.currentTimeMillis()
 
             val digest = MessageDigest.getInstance("SHA-256")
@@ -712,7 +712,7 @@ actual class ModelManager(private val context: Context) {
             val checksum = bytes.joinToString("") { "%02x".format(it) }
 
             val elapsed = System.currentTimeMillis() - startTime
-            android.util.Log.d(TAG, "Checksum calculated in ${elapsed}ms")
+            nluLogDebug(TAG, "Checksum calculated in ${elapsed}ms")
 
             // Issue 4.4: Cache the result
             synchronized(this) {
@@ -722,7 +722,7 @@ actual class ModelManager(private val context: Context) {
 
             checksum
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Checksum calculation failed", e)
+            nluLogError(TAG, "Checksum calculation failed", e)
             "unknown"
         }
     }

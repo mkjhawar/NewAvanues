@@ -1,6 +1,9 @@
 package com.augmentalis.nlu.learning
 
-import android.util.Log
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
+import com.augmentalis.nlu.nluLogWarn
 import com.augmentalis.nlu.IntentClassifier
 import com.augmentalis.nlu.learning.domain.*
 import kotlinx.coroutines.CoroutineScope
@@ -69,7 +72,7 @@ class UnifiedLearningService @Inject constructor(
     override suspend fun consume(command: LearnedCommand): Boolean = withContext(Dispatchers.IO) {
         try {
             // PII-safe: log utterance length, not content
-            Log.d(TAG, "Consuming command: ${command.utterance.length}-char cmd -> ${command.intent}")
+            nluLogDebug(TAG, "Consuming command: ${command.utterance.length}-char cmd -> ${command.intent}")
 
             // 1. Compute embedding if needed
             val commandWithEmbedding = if (!command.hasEmbedding) {
@@ -91,12 +94,12 @@ class UnifiedLearningService @Inject constructor(
                 // 4. Notify other consumers
                 notifyConsumers(commandWithEmbedding)
 
-                Log.i(TAG, "Successfully consumed: ${command.utterance.length}-char cmd -> ${command.intent}")
+                nluLogInfo(TAG, "Successfully consumed: ${command.utterance.length}-char cmd -> ${command.intent}")
             }
 
             saved
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to consume command: ${e.message}", e)
+            nluLogError(TAG, "Failed to consume command: ${e.message}", e)
             false
         }
     }
@@ -112,7 +115,7 @@ class UnifiedLearningService @Inject constructor(
             }
         }
 
-        Log.i(TAG, "Batch consumed: $successCount/${commands.size} commands")
+        nluLogInfo(TAG, "Batch consumed: $successCount/${commands.size} commands")
         successCount
     }
 
@@ -130,24 +133,24 @@ class UnifiedLearningService @Inject constructor(
         scope.launch {
             when (event) {
                 is LearningEvent.CommandLearned -> {
-                    Log.d(TAG, "Received CommandLearned event from ${event.sourceSystem}")
+                    nluLogDebug(TAG, "Received CommandLearned event from ${event.sourceSystem}")
                     consume(event.command)
                 }
                 is LearningEvent.CommandUpdated -> {
-                    Log.d(TAG, "Received CommandUpdated event: ${event.updateReason}")
+                    nluLogDebug(TAG, "Received CommandUpdated event: ${event.updateReason}")
                     // Forward to consumers
                     _events.emit(event)
                 }
                 is LearningEvent.CommandDeleted -> {
-                    Log.d(TAG, "Received CommandDeleted event: ${event.reason}")
+                    nluLogDebug(TAG, "Received CommandDeleted event: ${event.reason}")
                     _events.emit(event)
                 }
                 is LearningEvent.EmbeddingComputed -> {
-                    Log.d(TAG, "Received EmbeddingComputed event: dim=${event.embeddingDimension}")
+                    nluLogDebug(TAG, "Received EmbeddingComputed event: dim=${event.embeddingDimension}")
                     _events.emit(event)
                 }
                 is LearningEvent.SyncCompleted -> {
-                    Log.i(TAG, "Sync completed: ${event.syncedCount} from ${event.sourceSystem} to ${event.targetSystem}")
+                    nluLogInfo(TAG, "Sync completed: ${event.syncedCount} from ${event.sourceSystem} to ${event.targetSystem}")
                     _events.emit(event)
                 }
             }
@@ -162,7 +165,7 @@ class UnifiedLearningService @Inject constructor(
     fun registerSource(source: ILearningSource) {
         sources.add(source)
         source.addLearningListener(this)
-        Log.i(TAG, "Registered source: ${source.sourceName}")
+        nluLogInfo(TAG, "Registered source: ${source.sourceName}")
     }
 
     /**
@@ -171,7 +174,7 @@ class UnifiedLearningService @Inject constructor(
     fun unregisterSource(source: ILearningSource) {
         source.removeLearningListener(this)
         sources.remove(source)
-        Log.i(TAG, "Unregistered source: ${source.sourceName}")
+        nluLogInfo(TAG, "Unregistered source: ${source.sourceName}")
     }
 
     /**
@@ -180,7 +183,7 @@ class UnifiedLearningService @Inject constructor(
     fun registerConsumer(consumer: ILearningConsumer) {
         if (consumer !== this) { // Don't register self
             consumers.add(consumer)
-            Log.i(TAG, "Registered consumer: ${consumer.consumerName}")
+            nluLogInfo(TAG, "Registered consumer: ${consumer.consumerName}")
         }
     }
 
@@ -189,7 +192,7 @@ class UnifiedLearningService @Inject constructor(
      */
     fun unregisterConsumer(consumer: ILearningConsumer) {
         consumers.remove(consumer)
-        Log.i(TAG, "Unregistered consumer: ${consumer.consumerName}")
+        nluLogInfo(TAG, "Unregistered consumer: ${consumer.consumerName}")
     }
 
     // ==================== Sync Operations ====================
@@ -208,11 +211,11 @@ class UnifiedLearningService @Inject constructor(
                 val synced = syncFromSource(source, limit)
                 totalSynced += synced
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to sync from ${source.sourceName}: ${e.message}", e)
+                nluLogError(TAG, "Failed to sync from ${source.sourceName}: ${e.message}", e)
             }
         }
 
-        Log.i(TAG, "Total synced from all sources: $totalSynced")
+        nluLogInfo(TAG, "Total synced from all sources: $totalSynced")
         totalSynced
     }
 
@@ -228,11 +231,11 @@ class UnifiedLearningService @Inject constructor(
             val commands = source.getUnsyncedCommands(limit)
 
             if (commands.isEmpty()) {
-                Log.d(TAG, "No unsynced commands from ${source.sourceName}")
+                nluLogDebug(TAG, "No unsynced commands from ${source.sourceName}")
                 return@withContext 0
             }
 
-            Log.d(TAG, "Syncing ${commands.size} commands from ${source.sourceName}")
+            nluLogDebug(TAG, "Syncing ${commands.size} commands from ${source.sourceName}")
 
             val synced = consumeBatch(commands)
 
@@ -249,7 +252,7 @@ class UnifiedLearningService @Inject constructor(
 
             synced
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync from ${source.sourceName}: ${e.message}", e)
+            nluLogError(TAG, "Failed to sync from ${source.sourceName}: ${e.message}", e)
             0
         }
     }
@@ -278,7 +281,7 @@ class UnifiedLearningService @Inject constructor(
         synonyms: List<String> = emptyList()
     ): Boolean {
         if (confidence < VOICEOS_MIN_CONFIDENCE) {
-            Log.d(TAG, "VoiceOS command confidence too low: $confidence < $VOICEOS_MIN_CONFIDENCE")
+            nluLogDebug(TAG, "VoiceOS command confidence too low: $confidence < $VOICEOS_MIN_CONFIDENCE")
             return false
         }
 
@@ -320,14 +323,14 @@ class UnifiedLearningService @Inject constructor(
         return try {
             val embedding = intentClassifier.computeEmbedding(command.utterance)
             if (embedding != null) {
-                Log.d(TAG, "Computed embedding for ${command.utterance.length}-char cmd: ${embedding.size} dims")
+                nluLogDebug(TAG, "Computed embedding for ${command.utterance.length}-char cmd: ${embedding.size} dims")
                 command.copy(embedding = embedding)
             } else {
-                Log.w(TAG, "Failed to compute embedding for ${command.utterance.length}-char cmd")
+                nluLogWarn(TAG, "Failed to compute embedding for ${command.utterance.length}-char cmd")
                 command
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error computing embedding: ${e.message}", e)
+            nluLogError(TAG, "Error computing embedding: ${e.message}", e)
             command
         }
     }
@@ -347,11 +350,11 @@ class UnifiedLearningService @Inject constructor(
                 )
             } else {
                 // Schedule background computation
-                Log.d(TAG, "Command has no embedding, skipping NLU save: ${command.utterance.length}-char cmd")
+                nluLogDebug(TAG, "Command has no embedding, skipping NLU save: ${command.utterance.length}-char cmd")
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to save to NLU: ${e.message}", e)
+            nluLogError(TAG, "Failed to save to NLU: ${e.message}", e)
             false
         }
     }
@@ -366,7 +369,7 @@ class UnifiedLearningService @Inject constructor(
                     consumer.consume(command)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Consumer ${consumer.consumerName} failed: ${e.message}", e)
+                nluLogError(TAG, "Consumer ${consumer.consumerName} failed: ${e.message}", e)
             }
         }
     }
@@ -397,7 +400,7 @@ class UnifiedLearningService @Inject constructor(
                 registeredConsumers = consumers.size
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get stats: ${e.message}", e)
+            nluLogError(TAG, "Failed to get stats: ${e.message}", e)
             UnifiedLearningStats(0, 0, 0, 0, 0, sources.size, consumers.size)
         }
     }

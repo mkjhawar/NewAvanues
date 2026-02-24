@@ -48,7 +48,7 @@ class NLUInitializer(private val context: Context) {
             // Step 0: Extract .ava files (first launch only)
             val extracted = assetExtractor.extractIfNeeded()
             if (extracted) {
-                android.util.Log.i("NLUInitializer", ".ava files extracted to device storage")
+                nluLogInfo("NLUInitializer", ".ava files extracted to device storage")
             }
 
             // Step 1: Check model availability
@@ -95,42 +95,42 @@ class NLUInitializer(private val context: Context) {
                     val versionStatus = when (versionStatusResult) {
                         is Result.Success -> versionStatusResult.data
                         is Result.Error -> {
-                            android.util.Log.w("NLUInitializer", "Version check failed: ${versionStatusResult.message}")
+                            nluLogWarn("NLUInitializer", "Version check failed: ${versionStatusResult.message}")
                             VersionStatus.Current  // Default to current if check fails
                         }
                     }
 
                     when (versionStatus) {
                         is VersionStatus.NeedsMigration -> {
-                            android.util.Log.w("NLUInitializer", "Model version changed: ${versionStatus.reason}")
-                            android.util.Log.i("NLUInitializer", "From: ${versionStatus.fromModel} ${versionStatus.fromVersion}")
-                            android.util.Log.i("NLUInitializer", "To: ${versionStatus.toModel} ${versionStatus.toVersion}")
-                            android.util.Log.i("NLUInitializer", "Starting automatic migration...")
+                            nluLogWarn("NLUInitializer", "Model version changed: ${versionStatus.reason}")
+                            nluLogInfo("NLUInitializer", "From: ${versionStatus.fromModel} ${versionStatus.fromVersion}")
+                            nluLogInfo("NLUInitializer", "To: ${versionStatus.toModel} ${versionStatus.toVersion}")
+                            nluLogInfo("NLUInitializer", "Starting automatic migration...")
 
                             // Run migration with progress tracking
                             val migrator = EmbeddingMigrator(context, intentClassifier)
                             val currentModelVersion = modelManager.getCurrentModelVersion()
 
                             when (val migrationResult = migrator.migrateEmbeddings(currentModelVersion) { progress ->
-                                android.util.Log.d("NLUInitializer", "Migration progress: ${(progress * 100).toInt()}%")
+                                nluLogDebug("NLUInitializer", "Migration progress: ${(progress * 100).toInt()}%")
                             }) {
                                 is Result.Success -> {
                                     val stats = migrationResult.data
-                                    android.util.Log.i("NLUInitializer", "Migration complete!")
-                                    android.util.Log.i("NLUInitializer", "  Processed: ${stats.totalProcessed}")
-                                    android.util.Log.i("NLUInitializer", "  Successful: ${stats.successful}")
-                                    android.util.Log.i("NLUInitializer", "  Failed: ${stats.failed}")
-                                    android.util.Log.i("NLUInitializer", "  Duration: ${stats.duration}ms")
+                                    nluLogInfo("NLUInitializer", "Migration complete!")
+                                    nluLogInfo("NLUInitializer", "  Processed: ${stats.totalProcessed}")
+                                    nluLogInfo("NLUInitializer", "  Successful: ${stats.successful}")
+                                    nluLogInfo("NLUInitializer", "  Failed: ${stats.failed}")
+                                    nluLogInfo("NLUInitializer", "  Duration: ${stats.duration}ms")
                                 }
                                 is Result.Error -> {
-                                    android.util.Log.e("NLUInitializer", "Migration failed: ${migrationResult.message}", migrationResult.exception)
+                                    nluLogError("NLUInitializer", "Migration failed: ${migrationResult.message}", migrationResult.exception)
                                     // Continue anyway - non-fatal
                                 }
                             }
                         }
 
                         is VersionStatus.NewInstall -> {
-                            android.util.Log.i("NLUInitializer", "New install - will create embeddings on first ontology load")
+                            nluLogInfo("NLUInitializer", "New install - will create embeddings on first ontology load")
 
                             // Save initial metadata
                             val currentModelVersion = modelManager.getCurrentModelVersion()
@@ -146,7 +146,7 @@ class NLUInitializer(private val context: Context) {
                         }
 
                         is VersionStatus.Current -> {
-                            android.util.Log.i("NLUInitializer", "Model version current - no migration needed")
+                            nluLogInfo("NLUInitializer", "Model version current - no migration needed")
                         }
                     }
 
@@ -229,7 +229,7 @@ class NLUInitializer(private val context: Context) {
      */
     private suspend fun loadAonOntologies() {
         try {
-            android.util.Log.i("NLUInitializer", "=== AON Ontology Loading ===")
+            nluLogInfo("NLUInitializer", "=== AON Ontology Loading ===")
 
             val aonLoader = com.augmentalis.nlu.aon.AonLoader(
                 context = context,
@@ -243,23 +243,23 @@ class NLUInitializer(private val context: Context) {
                 is Result.Success -> {
                     val stats = result.data
                     if (stats.skipped > 0) {
-                        android.util.Log.i("NLUInitializer", "AON ontologies already loaded (${stats.skipped} intents)")
+                        nluLogInfo("NLUInitializer", "AON ontologies already loaded (${stats.skipped} intents)")
                     } else {
-                        android.util.Log.i("NLUInitializer", "AON ontologies loaded successfully:")
-                        android.util.Log.i("NLUInitializer", "  Intents: ${stats.totalIntents}")
-                        android.util.Log.i("NLUInitializer", "  Files: ${stats.filesProcessed}")
-                        android.util.Log.i("NLUInitializer", "  Embeddings: ${stats.embeddingsCreated}")
-                        android.util.Log.i("NLUInitializer", "  Duration: ${stats.duration}ms")
+                        nluLogInfo("NLUInitializer", "AON ontologies loaded successfully:")
+                        nluLogInfo("NLUInitializer", "  Intents: ${stats.totalIntents}")
+                        nluLogInfo("NLUInitializer", "  Files: ${stats.filesProcessed}")
+                        nluLogInfo("NLUInitializer", "  Embeddings: ${stats.embeddingsCreated}")
+                        nluLogInfo("NLUInitializer", "  Duration: ${stats.duration}ms")
                     }
                 }
                 is Result.Error -> {
-                    android.util.Log.w("NLUInitializer", "Failed to load AON ontologies: ${result.message}")
-                    android.util.Log.w("NLUInitializer", "Falling back to legacy intent loading")
+                    nluLogWarn("NLUInitializer", "Failed to load AON ontologies: ${result.message}")
+                    nluLogWarn("NLUInitializer", "Falling back to legacy intent loading")
                     // Non-fatal: app continues with legacy intent examples
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("NLUInitializer", "AON loading error (non-fatal)", e)
+            nluLogError("NLUInitializer", "AON loading error (non-fatal)", e)
         }
     }
 }
