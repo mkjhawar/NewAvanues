@@ -26,6 +26,7 @@ import com.augmentalis.foundation.settings.ISettingsStore
 import com.augmentalis.foundation.settings.SettingsMigration
 import com.augmentalis.foundation.settings.models.AvanuesSettings
 import com.augmentalis.foundation.settings.models.PersistedSynonym
+import com.augmentalis.voiceoscore.AdaptiveTimingManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -308,15 +309,14 @@ class AvanuesSettingsRepository @Inject constructor(
      * Call once on startup after AdaptiveTimingManager is available.
      */
     suspend fun loadAdaptiveTimingValues() {
-        val mgr = com.augmentalis.voiceoscore.AdaptiveTimingManager
         context.avanuesDataStore.data.first().let { prefs ->
             val map = mutableMapOf<String, Long>()
-            prefs[KEY_ADAPTIVE_PROCESSING_DELAY]?.let { map[mgr.Keys.PROCESSING_DELAY] = it }
-            prefs[KEY_ADAPTIVE_SCROLL_DEBOUNCE]?.let { map[mgr.Keys.SCROLL_DEBOUNCE] = it }
-            prefs[KEY_ADAPTIVE_SPEECH_UPDATE_DEBOUNCE]?.let { map[mgr.Keys.SPEECH_UPDATE_DEBOUNCE] = it }
-            prefs[KEY_ADAPTIVE_COMMAND_WINDOW]?.let { map[mgr.Keys.COMMAND_WINDOW] = it }
+            prefs[KEY_ADAPTIVE_PROCESSING_DELAY]?.let { map[AdaptiveTimingManager.Keys.PROCESSING_DELAY] = it }
+            prefs[KEY_ADAPTIVE_SCROLL_DEBOUNCE]?.let { map[AdaptiveTimingManager.Keys.SCROLL_DEBOUNCE] = it }
+            prefs[KEY_ADAPTIVE_SPEECH_UPDATE_DEBOUNCE]?.let { map[AdaptiveTimingManager.Keys.SPEECH_UPDATE_DEBOUNCE] = it }
+            prefs[KEY_ADAPTIVE_COMMAND_WINDOW]?.let { map[AdaptiveTimingManager.Keys.COMMAND_WINDOW] = it }
             if (map.isNotEmpty()) {
-                mgr.applyPersistedValues(map)
+                AdaptiveTimingManager.applyPersistedValues(map)
             }
         }
     }
@@ -326,21 +326,13 @@ class AvanuesSettingsRepository @Inject constructor(
      * Call periodically (e.g., every 60s) or on app pause/stop.
      */
     suspend fun persistAdaptiveTimingValues() {
-        val mgr = com.augmentalis.voiceoscore.AdaptiveTimingManager
-        val values = mgr.toPersistedMap()
+        val values = AdaptiveTimingManager.toPersistedMap()
         context.avanuesDataStore.edit { prefs ->
-            values[mgr.Keys.PROCESSING_DELAY]?.let {
-                prefs[KEY_ADAPTIVE_PROCESSING_DELAY] = it
-            }
-            values[mgr.Keys.SCROLL_DEBOUNCE]?.let {
-                prefs[KEY_ADAPTIVE_SCROLL_DEBOUNCE] = it
-            }
-            values[mgr.Keys.SPEECH_UPDATE_DEBOUNCE]?.let {
-                prefs[KEY_ADAPTIVE_SPEECH_UPDATE_DEBOUNCE] = it
-            }
-            values[mgr.Keys.COMMAND_WINDOW]?.let {
-                prefs[KEY_ADAPTIVE_COMMAND_WINDOW] = it
-            }
+            // toPersistedMap() returns non-nullable values; direct assignment is safe
+            prefs[KEY_ADAPTIVE_PROCESSING_DELAY] = values.getValue(AdaptiveTimingManager.Keys.PROCESSING_DELAY)
+            prefs[KEY_ADAPTIVE_SCROLL_DEBOUNCE] = values.getValue(AdaptiveTimingManager.Keys.SCROLL_DEBOUNCE)
+            prefs[KEY_ADAPTIVE_SPEECH_UPDATE_DEBOUNCE] = values.getValue(AdaptiveTimingManager.Keys.SPEECH_UPDATE_DEBOUNCE)
+            prefs[KEY_ADAPTIVE_COMMAND_WINDOW] = values.getValue(AdaptiveTimingManager.Keys.COMMAND_WINDOW)
         }
     }
 

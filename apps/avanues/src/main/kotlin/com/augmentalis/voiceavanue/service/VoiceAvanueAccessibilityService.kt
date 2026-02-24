@@ -37,6 +37,7 @@ import com.augmentalis.voiceoscore.createForAndroid
 import com.augmentalis.voiceoscore.NumbersOverlayMode
 import com.augmentalis.voiceoscore.OverlayNumberingExecutor
 import com.augmentalis.voiceoscore.OverlayStateManager
+import com.augmentalis.voiceoscore.AdaptiveTimingManager
 import com.augmentalis.voiceoscore.SpeechMode
 import com.augmentalis.voiceoscore.TARGET_APPS
 import com.augmentalis.voiceoscore.wireCursorDependencies
@@ -101,6 +102,7 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
     private var webCommandCollectorJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var cursorSettingsJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
     private var numbersOverlayModeJob: kotlinx.coroutines.Job? = null  // Cancelled in onDestroy
+    private var adaptiveTimingPersistJob: kotlinx.coroutines.Job? = null  // Periodic persistence
 
     override fun getActionCoordinator(): ActionCoordinator {
         // Prefer VoiceOSCore's coordinator — it has handlers registered
@@ -176,6 +178,29 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 )
                 voiceOSCore?.initialize()
 
+                // Restore previously learned adaptive timing values from DataStore.
+                // Must run after VoiceOSCore.initialize() sets the confidence floor.
+                val settingsRepo = AvanuesSettingsRepository(applicationContext)
+                try {
+                    settingsRepo.loadAdaptiveTimingValues()
+                    Log.i(TAG, "Adaptive timing values restored from DataStore")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load adaptive timing values (using defaults): ${e.message}")
+                }
+
+                // Persist learned adaptive timing values every 60 seconds.
+                // Values survive process death and restore on next startup.
+                adaptiveTimingPersistJob = serviceScope.launch(Dispatchers.IO) {
+                    while (true) {
+                        kotlinx.coroutines.delay(60_000L)
+                        try {
+                            settingsRepo.persistAdaptiveTimingValues()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Adaptive timing persist failed: ${e.message}")
+                        }
+                    }
+                }
+
                 // Initialize CommandManager to build pattern matching cache + populate
                 // StaticCommandRegistry from DB. VoiceOSCore.initialize() already loaded
                 // commands to DB via StaticCommandPersistenceImpl; CommandManager's version
@@ -210,13 +235,15 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
                 // - COMBINED/STATIC/DYNAMIC: route to processVoiceCommand() (normal)
                 // - MUTED: only wake commands pass through (defense-in-depth — grammar already restricted)
                 // - DICTATION: non-exit text injected into focused input field; exit commands route normally
-                val confidenceThreshold = devSettings.confidenceThreshold
+                // Use AdaptiveTimingManager as the single source of truth for confidence floor.
+                // This ensures both the collector gate and processVoiceCommand use the same clamped value
+                // (0.3-0.7 range), preventing bypasses via unclamped devSettings access.
                 speechCollectorJob?.cancel()
                 speechCollectorJob = serviceScope.launch {
                     voiceOSCore?.speechResults
                         ?.conflate()  // Drop intermediate results if processing is slow
                         ?.collect { result ->
-                            if (result.isFinal && result.text.isNotBlank() && result.confidence >= confidenceThreshold) {
+                            if (result.isFinal && result.text.isNotBlank() && result.confidence >= AdaptiveTimingManager.getConfidenceFloor()) {
                                 Log.d(TAG, "Voice recognized: '${result.text}' (conf: ${result.confidence})")
 
                                 val currentMode = voiceOSCore?.speechMode
@@ -682,6 +709,21 @@ class VoiceAvanueAccessibilityService : VoiceOSAccessibilityService() {
 
     override fun onDestroy() {
         instance = null
+
+        // Persist adaptive timing values before shutdown.
+        // Fire-and-forget on IO — avoids blocking Main thread (ANR risk).
+        // If the process dies before completion, periodic persist (every 60s) ensures
+        // values are at most ~60s stale on next startup.
+        adaptiveTimingPersistJob?.cancel()
+        adaptiveTimingPersistJob = null
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                AvanuesSettingsRepository(applicationContext).persistAdaptiveTimingValues()
+                Log.i(TAG, "Adaptive timing values persisted on destroy")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to persist adaptive timing on destroy: ${e.message}")
+            }
+        }
 
         // Clear VoiceControlCallbacks to prevent stale references
         VoiceControlCallbacks.clear()

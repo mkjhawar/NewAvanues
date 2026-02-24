@@ -16,6 +16,7 @@
  */
 package com.augmentalis.voiceoscore
 
+import com.augmentalis.foundation.settings.SettingsKeys
 import kotlin.concurrent.Volatile
 import kotlin.math.max
 import kotlin.math.min
@@ -25,8 +26,9 @@ import kotlin.math.min
  * optimal timing values using EMA smoothing.
  *
  * Signals in:
- *   commandSuccess(), commandDuplicate(), grammarCompiled(ms),
- *   confidenceValue(f), wakeWordHit(ms), wakeWordTimeout()
+ *   recordCommandSuccess(), recordCommandDuplicate(), recordGrammarCompile(ms),
+ *   recordConfidenceNearMiss(f), setConfidenceFloor(f),
+ *   recordWakeWordHit(ms), recordWakeWordTimeout()
  *
  * Timing values out:
  *   getProcessingDelayMs(), getConfidenceFloor(), getScrollDebounceMs(),
@@ -51,7 +53,8 @@ object AdaptiveTimingManager {
     private const val CONFIDENCE_FLOOR_MIN = 0.3f
     private const val CONFIDENCE_FLOOR_MAX = 0.7f
 
-    // Scroll debounce: lighter than content debounce
+    // Scroll debounce: lighter than content debounce.
+    // Currently static (no signal adapts it) — reserved for future scroll-performance feedback.
     private const val SCROLL_DEBOUNCE_START = 200L
     private const val SCROLL_DEBOUNCE_MIN = 100L
     private const val SCROLL_DEBOUNCE_MAX = 500L
@@ -144,7 +147,8 @@ object AdaptiveTimingManager {
 
     /**
      * Record a successful command execution.
-     * Effect: decreases processing delay (multiplicative decrease: *= 0.95)
+     * Effect: shrinks processing delay aggressively (delay *= 0.95).
+     * This is the "reward" path — fast commands earn faster future execution.
      */
     fun recordCommandSuccess() {
         totalCommands++
@@ -168,7 +172,8 @@ object AdaptiveTimingManager {
 
     /**
      * Record a duplicate command (same text within 500ms window).
-     * Effect: increases processing delay (additive increase: += 25ms)
+     * Effect: grows processing delay conservatively (delay += 25ms).
+     * This is the "backoff" path — duplicates indicate the engine is firing too fast.
      */
     fun recordCommandDuplicate() {
         totalDuplicates++
@@ -235,8 +240,12 @@ object AdaptiveTimingManager {
     fun isDuplicate(text: String, timestampMs: Long): Boolean {
         val isDup = text.equals(lastCommandText, ignoreCase = true) &&
             (timestampMs - lastCommandTimeMs) < DUPLICATE_WINDOW_MS
-        lastCommandText = text
-        lastCommandTimeMs = timestampMs
+        if (!isDup) {
+            // Only update tracking state for non-duplicates.
+            // This ensures triple-fire (A-A-A) correctly detects 2nd and 3rd as duplicates.
+            lastCommandText = text
+            lastCommandTimeMs = timestampMs
+        }
         return isDup
     }
 
@@ -293,12 +302,12 @@ object AdaptiveTimingManager {
     // Persistence round-trip
     // ═══════════════════════════════════════════════════════════════════
 
-    /** Persistence key constants */
+    /** Persistence key constants — delegates to Foundation SettingsKeys (single source of truth) */
     object Keys {
-        const val PROCESSING_DELAY = "adaptive_processing_delay_ms"
-        const val SCROLL_DEBOUNCE = "adaptive_scroll_debounce_ms"
-        const val SPEECH_UPDATE_DEBOUNCE = "adaptive_speech_update_debounce_ms"
-        const val COMMAND_WINDOW = "adaptive_command_window_ms"
+        const val PROCESSING_DELAY = SettingsKeys.ADAPTIVE_PROCESSING_DELAY_MS
+        const val SCROLL_DEBOUNCE = SettingsKeys.ADAPTIVE_SCROLL_DEBOUNCE_MS
+        const val SPEECH_UPDATE_DEBOUNCE = SettingsKeys.ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS
+        const val COMMAND_WINDOW = SettingsKeys.ADAPTIVE_COMMAND_WINDOW_MS
     }
 
     /**

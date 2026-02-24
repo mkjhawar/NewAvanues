@@ -4,7 +4,7 @@
 **Platforms**: Android, iOS, macOS, Desktop (Windows/Linux)
 **Dependencies**: whisper.cpp (JNI/cinterop), AvanueUI (download UI), Foundation (settings), Speech.framework (Apple), Sherpa-ONNX (AVX engine), Crypto/AONCodec (AVX model encryption)
 **Created**: 2026-02-20
-**Updated**: 2026-02-24 — AVX (AvaVox) Command Engine (Section 20, 20.1-20.8), Distil-Whisper models (Section 20.2), initial_prompt biasing (Section 20.1), Pre-filter architecture (Section 20.5), Vivoka wake-word detection with lifecycle wiring (Section 19, 19.1-19.6), P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
+**Updated**: 2026-02-24 — AdaptiveTimingManager review fixes: unified confidence gate, persistence wiring, key consolidation, isDuplicate mutation fix (Section 21.5, 21.7). AVX (AvaVox) Command Engine (Section 20, 20.1-20.8), Distil-Whisper models (Section 20.2), initial_prompt biasing (Section 20.1), Pre-filter architecture (Section 20.5), Vivoka wake-word detection with lifecycle wiring (Section 19, 19.1-19.6), P2 hardening: VADProfile presets (Section 16), Google Cloud streaming fixes (Section 17), SpeechMetricsSnapshot dashboard card (Section 18), KMP atomicfu thread safety (Section 9), macOS Whisper support, PII-safe logging, totalSegments metric, download retry/backoff (Section 4.5), NSError capture pattern (Section 3.2), WhisperPerformance tests (Section 8.3), memory-aware model selection at runtime (Section 3.6)
 
 ---
 
@@ -2192,10 +2192,11 @@ wakeWordTimeout()   ──┘
 | `VivokaEngine.kt` | Added `setProcessingDelay(ms)` to delegate to recognizer |
 | `VivokaAndroidEngine.kt` | Wires adaptive processing delay + grammar compile tracking + wake word timing |
 | `VoiceOSAccessibilityService.kt` | Replaced hardcoded `0.5f` with `AdaptiveTimingManager.getConfidenceFloor()` |
+| `VoiceAvanueAccessibilityService.kt` | Unified confidence gate: speech collector uses `AdaptiveTimingManager.getConfidenceFloor()` instead of raw `devSettings.confidenceThreshold` (eliminates dual-path bypass). Wires `loadAdaptiveTimingValues()` on init and 60s periodic `persistAdaptiveTimingValues()` |
 | `PlatformActual.kt` | `getScrollDebounceMs()` and SPEECH_ENGINE_UPDATE → delegate to manager |
 | `ActionCoordinator.kt` | Feeds success/duplicate signals in `recordResult()` |
 | `VoiceOSCore.kt` | Initializes confidence floor from `ServiceConfiguration` at startup |
-| `AvanuesSettingsRepository.kt` | `loadAdaptiveTimingValues()` / `persistAdaptiveTimingValues()` for DataStore round-trip |
+| `AvanuesSettingsRepository.kt` | `loadAdaptiveTimingValues()` / `persistAdaptiveTimingValues()` with `getValue()` (non-nullable) for persist writes |
 
 ### 21.6 Wake Word Adaptive Command Window
 
@@ -2228,9 +2229,11 @@ Learned values survive app restarts via DataStore:
 | `adaptive_speech_update_debounce_ms` | `ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS` |
 | `adaptive_command_window_ms` | `ADAPTIVE_COMMAND_WINDOW_MS` |
 
-Load: `AvanuesSettingsRepository.loadAdaptiveTimingValues()` at startup.
-Save: `AvanuesSettingsRepository.persistAdaptiveTimingValues()` periodically or on pause.
+Load: `AvanuesSettingsRepository.loadAdaptiveTimingValues()` — called in `VoiceAvanueAccessibilityService.onServiceReady()` after `VoiceOSCore.initialize()`.
+Save: `AvanuesSettingsRepository.persistAdaptiveTimingValues()` — called every 60 seconds via `adaptiveTimingPersistJob` and on service destroy (fire-and-forget on `Dispatchers.IO`).
 Reset: `AdaptiveTimingManager.reset()` returns all values to defaults.
+
+Key consolidation: `AdaptiveTimingManager.Keys` delegates to `SettingsKeys` in Foundation (single source of truth). `AvanuesSettingsRepository` uses `AdaptiveTimingManager.Keys.*` for map construction and `getValue()` for non-nullable persist writes.
 
 ### 21.8 Thread Safety
 
