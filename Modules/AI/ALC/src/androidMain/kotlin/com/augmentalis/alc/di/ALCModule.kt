@@ -8,6 +8,7 @@ import com.augmentalis.alc.engine.*
 import com.augmentalis.alc.provider.*
 import com.augmentalis.alc.response.HybridResponseGenerator
 import com.augmentalis.alc.response.TemplateResponseGenerator
+import com.augmentalis.llm.LLMResult
 import com.augmentalis.llm.security.ApiKeyManager
 import com.augmentalis.llm.ProviderType as LLMProviderType
 import dagger.Module
@@ -27,6 +28,16 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object ALCModule {
+
+    private fun resolveApiKey(apiKeyManager: ApiKeyManager, provider: LLMProviderType): String? {
+        return when (val result = apiKeyManager.getApiKeyBlocking(provider)) {
+            is LLMResult.Success -> result.data
+            is LLMResult.Error -> {
+                Timber.w("${provider.name} API key not configured: ${result.message}")
+                null
+            }
+        }
+    }
 
     @Provides
     @Singleton
@@ -51,21 +62,10 @@ object ALCModule {
     fun provideAnthropicProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = apiKeyManager.getApiKeyBlocking(LLMProviderType.ANTHROPIC)
-            .let { result ->
-                when (result) {
-                    is com.augmentalis.llm.LLMResult.Success -> result.data
-                    is com.augmentalis.llm.LLMResult.Error -> {
-                        Timber.w("Anthropic API key not configured: ${result.message}")
-                        null
-                    }
-                    else -> null
-                }
-            }
         return AnthropicProvider(
             ProviderConfig(
                 type = ProviderType.ANTHROPIC,
-                apiKey = key,
+                apiKey = resolveApiKey(apiKeyManager, LLMProviderType.ANTHROPIC),
                 model = "claude-3-5-sonnet-20241022"
             )
         )
@@ -77,21 +77,10 @@ object ALCModule {
     fun provideOpenAIProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = apiKeyManager.getApiKeyBlocking(LLMProviderType.OPENAI)
-            .let { result ->
-                when (result) {
-                    is com.augmentalis.llm.LLMResult.Success -> result.data
-                    is com.augmentalis.llm.LLMResult.Error -> {
-                        Timber.w("OpenAI API key not configured: ${result.message}")
-                        null
-                    }
-                    else -> null
-                }
-            }
         return OpenAIProvider(
             ProviderConfig(
                 type = ProviderType.OPENAI,
-                apiKey = key,
+                apiKey = resolveApiKey(apiKeyManager, LLMProviderType.OPENAI),
                 model = "gpt-4o"
             )
         )
@@ -103,21 +92,10 @@ object ALCModule {
     fun provideGroqProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = apiKeyManager.getApiKeyBlocking(LLMProviderType.GROQ)
-            .let { result ->
-                when (result) {
-                    is com.augmentalis.llm.LLMResult.Success -> result.data
-                    is com.augmentalis.llm.LLMResult.Error -> {
-                        Timber.w("Groq API key not configured: ${result.message}")
-                        null
-                    }
-                    else -> null
-                }
-            }
         return GroqProvider(
             ProviderConfig(
                 type = ProviderType.GROQ,
-                apiKey = key,
+                apiKey = resolveApiKey(apiKeyManager, LLMProviderType.GROQ),
                 model = "llama-3.1-70b-versatile"
             )
         )
@@ -129,21 +107,10 @@ object ALCModule {
     fun provideGoogleAIProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = apiKeyManager.getApiKeyBlocking(LLMProviderType.GOOGLE_AI)
-            .let { result ->
-                when (result) {
-                    is com.augmentalis.llm.LLMResult.Success -> result.data
-                    is com.augmentalis.llm.LLMResult.Error -> {
-                        Timber.w("Google AI API key not configured: ${result.message}")
-                        null
-                    }
-                    else -> null
-                }
-            }
         return GoogleAIProvider(
             ProviderConfig(
                 type = ProviderType.GOOGLE_AI,
-                apiKey = key,
+                apiKey = resolveApiKey(apiKeyManager, LLMProviderType.GOOGLE_AI),
                 model = "gemini-1.5-pro"
             )
         )

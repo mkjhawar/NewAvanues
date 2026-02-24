@@ -330,7 +330,7 @@ class CommandLocalizer(
      * so this is a no-op. Reserved for future caching implementation.
      */
     fun clearCache() {
-        // TODO: Implement caching layer if needed for performance
+        // No caching layer — database queries are direct via SQLDelight
         Log.d(TAG, "clearCache() called - no cache to clear (database queries are direct)")
     }
 
@@ -341,7 +341,7 @@ class CommandLocalizer(
      * @return Empty map (no cache stats available)
      */
     fun getCacheStats(): Map<String, Int> {
-        // TODO: Implement caching layer if needed for performance
+        // No caching layer — database queries are direct via SQLDelight
         return emptyMap()
     }
 
