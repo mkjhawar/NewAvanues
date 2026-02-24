@@ -1,3 +1,0 @@
-package = com.augmentalis.crypto.native.cc
-headers = CommonCrypto/CommonCrypto.h CommonCrypto/CommonDigest.h CommonCrypto/CommonHMAC.h CommonCrypto/CommonCryptor.h
-headerFilter = CommonCrypto/**
