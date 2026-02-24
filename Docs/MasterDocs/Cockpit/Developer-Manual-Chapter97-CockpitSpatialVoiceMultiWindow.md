@@ -189,25 +189,37 @@ Each position has a `label` for voice commands ("top left", "center", etc.).
 
 ```
 MAIN (root)
-├── ADD_FRAME         → content type chips
-├── LAYOUT_PICKER     → 13 layout mode chips
+├── ADD_FRAME             → content type chips
+├── LAYOUT_PICKER         → 13 layout mode chips
 ├── FRAME_ACTIONS
-│   ├── WEB_ACTIONS   → Back, Forward, Refresh, ZoomIn, ZoomOut
-│   ├── PDF_ACTIONS   → PrevPage, NextPage, ZoomIn, ZoomOut
-│   ├── IMAGE_ACTIONS → ZoomIn, ZoomOut, Rotate
-│   ├── VIDEO_ACTIONS → Rewind, Play/Pause, Fullscreen
-│   ├── NOTE_ACTIONS  → Undo, Redo (bypassed — see below)
-│   └── CAMERA_ACTIONS→ Flip, Capture (bypassed — see below)
-├── SCROLL_COMMANDS   → (reserved)
-├── ZOOM_COMMANDS     → (reserved)
-└── SPATIAL_COMMANDS  → (reserved)
+│   ├── WEB_ACTIONS       → Back, Forward, Refresh, ZoomIn, ZoomOut
+│   ├── PDF_ACTIONS       → PrevPage, NextPage, ZoomIn, ZoomOut
+│   ├── IMAGE_ACTIONS     → ZoomIn, ZoomOut, Rotate
+│   ├── VIDEO_ACTIONS     → Rewind, Play/Pause, Fullscreen
+│   ├── NOTE_ACTIONS      → Bold, Italic, Underline, Strikethrough, Undo, Redo, Save
+│   ├── CAMERA_ACTIONS    → Flip, Capture
+│   └── WHITEBOARD_ACTIONS→ Pen, Highlight, Eraser, Undo, Redo, Clear
+├── SCROLL_COMMANDS       → (reserved)
+├── ZOOM_COMMANDS         → (reserved)
+└── SPATIAL_COMMANDS      → (reserved)
 ```
 
 Properties: `parent` (back navigation), `isContentSpecific`, `depth` (nesting level).
 
 `CommandBarState.forContentType(typeId)` auto-selects the right state when a frame gains focus.
 
-**260224 Update:** `forContentType()` now maps `"note"`, `"voice_note"`, and `"camera"` to `FRAME_ACTIONS` instead of `NOTE_ACTIONS`/`CAMERA_ACTIONS`. NoteAvanue and PhotoAvanue don't currently expose undo/redo or flip/capture APIs, so the content-specific chips were dead buttons. The enum values `NOTE_ACTIONS` and `CAMERA_ACTIONS` are retained for future API wiring — once NoteAvanue exposes editing commands or PhotoAvanue exposes capture controls, the mappings should be restored.
+| Content Type ID | Routed State | Module Executor |
+|----------------|-------------|-----------------|
+| `"web"` | `WEB_ACTIONS` | Direct WebView dispatch |
+| `"pdf"` | `PDF_ACTIONS` | Direct PdfViewer state |
+| `"image"` | `IMAGE_ACTIONS` | Direct zoom/rotation state |
+| `"video"` | `VIDEO_ACTIONS` | Direct VideoPlayer state |
+| `"note"`, `"voice_note"` | `NOTE_ACTIONS` | `ModuleCommandCallbacks.noteExecutor` |
+| `"camera"` | `CAMERA_ACTIONS` | `ModuleCommandCallbacks.cameraExecutor` |
+| `"whiteboard"` | `WHITEBOARD_ACTIONS` | `ModuleCommandCallbacks.annotationExecutor` |
+| (others) | `FRAME_ACTIONS` | Generic minimize/maximize/close |
+
+**Bridge pattern:** Note, Camera, and Whiteboard actions are dispatched through `ModuleCommandCallbacks` executors (VoiceOSCore), translating `ContentAction` → `CommandActionType` in `ContentRenderer`. The modules register their executors via `DisposableEffect` when mounted. NoteAvanue includes a custom `RichTextUndoManager` for snapshot-based undo/redo (compose-rich-editor RC13 lacks native undo API).
 
 ---
 
@@ -624,7 +636,7 @@ The `state.availableLayoutModes` field filters the CommandBar's layout picker to
 2. Add `ContentAccent` mapping in `ContentAccent.forContentType()`
 3. Add icon in `FrameWindow.contentTypeIcon()`
 4. Add to `CommandBar.addFrameOptions()`
-5. Add `CommandBarState` actions if content-specific controls needed; wire in `ContentRenderer` via `contentActionFlow` LaunchedEffect; update `forContentType()` mapping (note: only map to a content-specific state if the module exposes the corresponding APIs — otherwise map to `FRAME_ACTIONS`)
+5. Add `CommandBarState` enum value + chips in `CommandBar.kt`; update `forContentType()` mapping; add `ContentAction` values for each chip; wire dispatch in `ContentRenderer` via `contentActionFlow` LaunchedEffect → translate `ContentAction` → `CommandActionType` → `ModuleCommandCallbacks.{module}Executor?.invoke()`
 6. Add rendering in `ContentRenderer.kt` (androidMain)
 7. Add content module dependency in `build.gradle.kts` androidMain
 
@@ -729,10 +741,21 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 - `NeumorphicModifier`: hoisted `Paint()` out of `drawIntoCanvas` lambda — reused across 8 blur passes
 
 **Other:**
-- `CommandBarState.forContentType()` maps `note/voice_note/camera` to `FRAME_ACTIONS` (dead chips removed)
 - `CockpitScreen` uses `LoggerFactory.getLogger()` with lazy lambdas instead of `android.util.Log`
 
 See fix doc: `docs/fixes/Cockpit/Cockpit-Fix-DeferredReviewItems-260224-V1.md`
+
+### 260224 — CommandBar Module Wiring
+
+Wired NOTE_ACTIONS, CAMERA_ACTIONS, and new WHITEBOARD_ACTIONS to their module composables via `ModuleCommandCallbacks`:
+
+- **NOTE_ACTIONS:** 7 chips (Bold, Italic, Underline, Strikethrough, Undo, Redo, Save) dispatched through `noteExecutor` → `executeNoteCommand()` in NoteAvanue. Custom `RichTextUndoManager` provides snapshot-based undo/redo for compose-rich-editor RC13.
+- **CAMERA_ACTIONS:** 2 chips (Flip, Capture) dispatched through `cameraExecutor` → PhotoAvanue.
+- **WHITEBOARD_ACTIONS:** 6 chips (Pen, Highlight, Eraser, Undo, Redo, Clear) dispatched through `annotationExecutor` → AnnotationAvanue.
+- `forContentType()` restored: `note/voice_note` → `NOTE_ACTIONS`, `camera` → `CAMERA_ACTIONS`, `whiteboard` → `WHITEBOARD_ACTIONS`.
+- `ContentAction` enum expanded with 10 new values (NOTE_BOLD/ITALIC/UNDERLINE/STRIKETHROUGH/SAVE + WB_PEN/HIGHLIGHTER/ERASER/UNDO/REDO/CLEAR).
+
+See plan: `docs/plans/Cockpit/Cockpit-Plan-CommandBarModuleWiring-260224-V1.md`
 
 ### 260222 — ContentRenderer Import Fix
 `ContentRenderer.kt` imports `CameraPreview` for the `FrameContent.Camera` content type. The import was corrected from the non-existent `com.augmentalis.cameraavanue` package to `com.augmentalis.photoavanue.CameraPreview`, which is the actual composable in the PhotoAvanue module (Chapter 98). The orphaned CameraAvanue module has been deleted — PhotoAvanue is the canonical camera module.
