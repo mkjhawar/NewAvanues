@@ -672,4 +672,26 @@ This creates the feedback loop: commands flow through ActionCoordinator → timi
 
 See Chapter 102 Section 21 for full AdaptiveTimingManager architecture.
 
-*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar bridge, IActionCoordinator DI pattern, runBlocking elimination, AdaptiveTimingManager signal wiring)*
+---
+
+## ActionCoordinator: Suspend Migration for ANR Prevention (260224)
+
+**Problem**: `ActionCoordinator.clearDynamicCommandsBySource()`, `clearDynamicCommands()`, and `dispose()` called deprecated `CommandRegistry` methods that use `runBlocking { withTimeout(5000L) { mutex.withLock { ... } } }`. When invoked from `serviceScope` (`Dispatchers.Main`) while a background coroutine held the mutex (during grammar compilation), the Main thread blocked for up to 5000ms — causing an ANR (Input dispatching timed out: 5001ms).
+
+**Fix**: All three methods now use suspend CommandRegistry variants:
+
+| Method | Before (Deprecated) | After (Suspend) |
+|---|---|---|
+| `clearDynamicCommandsBySource(source)` | `fun` → `clearBySource()` | `suspend fun` → `clearBySourceSuspend()` |
+| `clearDynamicCommands()` | `fun` → `clear()` | `suspend fun` → `clearSuspend()` |
+| `dispose()` | `clear()` | `clearSuspend()` |
+
+All callers were already in suspend/coroutine contexts, so no signature propagation needed.
+
+**Additionally**: `VoiceAvanueAccessibilityService.webCommandCollectorJob` now runs on `Dispatchers.Default` (not Main), and `switchLocale()`/`updateWakeWordSettings()` in `cursorSettingsJob` are wrapped in `withContext(Dispatchers.Default)`.
+
+**Rule**: Never call deprecated `runBlocking` CommandRegistry methods from Main thread. Always prefer suspend variants (`clearBySourceSuspend`, `clearSuspend`, `addAllSuspend`, `update`).
+
+See: `docs/fixes/VoiceOSCore/VoiceOSCore-Fix-ANRMainThreadRunBlocking-260224-V1.md` for full kill-chain analysis.
+
+*Chapter 110 | Unified Command Architecture | 2026-02-23 (updated 2026-02-24: CommandBar bridge, IActionCoordinator DI pattern, runBlocking elimination, AdaptiveTimingManager signal wiring, ActionCoordinator suspend migration for ANR prevention)*

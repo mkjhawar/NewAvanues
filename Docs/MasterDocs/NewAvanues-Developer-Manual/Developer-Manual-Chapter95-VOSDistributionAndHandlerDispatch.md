@@ -955,6 +955,18 @@ interface SyncEntryPoint {
 
 ---
 
+### 5.6 Dispatcher Fix: webCommandCollectorJob Off Main (260224)
+
+`webCommandCollectorJob` in `VoiceAvanueAccessibilityService` previously ran on `serviceScope` (`Dispatchers.Main`). Combined with `ActionCoordinator.clearDynamicCommandsBySource()` calling `CommandRegistry.clearBySource()` (which uses `runBlocking { mutex.withLock { ... } }`), this created a direct ANR path: Main thread blocks waiting for mutex held by background grammar compilation.
+
+**Fix**: `webCommandCollectorJob = serviceScope.launch(Dispatchers.Default)` — the collector registers/clears dynamic commands via suspend functions, none of which require Main thread. Similarly, `switchLocale()` and `updateWakeWordSettings()` in `cursorSettingsJob` are now wrapped in `withContext(Dispatchers.Default)`.
+
+**Rule**: Any `serviceScope.launch` doing CommandRegistry operations or speech engine configuration MUST use `Dispatchers.Default` (or `IO` for file/network). Only overlay/badge UI updates require Main.
+
+See: `docs/fixes/VoiceOSCore/VoiceOSCore-Fix-ANRMainThreadRunBlocking-260224-V1.md` and Chapter 110 (ActionCoordinator suspend migration).
+
+---
+
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants) | Updated: 2026-02-22 (CommandManager import path fix: managers.commandmanager → commandmanager) | Updated: 2026-02-23 (Section 3: VOS export file naming convention AppName_AppVersion_Locale_Timestamp; Section 3.5: VOS portability — screen-size/orientation agnosticism, 4-layer BoundsResolver dispatch, cross-device import scenarios, coordinate targeting responsibility matrix; Section 3.6: VOS v3.1 extended format with targeting metadata — resourceId, elementHash, className for cross-device element resolution)*
+*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants) | Updated: 2026-02-22 (CommandManager import path fix: managers.commandmanager → commandmanager) | Updated: 2026-02-23 (Section 3: VOS export file naming convention AppName_AppVersion_Locale_Timestamp; Section 3.5: VOS portability — screen-size/orientation agnosticism, 4-layer BoundsResolver dispatch, cross-device import scenarios, coordinate targeting responsibility matrix; Section 3.6: VOS v3.1 extended format with targeting metadata — resourceId, elementHash, className for cross-device element resolution) | Updated: 2026-02-24 (Section 5.6: webCommandCollectorJob dispatcher fix for ANR prevention)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement), Chapter 96 (KMP Foundation)*
