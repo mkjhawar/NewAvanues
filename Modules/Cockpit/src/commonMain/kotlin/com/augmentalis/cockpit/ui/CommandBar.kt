@@ -45,13 +45,13 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Minimize
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ScreenSearchDesktop
 import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.ZoomIn
@@ -280,10 +280,10 @@ fun CommandBar(
                         CommandChip(Icons.Default.FormatStrikethrough, "Strikethrough", false) {
                             onContentAction(ContentAction.NOTE_STRIKETHROUGH)
                         }
-                        CommandChip(Icons.Default.Undo, "Undo", false) {
+                        CommandChip(Icons.AutoMirrored.Filled.Undo, "Undo", false) {
                             onContentAction(ContentAction.NOTE_UNDO)
                         }
-                        CommandChip(Icons.Default.Redo, "Redo", false) {
+                        CommandChip(Icons.AutoMirrored.Filled.Redo, "Redo", false) {
                             onContentAction(ContentAction.NOTE_REDO)
                         }
                         CommandChip(Icons.Default.Save, "Save", false) {
@@ -310,10 +310,10 @@ fun CommandBar(
                         CommandChip(Icons.Default.Delete, "Eraser", false) {
                             onContentAction(ContentAction.WB_ERASER)
                         }
-                        CommandChip(Icons.Default.Undo, "Undo", false) {
+                        CommandChip(Icons.AutoMirrored.Filled.Undo, "Undo", false) {
                             onContentAction(ContentAction.WB_UNDO)
                         }
-                        CommandChip(Icons.Default.Redo, "Redo", false) {
+                        CommandChip(Icons.AutoMirrored.Filled.Redo, "Redo", false) {
                             onContentAction(ContentAction.WB_REDO)
                         }
                         CommandChip(Icons.Default.Close, "Clear", false) {

@@ -73,10 +73,6 @@ class AvaApplication : Application(), Configuration.Provider {
     private val _isLLMReady = MutableStateFlow(false)
     val isLLMReady: StateFlow<Boolean> = _isLLMReady.asStateFlow()
 
-    // Phase 2: Intent category repository for database-driven lookup
-    @Inject
-    lateinit var intentCategoryRepository: com.augmentalis.ava.core.data.repository.IntentCategoryRepository
-
     /**
      * WorkManager configuration for Hilt-injected workers.
      * Required for EmbeddingComputeWorker to receive dependencies via @AssistedInject.
@@ -111,8 +107,8 @@ class AvaApplication : Application(), Configuration.Provider {
         // Initialize crash reporting (disabled by default for privacy)
         initializeCrashReporting()
 
-        // Phase 2: Seed intent category database if empty
-        seedIntentCategories()
+        // Phase 2: Intent category seeding removed — categories now live on IIntentAction
+        // directly via IntentActionRegistry.findByIntent()?.category (Chapter 110)
 
         // Initialize NLU engine in background
         initializeNLU()
@@ -209,32 +205,6 @@ class AvaApplication : Application(), Configuration.Provider {
                 Timber.e(e, "LLM initialization failed")
                 // Still set ready state to allow app to function with template responses
                 _isLLMReady.value = true
-            }
-        }
-    }
-
-    /**
-     * Phase 2: Seed intent category database on first launch
-     *
-     * Populates database with all known intent-category mappings if database is empty.
-     * This enables database-driven category lookup instead of hardcoded registry.
-     */
-    private fun seedIntentCategories() {
-        applicationScope.launch(Dispatchers.IO) {
-            try {
-                val totalCount = intentCategoryRepository.getTotalCount()
-
-                if (totalCount == 0L) {
-                    Timber.i("Intent category database is empty, seeding...")
-                    val seeder = com.augmentalis.actions.CategorySeeder(intentCategoryRepository)
-                    seeder.seedCategories()
-                    Timber.i("Intent category database seeding complete")
-                } else {
-                    Timber.d("Intent category database already seeded ($totalCount mappings)")
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to seed intent categories")
-                // Non-fatal error - app continues with fallback category inference
             }
         }
     }

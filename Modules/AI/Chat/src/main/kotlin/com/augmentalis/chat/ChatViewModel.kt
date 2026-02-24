@@ -23,7 +23,6 @@ import com.augmentalis.chat.coordinator.TeachingFlowManager
 import com.augmentalis.chat.data.BuiltInIntents
 import com.augmentalis.chat.event.WakeWordEventBus
 import com.augmentalis.nlu.IntentClassification
-import com.augmentalis.actions.ActionsManager
 import com.augmentalis.llm.response.ResponseGenerator
 import com.augmentalis.llm.response.ResponseContext
 import com.augmentalis.rag.domain.RAGRepository
@@ -35,9 +34,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import com.augmentalis.ava.core.data.util.AvidHelper
 import javax.inject.Inject
 
@@ -68,7 +65,6 @@ class ChatViewModel @Inject constructor(
     // Message repository for direct message operations
     private val messageRepository: MessageRepository,
     private val chatPreferences: ChatPreferences,
-    private val actionsManager: ActionsManager,
     private val responseGenerator: ResponseGenerator,
     private val ragRepository: RAGRepository?,
     // SOLID Coordinators
@@ -275,15 +271,12 @@ class ChatViewModel @Inject constructor(
     private fun initializeActions() {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "Initializing action handlers...")
-                actionsManager.initialize()
-                val ready = withTimeoutOrNull(5000L) {
-                    actionsManager.isReady.first { it }
-                }
-                if (ready == true) {
+                Log.d(TAG, "Initializing action handlers via ActionCoordinator...")
+                actionCoordinator.initialize()
+                if (actionCoordinator.isInitialized()) {
                     Log.i(TAG, "Action handlers initialized and ready")
                 } else {
-                    Log.w(TAG, "Action handlers initialization timed out")
+                    Log.w(TAG, "Action handlers not ready after initialize()")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize action handlers: ${e.message}", e)
@@ -430,14 +423,10 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onAppSelected(capability: String, packageName: String, appName: String, remember: Boolean) {
-        viewModelScope.launch {
-            try {
-                actionsManager.saveAppPreference(capability, packageName, appName, remember)
-                dismissAppPreferenceSheet()
-            } catch (e: Exception) {
-                uiStateManager.setError("Failed to save preference: ${e.message}")
-            }
-        }
+        // App preferences were ActionsManager-specific; IntentActions resolves entities directly.
+        // Dismiss the sheet — the user's choice is acknowledged but no longer persisted here.
+        Log.d(TAG, "App selected for $capability: $appName ($packageName), remember=$remember")
+        dismissAppPreferenceSheet()
     }
 
     fun openAccessibilitySettings() {
