@@ -44,8 +44,11 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         private const val TAG = "VoiceOSAccessibility"
     }
 
-    // Coroutine scope for async operations
-    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    // Coroutine scope for async operations — Default dispatcher to avoid
+    // blocking the Main thread with grammar compilation, command matching,
+    // and flow collection. Use withContext(Dispatchers.Main) for the rare
+    // operations that truly require Main (e.g., AccessibilityEvent.obtain()).
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     // Core components
     private lateinit var screenExtractor: AndroidScreenExtractor
@@ -59,7 +62,7 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
     private var isServiceReady = false
 
     // NAV-500 Fix #1: Event debouncing to prevent excessive processing
-    private var lastEventProcessTime = 0L
+    @Volatile private var lastEventProcessTime = 0L
     private var pendingScreenChangeJob: Job? = null
     private var currentPackageName: String? = null
 
