@@ -27,7 +27,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 
 /**
  * Commands Manager
@@ -532,10 +531,7 @@ class CommandManager(private val context: Context) {
      * @return Current locale string (e.g., "en-US", "es-ES", "fr-FR", "de-DE")
      */
     fun getCurrentLocale(): String {
-        // Access Flow's current value using runBlocking and first()
-        return kotlinx.coroutines.runBlocking {
-            commandLocalizer.currentLocale.first()
-        }
+        return commandLocalizer.currentLocale.value
     }
 
     /**

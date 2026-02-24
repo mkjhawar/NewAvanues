@@ -12,8 +12,8 @@ import android.util.Log
 import com.augmentalis.voiceoscore.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandEntity
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -45,7 +45,7 @@ class CommandLocalizer(
     private val commandDao: com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
 ) {
     private val _currentLocale = MutableStateFlow(Locale.getDefault().toLanguageTag())
-    val currentLocale: Flow<String> = _currentLocale.asStateFlow()
+    val currentLocale: StateFlow<String> = _currentLocale.asStateFlow()
 
     private val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 

@@ -15,7 +15,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import javax.inject.Named
 import javax.inject.Singleton
@@ -52,7 +51,7 @@ object ALCModule {
     fun provideAnthropicProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = runBlocking { apiKeyManager.getApiKey(LLMProviderType.ANTHROPIC) }
+        val key = apiKeyManager.getApiKeyBlocking(LLMProviderType.ANTHROPIC)
             .let { result ->
                 when (result) {
                     is com.augmentalis.llm.LLMResult.Success -> result.data
@@ -78,7 +77,7 @@ object ALCModule {
     fun provideOpenAIProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = runBlocking { apiKeyManager.getApiKey(LLMProviderType.OPENAI) }
+        val key = apiKeyManager.getApiKeyBlocking(LLMProviderType.OPENAI)
             .let { result ->
                 when (result) {
                     is com.augmentalis.llm.LLMResult.Success -> result.data
@@ -104,7 +103,7 @@ object ALCModule {
     fun provideGroqProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = runBlocking { apiKeyManager.getApiKey(LLMProviderType.GROQ) }
+        val key = apiKeyManager.getApiKeyBlocking(LLMProviderType.GROQ)
             .let { result ->
                 when (result) {
                     is com.augmentalis.llm.LLMResult.Success -> result.data
@@ -130,7 +129,7 @@ object ALCModule {
     fun provideGoogleAIProvider(
         apiKeyManager: ApiKeyManager
     ): ILLMProvider {
-        val key = runBlocking { apiKeyManager.getApiKey(LLMProviderType.GOOGLE_AI) }
+        val key = apiKeyManager.getApiKeyBlocking(LLMProviderType.GOOGLE_AI)
             .let { result ->
                 when (result) {
                     is com.augmentalis.llm.LLMResult.Success -> result.data

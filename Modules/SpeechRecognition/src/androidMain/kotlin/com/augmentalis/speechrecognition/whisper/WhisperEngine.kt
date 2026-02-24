@@ -13,6 +13,7 @@
  */
 package com.augmentalis.speechrecognition.whisper
 
+import android.app.ActivityManager
 import android.content.Context
 import android.util.Log
 import com.augmentalis.speechrecognition.CommandCache
@@ -359,6 +360,33 @@ class WhisperEngine(
             maxSpeechDurationMs = config.maxChunkDurationMs,
             paddingMs = 150
         )
+
+        // Step 2c: Memory-aware model selection — check AVAILABLE RAM at load time.
+        // autoTuned() selects based on totalMem, but availMem can be much lower when
+        // other apps are active. Loading a model that exceeds availMem causes a page
+        // fault storm (146K+ faults) that starves the main thread and triggers ANR.
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memInfo)
+        val availableMB = (memInfo.availMem / (1024 * 1024)).toInt()
+
+        if (memInfo.lowMemory) {
+            // Android reports critical low memory — force smallest model
+            val tinyModel = if (config.modelSize.isEnglishOnly) WhisperModelSize.TINY_EN else WhisperModelSize.TINY
+            Log.w(TAG, "Device in low memory state (${availableMB}MB available). " +
+                "Forcing ${tinyModel.displayName} to prevent ANR")
+            config = config.copy(modelSize = tinyModel)
+        } else if (availableMB < config.modelSize.minRAMMB) {
+            val isEnglish = config.modelSize.isEnglishOnly
+            val downgradedModel = WhisperModelSize.forAvailableRAM(availableMB, isEnglish)
+            Log.w(TAG, "Insufficient available RAM for ${config.modelSize.displayName} " +
+                "(need ${config.modelSize.minRAMMB}MB, have ${availableMB}MB available). " +
+                "Downgrading to ${downgradedModel.displayName}")
+            config = config.copy(modelSize = downgradedModel)
+        } else {
+            Log.d(TAG, "Memory check OK: ${availableMB}MB available, " +
+                "${config.modelSize.displayName} needs ${config.modelSize.minRAMMB}MB")
+        }
 
         // Step 3: Load model (auto-download if missing)
         var modelPath = config.resolveModelPath(context)

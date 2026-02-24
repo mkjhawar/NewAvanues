@@ -93,7 +93,14 @@ class ApiKeyManager(context: Context) {
      * @param provider Provider type
      * @return LLMResult.Success with API key, or LLMResult.Error if not found
      */
-    suspend fun getApiKey(provider: ProviderType): LLMResult<String> {
+    /**
+     * Synchronous API key retrieval — no suspension points.
+     *
+     * All operations (System.getenv, EncryptedSharedPreferences.getString) are
+     * synchronous, so this does not need to be a suspend function. Use this from
+     * non-coroutine contexts (e.g., Hilt @Provides methods) to avoid runBlocking.
+     */
+    fun getApiKeyBlocking(provider: ProviderType): LLMResult<String> {
         return try {
             // Ignore LOCAL provider (doesn't need API keys)
             if (provider == ProviderType.LOCAL) {
@@ -133,6 +140,14 @@ class ApiKeyManager(context: Context) {
                 cause = e
             )
         }
+    }
+
+    /**
+     * Suspend wrapper for coroutine callers — delegates to [getApiKeyBlocking].
+     * Retained for backward compatibility with existing suspend call sites.
+     */
+    suspend fun getApiKey(provider: ProviderType): LLMResult<String> {
+        return getApiKeyBlocking(provider)
     }
 
     /**
