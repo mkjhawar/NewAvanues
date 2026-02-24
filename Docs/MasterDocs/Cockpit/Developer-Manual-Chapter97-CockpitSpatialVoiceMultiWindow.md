@@ -52,7 +52,7 @@ The UI follows the **SpatialVoice** design language with full **AvanueUI v5.1** 
 
 | Source Set | Contents |
 |-----------|---------|
-| `commonMain` | Models (CockpitFrame, PanelRole, FrameContent.ExternalApp), constants, all layout composables, LayoutEngine, CommandBar, CockpitScreenContent, SpatialViewportController, ISpatialOrientationSource, LayoutModeResolver, ICockpitRepository, IExternalAppResolver, ExternalAppContent |
+| `commonMain` | Models (CockpitFrame, PanelRole, FrameContent.ExternalApp), constants, all layout composables, LayoutEngine, CommandBar, CockpitScreenContent, SpatialViewportController, ISpatialOrientationSource, LayoutModeResolver, ICockpitRepository, IExternalAppResolver, ExternalAppContent, SpeechPerformanceCard |
 | `androidMain` | CockpitScreen (thin wrapper), ContentRenderer (AndroidView + ExternalApp wiring), AndroidSpatialOrientationSource (IMU), AndroidExternalAppResolver (PackageManager + Intent) |
 | `desktopMain` | DesktopSpatialOrientationSource (manual input fallback), DesktopExternalAppResolver (stub) |
 
@@ -724,6 +724,7 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 **CockpitViewModel v2.4:**
 - `updateFrame(frameId, transform)` helper centralizes the map-match-copy-save pattern across 7 frame mutation methods
 - `generateId()` uses `kotlin.uuid.Uuid.random()` (Kotlin 2.1.0) for cryptographic-quality IDs
+- `speechMetrics: StateFlow<SpeechMetricsSnapshot?>` — pushed by platform bridge collecting from engine StateFlow. `updateSpeechMetrics(snapshot)` sets the value. Combined into `dashboardState` via `combine(_sessions, _activeSession, _speechMetrics)`
 
 **ContentRenderer content actions:**
 - **Image:** `zoom` + `rotation` state via `graphicsLayer`, handles `IMAGE_ZOOM_IN/OUT/ROTATE`
@@ -765,6 +766,18 @@ Two-layer defense against `ExoPlaybackException: FileDataSource$FileDataSourceEx
 - **Layer 2 (VideoPlayer):** Belt-and-suspenders early-return guard at the top of `VideoPlayer` composable. Blank URI shows a centered placeholder (VideoLibrary icon + "No video selected") and returns before `ExoPlayer.Builder` is ever called. Protects against any future caller that bypasses ContentRenderer.
 
 See fix doc: `docs/fixes/videoavanue/VideoAvanue-Fix-ExoPlayerEmptyUriCrash-260224-V1.md`
+
+### 260224 — Speech Engine Metrics Dashboard Card
+
+New `SpeechPerformanceCard` composable (commonMain) displays live speech engine metrics on the Dashboard:
+
+- **DashboardState:** Added `@Transient speechMetrics: SpeechMetricsSnapshot?` field (not serialized — runtime-only metrics)
+- **CockpitViewModel:** New `_speechMetrics` StateFlow combined into `dashboardState` via `combine(_sessions, _activeSession, _speechMetrics)`. Platform bridges call `updateSpeechMetrics(snapshot)` to push data from `WhisperEngine.metricsSnapshot` or `GoogleCloudEngine.metricsSnapshot`
+- **DashboardLayout:** Full-width `SpeechPerformanceCard` in a "Speech Engine" section, shown only when `speechMetrics != null`
+- **SpeechPerformanceCard:** Compact card with engine name, model size, health dot (GOOD/WARNING/CRITICAL/IDLE), and 6 metrics (latency, RTF, confidence, success rate, total transcriptions, language). Uses `AvanueCard` + `AvanueTheme.colors`. AVID voice identifier on card root
+- **Dependency:** Cockpit `build.gradle.kts` now depends on SpeechRecognition module (commonMain)
+
+See Chapter 102 for `SpeechMetricsSnapshot` model and engine-side metrics collection.
 
 ### 260222 — ContentRenderer Import Fix
 `ContentRenderer.kt` imports `CameraPreview` for the `FrameContent.Camera` content type. The import was corrected from the non-existent `com.augmentalis.cameraavanue` package to `com.augmentalis.photoavanue.CameraPreview`, which is the actual composable in the PhotoAvanue module (Chapter 98). The orphaned CameraAvanue module has been deleted — PhotoAvanue is the canonical camera module.
