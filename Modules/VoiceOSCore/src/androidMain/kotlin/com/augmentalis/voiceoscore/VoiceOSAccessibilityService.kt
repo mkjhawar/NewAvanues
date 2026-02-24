@@ -58,8 +58,8 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
     private val screenFingerprinter = ScreenFingerprinter()
     @Volatile private var lastScreenHash: String = ""
 
-    // Service state
-    private var isServiceReady = false
+    // Service state — volatile for thread safety (Main callbacks + Default coroutines)
+    @Volatile private var isServiceReady = false
 
     // NAV-500 Fix #1: Event debouncing to prevent excessive processing
     @Volatile private var lastEventProcessTime = 0L
