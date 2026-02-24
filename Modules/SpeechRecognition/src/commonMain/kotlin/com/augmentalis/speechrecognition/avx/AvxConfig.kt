@@ -5,7 +5,12 @@
  * Created: 2026-02-24
  *
  * Platform-agnostic configuration for the ONNX-based command recognition engine.
- * Supports hot words boosting, beam size tuning, and language selection.
+ * Maps to Sherpa-ONNX OnlineRecognizerConfig parameters internally.
+ *
+ * Key Sherpa-ONNX constraints:
+ * - Hot words require decodingMethod = "modified_beam_search"
+ * - Hot words require transducer model type (NOT paraformer or CTC)
+ * - Sample rate must be 16000 Hz
  */
 package com.augmentalis.speechrecognition.avx
 
@@ -13,7 +18,7 @@ package com.augmentalis.speechrecognition.avx
  * Configuration for the AVX engine.
  *
  * Unlike Whisper (which loads a single multilingual model), AVX loads a
- * language-specific model and uses hot words to bias toward known commands.
+ * language-specific transducer model and uses hot words to bias toward known commands.
  */
 data class AvxConfig(
     /** Target language for recognition */
@@ -53,15 +58,39 @@ data class AvxConfig(
 
     /**
      * Number of N-best hypotheses to request from the decoder.
+     * Maps to maxActivePaths in modified_beam_search.
      * More candidates = better chance of command match, but slightly slower.
      */
-    val nBestCount: Int = 5,
+    val nBestCount: Int = 4,
 
-    /** Custom model file path. If set, overrides language-based path resolution. */
+    /**
+     * Decoding method for the transducer model.
+     * MUST be "modified_beam_search" for hot words support.
+     * "greedy_search" is faster but disables hot words entirely.
+     */
+    val decodingMethod: String = "modified_beam_search",
+
+    /**
+     * Maximum active paths for beam search.
+     * Higher = more exploration = better accuracy, but slower.
+     * Must match nBestCount or be >= nBestCount.
+     */
+    val maxActivePaths: Int = 4,
+
+    /**
+     * Enable endpoint detection (silence-based utterance segmentation).
+     * When true, Sherpa-ONNX automatically detects end of speech.
+     */
+    val enableEndpoint: Boolean = true,
+
+    /**
+     * Blank penalty for transducer decoding.
+     * Helps reduce insertions. 0.0 = no penalty, higher = fewer blanks.
+     */
+    val blankPenalty: Float = 0.0f,
+
+    /** Custom model directory path. If set, overrides language-based path resolution. */
     val customModelPath: String? = null,
-
-    /** Enable streaming mode (partial results as speech progresses) */
-    val enableStreaming: Boolean = false,
 
     /**
      * Sample rate for audio input.
@@ -112,16 +141,46 @@ data class AvxConfig(
         if (sampleRate != 16000) {
             return Result.failure(IllegalArgumentException("sampleRate must be 16000 (Sherpa-ONNX requirement)"))
         }
+        if (decodingMethod != "modified_beam_search" && decodingMethod != "greedy_search") {
+            return Result.failure(IllegalArgumentException(
+                "decodingMethod must be 'modified_beam_search' or 'greedy_search'"
+            ))
+        }
+        if (decodingMethod != "modified_beam_search" && hotWords.isNotEmpty()) {
+            return Result.failure(IllegalArgumentException(
+                "Hot words require decodingMethod='modified_beam_search'"
+            ))
+        }
+        if (!language.hasTransducerModel && language.tier != AvxModelTier.PLANNED) {
+            return Result.failure(IllegalArgumentException(
+                "Language '${language.displayName}' does not have a transducer model"
+            ))
+        }
         return Result.success(Unit)
     }
 
     companion object {
         /**
          * Create a config for command recognition with the given language.
+         * Returns null if the language doesn't have a transducer model.
          */
-        fun forLanguage(langCode: String): AvxConfig {
-            val language = AvxLanguage.forCode(langCode) ?: AvxLanguage.ENGLISH
+        fun forLanguage(langCode: String): AvxConfig? {
+            val language = AvxLanguage.forCode(langCode) ?: return null
+            if (!language.hasTransducerModel) return null
             return AvxConfig(language = language)
+        }
+
+        /**
+         * Create a config for command recognition, falling back to English
+         * if the requested language doesn't have a transducer model.
+         */
+        fun forLanguageOrFallback(langCode: String): AvxConfig {
+            val language = AvxLanguage.forCode(langCode)
+            return if (language != null && language.hasTransducerModel) {
+                AvxConfig(language = language)
+            } else {
+                AvxConfig(language = AvxLanguage.ENGLISH)
+            }
         }
     }
 }

@@ -1,193 +1,313 @@
 /**
- * AvxNative.kt - Thread-safe JNI wrapper for Sherpa-ONNX on Android
+ * AvxNative.kt - Thread-safe wrapper around Sherpa-ONNX OnlineRecognizer for Android
  *
  * Copyright (C) Augmentalis Inc, Intelligent Devices LLC
  * Created: 2026-02-24
  *
- * Provides thread-safe access to the Sherpa-ONNX native library (sherpa-onnx-jni).
- * All native calls are serialized through a single synchronized lock to prevent
- * concurrent access to ONNX Runtime sessions.
+ * Provides thread-safe access to the Sherpa-ONNX streaming transducer recognizer.
+ * Wraps the official com.k2fsa.sherpa.onnx Kotlin API rather than raw JNI.
  *
- * Native library: libsherpa-onnx-jni.so (bundled via sherpa-onnx AAR dependency)
- * JNI package: com.augmentalis.speechrecognition.avx.AvxNative
+ * Responsibilities:
+ * 1. Thread safety — all recognizer calls serialized through lock
+ * 2. Hot words file management — writes hot words to temp file for Sherpa config
+ * 3. Model lifecycle — create/release OnlineRecognizer and OnlineStream
+ * 4. Audio streaming — acceptWaveform + decode + getResult pipeline
+ *
+ * Native library: libsherpa-onnx-jni.so (bundled in sherpa-onnx AAR)
  */
 package com.augmentalis.speechrecognition.avx
 
+import android.content.Context
 import android.util.Log
+import com.k2fsa.sherpa.onnx.EndpointConfig
+import com.k2fsa.sherpa.onnx.EndpointRule
+import com.k2fsa.sherpa.onnx.FeatureConfig
+import com.k2fsa.sherpa.onnx.OnlineModelConfig
+import com.k2fsa.sherpa.onnx.OnlineRecognizer
+import com.k2fsa.sherpa.onnx.OnlineRecognizerConfig
+import com.k2fsa.sherpa.onnx.OnlineStream
+import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig
+import java.io.File
+
+// AvxTranscriptionResult and AvxModelPaths are defined in commonMain/AvxModels.kt
 
 /**
- * Transcription result from AVX/Sherpa-ONNX.
- */
-data class AvxTranscriptionResult(
-    /** Best hypothesis text */
-    val text: String,
-    /** Confidence score [0.0-1.0] */
-    val confidence: Float,
-    /** Alternative hypotheses (N-best minus the best) */
-    val alternatives: List<String> = emptyList()
-)
-
-/**
- * Thread-safe JNI wrapper for Sherpa-ONNX native calls.
+ * Thread-safe wrapper around Sherpa-ONNX OnlineRecognizer.
  *
- * Why this exists (same rationale as WhisperNative):
- * 1. Thread safety — ONNX Runtime sessions are not thread-safe
- * 2. Null-pointer guards — calling native with ptr=0 causes SIGSEGV
- * 3. Library loading — idempotent System.loadLibrary management
+ * Unlike the previous raw JNI approach, this uses the official Sherpa-ONNX
+ * Kotlin API (OnlineRecognizer, OnlineStream) which handles native library
+ * loading and session management internally.
  */
-object AvxNative {
+class AvxNative(private val context: Context) {
 
-    private const val TAG = "AvxNative"
+    companion object {
+        private const val TAG = "AvxNative"
+    }
+
+    private val lock = Any()
 
     @Volatile
-    private var isLibraryLoaded = false
+    private var recognizer: OnlineRecognizer? = null
+
+    @Volatile
+    private var stream: OnlineStream? = null
+
+    @Volatile
+    private var hotWordsFile: File? = null
 
     /**
-     * Load the Sherpa-ONNX native library. Safe to call multiple times.
+     * Create and configure the OnlineRecognizer with a transducer model.
+     *
+     * @param modelPaths Paths to the decrypted model files (encoder, decoder, joiner, tokens)
+     * @param config AVX engine configuration
+     * @return true if recognizer was created successfully
      */
-    fun ensureLoaded(): Boolean {
-        if (isLibraryLoaded) return true
-        return synchronized(this) {
-            if (isLibraryLoaded) return@synchronized true
+    fun createRecognizer(modelPaths: AvxModelPaths, config: AvxConfig): Boolean {
+        return synchronized(lock) {
             try {
-                System.loadLibrary("sherpa-onnx-jni")
-                isLibraryLoaded = true
-                Log.i(TAG, "sherpa-onnx-jni loaded")
+                // Release any existing recognizer
+                releaseInternal()
+
+                // Write hot words file if commands are set
+                val hwFile = writeHotWordsFile(config.hotWords)
+
+                val transducerConfig = OnlineTransducerModelConfig(
+                    encoder = modelPaths.encoderPath,
+                    decoder = modelPaths.decoderPath,
+                    joiner = modelPaths.joinerPath
+                )
+
+                val modelConfig = OnlineModelConfig(
+                    transducer = transducerConfig,
+                    tokens = modelPaths.tokensPath,
+                    numThreads = config.effectiveThreadCount(),
+                    debug = false,
+                    provider = "cpu"
+                )
+
+                // Endpoint detection: tuned for short voice commands
+                val endpointConfig = EndpointConfig(
+                    rule1 = EndpointRule(
+                        mustContainNonSilence = false,
+                        minTrailingSilence = 2.4f,   // 2.4s pure silence = end
+                        minUtteranceLength = 0f
+                    ),
+                    rule2 = EndpointRule(
+                        mustContainNonSilence = true,
+                        minTrailingSilence = 0.8f,    // 0.8s silence after speech = end
+                        minUtteranceLength = 0f
+                    ),
+                    rule3 = EndpointRule(
+                        mustContainNonSilence = false,
+                        minTrailingSilence = 0f,
+                        minUtteranceLength = 15f      // Max 15s utterance
+                    )
+                )
+
+                val recognizerConfig = OnlineRecognizerConfig(
+                    featConfig = FeatureConfig(sampleRate = config.sampleRate, featureDim = 80),
+                    modelConfig = modelConfig,
+                    endpointConfig = endpointConfig,
+                    enableEndpoint = config.enableEndpoint,
+                    decodingMethod = config.decodingMethod,
+                    maxActivePaths = config.maxActivePaths,
+                    hotwordsFile = hwFile?.absolutePath ?: "",
+                    hotwordsScore = config.defaultHotWordBoost,
+                    blankPenalty = config.blankPenalty
+                )
+
+                recognizer = OnlineRecognizer(config = recognizerConfig)
+                stream = recognizer?.createStream()
+                hotWordsFile = hwFile
+
+                Log.i(TAG, "OnlineRecognizer created: lang=${config.language.langCode}, " +
+                        "threads=${config.effectiveThreadCount()}, " +
+                        "hotWords=${config.hotWords.size}, " +
+                        "decoding=${config.decodingMethod}")
                 true
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to load sherpa-onnx-jni", e)
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create OnlineRecognizer", e)
+                releaseInternal()
                 false
             }
         }
     }
 
     /**
-     * Create an ONNX Runtime session from a model file.
+     * Feed audio samples to the recognizer stream.
      *
-     * @param modelPath Path to the decrypted ONNX model file
-     * @param numThreads Number of inference threads
+     * @param samples 16kHz mono float audio data
      * @param sampleRate Audio sample rate (must be 16000)
-     * @return Session pointer (0 if failed)
      */
-    fun createSession(modelPath: String, numThreads: Int, sampleRate: Int): Long {
-        if (!ensureLoaded()) return 0L
-        return synchronized(this) {
+    fun acceptWaveform(samples: FloatArray, sampleRate: Int = 16000) {
+        synchronized(lock) {
+            val s = stream ?: return
             try {
-                nativeCreateSession(modelPath, numThreads, sampleRate)
+                s.acceptWaveform(samples, sampleRate)
             } catch (e: Exception) {
-                Log.e(TAG, "createSession failed: $modelPath", e)
-                0L
+                Log.e(TAG, "acceptWaveform failed", e)
             }
         }
     }
 
     /**
-     * Free an ONNX Runtime session and release resources.
+     * Run decoding on accumulated audio. Call after acceptWaveform.
+     * May need to be called multiple times until isReady returns false.
      */
-    fun freeSession(sessionPtr: Long) {
-        if (sessionPtr == 0L) return
-        synchronized(this) {
+    fun decode() {
+        synchronized(lock) {
+            val r = recognizer ?: return
+            val s = stream ?: return
             try {
-                nativeFreeSession(sessionPtr)
+                while (r.isReady(s)) {
+                    r.decode(s)
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "freeSession failed", e)
+                Log.e(TAG, "decode failed", e)
             }
         }
     }
 
     /**
-     * Set hot words for decoder biasing.
+     * Get the current recognition result.
      *
-     * @param sessionPtr Active session pointer
-     * @param phrases Array of hot word phrases
-     * @param boosts Array of boost scores (parallel with phrases)
+     * @return Transcription result with text, confidence, and alternatives
      */
-    fun setHotWords(sessionPtr: Long, phrases: Array<String>, boosts: FloatArray) {
-        if (sessionPtr == 0L) return
-        synchronized(this) {
+    fun getResult(): AvxTranscriptionResult {
+        return synchronized(lock) {
+            val r = recognizer ?: return AvxTranscriptionResult("", 0f)
+            val s = stream ?: return AvxTranscriptionResult("", 0f)
             try {
-                nativeSetHotWords(sessionPtr, phrases, boosts)
-            } catch (e: Exception) {
-                Log.e(TAG, "setHotWords failed", e)
-            }
-        }
-    }
+                val result = r.getResult(s)
+                val text = result.text.trim()
 
-    /**
-     * Run transcription on audio data.
-     *
-     * @param sessionPtr Active session pointer
-     * @param audioData 16kHz mono float audio samples
-     * @param nBest Number of N-best hypotheses to return
-     * @return Transcription result with best text and alternatives
-     */
-    fun transcribe(sessionPtr: Long, audioData: FloatArray, nBest: Int = 5): AvxTranscriptionResult {
-        if (sessionPtr == 0L) return AvxTranscriptionResult("", 0f)
+                // Sherpa-ONNX doesn't provide a direct confidence score.
+                // Estimate from token count and text length as a heuristic.
+                // The real confidence filtering happens in ConfidenceScorer.
+                val confidence = if (text.isNotEmpty()) {
+                    // Non-empty result gets base confidence of 0.7,
+                    // boosted by token count (more tokens = more confident the decoder was)
+                    val tokenBonus = (result.tokens.size.coerceAtMost(10) * 0.03f)
+                    (0.7f + tokenBonus).coerceAtMost(1.0f)
+                } else {
+                    0f
+                }
 
-        return synchronized(this) {
-            try {
-                val rawResult = nativeTranscribe(sessionPtr, audioData, nBest)
-                parseTranscriptionResult(rawResult)
+                AvxTranscriptionResult(
+                    text = text,
+                    confidence = confidence,
+                    alternatives = emptyList(), // OnlineRecognizer returns single best
+                    tokens = result.tokens.toList(),
+                    timestamps = result.timestamps.toList()
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "transcribe failed", e)
+                Log.e(TAG, "getResult failed", e)
                 AvxTranscriptionResult("", 0f)
             }
         }
     }
 
     /**
-     * Get system info from ONNX Runtime.
+     * Check if the recognizer has detected an endpoint (end of utterance).
      */
-    fun getSystemInfo(): String {
-        if (!ensureLoaded()) return "library not loaded"
-        return synchronized(this) {
+    fun isEndpoint(): Boolean {
+        return synchronized(lock) {
+            val r = recognizer ?: return false
+            val s = stream ?: return false
             try {
-                nativeGetSystemInfo()
+                r.isEndpoint(s)
             } catch (e: Exception) {
-                "error: ${e.message}"
+                false
             }
         }
     }
 
-    // --- JNI External Declarations ---
-
-    @JvmStatic
-    private external fun nativeCreateSession(modelPath: String, numThreads: Int, sampleRate: Int): Long
-
-    @JvmStatic
-    private external fun nativeFreeSession(sessionPtr: Long)
-
-    @JvmStatic
-    private external fun nativeSetHotWords(sessionPtr: Long, phrases: Array<String>, boosts: FloatArray)
-
     /**
-     * Returns a pipe-delimited string: "text|confidence|alt1|alt2|..."
-     * Parsed by [parseTranscriptionResult].
+     * Reset the stream for a new utterance.
+     * Call after processing an endpoint to start fresh.
      */
-    @JvmStatic
-    private external fun nativeTranscribe(sessionPtr: Long, audioData: FloatArray, nBest: Int): String
-
-    @JvmStatic
-    private external fun nativeGetSystemInfo(): String
-
-    // --- Result Parsing ---
-
-    /**
-     * Parse the pipe-delimited native result into a structured object.
-     * Format: "text|confidence|alt1|alt2|..."
-     */
-    private fun parseTranscriptionResult(raw: String): AvxTranscriptionResult {
-        if (raw.isBlank()) return AvxTranscriptionResult("", 0f)
-
-        val parts = raw.split("|")
-        val text = parts.getOrElse(0) { "" }.trim()
-        val confidence = parts.getOrElse(1) { "0" }.toFloatOrNull() ?: 0f
-        val alternatives = if (parts.size > 2) {
-            parts.subList(2, parts.size).map { it.trim() }.filter { it.isNotBlank() }
-        } else {
-            emptyList()
+    fun reset() {
+        synchronized(lock) {
+            val r = recognizer ?: return
+            val s = stream ?: return
+            try {
+                r.reset(s)
+            } catch (e: Exception) {
+                Log.e(TAG, "reset failed", e)
+            }
         }
+    }
 
-        return AvxTranscriptionResult(text, confidence, alternatives)
+    /**
+     * Update hot words by rewriting the hot words file and recreating the stream.
+     *
+     * Sherpa-ONNX supports per-stream hot words via createStream(hotwords).
+     * We recreate the stream with the new hot words string.
+     */
+    fun updateHotWords(hotWords: List<HotWord>) {
+        synchronized(lock) {
+            val r = recognizer ?: return
+            try {
+                // Build hot words string: "phrase1 :boost1\nphrase2 :boost2\n..."
+                val hotWordsStr = hotWords.joinToString("\n") { "${it.phrase} :${it.boost}" }
+
+                // Recreate stream with new hot words
+                stream?.let { /* old stream will be GC'd */ }
+                stream = r.createStream(hotWordsStr)
+
+                Log.d(TAG, "Hot words updated: ${hotWords.size} phrases")
+            } catch (e: Exception) {
+                Log.e(TAG, "updateHotWords failed", e)
+            }
+        }
+    }
+
+    /**
+     * Check if the recognizer is initialized and ready.
+     */
+    fun isReady(): Boolean = recognizer != null && stream != null
+
+    /**
+     * Release all resources.
+     */
+    fun release() {
+        synchronized(lock) {
+            releaseInternal()
+        }
+    }
+
+    private fun releaseInternal() {
+        try {
+            stream = null
+            recognizer?.release()
+            recognizer = null
+            hotWordsFile?.delete()
+            hotWordsFile = null
+            Log.d(TAG, "OnlineRecognizer released")
+        } catch (e: Exception) {
+            Log.e(TAG, "release failed", e)
+        }
+    }
+
+    /**
+     * Write hot words to a temporary text file for Sherpa-ONNX config.
+     * Format: one entry per line, "phrase :boost"
+     * Example: "scroll down :10.0"
+     *
+     * @return File object, or null if no hot words
+     */
+    private fun writeHotWordsFile(hotWords: List<HotWord>): File? {
+        if (hotWords.isEmpty()) return null
+
+        val cacheDir = File(context.cacheDir, "avx_hw")
+        cacheDir.mkdirs()
+        val hwFile = File(cacheDir, "hotwords.txt")
+
+        val content = hotWords.joinToString("\n") { "${it.phrase} :${it.boost}" }
+        hwFile.writeText(content)
+
+        Log.d(TAG, "Hot words file written: ${hwFile.absolutePath} (${hotWords.size} entries)")
+        return hwFile
     }
 }
