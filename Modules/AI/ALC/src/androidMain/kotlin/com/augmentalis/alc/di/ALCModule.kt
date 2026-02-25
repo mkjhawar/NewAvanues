@@ -8,11 +8,15 @@ import com.augmentalis.alc.engine.*
 import com.augmentalis.alc.provider.*
 import com.augmentalis.alc.response.HybridResponseGenerator
 import com.augmentalis.alc.response.TemplateResponseGenerator
+import com.augmentalis.llm.LLMResult
+import com.augmentalis.llm.security.ApiKeyManager
+import com.augmentalis.llm.ProviderType as LLMProviderType
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import timber.log.Timber
 import javax.inject.Named
 import javax.inject.Singleton
 
@@ -24,6 +28,16 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object ALCModule {
+
+    private fun resolveApiKey(apiKeyManager: ApiKeyManager, provider: LLMProviderType): String? {
+        return when (val result = apiKeyManager.getApiKeyBlocking(provider)) {
+            is LLMResult.Success -> result.data
+            is LLMResult.Error -> {
+                Timber.w("${provider.name} API key not configured: ${result.message}")
+                null
+            }
+        }
+    }
 
     @Provides
     @Singleton
@@ -38,12 +52,20 @@ object ALCModule {
 
     @Provides
     @Singleton
+    fun provideApiKeyManager(
+        @ApplicationContext context: Context
+    ): ApiKeyManager = ApiKeyManager(context)
+
+    @Provides
+    @Singleton
     @Named("anthropic")
-    fun provideAnthropicProvider(): ILLMProvider {
+    fun provideAnthropicProvider(
+        apiKeyManager: ApiKeyManager
+    ): ILLMProvider {
         return AnthropicProvider(
             ProviderConfig(
                 type = ProviderType.ANTHROPIC,
-                apiKey = System.getenv("ANTHROPIC_API_KEY"),
+                apiKey = resolveApiKey(apiKeyManager, LLMProviderType.ANTHROPIC),
                 model = "claude-3-5-sonnet-20241022"
             )
         )
@@ -52,11 +74,13 @@ object ALCModule {
     @Provides
     @Singleton
     @Named("openai")
-    fun provideOpenAIProvider(): ILLMProvider {
+    fun provideOpenAIProvider(
+        apiKeyManager: ApiKeyManager
+    ): ILLMProvider {
         return OpenAIProvider(
             ProviderConfig(
                 type = ProviderType.OPENAI,
-                apiKey = System.getenv("OPENAI_API_KEY"),
+                apiKey = resolveApiKey(apiKeyManager, LLMProviderType.OPENAI),
                 model = "gpt-4o"
             )
         )
@@ -65,11 +89,13 @@ object ALCModule {
     @Provides
     @Singleton
     @Named("groq")
-    fun provideGroqProvider(): ILLMProvider {
+    fun provideGroqProvider(
+        apiKeyManager: ApiKeyManager
+    ): ILLMProvider {
         return GroqProvider(
             ProviderConfig(
                 type = ProviderType.GROQ,
-                apiKey = System.getenv("GROQ_API_KEY"),
+                apiKey = resolveApiKey(apiKeyManager, LLMProviderType.GROQ),
                 model = "llama-3.1-70b-versatile"
             )
         )
@@ -78,11 +104,13 @@ object ALCModule {
     @Provides
     @Singleton
     @Named("google")
-    fun provideGoogleAIProvider(): ILLMProvider {
+    fun provideGoogleAIProvider(
+        apiKeyManager: ApiKeyManager
+    ): ILLMProvider {
         return GoogleAIProvider(
             ProviderConfig(
                 type = ProviderType.GOOGLE_AI,
-                apiKey = System.getenv("GOOGLE_AI_API_KEY"),
+                apiKey = resolveApiKey(apiKeyManager, LLMProviderType.GOOGLE_AI),
                 model = "gemini-1.5-pro"
             )
         )

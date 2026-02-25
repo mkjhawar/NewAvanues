@@ -3,7 +3,6 @@
  * Path: /libraries/DeviceManager/src/main/java/com/augmentalis/devicemanager/imu/CursorAdapter.kt
  *
  * Created: 2025-01-23 02:00 PDT
- * Author: VOS4 Development Team
  * Version: 1.0.0
  *
  * Purpose: Adapter to connect cursor applications with centralized IMUManager

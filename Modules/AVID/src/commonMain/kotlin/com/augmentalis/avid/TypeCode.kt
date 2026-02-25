@@ -71,7 +71,7 @@ object TypeCode {
         return when (typeName.lowercase()) {
             "button", "imagebutton", "floatingactionbutton" -> BUTTON
             "input", "edittext", "textfield", "textinput" -> INPUT
-            "text", "textview", "label" -> TEXT
+            "text", "textview", "label", "span", "p", "h1", "h2", "h3", "h4", "h5", "h6" -> TEXT
             "image", "imageview", "icon" -> IMAGE
             "scroll", "scrollview", "recyclerview", "listview" -> SCROLL
             "card", "cardview" -> CARD

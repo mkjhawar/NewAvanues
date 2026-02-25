@@ -2,7 +2,6 @@
  * ServiceState.kt - Service state management
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-06
  *
  * KMP state management for VoiceOS service lifecycle.

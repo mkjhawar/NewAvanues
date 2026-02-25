@@ -2,7 +2,6 @@
  * HUDModels.kt
  * 
  * Created: 2025-01-23
- * Author: VOS4 Development Team
  * Version: 1.0.0
  * 
  * Purpose: Data models for HUD system testing and operations

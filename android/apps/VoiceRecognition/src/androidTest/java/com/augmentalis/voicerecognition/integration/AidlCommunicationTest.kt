@@ -2,7 +2,6 @@
  * AidlCommunicationTest.kt - AIDL communication integration tests
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-08-28
  * 
  * Tests for actual AIDL interface communication between VoiceRecognition service

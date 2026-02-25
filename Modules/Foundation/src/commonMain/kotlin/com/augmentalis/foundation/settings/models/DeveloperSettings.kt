@@ -39,6 +39,10 @@ data class DeveloperSettings(
     val scrollEventDebounceMs: Long = DEFAULT_SCROLL_EVENT_DEBOUNCE_MS,
     val screenChangeDelayMs: Long = DEFAULT_SCREEN_CHANGE_DELAY_MS,
 
+    // Cockpit Debug
+    val forceShellMode: String = "",      // Empty = no override, else CLASSIC/AVANUE_VIEWS/LENS/CANVAS
+    val showShellDebugOverlay: Boolean = false,
+
     // Activation
     val developerModeActivated: Boolean = false
 ) {

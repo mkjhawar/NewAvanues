@@ -2,9 +2,16 @@
  * MainActivity.kt - Main entry point for Avanues Consolidated App
  *
  * Routes to different modules based on which launcher icon was tapped:
- * - AvanuesAlias → hub dashboard (HubDashboardScreen)
+ * - Avanues (default) → Cockpit Dashboard
  * - VoiceAvanueAlias → voice dashboard (HomeScreen)
  * - WebAvanueAlias → full browser (WebAvanue BrowserApp)
+ * - PDFAvanueAlias → Cockpit with PDFAvanue module
+ * - ImageAvanueAlias → Cockpit with ImageAvanue module
+ * - VideoAvanueAlias → Cockpit with VideoAvanue module
+ * - NoteAvanueAlias → Cockpit with NoteAvanue module
+ * - PhotoAvanueAlias → Cockpit with PhotoAvanue module
+ * - CastAvanueAlias → Cockpit with CastAvanue (RemoteCast) module
+ * - DrawAvanueAlias → Cockpit with DrawAvanue (Annotation) module
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -19,15 +26,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -42,7 +50,9 @@ import com.augmentalis.avanueui.display.DisplayProfileResolver
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
 import com.augmentalis.devicemanager.KmpDeviceType
 import com.augmentalis.foundation.settings.models.AvanuesSettings
+import com.augmentalis.foundation.settings.models.DeveloperSettings
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
+import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.cockpit.CockpitEntryViewModel
@@ -50,7 +60,6 @@ import com.augmentalis.voiceavanue.ui.developer.DeveloperConsoleScreen
 import com.augmentalis.voiceavanue.ui.developer.DeveloperSettingsScreen
 import com.augmentalis.voiceavanue.ui.home.CommandsScreen
 import com.augmentalis.voiceavanue.ui.home.HomeScreen
-import com.augmentalis.voiceavanue.ui.hub.HubDashboardScreen
 import com.augmentalis.voiceavanue.ui.about.AboutScreen
 import com.augmentalis.voiceavanue.ui.settings.UnifiedSettingsScreen
 import com.augmentalis.voiceavanue.ui.sync.VosSyncScreen
@@ -106,6 +115,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AvanuesApp(
                         startMode = launchMode,
+                        settings = settings,
                         onNavControllerReady = { this@MainActivity.navController = it }
                     )
                 }
@@ -162,13 +172,20 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Determines which module to launch based on the activity-alias class name.
-     * - ".AvanuesAlias" or default → hub dashboard
-     * - ".VoiceAvanueAlias" → voice dashboard
-     * - ".WebAvanueAlias" → browser
+     * Module-specific aliases (PDF, Image, Video, Note, Photo, Cast, Draw) are
+     * checked first to avoid false matches with broader patterns like "VoiceAvanue".
+     * Falls back to HUB (Cockpit Dashboard) for the default Avanues launcher icon.
      */
     private fun determineLaunchMode(intent: Intent?): AvanueMode {
         val className = intent?.component?.className ?: return AvanueMode.HUB
         return when {
+            className.contains("PDFAvanue") -> AvanueMode.PDF
+            className.contains("ImageAvanue") -> AvanueMode.IMAGE
+            className.contains("VideoAvanue") -> AvanueMode.VIDEO
+            className.contains("NoteAvanue") -> AvanueMode.NOTE
+            className.contains("PhotoAvanue") -> AvanueMode.PHOTO
+            className.contains("CastAvanue") -> AvanueMode.CAST
+            className.contains("DrawAvanue") -> AvanueMode.DRAW
             className.contains("WebAvanue") -> AvanueMode.BROWSER
             className.contains("VoiceAvanue") -> AvanueMode.VOICE
             else -> AvanueMode.HUB
@@ -190,16 +207,29 @@ enum class AvanueMode(val route: String, val label: String) {
     DEVELOPER_CONSOLE("developer_console", "Developer Console"),
     DEVELOPER_SETTINGS("developer_settings", "Developer Settings"),
     VOS_SYNC("vos_sync", "VOS Sync"),
-    COCKPIT("cockpit", "Cockpit")
+    COCKPIT("cockpit", "Cockpit"),
+    PDF("cockpit/pdf", "PDFAvanue"),
+    IMAGE("cockpit/image", "ImageAvanue"),
+    VIDEO("cockpit/video", "VideoAvanue"),
+    NOTE("cockpit/note", "NoteAvanue"),
+    PHOTO("cockpit/photo", "PhotoAvanue"),
+    CAST("cockpit/cast", "CastAvanue"),
+    DRAW("cockpit/draw", "DrawAvanue")
     // Future: CURSOR("cursor", "VoiceCursor"), GAZE("gaze", "GazeControl")
 }
 
 @Composable
 fun AvanuesApp(
     startMode: AvanueMode = AvanueMode.HUB,
+    settings: AvanuesSettings = AvanuesSettings(),
     onNavControllerReady: ((NavHostController) -> Unit)? = null
 ) {
     val navController = rememberNavController()
+
+    // Collect developer settings for shell mode override
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val devRepo = remember(context) { DeveloperPreferencesRepository(context) }
+    val devSettings by devRepo.settings.collectAsState(initial = DeveloperSettings())
 
     // Expose navController to activity for onNewIntent handling
     LaunchedEffect(navController) {
@@ -211,25 +241,20 @@ fun AvanuesApp(
         startDestination = startMode.route
     ) {
         composable(AvanueMode.HUB.route) {
-            HubDashboardScreen(
-                onNavigateToRoute = { route ->
-                    navController.navigate(route) { launchSingleTop = true }
-                },
-                onNavigateToSettings = {
-                    navController.navigate(AvanueMode.SETTINGS.route) {
-                        launchSingleTop = true
+            val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+            CockpitScreen(
+                viewModel = cockpitEntry.cockpitViewModel,
+                onNavigateBack = { /* no-op, this is home */ },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) },
+                onSpecialModuleLaunch = { moduleId ->
+                    when (moduleId) {
+                        "voicecursor" -> navController.navigate(AvanueMode.VOICE.route)
+                        else -> android.util.Log.w("MainActivity",
+                            "Unknown special module: $moduleId — no navigation target")
                     }
                 },
-                onNavigateToAbout = {
-                    navController.navigate(AvanueMode.ABOUT.route) {
-                        launchSingleTop = true
-                    }
-                },
-                onNavigateToDeveloperSettings = {
-                    navController.navigate(AvanueMode.DEVELOPER_SETTINGS.route) {
-                        launchSingleTop = true
-                    }
-                }
+                userShellMode = settings.shellMode,
+                devForceShellMode = devSettings.forceShellMode
             )
         }
 
@@ -305,8 +330,50 @@ fun AvanuesApp(
             val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) },
+                userShellMode = settings.shellMode,
+                devForceShellMode = devSettings.forceShellMode
             )
         }
+
+        // ── Module-Direct Launcher Routes ──
+        // Each launches Cockpit with a specific module auto-opened via launchModule()
+        moduleDirectRoute(AvanueMode.PDF, "pdfavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.IMAGE, "imageavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.VIDEO, "videoavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.NOTE, "noteavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.PHOTO, "photoavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.CAST, "remotecast", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.DRAW, "annotationavanue", navController, settings.shellMode, devSettings.forceShellMode)
+    }
+}
+
+/**
+ * Registers a module-direct launcher route — launches Cockpit with a specific
+ * module auto-opened via [CockpitViewModel.launchModule].
+ * Used for launcher icon aliases (PDF, Image, Video, Note, Photo, Cast, Draw).
+ */
+private fun NavGraphBuilder.moduleDirectRoute(
+    mode: AvanueMode,
+    moduleId: String,
+    navController: NavHostController,
+    userShellMode: String = "",
+    devForceShellMode: String = ""
+) {
+    composable(mode.route) {
+        val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
+        LaunchedEffect(moduleId) {
+            if (cockpitEntry.cockpitViewModel.activeSession.value == null) {
+                cockpitEntry.cockpitViewModel.launchModule(moduleId)
+            }
+        }
+        CockpitScreen(
+            viewModel = cockpitEntry.cockpitViewModel,
+            onNavigateBack = { navController.popBackStack() },
+            onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) },
+            userShellMode = userShellMode,
+            devForceShellMode = devForceShellMode
+        )
     }
 }

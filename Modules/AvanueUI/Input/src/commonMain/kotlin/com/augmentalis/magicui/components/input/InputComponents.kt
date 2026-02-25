@@ -1,4 +1,4 @@
-package com.augmentalis.avamagic.components.input
+package com.augmentalis.avanueui.input
 
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone

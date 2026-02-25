@@ -1,3 +1,5 @@
+@file:OptIn(FlowPreview::class)
+
 /**
  * LiveDataFlowBridge.kt - Bridge utilities for LiveData to Flow conversion
  *
@@ -20,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -107,10 +110,7 @@ object LiveDataFlowBridge {
 
         // Cleanup when collection is cancelled
         awaitClose {
-            // Remove observer on main thread
-            kotlinx.coroutines.MainScope().launch(Dispatchers.Main.immediate) {
-                removeObserver(observer)
-            }
+            mainScope().launch { removeObserver(observer) }
         }
     }.flowOn(Dispatchers.Default)
 
@@ -144,9 +144,7 @@ object LiveDataFlowBridge {
         }
 
         awaitClose {
-            kotlinx.coroutines.MainScope().launch(Dispatchers.Main.immediate) {
-                removeObserver(observer)
-            }
+            mainScope().launch { removeObserver(observer) }
         }
     }.flowOn(Dispatchers.Default)
 
@@ -178,9 +176,7 @@ object LiveDataFlowBridge {
         }
 
         awaitClose {
-            kotlinx.coroutines.MainScope().launch(Dispatchers.Main.immediate) {
-                removeObserver(observer)
-            }
+            mainScope().launch { removeObserver(observer) }
         }
     }.flowOn(Dispatchers.Default)
 
@@ -217,15 +213,11 @@ object LiveDataFlowBridge {
         }
 
         awaitClose {
-            kotlinx.coroutines.MainScope().launch(Dispatchers.Main.immediate) {
-                removeObserver(observer)
-            }
+            mainScope().launch { removeObserver(observer) }
         }
     }.flowOn(Dispatchers.Default)
 
-    /**
-     * Coroutine launch helper (internal use).
-     */
+    /** Independent scope for observer removal in awaitClose (main thread, fire-and-forget). */
     private fun mainScope() = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + Dispatchers.Main.immediate
     )
@@ -351,7 +343,11 @@ fun <T> Flow<T>.logEmissions(
     logger: (String) -> Unit = { android.util.Log.d("LiveDataFlowBridge", it) }
 ): Flow<T> {
     return this.onEach { value ->
-        logger("[$tag] Emitted: $value")
+        val summary = when (value) {
+            is Collection<*> -> "${value::class.simpleName}(size=${value.size})"
+            else -> value?.let { "${it::class.simpleName}@${it.hashCode().toString(16)}" } ?: "null"
+        }
+        logger("[$tag] Emitted: $summary")
     }
 }
 

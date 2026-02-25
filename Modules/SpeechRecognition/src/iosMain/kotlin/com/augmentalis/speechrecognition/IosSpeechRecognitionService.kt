@@ -16,7 +16,13 @@ package com.augmentalis.speechrecognition
 import com.augmentalis.nlu.matching.CommandMatchingService
 import com.augmentalis.speechrecognition.whisper.IosWhisperConfig
 import com.augmentalis.speechrecognition.whisper.IosWhisperEngine
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.value
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -37,7 +43,7 @@ import platform.Speech.*
  * Engine switching happens at `initialize()` time based on `SpeechConfig.engine`.
  * Both engines share the same result/error/state flows for transparent integration.
  */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class IosSpeechRecognitionService : SpeechRecognitionService {
 
     companion object {
@@ -292,7 +298,15 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
 
             // Start audio engine
             audioEngine?.prepare()
-            audioEngine?.startAndReturnError(null)
+            audioEngine?.let { engine ->
+                memScoped {
+                    val startError = alloc<ObjCObjectVar<NSError?>>()
+                    engine.startAndReturnError(startError.ptr)
+                    startError.value?.let { nsError ->
+                        logError(TAG, "Audio engine start failed: ${nsError.localizedDescription}")
+                    }
+                }
+            }
 
             // Start recognition task
             recognitionTask = speechRecognizer?.recognitionTaskWithRequest(request) { result, error ->
@@ -414,7 +428,15 @@ class IosSpeechRecognitionService : SpeechRecognitionService {
             if (state == ServiceState.PAUSED) {
                 when (activeEngine) {
                     SpeechEngine.WHISPER -> whisperEngine?.resume()
-                    else -> audioEngine?.startAndReturnError(null)
+                    else -> audioEngine?.let { engine ->
+                        memScoped {
+                            val startError = alloc<ObjCObjectVar<NSError?>>()
+                            engine.startAndReturnError(startError.ptr)
+                            startError.value?.let { nsError ->
+                                logError(TAG, "Audio engine resume failed: ${nsError.localizedDescription}")
+                            }
+                        }
+                    }
                 }
                 updateState(ServiceState.LISTENING)
                 logInfo(TAG, "Resumed (engine=$activeEngine)")

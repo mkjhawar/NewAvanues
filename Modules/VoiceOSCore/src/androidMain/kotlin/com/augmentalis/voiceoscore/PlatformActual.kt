@@ -63,11 +63,10 @@ actual object DeviceCapabilityManager {
     }
 
     actual fun getScrollDebounceMs(): Long {
-        return when (getDeviceSpeed()) {
-            DeviceSpeed.FAST -> 400L
-            DeviceSpeed.MEDIUM -> 600L
-            DeviceSpeed.SLOW -> 800L
-        }
+        // Delegate to AdaptiveTimingManager for learned value.
+        // Scroll is a lightweight operation (offset + overlay refresh),
+        // so it uses a separate, faster debounce than content changes.
+        return AdaptiveTimingManager.getScrollDebounceMs()
     }
 
     actual fun setUserDebounceMs(ms: Long?) {
@@ -139,8 +138,8 @@ actual object DeviceCapabilityManager {
                 minIntervalMs = 100L
             )
             TimingOperation.SPEECH_ENGINE_UPDATE -> TimingConfig(
-                debounceMs = 300L,
-                minIntervalMs = 200L
+                debounceMs = AdaptiveTimingManager.getSpeechUpdateDebounceMs(),
+                minIntervalMs = 100L
             )
         }
     }
@@ -260,6 +259,7 @@ internal class AndroidSpeechEngineFactory : ISpeechEngineFactory {
             SpeechEngine.GOOGLE_CLOUD -> true // Requires API key
             SpeechEngine.AZURE -> true // Requires subscription
             SpeechEngine.APPLE_SPEECH -> false // iOS only
+            SpeechEngine.AVX -> true // Requires model download (Sherpa-ONNX)
         }
     }
 
@@ -326,6 +326,11 @@ internal class AndroidSpeechEngineFactory : ISpeechEngineFactory {
                 EngineFeature.PUNCTUATION
             )
             SpeechEngine.APPLE_SPEECH -> emptySet() // Not available on Android
+            SpeechEngine.AVX -> setOf(
+                EngineFeature.OFFLINE_MODE,
+                EngineFeature.CONTINUOUS_RECOGNITION,
+                EngineFeature.CUSTOM_VOCABULARY
+            )
         }
     }
 
@@ -386,6 +391,14 @@ internal class AndroidSpeechEngineFactory : ISpeechEngineFactory {
                 requiresNetwork = false,
                 requiresApiKey = false,
                 notes = "Not available on Android"
+            )
+            SpeechEngine.AVX -> EngineRequirements(
+                permissions = listOf("android.permission.RECORD_AUDIO"),
+                requiresModelDownload = true,
+                modelSizeMB = 70,
+                requiresNetwork = false,
+                requiresApiKey = false,
+                notes = "Download AVX/Sherpa-ONNX transducer model per language"
             )
         }
     }

@@ -2,8 +2,6 @@
  * GPUStateManager.kt - GPU-accelerated state management using RenderEffect
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2025-12-27
  *
  * Provides GPU-accelerated state caching and diffing for MagicEngine.

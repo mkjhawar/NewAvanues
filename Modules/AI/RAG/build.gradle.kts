@@ -24,30 +24,24 @@ kotlin {
     }
 
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach { iosTarget ->
-            iosTarget.binaries.framework {
-                baseName = "AvaRAG"
-                isStatic = true
-            }
+    // iOS targets
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "AvaRAG"
+            isStatic = true
         }
     }
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions.jvmTarget = "17"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -81,6 +75,9 @@ kotlin {
                 // Shared AI modules
                 implementation(project(":Modules:AI:LLM"))
 
+                // NLU module for real BERT WordPiece tokenization
+                implementation(project(":Modules:AI:NLU"))
+
                 // Compose dependencies
                 implementation(project.dependencies.platform(libs.compose.bom))
                 implementation("androidx.compose.ui:ui")
@@ -96,7 +93,11 @@ kotlin {
                 implementation("com.microsoft.onnxruntime:onnxruntime-android:1.16.3")
 
                 // PDF text extraction
-                implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+                implementation("com.tom-roush:pdfbox-android:2.0.27.0") {
+                    exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18")
+                    exclude(group = "org.bouncycastle", module = "bcpkix-jdk15to18")
+                    exclude(group = "org.bouncycastle", module = "bcutil-jdk15to18")
+                }
 
                 // HTML parsing (for HTML files and web documents)
                 implementation("org.jsoup:jsoup:1.17.1")
@@ -131,7 +132,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.rag"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)

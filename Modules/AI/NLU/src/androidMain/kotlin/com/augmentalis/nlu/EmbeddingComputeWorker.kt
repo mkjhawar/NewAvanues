@@ -44,7 +44,7 @@ class EmbeddingComputeWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val utterance = inputData.getString(KEY_UTTERANCE)
         val intent = inputData.getString(KEY_INTENT)
-        val confidence = inputData.getFloat(KEY_CONFIDENCE, 0.8f)
+        val confidence = inputData.getFloat(KEY_CONFIDENCE, NluThresholds.DEFAULT_WORKER_CONFIDENCE)
 
         if (utterance.isNullOrBlank() || intent.isNullOrBlank()) {
             Timber.w("EmbeddingComputeWorker: Missing utterance or intent")

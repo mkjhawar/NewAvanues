@@ -1,5 +1,6 @@
 package com.augmentalis.magiccode.plugins.marketplace
 
+import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 
 /**
@@ -34,7 +35,7 @@ import kotlinx.serialization.Serializable
  *     ),
  *     signature = "base64-encoded-signature",
  *     checksum = "sha256:abc123...",
- *     publishedAt = System.currentTimeMillis(),
+ *     publishedAt = Clock.System.now().toEpochMilliseconds(),
  *     size = 1024000L
  * )
  * ```

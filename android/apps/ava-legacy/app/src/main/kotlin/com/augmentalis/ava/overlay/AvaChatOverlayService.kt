@@ -75,7 +75,6 @@ interface ChatViewModelDependenciesEntryPoint {
     fun chatPreferences(): com.augmentalis.ava.core.data.prefs.ChatPreferences
     fun intentClassifier(): com.augmentalis.nlu.IntentClassifier
     fun modelManager(): com.augmentalis.nlu.ModelManager
-    fun actionsManager(): com.augmentalis.actions.ActionsManager
     fun responseGenerator(): com.augmentalis.llm.response.ResponseGenerator
     // Issue 5.3: IntentLearningManager removed - use nluSelfLearner below
     fun exportConversationUseCase(): com.augmentalis.ava.core.domain.usecase.ExportConversationUseCase
@@ -381,7 +380,6 @@ class AvaChatOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner
                 chatPreferences = entryPoint.chatPreferences(),
                 intentClassifier = entryPoint.intentClassifier(),
                 modelManager = entryPoint.modelManager(),
-                actionsManager = entryPoint.actionsManager(),
                 responseGenerator = entryPoint.responseGenerator(),
                 // Issue 5.3: IntentLearningManager removed - use nluSelfLearner below
                 exportConversationUseCase = entryPoint.exportConversationUseCase(),

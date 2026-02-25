@@ -3,7 +3,6 @@
  * Path: libraries/AvidCreator/src/main/java/com/augmentalis/avidcreator/database/repository/SQLDelightAvidRepositoryAdapter.kt
  *
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-11-25
  *
  * Repository adapter that bridges AvidCreator models to SQLDelight database.
@@ -85,12 +84,12 @@ class SQLDelightAvidRepositoryAdapter(
      */
     suspend fun loadCache() = withContext(dispatcher) {
         if (!isLoaded) {
+            // Load data outside synchronized block — suspend calls can't be inside JVM monitors
+            val elementDTOs = repository.getAllElements()
+            val hierarchyDTOs = repository.getAllHierarchy()
+            val aliasDTOs = repository.getAllAliases()
             synchronized(loadLock) {
                 if (!isLoaded) {
-                    // Load all elements from database
-                    val elementDTOs = repository.getAllElements()
-                    val hierarchyDTOs = repository.getAllHierarchy()
-                    val aliasDTOs = repository.getAllAliases()
 
                     // Build children map from hierarchy relationships
                     val childrenMap = hierarchyDTOs

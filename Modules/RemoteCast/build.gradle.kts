@@ -21,14 +21,14 @@ kotlin {
     }
 
     androidTarget {
-        compilations.all {
-            kotlinOptions { jvmTarget = "17" }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions { jvmTarget = "17" }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -38,6 +38,7 @@ kotlin {
                 api(project(":Modules:Foundation"))
                 api(project(":Modules:Logging"))
                 api(project(":Modules:HTTPAvanue"))
+                api(project(":Modules:NetAvanue"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
             }
@@ -52,8 +53,9 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(project(":Modules:AvanueUI"))
+                implementation(project(":Modules:VoiceOSCore"))
                 implementation(libs.androidx.core.ktx)
-                implementation(platform(libs.compose.bom.get()))
+                implementation(project.dependencies.platform(libs.compose.bom))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
                 implementation(libs.compose.material.icons.extended)
@@ -78,7 +80,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.remotecast"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig { minSdk = 29 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

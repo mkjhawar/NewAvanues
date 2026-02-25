@@ -36,9 +36,25 @@ class VivokaRecognizer(
 
     companion object {
         private const val TAG = "VivokaRecognizer"
-        private const val PROCESSING_DELAY = 200L
         private const val VIVOKA_MAX_CONFIDENCE = 10000f
     }
+
+    /**
+     * Processing delay between recognition result and command emission (ms).
+     * Settable by the caller (e.g., VivokaAndroidEngine) to wire to
+     * AdaptiveTimingManager which learns the optimal value at runtime.
+     * Default matches AdaptiveTimingManager's aggressive start (50ms).
+     */
+    @Volatile
+    var processingDelayMs: Long = 50L
+
+    /**
+     * Optional provider that returns the current processing delay on each call.
+     * When set, overrides the static [processingDelayMs] field so the recognizer
+     * always reads the latest adaptive value without needing a module dependency
+     * on VoiceOSCore. Set by VivokaAndroidEngine to `{ AdaptiveTimingManager.getProcessingDelayMs() }`.
+     */
+    var processingDelayProvider: (() -> Long)? = null
 
     // Configuration
     private lateinit var config: SpeechConfig
@@ -183,7 +199,9 @@ class VivokaRecognizer(
         recognitionProcessingJob?.cancel()
         recognitionProcessingJob = coroutineScope.launch {
             try {
-                delay(PROCESSING_DELAY) // Small delay for response stability
+                // Read latest adaptive delay — provider returns live value from AdaptiveTimingManager
+                val effectiveDelay = processingDelayProvider?.invoke() ?: processingDelayMs
+                delay(effectiveDelay)
 
                 Log.d(TAG, "Processing command: ${result.text}")
 

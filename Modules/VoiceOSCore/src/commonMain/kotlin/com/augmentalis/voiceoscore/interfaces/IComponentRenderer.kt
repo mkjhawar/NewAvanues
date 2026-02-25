@@ -5,8 +5,6 @@
  * Platform implementations (Android, iOS, Desktop) provide concrete renderers.
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2026-01-06
  *
  * Architecture:

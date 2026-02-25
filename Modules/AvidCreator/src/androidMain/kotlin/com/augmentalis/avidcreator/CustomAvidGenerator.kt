@@ -3,7 +3,6 @@
  * Path: libraries/AvidCreator/src/main/java/com/augmentalis/uuidcreator/formats/CustomAvidGenerator.kt
  *
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-10-08
  *
  * Custom UUID format generation with organizational prefixes

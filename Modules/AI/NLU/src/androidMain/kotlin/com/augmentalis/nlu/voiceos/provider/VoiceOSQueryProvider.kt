@@ -3,7 +3,8 @@ package com.augmentalis.nlu.voiceos.provider
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
-import android.util.Log
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
 
 /**
  * VoiceOS ContentProvider queries
@@ -50,7 +51,7 @@ class VoiceOSQueryProvider(private val context: Context) {
             }
             result
         } catch (e: Exception) {
-            Log.e(TAG, "Error querying VoiceOS app context: ${e.message}", e)
+            nluLogError(TAG, "Error querying VoiceOS app context: ${e.message}", e)
             null
         }
     }
@@ -87,10 +88,10 @@ class VoiceOSQueryProvider(private val context: Context) {
                 }
             }
 
-            Log.d(TAG, "Found ${elements.size} clickable elements")
+            nluLogDebug(TAG, "Found ${elements.size} clickable elements")
             elements
         } catch (e: Exception) {
-            Log.e(TAG, "Error querying clickable elements: ${e.message}", e)
+            nluLogError(TAG, "Error querying clickable elements: ${e.message}", e)
             emptyList()
         }
     }

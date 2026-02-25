@@ -81,7 +81,7 @@ media_play|play music|play,resume|Play/resume media
 5. Merges command lists
 6. Single `insertBatch()` to DB
 
-Version `requiredVersion = "3.0"` — forces DB reload on app upgrade from v2.1.
+Version `VOS_DB_VERSION = "3.2"` — shared constant in `StaticCommandPersistenceImpl.companion` (commonMain). Both `CommandLoader` (androidMain) and `StaticCommandPersistenceImpl` (commonMain) reference this single constant to prevent version ping-pong on startup. Bump this constant to force DB reload across all platforms.
 
 **CRITICAL (260212)**: VOS files are now the ONLY source of truth. The hardcoded fallback command lists (~800 lines) have been removed from `StaticCommandRegistry`. If the DB is not initialized, `StaticCommandRegistry.all()` returns an empty list. This enforces `.VOS → DB` as the single source and eliminates dual-source maintenance burden.
 
@@ -151,6 +151,45 @@ Key operations:
 
 ## 3. VOS Export/Import
 
+### VOS Export File Naming Convention
+
+**Pattern**: `{AppName}_{AppVersion}_{Locale}_{Timestamp}.{type}.vos`
+
+| Segment | Example | Source |
+|---------|---------|--------|
+| AppName | `Avanues` | App display name or package short name |
+| AppVersion | `V1.0.0` | The **application's own version** from its manifest (`PackageInfo.versionName`). This is the manufacturer's release version (e.g., Avanues 1.0.0, Chrome 120.0.6099), NOT the VOS format version or internal revision number. |
+| Locale | `en-US` | Device locale at export time |
+| Timestamp | `260223T1430` | YYMMDD + T + HHMM (compact) |
+| Type | `.app.vos` / `.web.vos` | Static app commands vs scraped web |
+
+**App VOS examples:**
+```
+Avanues_V1.0.0_en-US_260223T1430.app.vos
+Avanues_V1.0.0_es-ES_260223T1430.app.vos
+Avanues_V1.2.0_en-US_260315T0900.app.vos
+```
+
+**Web VOS examples:**
+```
+google.com_V1.0.0_en-US_260223T1430.web.vos
+github.com_V1.0.0_en-US_260223T1502.web.vos
+```
+
+**JSON backup/export examples:**
+```
+Avanues_V1.0.0_en-US_Backup_260223T1430.json
+Avanues_V1.0.0_en-US_Export_260223T1430.json
+```
+
+**Why this convention:**
+- **Version visible at a glance** — no need to open the file or query the DB to know which version it is
+- **Sortable by timestamp** — chronological ordering in any file browser
+- **Locale in filename** — unambiguous when files from multiple locales sit in the same folder
+- **AppVersion tracks compatibility** — this is the application's own release version (from `PackageInfo.versionName`), not the VOS format version. A VOS file exported from Avanues V2.0.0 may contain commands for UI elements that don't exist in V1.x, making the app version the key compatibility indicator
+
+**Version tracking still in DB:** The `VosFileRegistry` continues to track internal revision numbers (`version` column) for dedup and sync. The filename convention is for human readability and file management; the DB tracks the machine-readable provenance chain.
+
 ### VosFileExporter
 
 **File**: `VoiceOSCore/src/androidMain/.../vos/VosFileExporter.kt`
@@ -165,6 +204,7 @@ class VosFileExporter(context: Context, registry: IVosFileRegistryRepository) {
 ```
 
 - Saves to `Downloads/commands/{filename}`
+- Filename follows `{AppName}_{AppVersion}_{Locale}_{Timestamp}.{type}.vos` convention
 - Computes SHA-256 content hash
 - Skips export if identical hash already registered
 - Auto-increments version per fileId
@@ -190,32 +230,220 @@ class VosFileImporter(registry: IVosFileRegistryRepository, commandDao: VoiceCom
 - Batch insert via `VoiceCommandDaoAdapter.insertBatch()`
 - Auto-detects file type (app/web) from filename or parsed `domain` from VosParseResult
 
+## 3.5 VOS Portability: Screen-Size & Orientation Agnosticism
+
+### Why VOS Files Are Form-Factor-Independent
+
+VOS files are **screen-size and orientation agnostic**. A single VOS file works identically across phones (portrait/landscape), tablets, smart glasses, and desktops. This is by design — VOS files define a **vocabulary layer** (what commands exist), not a **targeting layer** (where elements are on screen).
+
+**What a VOS command contains:**
+```
+nav_back|go back|navigate back,back,previous screen|Navigate to previous screen
+```
+
+**What a VOS command does NOT contain:**
+- Screen width, height, or density
+- Portrait vs landscape orientation
+- Pixel coordinates or element positions
+- Display profile or form factor data
+
+### Vocabulary vs Targeting: Two Separate Concerns
+
+| Concern | Where it lives | Portable? |
+|---------|---------------|-----------|
+| **Command vocabulary** ("go back", "scroll down") | `.vos` files | Yes — same file works everywhere |
+| **Element coordinates** (pixel bounds at scrape time) | `ScrapedElement.sq` DB (device-local) | No — device-specific, not in VOS |
+| **Runtime element discovery** (where is "Settings" NOW?) | `BoundsResolver.kt` (live accessibility tree) | N/A — resolved at runtime |
+
+### How Click Dispatch Works Without Stored Coordinates
+
+When a user says "click Settings", the system does NOT require coordinates from the VOS file. Instead, `BoundsResolver` uses a **4-layer fallback system** to find the element at runtime:
+
+| Layer | Method | Speed | How it works |
+|-------|--------|-------|-------------|
+| 1 | Metadata bounds | 0-1ms | Use cached pixel coordinates (fast path, same device only) |
+| 2 | Delta compensation | 1-2ms | Adjust cached bounds by scroll offset |
+| 3 | Resource ID search | 5-10ms | Query **live** accessibility tree by `viewIdResourceName` |
+| 4 | Full tree BFS | 50-100ms | Search by text, contentDescription, or elementHash |
+
+**Key insight:** Layers 3 and 4 use **intrinsic element identifiers** — a button with `resourceId="@id/settings_button"` or `text="Settings"` will be found on ANY Android device running that app, regardless of screen size or orientation.
+
+### Cross-Device Import Scenarios
+
+| Scenario | Layer 1 (bounds) | Layer 3 (resourceId) | Layer 4 (text) | Works? |
+|----------|-----------------|---------------------|----------------|--------|
+| Same device, same orientation | Valid | Valid | Valid | Yes (0ms) |
+| Same device, rotated | Stale | Valid | Valid | Yes (5ms) |
+| Different phone (1080p → 1440p) | Wrong | Valid | Valid | Yes (5ms) |
+| Phone → Tablet | Wrong | Valid | Valid | Yes (5ms) |
+| Phone → Smart glasses | Wrong | May differ | Valid | Yes (50ms) |
+| Android → iOS | N/A | N/A (no Android IDs) | Valid | Yes (50ms) |
+
+**Static commands** (handler-based: "go back", "scroll down", "copy", "paste") work immediately on any device — no coordinates needed. They execute via `AccessibilityService.performGlobalAction()` or handler logic.
+
+**Dynamic/scraped commands** (element-specific: "click Settings button") need the importing device to discover element positions via its own accessibility tree. The VOS gives the device the command vocabulary; the runtime accessibility tree provides the targeting.
+
+### What About Scraped Element Bounds?
+
+`ScrapedElement.sq` stores absolute device pixel bounds (`"left,top,right,bottom"`) captured at scrape time via `node.getBoundsInScreen(rect)`. These are:
+
+- **Device-local** — captured on THAT device at THAT screen size
+- **Used for Layer 1 fast-path** — optimization, not correctness requirement
+- **NOT exported in VOS files** — stay in the local database
+- **Rebuilt on import** — the importing device re-scrapes to build its own bounds cache
+
+The `elementHash` (deterministic fingerprint based on `className + packageName + resourceId + text + contentDescription`) IS included in VOS command metadata, enabling cross-device element matching without coordinates.
+
+### DisplayProfile Is Orthogonal to VOS
+
+The `DisplayProfile` enum (`PHONE`, `TABLET`, `GLASS_MICRO`, `COMPACT`, `STANDARD`, `HD`) affects **UI rendering** (Compose density scaling, font sizing, touch targets) but has **zero coupling** to VOS files or command generation. Commands don't change by form factor — "click back" is "click back" whether rendered on a phone or smart glasses.
+
+### Design Principle
+
+> VOS files are the **lingua franca** of voice commands. They teach any device *what to say*. Each device independently discovers *where things are* via its own accessibility tree at runtime. This separation enables VOS portability across all form factors without screen-size-specific variants.
+
+### Coordinate Targeting: Who Does What?
+
+VOS files carry **device-independent targeting metadata** (resourceId, elementHash, className) that enable any device with an accessibility tree to find elements without re-scraping. Actual pixel coordinates are always resolved at runtime by the device that owns the screen.
+
+| Device Type | Needs VOS vocabulary? | Needs targeting metadata? | Resolves coordinates? |
+|-------------|----------------------|--------------------------|----------------------|
+| **Phone/tablet** (standalone) | Yes — from `.app.vos` | Yes — resourceId + elementHash in VOS v3.1 | Yes — from its own accessibility tree |
+| **Full Android glasses** (standalone) | Yes — same as phone | Yes — scrapes its own tree | Yes — resolves locally |
+| **Thin glasses** (Vuzix Z100, Even Realities G1) | Vocabulary only — pushed via VOC protocol | No — sends AVID back to phone | No — phone handles all targeting |
+
+**RemoteCast thin-client pattern:** When a phone streams its screen to thin glasses via CAST protocol, the glasses are a terminal — they display video and capture voice. The phone does ALL coordinate targeting on its own screen. Glasses hear "click Settings" → match against VOCAB → relay CMD with AVID back to phone → phone resolves coordinates from its own accessibility tree → executes click → screen updates → new frame streams to glasses. (See Chapter 103 Section 8 for full VOCAB sync architecture.)
+
+**No companion coordinate files needed.** Device-independent identifiers (resourceId, elementHash) go directly in VOS v3.1. Each device resolves pixel coordinates at runtime from its own accessibility tree. Thin glasses never need coordinates at all — the phone handles everything.
+
+## 3.6 VOS v3.1: Extended Format with Targeting Metadata
+
+### Motivation
+
+VOS v3.0 carries only vocabulary data (phrases, synonyms, descriptions). Dynamic commands exported from scraping lose all element targeting metadata (resourceId, elementHash, className). This means an importing device must re-scrape to discover element positions, even though the device-independent identifiers (resourceId, elementHash) would allow immediate BoundsResolver Layer 3 resolution.
+
+VOS v3.1 adds optional targeting fields to dynamic commands, making imported VOS files immediately actionable without re-scraping.
+
+### Format
+
+**Static commands (unchanged — backward compatible):**
+```
+action_id|primary_phrase|synonyms_csv|description
+```
+
+**Dynamic commands with targeting (v3.1 extension):**
+```
+action_id|primary_phrase|synonyms_csv|description|resource_id|element_hash|class_name
+```
+
+The parser detects field count: 4 fields = static command (v3.0), 7 fields = dynamic command with targeting (v3.1). Both formats coexist in the same file.
+
+### Header
+
+```
+VOS:3.1:en-US:en-US:app
+```
+
+Version `3.1` signals the parser that targeting fields MAY be present. A v3.1-aware parser reading a v3.0 file works unchanged (all commands have 4 fields). A v3.0 parser reading a v3.1 file ignores extra fields (graceful degradation).
+
+### Example
+
+```
+# VOS v3.1 — en-US app commands with targeting metadata
+VOS:3.1:en-US:en-US:app
+
+# Static commands (no targeting needed — handler-based)
+nav_back|go back|navigate back,back,previous screen|Navigate to previous screen
+media_play|play music|play,resume|Play/resume media
+
+# Dynamic commands (targeting metadata from scraping)
+click_settings|click settings|tap settings|Click settings button|@id/action_settings|a3f2e1c9|android.widget.Button
+click_compose|compose email|new email,write email|Compose new email|@id/compose_button|b7d4f2a1|com.google.android.material.floatingactionbutton.FloatingActionButton
+```
+
+### Field Reference
+
+| Field | Position | Required | Description |
+|-------|----------|----------|-------------|
+| action_id | 0 | Yes | Command identifier (e.g., `click_settings`) |
+| primary_phrase | 1 | Yes | Primary voice trigger (e.g., `click settings`) |
+| synonyms_csv | 2 | Yes | Comma-separated alternative phrases |
+| description | 3 | Yes | Human-readable description |
+| resource_id | 4 | No (v3.1) | Android view resource ID (e.g., `@id/action_settings`). Device-independent — same across all devices running the same app version. Enables BoundsResolver Layer 3 resolution. |
+| element_hash | 5 | No (v3.1) | Deterministic fingerprint from class+package+resourceId+text+description. Enables cross-session element matching via BoundsResolver Layer 4. |
+| class_name | 6 | No (v3.1) | Android widget class (e.g., `android.widget.Button`). Refines Layer 4 full-tree search from O(n) to O(filtered). |
+
+### Database Schema Extension
+
+`VoiceCommand.sq` adds three nullable columns:
+
+```sql
+element_hash TEXT,     -- Cross-session element fingerprint
+resource_id TEXT,      -- Android view resource ID for Layer 3 resolution
+class_name TEXT        -- Widget class for Layer 4 search refinement
+```
+
+Plus indexes for fast lookup:
+```sql
+CREATE INDEX idx_vc_element_hash ON commands_static(element_hash);
+CREATE INDEX idx_vc_resource_id ON commands_static(resource_id);
+```
+
+### Import Behavior
+
+When a device imports a v3.1 VOS file:
+1. Static commands load as before (4 fields, no targeting)
+2. Dynamic commands load with targeting metadata populated
+3. BoundsResolver Layer 3 can immediately find elements by resourceId — no scraping needed
+4. Layer 4 uses elementHash + className for fallback matching
+5. Layer 1 (pixel bounds) remains empty until the device scrapes its own screen — this is expected and handled gracefully by the fallback system
+
 ## 4. Static Command Dispatch Architecture
 
 ### Problem Solved
 
-VOS seed files defined 107+ commands across 11 categories, but originally only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 7 new handlers were added in v2.1, then NoteCommandHandler (v2.2) and CockpitCommandHandler (v2.3) brought the total to 13. All handler categories are fully covered.
+VOS seed files defined 107+ commands across 11 categories, but originally only 4 handlers existed (AndroidGestureHandler, SystemHandler, AppHandler, AndroidCursorHandler). 7 new handlers were added in v2.1, then NoteCommandHandler (v2.2) and CockpitCommandHandler (v2.3) brought the total to 13. Wave 4 added AnnotationCommandHandler, ImageCommandHandler, VideoCommandHandler, CastCommandHandler, and AICommandHandler, bringing the total to **18 handlers**. All handler categories are fully covered.
 
-### Handler Coverage (13 of 13 Handlers)
+### Handler Coverage (18 Handlers)
 
 | Handler | Category | Commands | Key API | Status |
 |---------|----------|----------|---------|--------|
-| AndroidGestureHandler | GESTURE | scroll, tap, swipe, pinch | GestureDescription API | v1.0 |
-| SystemHandler | SYSTEM/NAV | back, home, recents, split screen | performGlobalAction() | v1.0 |
-| AppHandler | APP_LAUNCH | open browser/camera/gallery/etc. | Intent + PackageManager | v1.0 |
+| AndroidGestureHandler | NAVIGATION | scroll, tap, swipe, pinch | GestureDescription API | v1.0 |
+| SystemHandler | SYSTEM | back, home, recents, split screen | performGlobalAction() | v1.0 |
+| AppHandler | APP | open browser/camera/gallery/etc. | Intent + PackageManager | v1.0 |
 | AndroidCursorHandler | GAZE | cursor show/hide/click | CursorOverlayService + IMUManager | v1.0 (IMU wiring v2.2) |
-| **MediaHandler** | MEDIA | play, pause, next, prev, volume | AudioManager + KeyEvent | v2.1 |
-| **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight | Settings.System + CameraManager | v2.1 |
-| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete | AccessibilityNodeInfo actions (delete = selection-aware backspace, not clear-all) | v2.2 |
-| **InputHandler** | INPUT | show/hide keyboard | SoftKeyboardController | v2.1 |
-| **AppControlHandler** | APP | close app, exit, quit | GLOBAL_ACTION_BACK + HOME | v2.1 |
-| **ReadingHandler** | ACCESSIBILITY | read screen, stop reading | TextToSpeech + tree traversal | v2.1 |
-| **VoiceControlHandler** | SYSTEM | mute/wake, dictation mode switch, help, list commands | VoiceControlCallbacks + OverlayStateManager feedback | v2.4 |
+| **MediaHandler** | MEDIA | play, pause, next, prev, volume (13 cmds) | AudioManager + KeyEvent | v2.1 |
+| **ScreenHandler** | DEVICE | brightness, wifi, bluetooth, screenshot, flashlight (20 cmds) | Settings.System + CameraManager | v2.1 |
+| **TextHandler** | INPUT | select all, copy, paste, cut, undo, redo, delete (8 cmds) | AccessibilityNodeInfo actions | v2.2 |
+| **InputHandler** | INPUT | show/hide keyboard (6 cmds) | SoftKeyboardController | v2.1 |
+| **AppControlHandler** | APP | close app, exit, quit (4 cmds) | GLOBAL_ACTION_BACK + HOME | v2.1 |
+| **ReadingHandler** | ACCESSIBILITY | read screen, stop reading (7 cmds) | TextToSpeech + tree traversal | v2.1 |
+| **VoiceControlHandler** | SYSTEM | mute/wake, dictation mode switch, help, list commands (16 cmds) | VoiceControlCallbacks + OverlayStateManager feedback | v2.4 |
 | **WebCommandHandler** | BROWSER | 45 web commands | IWebCommandExecutor + DOMScraperBridge | v2.1 |
-| **NoteCommandHandler** | NOTE | 48 note commands (format, dictate, navigate) | INoteController + RichTextState | v2.2 |
-| **CockpitCommandHandler** | COCKPIT | 26 cockpit commands (frames, layouts, content) | Intent broadcast to CockpitViewModel | v2.3 |
+| **NoteCommandHandler** | NOTE | 23 note commands (format, dictate, navigate) | INoteController + RichTextState | v2.2 |
+| **CockpitCommandHandler** | COCKPIT | 20 cockpit commands (frames, layouts, content) | Intent broadcast to CockpitViewModel | v2.3 |
+| **AnnotationCommandHandler** | ANNOTATION | 14 annotation commands (draw, colors, undo, save) | ModuleCommandCallbacks.annotationExecutor | v2.4 |
+| **ImageCommandHandler** | IMAGE | 16 image commands (rotate, flip, zoom, filter, gallery) | ModuleCommandCallbacks.imageExecutor | v2.3 |
+| **VideoCommandHandler** | VIDEO | 12 video commands (play, pause, seek, speed, fullscreen) | ModuleCommandCallbacks.videoExecutor | v2.4 |
+| **CastCommandHandler** | CAST | 5 cast commands (start, stop, connect, quality) | ModuleCommandCallbacks.castExecutor | v2.4 |
+| **AICommandHandler** | CUSTOM | 5 AI commands (summarize, chat, search, teach) | ModuleCommandCallbacks.aiExecutor | v2.4 |
 
-Bold = new in v2.1+. All 13 handler categories are fully covered.
+Bold = new in v2.1+. All 18 handler categories are fully covered.
+
+### Handler Phrase Collision Avoidance (260222 fix)
+
+Module-specific handlers must **prefix their phrases** with the module name to avoid being intercepted by higher-priority general handlers:
+
+| Before (collided) | After (prefixed) | Why |
+|-------------------|-------------------|-----|
+| "scroll up" (Cockpit) | "frame scroll up" | NAVIGATION handler (priority 2) intercepted before COCKPIT (priority 13) |
+| "scroll down" (Cockpit) | "frame scroll down" | Same |
+| "zoom in" (Cockpit) | "frame zoom in" | ScreenHandler (priority 7) intercepted |
+| "zoom out" (Cockpit) | "frame zoom out" | Same |
+| "rotate left" (Image) | "image rotate left" | ScreenHandler prefix-matched "rotate" |
+| "rotate right" (Image) | "image rotate right" | Same |
+
+**Rule:** When adding new handler commands, always check if a higher-priority handler already claims a prefix match on the same phrase. If so, add a module-specific prefix.
 
 ### Factory Registration
 
@@ -331,7 +559,7 @@ UI interaction is at the result callback boundary.
 ### 5.3 Handler Registry: Cached Flat Handler List
 
 **Before:** `HandlerRegistry.findHandler()` called `handlers.values.flatten()` on every invocation,
-allocating a new `List<IHandler>` for each voice command (13 handlers = 13-element list rebuilt
+allocating a new `List<IHandler>` for each voice command (18 handlers = 18-element list rebuilt
 on every call).
 
 **After:** `HandlerRegistry` stores a pre-computed `_cachedHandlers: List<IHandler>` built once
@@ -396,6 +624,10 @@ fun findByPhrase(phrase: String): StaticCommand? =
 
 Multi-phrase commands (a single `StaticCommand` with several `phrases`) are indexed under each
 phrase independently, so all synonyms resolve in O(1).
+
+**`findById(id)`** — O(n) linear scan to find a command by its unique VOS action_id (e.g., `"voice_wake"`, `"voice_dict_stop"`). Used by `VoiceOSCore.setSpeechMode()` and `VoiceAvanueAccessibilityService` to load fallback wake/exit phrases from the registry. Returns `StaticCommand?`.
+
+**`StaticCommand` invariant** — `phrases` must be non-empty (enforced by `init { require(phrases.isNotEmpty()) }`). The `primaryPhrase` property delegates to `phrases.first()` and is safe given this guard. Use `cmd.phrases` directly when you need all trigger phrases including synonyms.
 
 ### 5.6 `StaticCommandRegistry` Suspend Variants
 
@@ -530,7 +762,7 @@ The `RETRAIN_PAGE` action type triggers a fresh DOM scrape of the current web pa
 7. If adding a new action_id prefix: add entry to `VosParser.CATEGORY_MAP`
 8. Add action_id → CommandActionType entry to `VosParser.ACTION_MAP`
 9. If the command has metadata (direction/scale/factor): add entry to `VosParser.META_MAP`
-10. Bump VOS version in `CommandLoader.requiredVersion` to force DB reload
+10. Bump `StaticCommandPersistenceImpl.VOS_DB_VERSION` to force DB reload (both CommandLoader and StaticCommandPersistenceImpl read this constant)
 
 ## 8. SFTP Sync (Phase B) — Implemented
 
@@ -723,6 +955,18 @@ interface SyncEntryPoint {
 
 ---
 
+### 5.6 Dispatcher Fix: webCommandCollectorJob Off Main (260224)
+
+`webCommandCollectorJob` in `VoiceAvanueAccessibilityService` previously ran on `serviceScope` (`Dispatchers.Main`). Combined with `ActionCoordinator.clearDynamicCommandsBySource()` calling `CommandRegistry.clearBySource()` (which uses `runBlocking { mutex.withLock { ... } }`), this created a direct ANR path: Main thread blocks waiting for mutex held by background grammar compilation.
+
+**Fix**: `webCommandCollectorJob = serviceScope.launch(Dispatchers.Default)` — the collector registers/clears dynamic commands via suspend functions, none of which require Main thread. Similarly, `switchLocale()` and `updateWakeWordSettings()` in `cursorSettingsJob` are now wrapped in `withContext(Dispatchers.Default)`.
+
+**Rule**: Any `serviceScope.launch` doing CommandRegistry operations or speech engine configuration MUST use `Dispatchers.Default` (or `IO` for file/network). Only overlay/badge UI updates require Main.
+
+See: `docs/fixes/VoiceOSCore/VoiceOSCore-Fix-ANRMainThreadRunBlocking-260224-V1.md` and Chapter 110 (ActionCoordinator suspend migration).
+
+---
+
 *Chapter 95 | VOS Distribution System & Handler Dispatch Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants)*
+*Created: 2026-02-11 | Updated: 2026-02-16 (VOS v3.0 compact format, VosParser compiled maps, CommandLoader/Importer migration, web command routing, dead code audit: ArrayJsonParser + UnifiedJSONParser deleted) | Updated: 2026-02-19 (Section 5 — command pipeline performance optimizations: Dispatchers.Default, handler list cache, collapsed canHandle, O(1) phrase index, suspend variants) | Updated: 2026-02-22 (CommandManager import path fix: managers.commandmanager → commandmanager) | Updated: 2026-02-23 (Section 3: VOS export file naming convention AppName_AppVersion_Locale_Timestamp; Section 3.5: VOS portability — screen-size/orientation agnosticism, 4-layer BoundsResolver dispatch, cross-device import scenarios, coordinate targeting responsibility matrix; Section 3.6: VOS v3.1 extended format with targeting metadata — resourceId, elementHash, className for cross-device element resolution) | Updated: 2026-02-24 (Section 5.6: webCommandCollectorJob dispatcher fix for ANR prevention)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 94 (4-Tier Voice Enablement), Chapter 96 (KMP Foundation)*

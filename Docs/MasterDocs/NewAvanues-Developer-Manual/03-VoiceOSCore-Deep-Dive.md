@@ -182,6 +182,8 @@ serviceScope.launch {
 }
 ```
 
+> **Note:** The confidence `threshold` is adaptive via `AdaptiveTimingManager.getConfidenceFloor()` (default 0.45f, range 0.3-0.7). This replaced a hardcoded 0.5f check. See Chapter 102 Section 21 for the full adaptive timing system.
+
 Without this bridge, Vivoka recognizes speech and emits results, but nobody calls `processCommand()` and no action executes.
 
 **Note:** `SpeechEngineManager` exists with its own result collection, but VoiceOSCore bypasses it. The host app is responsible for the bridge.

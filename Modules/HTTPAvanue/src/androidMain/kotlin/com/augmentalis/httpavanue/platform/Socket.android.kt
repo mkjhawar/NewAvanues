@@ -1,12 +1,11 @@
 package com.augmentalis.httpavanue.platform
 
+import com.augmentalis.httpavanue.io.AvanueSource
+import com.augmentalis.httpavanue.io.AvanueSourceJvm
+import com.augmentalis.httpavanue.io.AvanueSink
+import com.augmentalis.httpavanue.io.AvanueSinkJvm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okio.BufferedSink
-import okio.BufferedSource
-import okio.buffer
-import okio.sink
-import okio.source
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
@@ -81,12 +80,12 @@ private object TlsHelper {
 }
 
 actual class Socket(private val jvmSocket: JvmSocket, config: SocketConfig = SocketConfig()) {
-    private val bufferedSource: BufferedSource
-    private val bufferedSink: BufferedSink
+    private val bufferedSource: AvanueSource
+    private val bufferedSink: AvanueSink
     init {
         jvmSocket.apply { soTimeout = config.readTimeout.toInt(); keepAlive = config.keepAlive; tcpNoDelay = config.tcpNoDelay; receiveBufferSize = config.receiveBufferSize; sendBufferSize = config.sendBufferSize }
-        bufferedSource = jvmSocket.getInputStream().source().buffer()
-        bufferedSink = jvmSocket.getOutputStream().sink().buffer()
+        bufferedSource = AvanueSourceJvm(jvmSocket.getInputStream())
+        bufferedSink = AvanueSinkJvm(jvmSocket.getOutputStream())
     }
     actual companion object {
         actual suspend fun connect(host: String, port: Int, config: SocketConfig): Socket = withContext(Dispatchers.IO) {
@@ -101,8 +100,8 @@ actual class Socket(private val jvmSocket: JvmSocket, config: SocketConfig = Soc
             Socket(socket, config)
         }
     }
-    actual fun source() = bufferedSource
-    actual fun sink() = bufferedSink
+    actual fun source(): AvanueSource = bufferedSource
+    actual fun sink(): AvanueSink = bufferedSink
     actual fun close() { bufferedSource.close(); bufferedSink.close(); jvmSocket.close() }
     actual fun isConnected() = jvmSocket.isConnected && !jvmSocket.isClosed
     actual fun remoteAddress() = "${jvmSocket.inetAddress.hostAddress}:${jvmSocket.port}"

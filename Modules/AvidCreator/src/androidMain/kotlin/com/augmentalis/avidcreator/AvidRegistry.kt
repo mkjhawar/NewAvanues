@@ -3,7 +3,6 @@
  * Path: libraries/AvidCreator/src/main/java/com/augmentalis/avidcreator/core/AvidRegistry.kt
  *
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2024-08-20
  * Updated: 2026-01-16 - Renamed VUID → AVID (Augmentalis Voice ID)
  *

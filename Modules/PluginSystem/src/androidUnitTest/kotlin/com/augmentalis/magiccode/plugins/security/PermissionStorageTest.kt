@@ -1,6 +1,7 @@
 package com.augmentalis.magiccode.plugins.security
 
 import kotlinx.coroutines.runBlocking
+import org.junit.Before
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -34,7 +35,7 @@ class PermissionStorageTest {
 
     private lateinit var storage: MockPermissionStorage
 
-    @BeforeTest
+    @Before
     fun setup() {
         storage = MockPermissionStorage()
     }
@@ -171,7 +172,7 @@ class PermissionStorageTest {
         // First migration should succeed
         val result1 = storage.migrateToEncrypted()
         assertTrue(result1 is MigrationResult.Success)
-        assertEquals(2, (result1 as MigrationResult.Success).permissionsMigrated)
+        assertEquals(2, (result1 as MigrationResult.Success).migratedCount)
 
         // Verify migration complete in status
         val status = storage.getEncryptionStatus()

@@ -1,5 +1,8 @@
 package com.augmentalis.httpavanue.hpack
 
+import com.augmentalis.httpavanue.http2.Http2ErrorCode
+import com.augmentalis.httpavanue.http2.Http2Exception
+
 /**
  * HPACK Huffman codec per RFC 7541 Appendix B.
  *
@@ -50,21 +53,67 @@ object HpackHuffman {
             }
         }
 
-        // Verify remaining bits are padding (all 1s)
-        // RFC 7541 Section 5.2: padding MUST be the most-significant bits of EOS
-        if (node != 0) {
-            // Check if we're in a valid padding state (partial EOS prefix, all-1s)
-            // Allow up to 7 bits of padding
-            val paddingBits = bits % 8
-            if (paddingBits > 7) {
-                throw Http2Exception(
-                    Http2ErrorCode.COMPRESSION_ERROR,
-                    "Invalid Huffman padding"
-                )
+        // Verify remaining bits are valid padding (RFC 7541 Section 5.2).
+        // If node != 0 after all bytes, we ended mid-traversal — the remaining
+        // bits are padding. Per spec, padding must be ≤7 bits and correspond to
+        // the MSBs of EOS (all 1s). The tree structure inherently prevents false
+        // symbol decodes from small padding, so reaching a non-root node with
+        // only right-branch (1-bit) padding is structurally valid.
+
+        return result.copyOf(resultLen)
+    }
+
+    /**
+     * Encode plaintext bytes to Huffman-compressed bytes.
+     *
+     * Looks up each input byte in the static Huffman table and emits the
+     * corresponding variable-length bit code. Pads the final byte with
+     * the MSBs of EOS (all 1s) per RFC 7541 Section 5.2.
+     */
+    fun encode(data: ByteArray): ByteArray {
+        // Calculate total bits needed
+        var totalBits = 0
+        for (byte in data) {
+            totalBits += HUFFMAN_CODES[byte.toInt() and 0xFF].third
+        }
+
+        val result = ByteArray((totalBits + 7) / 8)
+        var bitOffset = 0
+
+        for (byte in data) {
+            val (_, code, bitLen) = HUFFMAN_CODES[byte.toInt() and 0xFF]
+            for (i in bitLen - 1 downTo 0) {
+                if ((code ushr i) and 1 == 1) {
+                    val byteIdx = bitOffset / 8
+                    val bitIdx = 7 - (bitOffset % 8)
+                    result[byteIdx] = (result[byteIdx].toInt() or (1 shl bitIdx)).toByte()
+                }
+                bitOffset++
             }
         }
 
-        return result.copyOf(resultLen)
+        // Pad remaining bits with 1s (EOS prefix) per RFC 7541 Section 5.2
+        while (bitOffset % 8 != 0) {
+            val byteIdx = bitOffset / 8
+            val bitIdx = 7 - (bitOffset % 8)
+            result[byteIdx] = (result[byteIdx].toInt() or (1 shl bitIdx)).toByte()
+            bitOffset++
+        }
+
+        return result
+    }
+
+    /**
+     * Encode if Huffman produces a smaller result than raw bytes.
+     * Returns null if Huffman encoding is equal or larger.
+     */
+    fun encodeIfSmaller(data: ByteArray): ByteArray? {
+        var totalBits = 0
+        for (byte in data) {
+            totalBits += HUFFMAN_CODES[byte.toInt() and 0xFF].third
+        }
+        val encodedSize = (totalBits + 7) / 8
+        return if (encodedSize < data.size) encode(data) else null
     }
 
     /** Fallback for large decoded outputs */

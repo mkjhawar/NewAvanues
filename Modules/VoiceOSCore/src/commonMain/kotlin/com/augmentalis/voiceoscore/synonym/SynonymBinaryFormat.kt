@@ -2,7 +2,6 @@
  * SynonymBinaryFormat.kt - Binary format for synonym packs (.qsyn)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-08
  *
  * Efficient binary format for production synonym packs.

@@ -2,7 +2,6 @@
  * GlassmorphismUtils.kt - AvidCreator Glass Morphism Theme
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * Refactored: 2026-02-02 (consolidated core classes to Common/UI)
  */

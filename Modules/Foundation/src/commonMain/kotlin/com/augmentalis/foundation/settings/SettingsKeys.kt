@@ -36,6 +36,13 @@ object SettingsKeys {
     const val VOICE_COMMAND_LOCALE = "voice_command_locale"
 
     // ══════════════════════════════════════════
+    // Wake Word Settings
+    // ══════════════════════════════════════════
+    const val WAKE_WORD_ENABLED = "wake_word_enabled"
+    const val WAKE_WORD_KEYWORD = "wake_word_keyword"
+    const val WAKE_WORD_SENSITIVITY = "wake_word_sensitivity"
+
+    // ══════════════════════════════════════════
     // Boot / Lifecycle
     // ══════════════════════════════════════════
     const val AUTO_START_ON_BOOT = "auto_start_on_boot"
@@ -67,6 +74,117 @@ object SettingsKeys {
     // ══════════════════════════════════════════
     const val DISABLED_COMMANDS = "vcm_disabled_commands"
     const val USER_SYNONYMS = "vcm_user_synonyms"
+
+    // ══════════════════════════════════════════
+    // Adaptive Timing (learned by AdaptiveTimingManager)
+    // ══════════════════════════════════════════
+    const val ADAPTIVE_PROCESSING_DELAY_MS = "adaptive_processing_delay_ms"
+    const val ADAPTIVE_SCROLL_DEBOUNCE_MS = "adaptive_scroll_debounce_ms"
+    const val ADAPTIVE_SPEECH_UPDATE_DEBOUNCE_MS = "adaptive_speech_update_debounce_ms"
+    const val ADAPTIVE_COMMAND_WINDOW_MS = "adaptive_command_window_ms"
+
+    // ══════════════════════════════════════════
+    // Cockpit Settings
+    // ══════════════════════════════════════════
+    const val SHELL_MODE = "shell_mode"
+    const val DEFAULT_ARRANGEMENT = "default_arrangement"
+    const val COCKPIT_MAX_FRAMES = "cockpit_max_frames"
+    const val COCKPIT_AUTOSAVE_INTERVAL = "cockpit_autosave_interval"
+    const val COCKPIT_BACKGROUND_SCENE = "cockpit_background_scene"
+    const val COCKPIT_SPATIAL_ENABLED = "cockpit_spatial_enabled"
+    const val COCKPIT_SPATIAL_SENSITIVITY = "cockpit_spatial_sensitivity"
+    const val COCKPIT_CANVAS_ZOOM_PERSIST = "cockpit_canvas_zoom_persist"
+
+    // ══════════════════════════════════════════
+    // PDFAvanue Settings
+    // ══════════════════════════════════════════
+    const val PDF_VIEW_MODE = "pdf_view_mode"
+    const val PDF_NIGHT_MODE = "pdf_night_mode"
+    const val PDF_DEFAULT_ZOOM = "pdf_default_zoom"
+    const val PDF_REMEMBER_PAGE = "pdf_remember_page"
+
+    // ══════════════════════════════════════════
+    // PhotoAvanue Settings
+    // ══════════════════════════════════════════
+    const val CAMERA_DEFAULT_LENS = "camera_default_lens"
+    const val CAMERA_RESOLUTION = "camera_resolution"
+    const val CAMERA_SAVE_PATH = "camera_save_path"
+    const val CAMERA_PRO_DEFAULT = "camera_pro_default"
+    const val CAMERA_STABILIZATION = "camera_stabilization"
+    const val CAMERA_RAW_ENABLED = "camera_raw_enabled"
+
+    // ══════════════════════════════════════════
+    // VideoAvanue Settings
+    // ══════════════════════════════════════════
+    const val VIDEO_DEFAULT_SPEED = "video_default_speed"
+    const val VIDEO_RESUME = "video_resume"
+    const val VIDEO_REPEAT_MODE = "video_repeat_mode"
+    const val VIDEO_DEFAULT_VOLUME = "video_default_volume"
+    const val VIDEO_MUTE_DEFAULT = "video_mute_default"
+
+    // ══════════════════════════════════════════
+    // NoteAvanue Settings
+    // ══════════════════════════════════════════
+    const val NOTE_FONT_SIZE = "note_font_size"
+    const val NOTE_AUTOSAVE = "note_autosave"
+    const val NOTE_SPELLCHECK = "note_spellcheck"
+    const val NOTE_DEFAULT_FORMAT = "note_default_format"
+
+    // ══════════════════════════════════════════
+    // FileAvanue Settings
+    // ══════════════════════════════════════════
+    const val FILE_SORT_MODE = "file_sort_mode"
+    const val FILE_VIEW_MODE = "file_view_mode"
+    const val FILE_SHOW_HIDDEN = "file_show_hidden"
+    const val FILE_DEFAULT_PROVIDER = "file_default_provider"
+
+    // ══════════════════════════════════════════
+    // RemoteCast Settings
+    // ══════════════════════════════════════════
+    const val CAST_JPEG_QUALITY = "cast_jpeg_quality"
+    const val CAST_TARGET_FPS = "cast_target_fps"
+    const val CAST_RESOLUTION_SCALE = "cast_resolution_scale"
+    const val CAST_PORT = "cast_port"
+    const val CAST_AUTO_CONNECT = "cast_auto_connect"
+
+    // ══════════════════════════════════════════
+    // AnnotationAvanue Settings
+    // ══════════════════════════════════════════
+    const val ANNOTATION_DEFAULT_TOOL = "annotation_default_tool"
+    const val ANNOTATION_DEFAULT_COLOR = "annotation_default_color"
+    const val ANNOTATION_STROKE_WIDTH = "annotation_stroke_width"
+    const val ANNOTATION_TENSION = "annotation_tension"
+
+    // ══════════════════════════════════════════
+    // ImageAvanue Settings
+    // ══════════════════════════════════════════
+    const val IMAGE_DEFAULT_ZOOM = "image_default_zoom"
+    const val IMAGE_SHOW_EXIF = "image_show_exif"
+
+    // ══════════════════════════════════════════
+    // WebAvanue Extended Settings
+    // ══════════════════════════════════════════
+    const val WEB_DEFAULT_ENGINE = "web_default_engine"
+    const val WEB_SEARCH_SUGGESTIONS = "web_search_suggestions"
+    const val WEB_JAVASCRIPT_ENABLED = "web_javascript_enabled"
+    const val WEB_COOKIE_MODE = "web_cookie_mode"
+    const val WEB_DO_NOT_TRACK = "web_do_not_track"
+    const val WEB_TEXT_SIZE = "web_text_size"
+    const val WEB_FORCE_DARK = "web_force_dark"
+    const val WEB_DESKTOP_MODE = "web_desktop_mode"
+    const val WEB_DOWNLOAD_PATH = "web_download_path"
+    const val WEB_ASK_BEFORE_DOWNLOAD = "web_ask_before_download"
+
+    // ══════════════════════════════════════════
+    // VoiceIsolation Settings
+    // ══════════════════════════════════════════
+    const val VOICE_ISOLATION_ENABLED = "voice_isolation_enabled"
+    const val VOICE_ISOLATION_NOISE_SUPPRESSION = "voice_isolation_noise_suppression"
+    const val VOICE_ISOLATION_ECHO_CANCELLATION = "voice_isolation_echo_cancellation"
+    const val VOICE_ISOLATION_AGC = "voice_isolation_agc"
+    const val VOICE_ISOLATION_NS_LEVEL = "voice_isolation_ns_level"
+    const val VOICE_ISOLATION_GAIN_LEVEL = "voice_isolation_gain_level"
+    const val VOICE_ISOLATION_MODE = "voice_isolation_mode"
 
     // ══════════════════════════════════════════
     // Developer Settings

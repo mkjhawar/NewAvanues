@@ -16,7 +16,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.vivokasdk"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26

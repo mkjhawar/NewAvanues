@@ -2,7 +2,6 @@
  * AIDLTestTemplate.kt - Advanced AIDL integration testing template
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: {{DATE}}
  * 
  * Comprehensive AIDL interface testing with IPC, callbacks, and cross-process validation

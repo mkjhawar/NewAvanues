@@ -1,0 +1,811 @@
+/* ============================================================
+   Cockpit Browser — layouts.css
+   Layout mode styles for all 14 frame-based layout modes:
+   GRID, FULLSCREEN, SPLIT, SPLIT_RIGHT, ROW, FREEFORM, COCKPIT,
+   T_PANEL, MOSAIC, WORKFLOW, CAROUSEL, SPATIAL_DICE, GALLERY,
+   TRIPTYCH
+   ============================================================ */
+
+/* ---- shared frame area ---- */
+
+.frame-area {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  position: relative;
+}
+
+/* ================================================================
+   LAYOUT: GRID
+   CSS Grid, auto-fit columns (min 300px), centered, equal-size.
+   ================================================================ */
+
+.layout-grid .frame-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.layout-grid .frame-window {
+  min-height: 250px;
+}
+
+/* ================================================================
+   LAYOUT: FULLSCREEN
+   Single selected frame takes 100%, tab strip for others.
+   ================================================================ */
+
+.layout-fullscreen .frame-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-fullscreen .tab-strip {
+  display: flex;
+  gap: 6px;
+  padding: 6px 0;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.layout-fullscreen .tab-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.layout-fullscreen .tab-strip::-webkit-scrollbar-thumb {
+  background: var(--av-border);
+  border-radius: 2px;
+}
+
+.tab-strip-item {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--av-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--av-border-subtle);
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tab-strip-item:hover {
+  color: var(--av-text-primary);
+  border-color: var(--av-border);
+}
+
+.tab-strip-item.active {
+  color: var(--av-primary);
+  font-weight: 500;
+}
+
+.tab-strip-item .tab-icon {
+  font-size: 12px;
+}
+
+.layout-fullscreen .fullscreen-frame-container {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.layout-fullscreen .fullscreen-frame-container .frame-window {
+  flex: 1;
+}
+
+/* hide non-selected frames in fullscreen mode — handled by JS visibility */
+
+/* ================================================================
+   LAYOUT: SPLIT_LEFT
+   60/40 split. Left = selected frame. Right = stacked remaining.
+   ================================================================ */
+
+.layout-split .frame-area {
+  display: flex;
+  gap: 12px;
+}
+
+.layout-split .split-primary {
+  flex: 0 0 60%;
+  display: flex;
+}
+
+.layout-split .split-primary .frame-window {
+  flex: 1;
+}
+
+.layout-split .split-secondary {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.layout-split .split-secondary .frame-window {
+  min-height: 150px;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   LAYOUT: ROW
+   Horizontal flex row, equal width frames.
+   ================================================================ */
+
+.layout-row .frame-area {
+  display: flex;
+  gap: 12px;
+}
+
+.layout-row .frame-window {
+  flex: 1;
+  min-width: 200px;
+  min-height: 250px;
+}
+
+/* ================================================================
+   LAYOUT: SPLIT_RIGHT
+   60/40 split. Right = selected frame. Left = stacked remaining.
+   Mirror of SPLIT.
+   ================================================================ */
+
+.layout-split_right .frame-area {
+  display: flex;
+  gap: 12px;
+}
+
+.layout-split_right .split-primary {
+  flex: 0 0 60%;
+  display: flex;
+}
+
+.layout-split_right .split-primary .frame-window {
+  flex: 1;
+}
+
+.layout-split_right .split-secondary {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.layout-split_right .split-secondary .frame-window {
+  min-height: 150px;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   LAYOUT: FREEFORM
+   Absolute-positioned draggable frames on a canvas.
+   ================================================================ */
+
+.layout-freeform .frame-area {
+  position: relative;
+  min-height: 500px;
+  overflow: visible;
+}
+
+.layout-freeform .frame-window {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+
+.layout-freeform .frame-window.selected {
+  box-shadow: 0 6px 28px rgba(var(--av-primary-rgb, 100, 140, 255), 0.35),
+              0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.layout-freeform .frame-header {
+  cursor: grab;
+}
+
+.layout-freeform .frame-header:active {
+  cursor: grabbing;
+}
+
+/* ================================================================
+   LAYOUT: COCKPIT (Flight Deck)
+   Instrument panel: status strip + main instruments + bottom row.
+   ================================================================ */
+
+.layout-cockpit .frame-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cockpit-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cockpit-row .frame-window {
+  flex: 1;
+  min-height: 120px;
+}
+
+.cockpit-status-strip {
+  flex: 0 0 80px;
+}
+
+.cockpit-status-strip .frame-window {
+  min-height: unset;
+}
+
+.cockpit-main-row {
+  flex: 1;
+}
+
+.cockpit-main-row .frame-window {
+  min-height: 200px;
+}
+
+.cockpit-bottom-row {
+  flex: 0 0 140px;
+}
+
+.cockpit-bottom-row .frame-window {
+  min-height: unset;
+}
+
+.cockpit-top-row {
+  flex: 1;
+}
+
+/* ================================================================
+   LAYOUT: T-PANEL
+   Column: primary 60% top, secondaries share 40% bottom row.
+   ================================================================ */
+
+.layout-t_panel .frame-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tpanel-top {
+  flex: 3;
+  display: flex;
+  min-height: 0;
+}
+
+.tpanel-top .frame-window {
+  flex: 1;
+}
+
+.tpanel-bottom {
+  flex: 2;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+.tpanel-bottom .frame-window {
+  flex: 1;
+  min-height: 120px;
+}
+
+/* ================================================================
+   LAYOUT: MOSAIC
+   Selected frame 50% left, remaining frames tiled in right column.
+   ================================================================ */
+
+.layout-mosaic .frame-area {
+  display: flex;
+  gap: 12px;
+}
+
+.mosaic-primary {
+  flex: 0 0 50%;
+  display: flex;
+}
+
+.mosaic-primary .frame-window {
+  flex: 1;
+}
+
+.mosaic-tiles {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.mosaic-tiles .frame-window {
+  flex-shrink: 0;
+  min-height: 130px;
+}
+
+/* ================================================================
+   LAYOUT: WORKFLOW
+   Left sidebar (200px) with numbered steps + right content area.
+   ================================================================ */
+
+.layout-workflow .frame-area {
+  display: flex;
+  gap: 0;
+}
+
+.workflow-sidebar {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--av-border);
+  background: var(--av-surface-elevated, rgba(255, 255, 255, 0.03));
+  overflow-y: auto;
+}
+
+.workflow-sidebar-title {
+  padding: 14px 16px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--av-text-tertiary);
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--av-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+  border-left: 3px solid transparent;
+}
+
+.workflow-step:hover {
+  background: var(--av-hover, rgba(255, 255, 255, 0.05));
+  color: var(--av-text-primary);
+}
+
+.workflow-step.active {
+  color: var(--av-primary);
+  background: var(--av-primary-surface, rgba(100, 140, 255, 0.08));
+  border-left-color: var(--av-primary);
+}
+
+.workflow-step-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: var(--av-border-subtle, rgba(255, 255, 255, 0.1));
+  color: var(--av-text-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.workflow-step.active .workflow-step-badge {
+  background: var(--av-primary);
+  color: var(--av-on-primary, #fff);
+}
+
+.workflow-step-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-content {
+  flex: 1;
+  display: flex;
+  padding: 12px;
+  min-width: 0;
+}
+
+.workflow-content .frame-window {
+  flex: 1;
+}
+
+/* ================================================================
+   LAYOUT: CAROUSEL
+   3D perspective swipe — center card full scale, sides scaled down
+   with rotateY perspective transforms.
+   ================================================================ */
+
+.layout-carousel .frame-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  perspective: 1200px;
+  overflow: hidden;
+}
+
+.carousel-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  perspective: 1200px;
+}
+
+.carousel-card {
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  flex-shrink: 0;
+}
+
+.carousel-center {
+  flex: 0 0 60%;
+  max-width: 60%;
+  transform: translateZ(0) scale(1);
+  z-index: 3;
+  opacity: 1;
+}
+
+.carousel-center .frame-window {
+  min-height: 300px;
+}
+
+.carousel-left {
+  flex: 0 0 28%;
+  max-width: 28%;
+  transform: perspective(1200px) rotateY(15deg) scale(0.8);
+  transform-origin: right center;
+  z-index: 1;
+  opacity: 0.65;
+}
+
+.carousel-left .frame-window {
+  min-height: 200px;
+}
+
+.carousel-right {
+  flex: 0 0 28%;
+  max-width: 28%;
+  transform: perspective(1200px) rotateY(-15deg) scale(0.8);
+  transform-origin: left center;
+  z-index: 1;
+  opacity: 0.65;
+}
+
+.carousel-right .frame-window {
+  min-height: 200px;
+}
+
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--av-border);
+  background: var(--av-surface-elevated, rgba(0, 0, 0, 0.4));
+  color: var(--av-text-primary);
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.carousel-nav:hover {
+  background: var(--av-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--av-primary);
+}
+
+.carousel-prev {
+  left: 12px;
+}
+
+.carousel-next {
+  right: 12px;
+}
+
+/* ================================================================
+   LAYOUT: SPATIAL DICE (Dice-5)
+   4 corners in a 2x2 grid + 1 center overlay.
+   ================================================================ */
+
+.layout-spatial_dice .frame-area {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+}
+
+.dice-grid {
+  display: contents;
+}
+
+.dice-corner {
+  display: flex;
+  min-height: 140px;
+}
+
+.dice-corner .frame-window {
+  flex: 1;
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
+}
+
+.dice-corner .frame-window:hover {
+  opacity: 1;
+}
+
+.dice-corner-empty {
+  border: 1px dashed var(--av-border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+}
+
+.dice-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 55%;
+  height: 55%;
+  z-index: 5;
+  display: flex;
+}
+
+.dice-center .frame-window {
+  flex: 1;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ================================================================
+   LAYOUT: GALLERY
+   CSS grid masonry-like media display.
+   ================================================================ */
+
+.layout-gallery .frame-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-auto-rows: 200px;
+  gap: 10px;
+  align-content: start;
+}
+
+.layout-gallery .frame-window {
+  min-height: unset;
+  height: 100%;
+}
+
+/* every 3rd gallery frame spans 2 rows for visual variety */
+.layout-gallery .frame-window:nth-child(3n+1) {
+  grid-row: span 2;
+}
+
+/* every 5th gallery frame spans 2 columns */
+.layout-gallery .frame-window:nth-child(5n) {
+  grid-column: span 2;
+}
+
+/* ================================================================
+   LAYOUT: TRIPTYCH
+   3-panel book spread with CSS perspective + rotateY.
+   Left/right panels angle inward, center panel forward.
+   ================================================================ */
+
+.layout-triptych .frame-area {
+  display: flex;
+  gap: 6px;
+  perspective: 900px;
+  align-items: stretch;
+}
+
+.triptych-panel {
+  display: flex;
+  transition: transform 0.4s ease;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.triptych-panel .frame-window {
+  flex: 1;
+}
+
+.triptych-left {
+  flex: 0.82;
+  transform: rotateY(16deg);
+  transform-origin: right center;
+  z-index: 1;
+}
+
+.triptych-center {
+  flex: 1.5;
+  transform: translateZ(14px);
+  z-index: 3;
+}
+
+.triptych-right {
+  flex: 0.82;
+  transform: rotateY(-16deg);
+  transform-origin: left center;
+  z-index: 1;
+}
+
+.triptych-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--av-text-tertiary);
+  font-size: 13px;
+  border: 1px dashed var(--av-border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  min-height: 200px;
+}
+
+/* ================================================================
+   Minimized frames
+   Collapsed to just the header bar (title visible).
+   ================================================================ */
+
+.frame-window.minimized {
+  min-height: unset !important;
+  height: auto !important;
+}
+
+.frame-window.minimized .frame-content {
+  display: none;
+}
+
+/* ================================================================
+   Responsive adjustments
+   ================================================================ */
+
+@media (max-width: 768px) {
+  .layout-grid .frame-area {
+    grid-template-columns: 1fr;
+  }
+
+  .layout-split .frame-area {
+    flex-direction: column;
+  }
+
+  .layout-split .split-primary {
+    flex: 0 0 auto;
+  }
+
+  .layout-split_right .frame-area {
+    flex-direction: column;
+  }
+
+  .layout-split_right .split-primary {
+    flex: 0 0 auto;
+  }
+
+  .layout-row .frame-area {
+    flex-direction: column;
+  }
+
+  .layout-row .frame-window {
+    min-width: unset;
+  }
+
+  .layout-mosaic .frame-area {
+    flex-direction: column;
+  }
+
+  .mosaic-primary {
+    flex: 0 0 auto;
+  }
+
+  .layout-workflow .frame-area {
+    flex-direction: column;
+  }
+
+  .workflow-sidebar {
+    flex: 0 0 auto;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-bottom: 1px solid var(--av-border);
+    max-height: 56px;
+  }
+
+  .workflow-sidebar-title {
+    display: none;
+  }
+
+  .workflow-step {
+    flex-shrink: 0;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    padding: 8px 12px;
+  }
+
+  .workflow-step.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--av-primary);
+  }
+
+  .layout-triptych .frame-area {
+    flex-direction: column;
+    perspective: none;
+  }
+
+  .triptych-left,
+  .triptych-center,
+  .triptych-right {
+    transform: none;
+    flex: 1;
+  }
+
+  .carousel-center {
+    flex: 0 0 80%;
+    max-width: 80%;
+  }
+
+  .carousel-left,
+  .carousel-right {
+    flex: 0 0 18%;
+    max-width: 18%;
+  }
+
+  .layout-spatial_dice .frame-area {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .dice-center {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 100%;
+    height: auto;
+    order: -1;
+    margin-bottom: 10px;
+  }
+
+  .dice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .layout-gallery .frame-area {
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 150px;
+  }
+
+  .layout-t_panel .tpanel-bottom {
+    flex-direction: column;
+  }
+
+  .cockpit-row {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .frame-area {
+    padding: 8px;
+  }
+
+  .layout-grid .frame-area {
+    gap: 8px;
+  }
+}

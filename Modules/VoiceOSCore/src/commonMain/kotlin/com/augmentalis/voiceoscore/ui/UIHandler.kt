@@ -2,7 +2,6 @@
  * UIHandler.kt - Handles UI element interaction with disambiguation support
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-06
  * Updated: 2026-01-08 - Added disambiguation for duplicate elements
  * Updated: 2026-01-08 - Integrated with dynamic command system (AVID priority)

@@ -21,6 +21,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.theme.AvanueTheme
 
@@ -43,7 +45,10 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Back" }
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -258,7 +263,9 @@ fun SettingsItem(
                 tint = AvanueTheme.colors.textSecondary
             )
         },
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier
+            .semantics { contentDescription = "Voice: click $title" }
+            .clickable(onClick = onClick)
     )
 }
 
@@ -283,9 +290,11 @@ fun SettingsSwitch(
         trailingContent = {
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.semantics { contentDescription = "Voice: toggle $title" }
             )
-        }
+        },
+        modifier = Modifier.semantics { contentDescription = "Voice: toggle $title" }
     )
 }
 
@@ -319,7 +328,9 @@ fun SettingsSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
-            modifier = Modifier.padding(start = 40.dp)
+            modifier = Modifier
+                .padding(start = 40.dp)
+                .semantics { contentDescription = "Voice: adjust $title slider" }
         )
     }
 }

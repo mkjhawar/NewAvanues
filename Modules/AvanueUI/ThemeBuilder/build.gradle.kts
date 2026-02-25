@@ -15,8 +15,8 @@ java {
 
 kotlin {
     jvm {
-        compilations.all {
-            kotlinOptions.jvmTarget = "17"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
         withJava()
     }
@@ -70,7 +70,7 @@ kotlin {
 // Configure Compose
 compose.desktop {
     application {
-        mainClass = "com.augmentalis.avanues.avamagic.components.themebuilder.MainKt"
+        mainClass = "com.augmentalis.avanueui.themebuilder.MainKt"
 
         nativeDistributions {
             targetFormats(
@@ -103,9 +103,9 @@ compose.desktop {
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.addAll(
             "-opt-in=kotlin.RequiresOptIn",
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
             "-opt-in=kotlinx.coroutines.FlowPreview"

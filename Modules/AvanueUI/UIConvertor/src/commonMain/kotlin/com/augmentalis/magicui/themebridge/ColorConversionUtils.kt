@@ -1,4 +1,4 @@
-package com.augmentalis.avamagic.themebridge
+package com.augmentalis.avanueui.themebridge
 
 import com.augmentalis.voiceos.colorpicker.ColorRGBA
 

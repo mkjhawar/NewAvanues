@@ -2,8 +2,6 @@
  * AppVersionDTO.kt - Data transfer object for app version records
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2025-12-14
  *
  * Represents app version data from database.

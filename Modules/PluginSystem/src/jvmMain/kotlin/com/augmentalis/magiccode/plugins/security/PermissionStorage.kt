@@ -1,213 +1,119 @@
 package com.augmentalis.magiccode.plugins.security
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
+import com.augmentalis.magiccode.plugins.core.PluginLog
+import java.util.prefs.Preferences
 
 /**
- * JVM implementation of PermissionStorage.
+ * JVM (Desktop) implementation of [PermissionStorage].
  *
- * Stores permission states as JSON files in user data directory.
- * Each plugin gets its own JSON file.
+ * Uses [java.util.prefs.Preferences] for persistent permission storage.
+ * Permissions are stored as comma-separated sets under per-plugin preference keys.
  *
- * TODO: For production, consider:
- * - SQLite database for better querying
- * - File locking for concurrent access
- * - Backup and migration support
- * - Encrypted storage for sensitive permissions
+ * Storage layout:
+ * ```
+ * /com/augmentalis/magiccode/plugins/permissions/
+ *   {pluginId}/
+ *     permissions = "CAMERA,MICROPHONE,STORAGE"
+ * ```
+ *
+ * Security: JVM Preferences are backed by the OS keychain (macOS),
+ * registry (Windows), or filesystem (Linux ~/.java/.userPrefs/).
+ * Not hardware-backed like Android Keystore, but OS-protected.
  */
-class JvmPermissionStorage(
-    private val storageDirectory: File = getDefaultStorageDirectory()
-) : PermissionStorage {
-    private val json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-    }
-
-    init {
-        // Ensure storage directory exists
-        if (!storageDirectory.exists()) {
-            storageDirectory.mkdirs()
-        }
-    }
+actual class PermissionStorage {
+    private val rootPrefs = Preferences.userRoot().node("/com/augmentalis/magiccode/plugins/permissions")
 
     companion object {
-        private const val STORAGE_DIR_NAME = "plugin_permissions"
-        private const val FILE_EXTENSION = ".json"
+        private const val TAG = "PermissionStorage[JVM]"
+        private const val PERMISSIONS_KEY = "permissions"
+        private const val SEPARATOR = ","
+    }
 
-        /**
-         * Get default storage directory.
-         *
-         * Uses platform-appropriate location:
-         * - Windows: %APPDATA%/MagicCode/plugin_permissions
-         * - macOS: ~/Library/Application Support/MagicCode/plugin_permissions
-         * - Linux: ~/.config/MagicCode/plugin_permissions
-         */
-        private fun getDefaultStorageDirectory(): File {
-            val userHome = System.getProperty("user.home")
-            val osName = System.getProperty("os.name").lowercase()
+    actual fun savePermission(pluginId: String, permission: String) {
+        val node = rootPrefs.node(sanitizeNodeName(pluginId))
+        val existing = getPermissionSet(node)
+        if (permission !in existing) {
+            val updated = existing + permission
+            node.put(PERMISSIONS_KEY, updated.joinToString(SEPARATOR))
+            node.flush()
+            PluginLog.d(TAG, "Saved permission '$permission' for plugin '$pluginId'")
+        }
+    }
 
-            val baseDir = when {
-                osName.contains("win") -> {
-                    // Windows
-                    File(System.getenv("APPDATA") ?: "$userHome/AppData/Roaming", "MagicCode")
-                }
-                osName.contains("mac") -> {
-                    // macOS
-                    File(userHome, "Library/Application Support/MagicCode")
-                }
-                else -> {
-                    // Linux and others
-                    File(userHome, ".config/MagicCode")
-                }
+    actual fun hasPermission(pluginId: String, permission: String): Boolean {
+        val node = rootPrefs.node(sanitizeNodeName(pluginId))
+        return permission in getPermissionSet(node)
+    }
+
+    actual fun getAllPermissions(pluginId: String): Set<String> {
+        val node = rootPrefs.node(sanitizeNodeName(pluginId))
+        return getPermissionSet(node)
+    }
+
+    actual fun revokePermission(pluginId: String, permission: String) {
+        val node = rootPrefs.node(sanitizeNodeName(pluginId))
+        val existing = getPermissionSet(node)
+        if (permission in existing) {
+            val updated = existing - permission
+            if (updated.isEmpty()) {
+                node.remove(PERMISSIONS_KEY)
+            } else {
+                node.put(PERMISSIONS_KEY, updated.joinToString(SEPARATOR))
             }
-
-            return File(baseDir, STORAGE_DIR_NAME)
+            node.flush()
+            PluginLog.d(TAG, "Revoked permission '$permission' for plugin '$pluginId'")
         }
     }
 
-    /**
-     * Get file for a plugin's permission state.
-     */
-    private fun getPluginFile(pluginId: String): File {
-        // Sanitize plugin ID for filename
-        val safeFilename = pluginId.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-        return File(storageDirectory, "$safeFilename$FILE_EXTENSION")
-    }
-
-    /**
-     * Save permission state for a plugin.
-     */
-    override suspend fun save(state: PluginPermissionState) {
+    actual fun clearAllPermissions(pluginId: String) {
         try {
-            val file = getPluginFile(state.pluginId)
-            val jsonString = json.encodeToString(state)
-
-            Files.write(
-                file.toPath(),
-                jsonString.toByteArray(),
-                StandardOpenOption.CREATE,
-                StandardOpenOption.TRUNCATE_EXISTING
-            )
+            val node = rootPrefs.node(sanitizeNodeName(pluginId))
+            node.removeNode()
+            rootPrefs.flush()
+            PluginLog.d(TAG, "Cleared all permissions for plugin '$pluginId'")
         } catch (e: Exception) {
-            // TODO: Log error
-            System.err.println("Failed to save permission state for ${state.pluginId}: ${e.message}")
+            PluginLog.e(TAG, "Failed to clear permissions for plugin '$pluginId': ${e.message}", e)
         }
     }
 
-    /**
-     * Load permission state for a plugin.
-     */
-    override suspend fun load(pluginId: String): PluginPermissionState? {
-        try {
-            val file = getPluginFile(pluginId)
-            if (!file.exists()) {
-                return null
-            }
-
-            val jsonString = file.readText()
-            return json.decodeFromString<PluginPermissionState>(jsonString)
-        } catch (e: Exception) {
-            com.augmentalis.magiccode.plugins.core.PluginLog.e(
-                "PermissionStorage",
-                "Failed to load permission state for $pluginId",
-                e
-            )
-            return null
-        }
+    actual fun isEncrypted(): Boolean {
+        // JVM Preferences use OS-level protection:
+        // - macOS: ~/Library/Preferences/com.apple.java.util.prefs.plist (protected by file permissions)
+        // - Windows: Registry HKEY_CURRENT_USER (protected by user session)
+        // - Linux: ~/.java/.userPrefs/ (protected by file permissions)
+        // Not AES-encrypted like Android's EncryptedSharedPreferences
+        return false
     }
 
-    /**
-     * Delete permission state for a plugin.
-     */
-    override suspend fun delete(pluginId: String) {
-        try {
-            val file = getPluginFile(pluginId)
-            if (file.exists()) {
-                file.delete()
-            }
-        } catch (e: Exception) {
-            com.augmentalis.magiccode.plugins.core.PluginLog.e(
-                "PermissionStorage",
-                "Failed to delete permission state for $pluginId",
-                e
-            )
-        }
+    actual fun getEncryptionStatus(): EncryptionStatus {
+        return EncryptionStatus(
+            isEncrypted = false,
+            isHardwareBacked = false,
+            migrationCompleted = true, // No migration needed on JVM
+            keyAlias = "N/A", // JVM uses OS-native Preferences, no Keystore alias
+            encryptionScheme = "OS_NATIVE", // OS-level file/registry protection
+            migratedPermissionCount = 0
+        )
     }
 
-    /**
-     * Load all permission states.
-     */
-    override suspend fun loadAll(): Map<String, PluginPermissionState> {
-        val result = mutableMapOf<String, PluginPermissionState>()
-
-        try {
-            storageDirectory.listFiles { file ->
-                file.isFile && file.name.endsWith(FILE_EXTENSION)
-            }?.forEach { file ->
-                try {
-                    val jsonString = file.readText()
-                    val state = json.decodeFromString<PluginPermissionState>(jsonString)
-                    result[state.pluginId] = state
-                } catch (e: Exception) {
-                    // Skip invalid files
-                    com.augmentalis.magiccode.plugins.core.PluginLog.e(
-                        "PermissionStorage",
-                        "Failed to load permission state from ${file.name}",
-                        e
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            com.augmentalis.magiccode.plugins.core.PluginLog.e(
-                "PermissionStorage",
-                "Failed to load all permission states",
-                e
-            )
-        }
-
-        return result
-    }
-}
-
-/**
- * Factory for creating JVM PermissionStorage instances.
- */
-actual object PermissionStorageFactory {
-    private var storageDirectoryProvider: (() -> File)? = null
-
-    /**
-     * Set the storage directory provider for creating PermissionStorage instances.
-     * This is optional - if not set, default directory will be used.
-     *
-     * @param provider Lambda that provides File for storage directory
-     */
-    fun setStorageDirectoryProvider(provider: () -> File) {
-        storageDirectoryProvider = provider
+    actual suspend fun migrateToEncrypted(): MigrationResult {
+        // JVM doesn't support hardware-backed encryption like Android Keystore.
+        // Permissions are stored using OS-native Preferences which provide
+        // user-session-level isolation. Full encryption would require a
+        // JCE/BouncyCastle wrapper with password-based key derivation.
+        return MigrationResult.AlreadyMigrated(
+            migratedCount = 0,
+            migrationTimestamp = System.currentTimeMillis()
+        )
     }
 
-    /**
-     * Create a PermissionStorage instance.
-     * Uses the registered storage directory provider if available.
-     */
-    actual fun create(): PermissionStorage {
-        val storageDir = storageDirectoryProvider?.invoke()
-        return if (storageDir != null) {
-            JvmPermissionStorage(storageDir)
-        } else {
-            JvmPermissionStorage()
-        }
+    private fun getPermissionSet(node: Preferences): Set<String> {
+        val raw = node.get(PERMISSIONS_KEY, "")
+        return if (raw.isBlank()) emptySet() else raw.split(SEPARATOR).toSet()
     }
 
-    /**
-     * Create a PermissionStorage with a specific storage directory.
-     *
-     * @param storageDirectory File directory for JSON storage
-     */
-    fun createWithDirectory(storageDirectory: File): PermissionStorage {
-        return JvmPermissionStorage(storageDirectory)
+    private fun sanitizeNodeName(pluginId: String): String {
+        // Preferences node names must be valid path components
+        return pluginId.replace(Regex("[^a-zA-Z0-9._-]"), "_")
     }
 }

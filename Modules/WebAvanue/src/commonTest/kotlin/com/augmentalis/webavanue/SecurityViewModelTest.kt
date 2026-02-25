@@ -33,8 +33,8 @@ class SecurityViewModelTest {
 
     @AfterTest
     fun teardown() {
+        if (::viewModel.isInitialized) viewModel.onCleared()
         Dispatchers.resetMain()
-        viewModel.onCleared()
     }
 
     // ========== SSL Error Dialog Tests ==========

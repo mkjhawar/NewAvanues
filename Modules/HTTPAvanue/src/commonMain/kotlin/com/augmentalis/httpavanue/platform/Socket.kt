@@ -1,7 +1,7 @@
 package com.augmentalis.httpavanue.platform
 
-import okio.BufferedSink
-import okio.BufferedSource
+import com.augmentalis.httpavanue.io.AvanueSource
+import com.augmentalis.httpavanue.io.AvanueSink
 
 /**
  * Platform-abstracted socket interface using expect/actual pattern.
@@ -16,8 +16,8 @@ expect class Socket {
         ): Socket
     }
 
-    fun source(): BufferedSource
-    fun sink(): BufferedSink
+    fun source(): AvanueSource
+    fun sink(): AvanueSink
     fun close()
     fun isConnected(): Boolean
     fun remoteAddress(): String

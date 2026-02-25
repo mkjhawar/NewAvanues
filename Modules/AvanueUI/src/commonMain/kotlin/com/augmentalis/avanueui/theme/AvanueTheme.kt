@@ -36,6 +36,8 @@ val LocalAppearanceIsDark = staticCompositionLocalOf { true }
  *
  * When [displayProfile] specifies a non-1.0 density scale, [LocalDensity] is overridden
  * so that ALL dp/sp values automatically adapt.
+ *
+ * Optional [themeOverrides] are layered on top of the base theme for preset fine-tuning.
  */
 @Composable
 @Suppress("DEPRECATION")
@@ -46,6 +48,7 @@ fun AvanueThemeProvider(
     displayProfile: DisplayProfile = DisplayProfile.PHONE,
     materialMode: MaterialMode = MaterialMode.Water,
     isDark: Boolean = true,
+    themeOverrides: ThemeOverrides = ThemeOverrides.None,
     content: @Composable () -> Unit
 ) {
     val currentDensity = LocalDensity.current
@@ -71,6 +74,7 @@ fun AvanueThemeProvider(
         LocalDisplayProfile provides displayProfile,
         LocalMaterialMode provides materialMode,
         LocalAppearanceIsDark provides isDark,
+        LocalThemeOverrides provides themeOverrides,
         LocalDensity provides scaledDensity,
     ) {
         MaterialTheme(
@@ -107,6 +111,9 @@ object AvanueTheme {
 
     val isDark: Boolean
         @Composable get() = LocalAppearanceIsDark.current
+
+    val overrides: ThemeOverrides
+        @Composable get() = LocalThemeOverrides.current
 
     /**
      * Get resolved accent colors for a module.

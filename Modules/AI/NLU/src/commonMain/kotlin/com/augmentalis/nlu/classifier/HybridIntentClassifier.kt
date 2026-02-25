@@ -12,6 +12,7 @@
 
 package com.augmentalis.nlu.classifier
 
+import com.augmentalis.nlu.NluThresholds
 import com.augmentalis.nlu.matcher.EmbeddingProvider
 import com.augmentalis.nlu.matcher.FuzzyMatcher
 import com.augmentalis.nlu.matcher.PatternMatcher
@@ -225,14 +226,14 @@ class HybridIntentClassifier(
  * Classifier configuration
  */
 data class ClassifierConfig(
-    val exactMatchThreshold: Float = 0.95f,
-    val fuzzyMinSimilarity: Float = 0.7f,
-    val fuzzyAcceptThreshold: Float = 0.85f,
-    val semanticMinSimilarity: Float = 0.6f,
-    val hybridMinScore: Float = 0.5f,
+    val exactMatchThreshold: Float = NluThresholds.EXACT_MATCH_THRESHOLD,
+    val fuzzyMinSimilarity: Float = NluThresholds.FUZZY_MIN_SIMILARITY,
+    val fuzzyAcceptThreshold: Float = NluThresholds.FUZZY_ACCEPT_THRESHOLD,
+    val semanticMinSimilarity: Float = NluThresholds.SEMANTIC_MIN_SIMILARITY,
+    val hybridMinScore: Float = NluThresholds.HYBRID_MIN_SCORE,
     val patternWeight: Float = 1.0f,
-    val fuzzyWeight: Float = 0.9f,
-    val semanticWeight: Float = 0.85f,
+    val fuzzyWeight: Float = NluThresholds.CLASSIFIER_FUZZY_WEIGHT,
+    val semanticWeight: Float = NluThresholds.CLASSIFIER_SEMANTIC_WEIGHT,
     val maxCandidates: Int = 5
 )
 
@@ -247,7 +248,7 @@ data class ClassificationResult(
 ) {
     val topMatch: IntentMatch? get() = matches.firstOrNull()
     val hasMatch: Boolean get() = matches.isNotEmpty()
-    val isHighConfidence: Boolean get() = confidence >= 0.85f
+    val isHighConfidence: Boolean get() = confidence >= NluThresholds.HIGH_CONFIDENCE
 }
 
 /**

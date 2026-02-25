@@ -20,6 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,11 +57,14 @@ fun DeviceInfoScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { 
-                        coroutineScope.launch {
-                            deviceManager.initializeAll()
-                        }
-                    }) {
+                    IconButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                deviceManager.initializeAll()
+                            }
+                        },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Refresh" }
+                    ) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 }
@@ -79,27 +84,32 @@ fun DeviceInfoScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Overview") }
+                    text = { Text("Overview") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Overview tab" }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Network") }
+                    text = { Text("Network") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Network tab" }
                 )
                 Tab(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    text = { Text("Sensors") }
+                    text = { Text("Sensors") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Sensors tab" }
                 )
                 Tab(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
-                    text = { Text("Security") }
+                    text = { Text("Security") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Security tab" }
                 )
                 Tab(
                     selected = selectedTab == 4,
                     onClick = { selectedTab = 4 },
-                    text = { Text("Audio") }
+                    text = { Text("Audio") },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Audio tab" }
                 )
             }
             
@@ -190,13 +200,15 @@ fun NetworkTab(deviceManager: DeviceManager) {
                     ) {
                         Button(
                             onClick = { deviceManager.bluetooth?.startDiscovery() },
-                            enabled = !bluetoothState.isScanning
+                            enabled = !bluetoothState.isScanning,
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Start Bluetooth Scan" }
                         ) {
                             Text("Start Scan")
                         }
                         Button(
                             onClick = { deviceManager.bluetooth?.stopDiscovery() },
-                            enabled = bluetoothState.isScanning
+                            enabled = bluetoothState.isScanning,
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Stop Bluetooth Scan" }
                         ) {
                             Text("Stop Scan")
                         }
@@ -237,7 +249,9 @@ fun NetworkTab(deviceManager: DeviceManager) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = { deviceManager.wifi?.startScan() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = "Voice: click Scan WiFi Networks" }
                     ) {
                         Text("Scan Networks")
                     }
@@ -275,7 +289,9 @@ fun NetworkTab(deviceManager: DeviceManager) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = { deviceManager.uwb?.startDiscovery() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = "Voice: click Discover UWB Devices" }
                     ) {
                         Text("Discover Devices")
                     }
@@ -325,7 +341,9 @@ fun SensorsTab(deviceManager: DeviceManager) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = { deviceManager.lidar?.startScanning() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = "Voice: click Start LiDAR Scanning" }
                     ) {
                         Text("Start Scanning")
                     }

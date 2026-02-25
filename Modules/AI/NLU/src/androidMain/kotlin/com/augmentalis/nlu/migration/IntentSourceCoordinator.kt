@@ -1,7 +1,6 @@
 package com.augmentalis.nlu.migration
 
 import android.content.Context
-import android.util.Log
 import com.augmentalis.ava.core.data.db.AVADatabase
 import com.augmentalis.ava.core.data.db.DatabaseDriverFactory
 import com.augmentalis.ava.core.data.db.IntentExampleQueries
@@ -10,6 +9,10 @@ import com.augmentalis.nlu.ava.AssetExtractor
 import com.augmentalis.nlu.ava.converter.AvaToEntityConverter
 import com.augmentalis.nlu.ava.io.AvaFileReader
 import com.augmentalis.nlu.LanguagePackManager
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
+import com.augmentalis.nlu.nluLogWarn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -55,10 +58,10 @@ class IntentSourceCoordinator(
             val hasExamples = queries.hasExamples().executeAsOne()
 
             if (!hasExamples) {
-                Log.i(TAG, "First run detected - starting intent examples migration from .ava files...")
+                nluLogInfo(TAG, "First run detected - starting intent examples migration from .ava files...")
                 migrate()
                 val count = queries.count().executeAsOne()
-                Log.i(TAG, "Migration complete. Total examples: $count")
+                nluLogInfo(TAG, "Migration complete. Total examples: $count")
                 return@withContext true
             } else {
                 // Database has examples, but check if they're from JSON fallback
@@ -67,19 +70,19 @@ class IntentSourceCoordinator(
 
                 if (hasJsonSource) {
                     // Database was populated from JSON fallback, need to reload from .ava files
-                    Log.i(TAG, "Database contains JSON fallback data - reloading from .ava files...")
+                    nluLogInfo(TAG, "Database contains JSON fallback data - reloading from .ava files...")
                     clearDatabase()
                     migrate()
                     val count = queries.count().executeAsOne()
-                    Log.i(TAG, "Migration complete. Total examples: $count")
+                    nluLogInfo(TAG, "Migration complete. Total examples: $count")
                     return@withContext true
                 } else {
-                    Log.i(TAG, "Database already populated from .ava files, skipping migration")
+                    nluLogInfo(TAG, "Database already populated from .ava files, skipping migration")
                     return@withContext false
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Migration failed: ${e.message}", e)
+            nluLogError(TAG, "Migration failed: ${e.message}", e)
             false
         }
     }
@@ -92,19 +95,19 @@ class IntentSourceCoordinator(
         val insertParams = try {
             val avaParams = loadFromAvaSources()
             if (avaParams.isNotEmpty()) {
-                Log.i(TAG, "Using .ava files as migration source (${avaParams.size} examples)")
+                nluLogInfo(TAG, "Using .ava files as migration source (${avaParams.size} examples)")
                 avaParams
             } else {
-                Log.i(TAG, "No .ava files found, falling back to JSON")
+                nluLogInfo(TAG, "No .ava files found, falling back to JSON")
                 loadFromJsonSource()
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to load .ava files, falling back to JSON: ${e.message}")
+            nluLogWarn(TAG, "Failed to load .ava files, falling back to JSON: ${e.message}")
             loadFromJsonSource()
         }
 
         if (insertParams.isEmpty()) {
-            Log.e(TAG, "No intent examples found from any source")
+            nluLogError(TAG, "No intent examples found from any source")
             return@withContext 0
         }
 
@@ -133,12 +136,12 @@ class IntentSourceCoordinator(
             }
         }
 
-        Log.i(TAG, "Inserted $insertedCount examples (${insertParams.size - insertedCount} duplicates skipped)")
+        nluLogInfo(TAG, "Inserted $insertedCount examples (${insertParams.size - insertedCount} duplicates skipped)")
 
         val intentCounts = queries.countPerIntent().executeAsList()
-        Log.d(TAG, "=== Intent Example Counts ===")
+        nluLogDebug(TAG, "=== Intent Example Counts ===")
         intentCounts.forEach { row ->
-            Log.d(TAG, "  ${row.intent_id}: ${row.example_count} examples")
+            nluLogDebug(TAG, "  ${row.intent_id}: ${row.example_count} examples")
         }
 
         insertedCount
@@ -147,8 +150,8 @@ class IntentSourceCoordinator(
     private suspend fun loadFromAvaSources(): List<AvaToEntityConverter.IntentExampleInsertParams> = withContext(Dispatchers.IO) {
         try {
             val activeLanguage = languagePackManager.getActiveLanguage()
-            Log.i(TAG, "Loading from .ava files for locale: $activeLanguage")
-            Log.d(TAG, "Storage paths: core=$corePath, voiceos=$voiceosPath, user=$userPath")
+            nluLogInfo(TAG, "Loading from .ava files for locale: $activeLanguage")
+            nluLogDebug(TAG, "Storage paths: core=$corePath, voiceos=$voiceosPath, user=$userPath")
 
             // Load from external storage (extracted from APK)
             val coreIntents = avaFileReader.loadIntentsFromDirectory(
@@ -166,13 +169,13 @@ class IntentSourceCoordinator(
 
             // Load from APK assets (ava-examples folder)
             val assetIntents = try {
-                Log.d(TAG, "Loading .ava files from APK assets (ava-examples/$activeLanguage/)")
+                nluLogDebug(TAG, "Loading .ava files from APK assets (ava-examples/$activeLanguage/)")
                 val assetManager = context.assets
                 val assetPath = "ava-examples/$activeLanguage"
                 val files = assetManager.list(assetPath) ?: emptyArray()
                 val avaFiles = files.filter { it.endsWith(".ava") }
 
-                Log.i(TAG, "Found ${avaFiles.size} .ava files in assets: ${avaFiles.joinToString()}")
+                nluLogInfo(TAG, "Found ${avaFiles.size} .ava files in assets: ${avaFiles.joinToString()}")
 
                 val intents = mutableListOf<com.augmentalis.nlu.ava.model.AvaIntent>()
                 avaFiles.forEach { fileName ->
@@ -180,30 +183,30 @@ class IntentSourceCoordinator(
                         val json = assetManager.open("$assetPath/$fileName").bufferedReader().use { it.readText() }
                         val fileIntents = avaFileReader.parseAvaFile(json, "ASSETS")
                         intents.addAll(fileIntents)
-                        Log.d(TAG, "Loaded ${fileIntents.size} intents from assets/$assetPath/$fileName")
+                        nluLogDebug(TAG, "Loaded ${fileIntents.size} intents from assets/$assetPath/$fileName")
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to load $fileName from assets: ${e.message}")
+                        nluLogWarn(TAG, "Failed to load $fileName from assets: ${e.message}")
                     }
                 }
                 intents
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to load from assets: ${e.message}")
+                nluLogWarn(TAG, "Failed to load from assets: ${e.message}")
                 emptyList()
             }
 
             val allIntents = coreIntents + voiceosIntents + userIntents + assetIntents
 
             if (allIntents.isEmpty()) {
-                Log.w(TAG, "No intents found in .ava files for $activeLanguage")
+                nluLogWarn(TAG, "No intents found in .ava files for $activeLanguage")
                 return@withContext emptyList()
             }
 
             val params = AvaToEntityConverter.convertToInsertParams(allIntents)
-            Log.i(TAG, "Loaded ${params.size} examples from ${allIntents.size} intents (.ava files)")
+            nluLogInfo(TAG, "Loaded ${params.size} examples from ${allIntents.size} intents (.ava files)")
 
             params
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load from .ava files: ${e.message}", e)
+            nluLogError(TAG, "Failed to load from .ava files: ${e.message}", e)
             emptyList()
         }
     }
@@ -211,12 +214,12 @@ class IntentSourceCoordinator(
     private fun loadFromJsonSource(): List<AvaToEntityConverter.IntentExampleInsertParams> {
         val json = loadJsonFromAssets()
         if (json == null) {
-            Log.e(TAG, "Failed to load intent_examples.json")
+            nluLogError(TAG, "Failed to load intent_examples.json")
             return emptyList()
         }
 
         val jsonObject = JSONObject(json)
-        Log.d(TAG, "Loaded JSON with ${jsonObject.length()} intents")
+        nluLogDebug(TAG, "Loaded JSON with ${jsonObject.length()} intents")
 
         val params = mutableListOf<AvaToEntityConverter.IntentExampleInsertParams>()
         val intentNames = jsonObject.keys()
@@ -226,7 +229,7 @@ class IntentSourceCoordinator(
             val intentId = intentNames.next()
             val examplesArray = jsonObject.getJSONArray(intentId)
 
-            Log.d(TAG, "Processing intent: $intentId (${examplesArray.length()} examples)")
+            nluLogDebug(TAG, "Processing intent: $intentId (${examplesArray.length()} examples)")
 
             for (i in 0 until examplesArray.length()) {
                 val exampleText = examplesArray.getString(i)
@@ -249,7 +252,7 @@ class IntentSourceCoordinator(
             }
         }
 
-        Log.i(TAG, "Parsed ${params.size} examples from ${jsonObject.length()} intents (JSON)")
+        nluLogInfo(TAG, "Parsed ${params.size} examples from ${jsonObject.length()} intents (JSON)")
         return params
     }
 
@@ -257,7 +260,7 @@ class IntentSourceCoordinator(
         return try {
             context.assets.open(JSON_PATH).bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load JSON from assets: ${e.message}", e)
+            nluLogError(TAG, "Failed to load JSON from assets: ${e.message}", e)
             null
         }
     }
@@ -266,9 +269,9 @@ class IntentSourceCoordinator(
         try {
             val count = queries.count().executeAsOne()
             queries.deleteAll()
-            Log.i(TAG, "Cleared $count examples from database")
+            nluLogInfo(TAG, "Cleared $count examples from database")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to clear database: ${e.message}", e)
+            nluLogError(TAG, "Failed to clear database: ${e.message}", e)
         }
     }
 
@@ -285,7 +288,7 @@ class IntentSourceCoordinator(
                 "intent_counts" to intentCounts
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get migration status: ${e.message}", e)
+            nluLogError(TAG, "Failed to get migration status: ${e.message}", e)
             mapOf("error" to (e.message ?: "Unknown error"))
         }
     }

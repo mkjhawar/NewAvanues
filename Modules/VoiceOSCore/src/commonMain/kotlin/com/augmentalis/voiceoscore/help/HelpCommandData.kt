@@ -2,7 +2,6 @@
  * HelpCommandData.kt - Data model for voice command help screen
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-29
  *
  * Provides structured data for the help screen, including command categories,

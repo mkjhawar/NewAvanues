@@ -4,7 +4,7 @@ plugins {
     id("com.android.library")
 }
 
-group = "com.augmentalis.avanues.avamagic.ui"
+group = "com.augmentalis.avanueui"
 version = "1.0.0"
 
 kotlin {
@@ -12,10 +12,8 @@ kotlin {
     // NOTE: Temporarily Android-only until platform-specific APIs (Math, etc.)
     // are refactored for multiplatform support
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -79,10 +77,10 @@ kotlin {
 
 android {
     namespace = "com.avanueui.core"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 28
     }
 
     compileOptions {

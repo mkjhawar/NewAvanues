@@ -1,6 +1,7 @@
 package com.augmentalis.llm.alc
 
 import android.content.Context
+import com.augmentalis.llm.LLMResult
 import com.augmentalis.llm.alc.interfaces.*
 import com.augmentalis.llm.alc.language.LanguagePackManager
 import com.augmentalis.llm.domain.ChatMessage
@@ -89,7 +90,7 @@ class ALCEngineTest {
         val result = engine.initialize()
 
         // Then
-        assertTrue("Should fail when language pack missing", result is com.augmentalis.ava.core.common.Result.Error)
+        assertTrue("Should fail when language pack missing", result is LLMResult.Error)
     }
 
     @Test
@@ -101,8 +102,8 @@ class ALCEngineTest {
         val result = engine.switchLanguage("es")
 
         // Then
-        assertTrue("Should fail when language not installed", 
-            result is com.augmentalis.ava.core.common.Result.Error)
+        assertTrue("Should fail when language not installed",
+            result is LLMResult.Error)
     }
 
     @Test

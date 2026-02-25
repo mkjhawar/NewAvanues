@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cockpit Dashboard v4.3 — Two-Level Hub + Triptych</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* ══════════════════════════════════════════
+     THEME VARIABLES
+     5 themes inspired by AR/XR platforms
+     ══════════════════════════════════════════ */
+
+  /* Apple Vision — white-tinted glass, blue accent, vibrancy hierarchy
+     Based on: visionOS adaptive glass, rgba white tint 15-25%, blur 40-120px,
+     specular edge highlights, #007AFF system blue, SF Pro Rounded */
+  [data-theme="apple-vision"] {
+    --bg: #000000; --surface: #1C1C1E; --surface-elevated: #2C2C2E;
+    --primary: #007AFF; --primary-light: #5AC8FA; --primary-glow: rgba(0,122,255,0.3);
+    --secondary: #FF9F0A; --tertiary: #30D158;
+    --text-primary: #FFFFFF; --text-secondary: rgba(255,255,255,0.70); --text-muted: rgba(255,255,255,0.45);
+    --glass-bg: rgba(255,255,255,0.18); --glass-border: rgba(255,255,255,0.25); --glass-blur: 40px;
+    --card-bg: rgba(255,255,255,0.12); --card-border: rgba(255,255,255,0.18);
+    --radius: 24px; --radius-sm: 16px;
+    --shadow-glow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+    --cat-controls: #007AFF; --cat-media: #FF9F0A; --cat-creation: #30D158;
+    --cat-tasks: #FF375F; --cat-web: #5AC8FA; --cat-favorites: #BF5AF2; --cat-templates: #64D2FF;
+  }
+
+  /* Meta Horizon — dark opaque panels, brand blue, RLDS design system
+     Based on: rgba(28,30,33,0.85-0.90), #0081FB brand blue, 8-16px blur,
+     higher opacity approach, v71 refresh contrast optimizations */
+  [data-theme="meta-horizon"] {
+    --bg: #0A0A0F; --surface: #1C1E21; --surface-elevated: #242526;
+    --primary: #0081FB; --primary-light: #1877F2; --primary-glow: rgba(0,129,251,0.25);
+    --secondary: #E41E3F; --tertiary: #31A24C;
+    --text-primary: #E4E6EB; --text-secondary: #B0B3B8; --text-muted: rgba(228,230,235,0.3);
+    --glass-bg: rgba(28,30,33,0.88); --glass-border: rgba(255,255,255,0.10); --glass-blur: 12px;
+    --card-bg: rgba(36,37,38,0.90); --card-border: rgba(255,255,255,0.08);
+    --radius: 20px; --radius-sm: 12px;
+    --shadow-glow: 0 4px 16px rgba(0,0,0,0.30);
+    --cat-controls: #0081FB; --cat-media: #E41E3F; --cat-creation: #31A24C;
+    --cat-tasks: #D06C14; --cat-web: #1877F2; --cat-favorites: #BF5AF2; --cat-templates: #00B4D8;
+  }
+
+  /* Google XR — M3 baseline dark, tonal elevation (no blur), rounded
+     Based on: #141218 background, #D0BCFF primary purple, #E6E1E5 text,
+     tonal surface containers instead of blur, 24px radius, Google Sans Flex */
+  [data-theme="google-xr"] {
+    --bg: #141218; --surface: #1D1B20; --surface-elevated: #2B2930;
+    --primary: #D0BCFF; --primary-light: #EADDFF; --primary-glow: rgba(208,188,255,0.15);
+    --secondary: #CCC2DC; --tertiary: #EFB8C8;
+    --text-primary: #E6E1E5; --text-secondary: #CAC4D0; --text-muted: #938F99;
+    --glass-bg: #211F26; --glass-border: #49454F; --glass-blur: 0px;
+    --card-bg: #2B2930; --card-border: #49454F;
+    --radius: 24px; --radius-sm: 16px;
+    --shadow-glow: none;
+    --cat-controls: #D0BCFF; --cat-media: #EFB8C8; --cat-creation: #34D399;
+    --cat-tasks: #F2B8B5; --cat-web: #CCC2DC; --cat-favorites: #D0BCFF; --cat-templates: #24C1E0;
+  }
+
+  /* HYDRA — deep sapphire, electric blue, scanline grid */
+  [data-theme="hydra"] {
+    --bg: #020617; --surface: #0F172A; --surface-elevated: #1E293B;
+    --primary: #1E40AF; --primary-light: #3B82F6; --primary-glow: rgba(30,64,175,0.35);
+    --secondary: #8B5CF6; --tertiary: #34D399;
+    --text-primary: #F1F5F9; --text-secondary: #94A3B8; --text-muted: #475569;
+    --glass-bg: rgba(15,23,42,0.65); --glass-border: rgba(255,255,255,0.08); --glass-blur: 12px;
+    --card-bg: rgba(15,23,42,0.7); --card-border: rgba(255,255,255,0.06);
+    --radius: 12px; --radius-sm: 8px;
+    --shadow-glow: 0 0 40px rgba(30,64,175,0.1);
+    --cat-controls: #1E40AF; --cat-media: #E91E63; --cat-creation: #34D399;
+    --cat-tasks: #FFA726; --cat-web: #00897B; --cat-favorites: #8B5CF6; --cat-templates: #26C6DA;
+  }
+
+  /* Neon Cyber — pure black, neon cyan/magenta, bold glow */
+  [data-theme="neon-cyber"] {
+    --bg: #000000; --surface: #0A0A0A; --surface-elevated: #141414;
+    --primary: #00FFFF; --primary-light: #80FFFF; --primary-glow: rgba(0,255,255,0.25);
+    --secondary: #FF00FF; --tertiary: #00FF88;
+    --text-primary: #FFFFFF; --text-secondary: rgba(255,255,255,0.6); --text-muted: rgba(255,255,255,0.3);
+    --glass-bg: rgba(20,20,20,0.7); --glass-border: rgba(0,255,255,0.15); --glass-blur: 16px;
+    --card-bg: rgba(20,20,20,0.8); --card-border: rgba(0,255,255,0.12);
+    --radius: 8px; --radius-sm: 6px;
+    --shadow-glow: 0 0 30px rgba(0,255,255,0.15), 0 0 60px rgba(255,0,255,0.05);
+    --cat-controls: #00FFFF; --cat-media: #FF00FF; --cat-creation: #00FF88;
+    --cat-tasks: #FFD700; --cat-web: #00BFFF; --cat-favorites: #FF6EFF; --cat-templates: #7DF9FF;
+  }
+
+  body {
+    background: #0a0a14;
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  /* ── Control Bar (top) ── */
+  .control-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(0,0,0,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column; gap: 6px; padding: 8px 12px;
+  }
+  .control-row {
+    display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+  }
+  .control-label {
+    font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; margin-right: 6px;
+    flex-shrink: 0;
+  }
+  .ctrl-btn {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+    background: transparent; color: rgba(255,255,255,0.5); font-size: 10px;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .ctrl-btn:hover { border-color: var(--primary-light, #3B82F6); color: #fff; }
+  .ctrl-btn.active {
+    background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.5);
+    color: #93c5fd;
+  }
+  .ctrl-btn.theme-apple.active { background: rgba(0,122,255,0.2); border-color: rgba(0,122,255,0.5); color: #5AC8FA; }
+  .ctrl-btn.theme-meta.active { background: rgba(24,119,242,0.2); border-color: rgba(24,119,242,0.5); color: #4BA3F5; }
+  .ctrl-btn.theme-google.active { background: rgba(26,115,232,0.2); border-color: rgba(26,115,232,0.5); color: #669DF6; }
+  .ctrl-btn.theme-hydra.active { background: rgba(30,64,175,0.2); border-color: rgba(30,64,175,0.5); color: #3B82F6; }
+  .ctrl-btn.theme-neon.active { background: rgba(0,255,255,0.15); border-color: rgba(0,255,255,0.4); color: #00FFFF; }
+  .device-info {
+    font-size: 9px; color: rgba(255,255,255,0.3); margin-left: 8px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Viewport Frame ── */
+  .viewport-wrapper {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 120px 20px 20px; width: 100%; min-height: 100vh;
+  }
+  .viewport-frame {
+    position: relative;
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 22px; overflow: hidden;
+    background: var(--bg);
+    box-shadow: var(--shadow-glow);
+    transform-origin: center center;
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+
+  /* ── Dashboard ── */
+  .dashboard {
+    width: 100%; height: 100%;
+    overflow-y: auto; overflow-x: hidden;
+    background: radial-gradient(ellipse at 50% 20%, var(--surface) 0%, var(--bg) 70%);
+    position: relative; display: flex; flex-direction: column;
+  }
+  .dashboard::-webkit-scrollbar { width: 2px; }
+  .dashboard::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  /* ── Theme-specific overrides ── */
+  /* Apple Vision: white glass + saturate for vibrancy */
+  [data-theme="apple-vision"] .cat-dot,
+  [data-theme="apple-vision"] .mod-dot,
+  [data-theme="apple-vision"] .session-pill {
+    backdrop-filter: blur(40px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+    border-top: 1px solid rgba(255,255,255,0.35);
+  }
+  /* Google XR: no blur — tonal surfaces only */
+  [data-theme="google-xr"] .cat-dot,
+  [data-theme="google-xr"] .mod-dot,
+  [data-theme="google-xr"] .session-pill {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  /* Neon Cyber: glow on nodes */
+  [data-theme="neon-cyber"] .cat-node.active .cat-dot {
+    box-shadow: 0 0 20px rgba(0,255,255,0.4), 0 0 40px rgba(255,0,255,0.15) !important;
+  }
+  [data-theme="neon-cyber"] .cat-dot,
+  [data-theme="neon-cyber"] .mod-dot {
+    border-color: rgba(0,255,255,0.2);
+  }
+
+  /* ── Scanline grid (HYDRA only) ── */
+  .scanline-grid {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(241,245,249,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(241,245,249,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0; transition: opacity 0.5s;
+  }
+  [data-theme="hydra"] .scanline-grid { opacity: 1; }
+
+  /* ══════════════════════════════════════════
+     HEADER
+     ══════════════════════════════════════════ */
+  .dash-header {
+    padding: 20px 20px 8px; text-align: center; z-index: 2; position: relative;
+  }
+  .dash-title {
+    font-size: 18px; font-weight: 700;
+    background: linear-gradient(135deg, var(--text-primary), var(--primary-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .dash-subtitle {
+    font-size: 10px; color: var(--text-secondary); margin-top: 2px; letter-spacing: 0.3px;
+  }
+
+  /* ══════════════════════════════════════════
+     HUB — The Two-Level System
+     ══════════════════════════════════════════ */
+  .hub-area {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 12px 16px; position: relative; z-index: 2;
+    min-height: 0;
+  }
+
+  /* ── Category Nodes (Level 1) ── */
+  .category-hub {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    transition: all 0.4s ease;
+  }
+
+  .cat-node {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    cursor: pointer; transition: all 0.3s ease; z-index: 5; position: relative;
+    opacity: 0; animation: nodeAppear 0.4s ease-out forwards;
+  }
+  .cat-node:hover { transform: scale(1.1); }
+  .cat-node.active { transform: scale(1.15); }
+  .cat-node .cat-dot {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; border: 2px solid var(--glass-border);
+    backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+    transition: all 0.3s; position: relative;
+  }
+  .cat-node:hover .cat-dot {
+    border-color: rgba(255,255,255,0.25);
+    box-shadow: 0 0 20px rgba(255,255,255,0.08);
+  }
+  .cat-node.active .cat-dot {
+    border-width: 2.5px;
+    box-shadow: 0 0 24px var(--primary-glow);
+  }
+  .cat-node .cat-dot .cat-count {
+    position: absolute; top: -4px; right: -4px;
+    width: 18px; height: 18px; border-radius: 50%;
+    font-size: 9px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--bg);
+  }
+  .cat-node .cat-label {
+    font-size: 9px; font-weight: 600; color: var(--text-secondary);
+    text-align: center; white-space: nowrap; max-width: 64px;
+    overflow: hidden; text-overflow: ellipsis;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  }
+  .cat-node.active .cat-label { color: var(--text-primary); }
+
+  @keyframes nodeAppear {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── Module Panel (Level 2) ── */
+  .module-panel {
+    margin-top: 16px; width: 100%; max-width: 500px;
+    transition: all 0.4s ease;
+  }
+  .module-panel-header {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .module-panel-title {
+    font-size: 13px; font-weight: 700; color: var(--text-primary);
+  }
+  .module-panel-back {
+    font-size: 11px; color: var(--text-muted); cursor: pointer;
+    padding: 3px 8px; border-radius: 6px; border: 1px solid var(--glass-border);
+    background: transparent; transition: all 0.2s;
+  }
+  .module-panel-back:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+
+  .module-hub {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    transition: all 0.4s ease;
+  }
+
+  .mod-node {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; transition: all 0.3s ease; z-index: 5; position: relative;
+    opacity: 0; animation: modAppear 0.35s ease-out forwards;
+  }
+  .mod-node:hover { transform: scale(1.12); }
+  .mod-node .mod-dot {
+    width: 44px; height: 44px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; border: 1px solid var(--card-border);
+    backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+    transition: all 0.25s;
+  }
+  .mod-node:hover .mod-dot {
+    border-color: rgba(255,255,255,0.2);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
+  }
+  .mod-node .mod-label {
+    font-size: 9px; font-weight: 600; color: var(--text-secondary);
+    text-align: center; white-space: nowrap; max-width: 60px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .mod-node .voice-num {
+    display: none; font-size: 11px; font-weight: 700;
+    color: var(--primary-light); margin-bottom: -2px;
+  }
+
+  @keyframes modAppear {
+    from { opacity: 0; transform: scale(0.6) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* ── Layout: inline ── */
+  .layout-inline { flex-direction: row; flex-wrap: wrap; gap: 14px; }
+
+  /* ── Layout: stacked ── */
+  .layout-stacked { flex-direction: column; gap: 10px; align-items: flex-start; width: 100%; padding-left: 24px; }
+  .layout-stacked .cat-node, .layout-stacked .mod-node {
+    flex-direction: row; gap: 10px;
+  }
+  .layout-stacked .cat-label, .layout-stacked .mod-label {
+    font-size: 12px; text-align: left; max-width: none;
+  }
+
+  /* ── Layout: stacked — landscape 2-column grid ── */
+  .layout-stacked.landscape {
+    flex-direction: row; flex-wrap: wrap; gap: 8px 20px;
+    padding-left: 16px; align-items: flex-start;
+  }
+  .layout-stacked.landscape .cat-node,
+  .layout-stacked.landscape .mod-node { width: 45%; }
+
+  /* ── Layout: staggered ── */
+  .layout-staggered { flex-wrap: wrap; gap: 12px; max-width: 90%; }
+
+  /* ── Layout: half-circle & circle — positioned by JS ── */
+  .layout-half-circle, .layout-circle {
+    position: relative;
+  }
+  .layout-half-circle .cat-node, .layout-half-circle .mod-node,
+  .layout-circle .cat-node, .layout-circle .mod-node {
+    position: absolute;
+  }
+
+  /* ── Layout: triptych — 3-panel cockpit for landscape ── */
+  .triptych-container {
+    display: flex; width: 100%; height: 100%;
+    perspective: 800px; align-items: stretch;
+  }
+  .triptych-panel {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 8px 6px; position: relative; z-index: 2;
+    transition: transform 0.4s ease;
+    min-width: 0; overflow-y: auto; overflow-x: hidden;
+  }
+  .triptych-panel::-webkit-scrollbar { width: 2px; }
+  .triptych-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .triptych-panel-left {
+    transform: rotateY(8deg); transform-origin: right center;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    justify-content: flex-start; padding-top: 16px;
+  }
+  .triptych-panel-center {
+    transform: rotateY(0deg); flex: 1.3;
+  }
+  .triptych-panel-right {
+    transform: rotateY(-8deg); transform-origin: left center;
+    border-left: 1px solid rgba(255,255,255,0.06);
+    justify-content: flex-start; padding-top: 16px;
+  }
+  .triptych-panel-label {
+    font-size: 8px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-bottom: 8px; text-align: center;
+  }
+  .triptych-items {
+    display: flex; flex-direction: column; gap: 6px;
+    align-items: center; width: 100%;
+  }
+  .triptych-items .cat-node, .triptych-items .mod-node {
+    flex-direction: row; gap: 6px;
+  }
+  .triptych-items .cat-label, .triptych-items .mod-label {
+    font-size: 10px; text-align: left; max-width: none;
+  }
+  /* Triptych center sessions */
+  .triptych-sessions {
+    display: flex; flex-direction: column; gap: 4px;
+    align-items: center; width: 100%;
+  }
+  .triptych-sessions .session-pill {
+    width: 100%; justify-content: center;
+  }
+
+  /* ══════════════════════════════════════════
+     MORPHISM STYLES (independent of theme)
+     ══════════════════════════════════════════ */
+
+  /* ── Glass Morphism: heavy blur, transparency, light borders ── */
+  .morph-glass .cat-dot, .morph-glass .mod-dot {
+    backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1.5px solid rgba(255,255,255,0.2);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  .morph-glass .session-pill {
+    backdrop-filter: blur(20px) saturate(140%); -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  /* ── Neumorphic Dark: deep shadows on dark surface ── */
+  .morph-neumorphic-dark .cat-dot, .morph-neumorphic-dark .mod-dot {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: var(--surface-elevated) !important;
+    border: none !important;
+    box-shadow:
+      8px 8px 16px rgba(0,0,0,0.6),
+      -6px -6px 12px rgba(255,255,255,0.05),
+      inset 1px 1px 2px rgba(255,255,255,0.06);
+  }
+  .morph-neumorphic-dark .cat-node:hover .cat-dot,
+  .morph-neumorphic-dark .mod-node:hover .mod-dot {
+    box-shadow:
+      2px 2px 6px rgba(0,0,0,0.6),
+      -2px -2px 4px rgba(255,255,255,0.05),
+      inset 4px 4px 8px rgba(0,0,0,0.4),
+      inset -3px -3px 6px rgba(255,255,255,0.04) !important;
+  }
+  .morph-neumorphic-dark .session-pill {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: var(--surface-elevated) !important;
+    border: none !important;
+    box-shadow: 6px 6px 14px rgba(0,0,0,0.5), -4px -4px 10px rgba(255,255,255,0.04);
+  }
+
+  /* ── Neumorphic Light: classic light neumorphism ── */
+  .morph-neumorphic-light .cat-dot, .morph-neumorphic-light .mod-dot {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: #DDE1E7 !important;
+    border: none !important;
+    color: #3a3f47 !important;
+    box-shadow:
+      6px 6px 12px rgba(163,177,198,0.6),
+      -6px -6px 12px rgba(255,255,255,0.8),
+      inset 1px 1px 2px rgba(255,255,255,0.5);
+  }
+  .morph-neumorphic-light .cat-node:hover .cat-dot,
+  .morph-neumorphic-light .mod-node:hover .mod-dot {
+    box-shadow:
+      2px 2px 4px rgba(163,177,198,0.6),
+      -2px -2px 4px rgba(255,255,255,0.8),
+      inset 4px 4px 8px rgba(163,177,198,0.35),
+      inset -3px -3px 6px rgba(255,255,255,0.6) !important;
+  }
+  .morph-neumorphic-light .session-pill {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: #DDE1E7 !important;
+    border: none !important;
+    box-shadow: 4px 4px 10px rgba(163,177,198,0.5), -4px -4px 10px rgba(255,255,255,0.7);
+    color: #3a3f47;
+  }
+  .morph-neumorphic-light .session-pill .sp-name { color: #2c3038; }
+  .morph-neumorphic-light .session-pill .sp-badge { color: #fff; }
+
+  /* Light neumorphic: override dashboard background + text */
+  .morph-neumorphic-light {
+    background: linear-gradient(135deg, #E0E5EC, #D1D9E6) !important;
+  }
+  .morph-neumorphic-light .dash-title {
+    background: linear-gradient(135deg, #2c3038, #5a6070) !important;
+    -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
+  .morph-neumorphic-light .dash-subtitle { color: #5a6070 !important; }
+  .morph-neumorphic-light .section-label { color: #7a8090 !important; }
+  .morph-neumorphic-light .cat-label,
+  .morph-neumorphic-light .mod-label { color: #4a5060 !important; text-shadow: none !important; }
+  .morph-neumorphic-light .cat-node.active .cat-label { color: #2c3038 !important; }
+  .morph-neumorphic-light .cat-count { color: #fff !important; }
+  .morph-neumorphic-light .module-panel-title { color: #2c3038 !important; }
+  .morph-neumorphic-light .module-panel-back { color: #5a6070 !important; border-color: rgba(0,0,0,0.12) !important; }
+  .morph-neumorphic-light .hud-footer {
+    background: linear-gradient(180deg, transparent, #D1D9E6) !important;
+    color: #7a8090 !important;
+  }
+  .morph-neumorphic-light .hud-footer .vos { color: #3a6ea5 !important; }
+
+  /* ── Neumorphic Gray: medium gray surface, white raised dots ── */
+  .morph-neumorphic-gray .cat-dot, .morph-neumorphic-gray .mod-dot {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: #F0F2F5 !important;
+    border: none !important;
+    color: #3a3f47 !important;
+    box-shadow:
+      6px 6px 14px rgba(0,0,0,0.18),
+      -6px -6px 14px rgba(255,255,255,0.45),
+      inset 1px 1px 2px rgba(255,255,255,0.7);
+  }
+  .morph-neumorphic-gray .cat-node:hover .cat-dot,
+  .morph-neumorphic-gray .mod-node:hover .mod-dot {
+    box-shadow:
+      2px 2px 4px rgba(0,0,0,0.18),
+      -2px -2px 4px rgba(255,255,255,0.45),
+      inset 4px 4px 8px rgba(0,0,0,0.08),
+      inset -3px -3px 6px rgba(255,255,255,0.6) !important;
+  }
+  .morph-neumorphic-gray .session-pill {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: #F0F2F5 !important;
+    border: none !important;
+    box-shadow: 4px 4px 10px rgba(0,0,0,0.15), -4px -4px 10px rgba(255,255,255,0.4);
+    color: #3a3f47;
+  }
+  .morph-neumorphic-gray .session-pill .sp-name { color: #2c3038; }
+  .morph-neumorphic-gray .session-pill .sp-badge { color: #fff; }
+
+  /* Gray neumorphic: override dashboard background + text */
+  .morph-neumorphic-gray {
+    background: linear-gradient(135deg, #B0B8C4, #A0A8B4) !important;
+  }
+  .morph-neumorphic-gray .dash-title {
+    background: linear-gradient(135deg, #1a1f28, #3a4050) !important;
+    -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
+  .morph-neumorphic-gray .dash-subtitle { color: #4a5060 !important; }
+  .morph-neumorphic-gray .section-label { color: #5a6575 !important; }
+  .morph-neumorphic-gray .cat-label,
+  .morph-neumorphic-gray .mod-label { color: #3a4050 !important; text-shadow: none !important; }
+  .morph-neumorphic-gray .cat-node.active .cat-label { color: #1a1f28 !important; }
+  .morph-neumorphic-gray .cat-count { color: #fff !important; }
+  .morph-neumorphic-gray .module-panel-title { color: #1a1f28 !important; }
+  .morph-neumorphic-gray .module-panel-back { color: #4a5060 !important; border-color: rgba(0,0,0,0.15) !important; }
+  .morph-neumorphic-gray .hud-footer {
+    background: linear-gradient(180deg, transparent, #A0A8B4) !important;
+    color: #5a6575 !important;
+  }
+  .morph-neumorphic-gray .hud-footer .vos { color: #2a5080 !important; }
+
+  /* ── Flat: no blur, no shadow, minimal borders ── */
+  .morph-flat .cat-dot, .morph-flat .mod-dot {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    border: 1px solid var(--card-border);
+    box-shadow: none;
+    background: var(--surface-elevated) !important;
+  }
+  .morph-flat .session-pill {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    border: 1px solid var(--card-border);
+    box-shadow: none;
+    background: var(--surface-elevated) !important;
+  }
+
+  /* ── PseudoSpatial: scanlines, corner accents, parallax, 3D tilt ── */
+  .morph-spatial .ps-scanlines {
+    display: block !important;
+  }
+  .morph-spatial .ps-corners {
+    display: block !important;
+  }
+  .morph-spatial .cat-dot, .morph-spatial .mod-dot {
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 0 20px rgba(0,0,0,0.3), 0 0 1px rgba(255,255,255,0.1);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+  }
+  .morph-spatial .cat-node:hover .cat-dot,
+  .morph-spatial .mod-node:hover .mod-dot {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 1px rgba(255,255,255,0.15) !important;
+    transform: translateY(-3px) scale(1.05) perspective(600px) rotateX(2deg) !important;
+  }
+  .morph-spatial .session-pill {
+    backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    transition: transform 0.15s ease-out;
+  }
+  .morph-spatial .session-pill:hover {
+    transform: translateY(-2px) perspective(400px) rotateX(1deg) !important;
+  }
+
+  /* ── Glass & Spatial: neutral gray dot backgrounds (override inline accent tint) ── */
+  .morph-glass .cat-dot, .morph-glass .mod-dot {
+    background: rgba(255,255,255,0.12) !important;
+  }
+  .morph-spatial .cat-dot, .morph-spatial .mod-dot {
+    background: rgba(255,255,255,0.10) !important;
+  }
+
+  /* PseudoSpatial overlay elements (hidden by default) */
+  .ps-scanlines {
+    display: none; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .ps-corners { display: none; }
+  .ps-corner {
+    position: absolute; width: 16px; height: 16px; pointer-events: none; z-index: 15;
+  }
+  .ps-corner::before, .ps-corner::after {
+    content: ''; position: absolute; background: var(--primary-light);
+    opacity: 0.5;
+  }
+  .ps-corner::before { width: 16px; height: 2px; }
+  .ps-corner::after { width: 2px; height: 16px; }
+  .ps-tl { top: 8px; left: 8px; }
+  .ps-tl::before { top: 0; left: 0; }  .ps-tl::after { top: 0; left: 0; }
+  .ps-tr { top: 8px; right: 8px; }
+  .ps-tr::before { top: 0; right: 0; } .ps-tr::after { top: 0; right: 0; }
+  .ps-bl { bottom: 8px; left: 8px; }
+  .ps-bl::before { bottom: 0; left: 0; } .ps-bl::after { bottom: 0; left: 0; }
+  .ps-br { bottom: 8px; right: 8px; }
+  .ps-br::before { bottom: 0; right: 0; } .ps-br::after { bottom: 0; right: 0; }
+
+  /* ══════════════════════════════════════════
+     SESSIONS BAR (bottom)
+     ══════════════════════════════════════════ */
+  .sessions-bar {
+    padding: 4px 16px 52px; z-index: 2; position: relative;
+  }
+  .section-label {
+    font-size: 9px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+    text-align: center;
+  }
+  .sessions-strip {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;
+    justify-content: center; flex-wrap: wrap;
+  }
+  .sessions-strip::-webkit-scrollbar { display: none; }
+  .session-pill {
+    flex-shrink: 0; padding: 6px 14px; border-radius: var(--radius-sm);
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    backdrop-filter: blur(var(--glass-blur)); cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .session-pill:hover {
+    border-color: rgba(255,255,255,0.15); transform: translateY(-1px);
+  }
+  .session-pill .sp-name { font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .session-pill .sp-badge {
+    font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 6px;
+    background: var(--primary); color: #fff;
+  }
+
+  /* ── Footer ── */
+  .hud-footer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 36px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 9px; color: var(--text-muted);
+    background: linear-gradient(180deg, transparent, var(--bg));
+    z-index: 10;
+  }
+  .hud-footer .vos { color: var(--primary-light); font-weight: 700; }
+
+  /* ── Toast ── */
+  .toast {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--glass-bg); border: 1px solid var(--primary);
+    border-radius: var(--radius); padding: 18px 32px;
+    backdrop-filter: blur(20px); text-align: center;
+    z-index: 50; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  }
+  .toast.show { opacity: 1; }
+  .toast .t-icon { font-size: 28px; margin-bottom: 4px; }
+  .toast .t-title { font-size: 13px; font-weight: 600; }
+  .toast .t-sub { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ══════════════════════════════════════════
+     SETTINGS PANEL
+     ══════════════════════════════════════════ */
+  .settings-toggle {
+    padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(59,130,246,0.1); color: rgba(255,255,255,0.6); font-size: 10px;
+    font-weight: 700; cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+  }
+  .settings-toggle:hover { border-color: rgba(59,130,246,0.5); color: #93c5fd; }
+  .settings-toggle.open { background: rgba(59,130,246,0.25); border-color: rgba(59,130,246,0.5); color: #93c5fd; }
+
+  .settings-panel {
+    display: none; padding: 8px 12px; gap: 6px;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    flex-wrap: wrap; align-items: center; justify-content: center;
+  }
+  .settings-panel.open { display: flex; }
+
+  .setting-group {
+    display: flex; align-items: center; gap: 4px; padding: 2px 0;
+  }
+  .setting-group.hidden { display: none; }
+  .setting-label {
+    font-size: 9px; color: rgba(255,255,255,0.4); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .setting-slider {
+    -webkit-appearance: none; appearance: none; width: 80px; height: 4px;
+    background: rgba(255,255,255,0.12); border-radius: 2px; outline: none;
+    cursor: pointer;
+  }
+  .setting-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 12px; height: 12px;
+    border-radius: 50%; background: #3B82F6; cursor: pointer;
+    border: 1.5px solid rgba(255,255,255,0.3);
+  }
+  .setting-value {
+    font-size: 9px; color: rgba(255,255,255,0.5); font-family: 'SF Mono', monospace;
+    min-width: 28px; text-align: right;
+  }
+  .setting-color { width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; }
+  .setting-toggle-switch {
+    position: relative; width: 28px; height: 16px; border-radius: 8px;
+    background: rgba(255,255,255,0.15); cursor: pointer; transition: background 0.2s;
+    border: none; padding: 0;
+  }
+  .setting-toggle-switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: rgba(255,255,255,0.6); transition: transform 0.2s;
+  }
+  .setting-toggle-switch.on { background: rgba(59,130,246,0.5); }
+  .setting-toggle-switch.on::after { transform: translateX(12px); background: #93c5fd; }
+
+  .setting-divider {
+    width: 1px; height: 20px; background: rgba(255,255,255,0.08); margin: 0 4px;
+  }
+
+  /* ══════════════════════════════════════════
+     DEVICE OVERRIDES
+     ══════════════════════════════════════════ */
+  .device-realwear .hub-area, .device-glass-micro .hub-area { justify-content: flex-start; padding-top: 8px; }
+  .device-realwear .cat-node .cat-dot, .device-glass-micro .cat-node .cat-dot { width: 40px; height: 40px; font-size: 18px; }
+  .device-realwear .mod-node .voice-num, .device-glass-micro .mod-node .voice-num { display: block; }
+  .device-realwear .sessions-bar, .device-glass-micro .sessions-bar { display: none; }
+  .device-realwear .dash-header, .device-glass-micro .dash-header { padding: 10px 16px 4px; }
+  .device-realwear .dash-title, .device-glass-micro .dash-title { font-size: 14px; }
+  .device-glass-micro .dash-subtitle { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Control Bar -->
+<div class="control-bar">
+  <div class="control-row">
+    <span class="control-label">Device</span>
+    <button class="ctrl-btn active" onclick="switchDevice('phone-p',this)">Phone P</button>
+    <button class="ctrl-btn" onclick="switchDevice('phone-l',this)">Phone L</button>
+    <button class="ctrl-btn" onclick="switchDevice('tablet-p',this)">Tablet P</button>
+    <button class="ctrl-btn" onclick="switchDevice('tablet-l',this)">Tablet L</button>
+    <button class="ctrl-btn" onclick="switchDevice('realwear',this)">RealWear</button>
+    <button class="ctrl-btn" onclick="switchDevice('glass-micro',this)">Glass Micro</button>
+    <button class="ctrl-btn" onclick="switchDevice('fold',this)">Samsung Fold</button>
+    <button class="ctrl-btn" onclick="switchDevice('ipad',this)">iPad</button>
+    <span class="device-info" id="deviceInfo">360 x 800</span>
+  </div>
+  <div class="control-row">
+    <span class="control-label">Theme</span>
+    <button class="ctrl-btn theme-apple active" onclick="switchTheme('apple-vision',this)">Apple Vision</button>
+    <button class="ctrl-btn theme-meta" onclick="switchTheme('meta-horizon',this)">Meta Horizon</button>
+    <button class="ctrl-btn theme-google" onclick="switchTheme('google-xr',this)">Google XR</button>
+    <button class="ctrl-btn theme-hydra" onclick="switchTheme('hydra',this)">HYDRA</button>
+    <button class="ctrl-btn theme-neon" onclick="switchTheme('neon-cyber',this)">Neon Cyber</button>
+  </div>
+  <div class="control-row">
+    <span class="control-label">Layout</span>
+    <button class="ctrl-btn layout-btn active" onclick="switchLayout('inline',this)">Inline</button>
+    <button class="ctrl-btn layout-btn" onclick="switchLayout('stacked',this)">Stacked</button>
+    <button class="ctrl-btn layout-btn" onclick="switchLayout('staggered',this)">Staggered</button>
+    <button class="ctrl-btn layout-btn" onclick="switchLayout('half-circle',this)">Half Circle</button>
+    <button class="ctrl-btn layout-btn" onclick="switchLayout('circle',this)">Circle</button>
+    <button class="ctrl-btn layout-btn" onclick="switchLayout('triptych',this)">Triptych</button>
+  </div>
+  <div class="control-row">
+    <span class="control-label">Morphism</span>
+    <button class="ctrl-btn morph-btn active" onclick="switchMorphism('glass',this)">Glass</button>
+    <button class="ctrl-btn morph-btn" onclick="switchMorphism('neumorphic-dark',this)">Neu Dark</button>
+    <button class="ctrl-btn morph-btn" onclick="switchMorphism('neumorphic-light',this)">Neu Light</button>
+    <button class="ctrl-btn morph-btn" onclick="switchMorphism('neumorphic-gray',this)">Neu Gray</button>
+    <button class="ctrl-btn morph-btn" onclick="switchMorphism('flat',this)">Flat</button>
+    <button class="ctrl-btn morph-btn" onclick="switchMorphism('spatial',this)">PseudoSpatial</button>
+    <button class="settings-toggle" id="settingsToggle" onclick="toggleSettings()">Settings</button>
+  </div>
+  <div class="settings-panel" id="settingsPanel">
+    <!-- Icon Spacing -->
+    <div class="setting-group">
+      <span class="setting-label">Spacing</span>
+      <input type="range" class="setting-slider" id="sliderSpacing" min="0" max="60" value="40"
+        oninput="onSpacingChange(this.value)">
+      <span class="setting-value" id="valSpacing">auto</span>
+    </div>
+    <div class="setting-divider"></div>
+    <!-- Stagger Amount (visible only for staggered layout) -->
+    <div class="setting-group" id="grpStagger">
+      <span class="setting-label">Stagger</span>
+      <input type="range" class="setting-slider" id="sliderStagger" min="0" max="60" value="32"
+        oninput="onStaggerChange(this.value)">
+      <span class="setting-value" id="valStagger">32px</span>
+    </div>
+    <div class="setting-divider" id="divStagger"></div>
+    <!-- Vertical Offset -->
+    <div class="setting-group">
+      <span class="setting-label">V-Offset</span>
+      <input type="range" class="setting-slider" id="sliderOffY" min="-50" max="50" value="0"
+        oninput="onOffsetYChange(this.value)">
+      <span class="setting-value" id="valOffY">0%</span>
+    </div>
+    <div class="setting-divider"></div>
+    <!-- Horizontal Offset -->
+    <div class="setting-group">
+      <span class="setting-label">H-Offset</span>
+      <input type="range" class="setting-slider" id="sliderOffX" min="-50" max="50" value="0"
+        oninput="onOffsetXChange(this.value)">
+      <span class="setting-value" id="valOffX">0%</span>
+    </div>
+    <div class="setting-divider"></div>
+    <!-- Neu Background Color (visible only for neumorphic morphisms) -->
+    <div class="setting-group" id="grpNeuBg">
+      <span class="setting-label">Neu BG</span>
+      <input type="color" class="setting-color" id="colorNeuBg" value="#B0B8C4"
+        oninput="onNeuBgChange(this.value)">
+    </div>
+    <!-- Neu Dot Color (visible only for neumorphic morphisms) -->
+    <div class="setting-group" id="grpNeuDot">
+      <span class="setting-label">Neu Dot</span>
+      <input type="color" class="setting-color" id="colorNeuDot" value="#F0F2F5"
+        oninput="onNeuDotChange(this.value)">
+    </div>
+    <div class="setting-divider"></div>
+    <!-- Sessions Toggle -->
+    <div class="setting-group">
+      <span class="setting-label">Sessions</span>
+      <button class="setting-toggle-switch on" id="btnSessions" onclick="onSessionsToggle()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Viewport -->
+<div class="viewport-wrapper">
+  <div class="viewport-frame" id="viewportFrame" data-theme="apple-vision" style="width:360px;height:800px;">
+    <div class="dashboard morph-glass" id="dashboard">
+      <div class="scanline-grid"></div>
+      <!-- PseudoSpatial overlays (hidden unless morph-spatial active) -->
+      <div class="ps-scanlines"></div>
+      <div class="ps-corners">
+        <div class="ps-corner ps-tl"></div>
+        <div class="ps-corner ps-tr"></div>
+        <div class="ps-corner ps-bl"></div>
+        <div class="ps-corner ps-br"></div>
+      </div>
+
+      <div class="dash-header">
+        <div class="dash-title">Cockpit</div>
+        <div class="dash-subtitle">Two-Level Hub &mdash; v4.3</div>
+      </div>
+
+      <div class="hub-area" id="hubArea">
+        <!-- Level 1: Categories -->
+        <div class="category-hub layout-inline" id="categoryHub"></div>
+        <!-- Level 2: Modules (hidden until category selected) -->
+        <div class="module-panel" id="modulePanel" style="display:none;">
+          <div class="module-panel-header">
+            <button class="module-panel-back" onclick="goBack()">&larr; Back</button>
+            <span class="module-panel-title" id="modulePanelTitle"></span>
+          </div>
+          <div class="module-hub layout-inline" id="moduleHub"></div>
+        </div>
+      </div>
+
+      <div class="sessions-bar">
+        <div class="section-label">Recent Sessions</div>
+        <div class="sessions-strip" id="sessionsStrip"></div>
+      </div>
+
+      <div class="hud-footer">
+        <span class="vos">VoiceOS&reg;</span>
+        <span>Cockpit v4</span>
+        <span style="opacity:0.4;">&#9679;</span>
+        <span>Where Avanues Meet</span>
+      </div>
+
+      <div class="toast" id="toast">
+        <div class="t-icon" id="toastIcon"></div>
+        <div class="t-title" id="toastTitle"></div>
+        <div class="t-sub" id="toastSub"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+const CATEGORIES = [
+  {
+    id: 'controls', name: 'Controls', icon: '\u{1F3AE}', colorVar: '--cat-controls',
+    modules: [
+      { id:'voiceavanue', name:'VoiceTouch\u2122', icon:'\u{1F3A4}', accent:'#1E40AF' },
+      { id:'voicecursor', name:'CursorAvanue',     icon:'\u{1F5B1}', accent:'#FF7043' }
+    ]
+  },
+  {
+    id: 'media', name: 'Media', icon: '\u{1F4F7}', colorVar: '--cat-media',
+    modules: [
+      { id:'photoavanue', name:'PhotoAvanue',  icon:'\u{1F4F7}', accent:'#7E57C2' },
+      { id:'imageavanue', name:'ImageAvanue',  icon:'\u{1F5BC}', accent:'#43A047' },
+      { id:'videoavanue', name:'VideoAvanue',  icon:'\u{1F3A5}', accent:'#E91E63' },
+      { id:'remotecast',  name:'CastAvanue',   icon:'\u{1F4E1}', accent:'#26C6DA' }
+    ]
+  },
+  {
+    id: 'creation', name: 'Creation', icon: '\u270F\uFE0F', colorVar: '--cat-creation',
+    modules: [
+      { id:'pdfavanue',   name:'PDFAvanue',   icon:'\u{1F4C4}', accent:'#E53935' },
+      { id:'noteavanue',  name:'NoteAvanue',   icon:'\u{1F4DD}', accent:'#FFA726' },
+      { id:'annotationavanue', name:'DrawAvanue', icon:'\u270F\uFE0F', accent:'#EF5350' }
+    ]
+  },
+  {
+    id: 'tasks', name: 'Tasks', icon: '\u2705', colorVar: '--cat-tasks',
+    modules: [
+      { id:'checklist', name:'Checklist', icon:'\u{1F4CB}', accent:'#FF6D3A' },
+      { id:'timer',     name:'Timer',     icon:'\u23F1\uFE0F', accent:'#FF375F' },
+      { id:'reminders', name:'Reminders', icon:'\u{1F514}', accent:'#FFA726' }
+    ]
+  },
+  {
+    id: 'web', name: 'Web', icon: '\u{1F310}', colorVar: '--cat-web',
+    modules: [
+      { id:'webavanue',  name:'WebAvanue',   icon:'\u{1F310}', accent:'#00897B' },
+      { id:'bookmarks',  name:'Bookmarks',   icon:'\u{1F516}', accent:'#1A73E8' },
+      { id:'history',    name:'History',      icon:'\u{1F553}', accent:'#669DF6' }
+    ]
+  },
+  {
+    id: 'favorites', name: 'Favorites', icon: '\u2B50', colorVar: '--cat-favorites',
+    modules: [
+      { id:'voiceavanue', name:'VoiceTouch\u2122', icon:'\u{1F3A4}', accent:'#1E40AF' },
+      { id:'webavanue',   name:'WebAvanue',        icon:'\u{1F310}', accent:'#00897B' },
+      { id:'noteavanue',  name:'NoteAvanue',        icon:'\u{1F4DD}', accent:'#FFA726' }
+    ]
+  },
+  {
+    id: 'templates', name: 'Templates', icon: '\u{1F4C2}', colorVar: '--cat-templates',
+    modules: [
+      { id:'tpl-research',   name:'Research',     icon:'\u{1F50D}', accent:'#1A73E8' },
+      { id:'tpl-field',      name:'Field Work',   icon:'\u{1F3D7}\uFE0F', accent:'#34D399' },
+      { id:'tpl-meeting',    name:'Meeting',      icon:'\u{1F4AC}', accent:'#8B5CF6' },
+      { id:'tpl-remote',     name:'Remote Assist', icon:'\u{1F4E1}', accent:'#26C6DA' }
+    ]
+  }
+];
+
+const SESSIONS = [
+  { name:'Research',    frames:4 },
+  { name:'Meeting',     frames:2 },
+  { name:'Field Work',  frames:3 },
+  { name:'Developer',   frames:5 },
+  { name:'Remote',      frames:2 }
+];
+
+const DEVICES = {
+  'phone-p':    { w:360,  h:800,  css:'device-phone-p',     label:'Phone Portrait' },
+  'phone-l':    { w:800,  h:360,  css:'device-phone-l',     label:'Phone Landscape' },
+  'tablet-p':   { w:800,  h:1280, css:'device-tablet-p',    label:'Tablet Portrait' },
+  'tablet-l':   { w:1280, h:800,  css:'device-tablet-l',    label:'Tablet Landscape' },
+  'realwear':   { w:854,  h:480,  css:'device-realwear',    label:'RealWear Nav520' },
+  'glass-micro':{ w:480,  h:480,  css:'device-glass-micro', label:'Vuzix Blade' },
+  'fold':       { w:884,  h:1104, css:'device-fold',        label:'Samsung Fold' },
+  'ipad':       { w:1024, h:1366, css:'device-ipad',        label:'iPad Pro 11"' }
+};
+
+let currentDevice = 'phone-p';
+let currentLayout = 'inline';
+let currentTheme = 'apple-vision';
+let currentMorphism = 'glass';
+let selectedCategory = null;
+let toastTimer = null;
+let parallaxEnabled = false;
+
+// Settings panel state
+const settings = {
+  spacing: null,         // null = auto (layout default), 0-60px override
+  staggerAmount: 32,     // 0-60px
+  offsetX: 0,            // -50% to +50% (stored as % of container)
+  offsetY: 0,            // -50% to +50%
+  neuBgColor: null,      // null = use CSS default
+  neuDotColor: null,     // null = use CSS default
+  showSessions: true     // Part D: toggle sessions bar
+};
+
+// ══════════════════════════════════════════
+// DEVICE SWITCHING
+// ══════════════════════════════════════════
+function switchDevice(id, btn) {
+  currentDevice = id;
+  const d = DEVICES[id];
+  const vf = document.getElementById('viewportFrame');
+  const db = document.getElementById('dashboard');
+
+  document.querySelectorAll('.control-row:first-child .ctrl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  vf.style.width = d.w + 'px';
+  vf.style.height = d.h + 'px';
+  db.className = 'dashboard ' + d.css + ' morph-' + currentMorphism;
+  document.getElementById('deviceInfo').textContent = d.w + ' \u00D7 ' + d.h + ' — ' + d.label;
+
+  scaleViewport();
+  render();
+  applySessionsVisibility();
+}
+
+function scaleViewport() {
+  const vf = document.getElementById('viewportFrame');
+  const ww = window.innerWidth - 40;
+  const wh = window.innerHeight - 120;
+  const vw = parseInt(vf.style.width);
+  const vh = parseInt(vf.style.height);
+  const scale = Math.min(1, ww / vw, wh / vh);
+  vf.style.transform = 'scale(' + scale + ')';
+}
+window.addEventListener('resize', scaleViewport);
+
+// ══════════════════════════════════════════
+// THEME SWITCHING
+// ══════════════════════════════════════════
+function switchTheme(theme, btn) {
+  currentTheme = theme;
+  document.getElementById('viewportFrame').setAttribute('data-theme', theme);
+  document.querySelectorAll('.control-row:nth-child(2) .ctrl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+// ══════════════════════════════════════════
+// LAYOUT SWITCHING
+// ══════════════════════════════════════════
+function switchLayout(layout, btn) {
+  currentLayout = layout;
+  document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateSettingsVisibility();
+  render();
+}
+
+// ══════════════════════════════════════════
+// MORPHISM SWITCHING
+// ══════════════════════════════════════════
+function switchMorphism(morph, btn) {
+  currentMorphism = morph;
+  const db = document.getElementById('dashboard');
+
+  // Remove all morph- classes, keep device class
+  db.className = db.className.replace(/morph-\S+/g, '').trim();
+  db.classList.add('morph-' + morph);
+
+  document.querySelectorAll('.morph-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // PseudoSpatial parallax
+  parallaxEnabled = (morph === 'spatial');
+
+  // Clear neu overrides when switching away from neumorphic
+  if (!morph.startsWith('neumorphic')) {
+    db.style.background = '';
+    db.style.removeProperty('--neu-dot-override');
+  } else {
+    applyNeuColors();
+  }
+
+  // Update settings panel visibility for neu controls
+  updateSettingsVisibility();
+}
+
+// ══════════════════════════════════════════
+// SETTINGS PANEL
+// ══════════════════════════════════════════
+function toggleSettings() {
+  const panel = document.getElementById('settingsPanel');
+  const btn = document.getElementById('settingsToggle');
+  const isOpen = panel.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  if (isOpen) updateSettingsVisibility();
+}
+
+function updateSettingsVisibility() {
+  const isNeu = currentMorphism.startsWith('neumorphic');
+  const isStaggered = currentLayout === 'staggered';
+  document.getElementById('grpStagger').classList.toggle('hidden', !isStaggered);
+  document.getElementById('divStagger').style.display = isStaggered ? '' : 'none';
+  document.getElementById('grpNeuBg').classList.toggle('hidden', !isNeu);
+  document.getElementById('grpNeuDot').classList.toggle('hidden', !isNeu);
+}
+
+function onSpacingChange(val) {
+  settings.spacing = parseInt(val);
+  document.getElementById('valSpacing').textContent = val + 'px';
+  render();
+}
+function onStaggerChange(val) {
+  settings.staggerAmount = parseInt(val);
+  document.getElementById('valStagger').textContent = val + 'px';
+  render();
+}
+function onOffsetYChange(val) {
+  settings.offsetY = parseInt(val);
+  document.getElementById('valOffY').textContent = val + '%';
+  applyOffsets();
+}
+function onOffsetXChange(val) {
+  settings.offsetX = parseInt(val);
+  document.getElementById('valOffX').textContent = val + '%';
+  applyOffsets();
+}
+function onNeuBgChange(color) {
+  settings.neuBgColor = color;
+  applyNeuColors();
+}
+function onNeuDotChange(color) {
+  settings.neuDotColor = color;
+  applyNeuColors();
+}
+function onSessionsToggle() {
+  settings.showSessions = !settings.showSessions;
+  const btn = document.getElementById('btnSessions');
+  btn.classList.toggle('on', settings.showSessions);
+  applySessionsVisibility();
+  render();
+}
+
+function applyOffsets() {
+  const catHub = document.getElementById('categoryHub');
+  const modHub = document.getElementById('moduleHub');
+  const dev = DEVICES[currentDevice];
+  const dx = (settings.offsetX / 100) * dev.w;
+  const dy = (settings.offsetY / 100) * dev.h;
+  const t = dx || dy ? 'translate(' + dx + 'px, ' + dy + 'px)' : '';
+  catHub.style.transform = t;
+  modHub.style.transform = t;
+}
+
+function applyNeuColors() {
+  const db = document.getElementById('dashboard');
+  if (settings.neuBgColor && currentMorphism.startsWith('neumorphic')) {
+    db.style.background = settings.neuBgColor;
+  } else {
+    db.style.background = '';
+  }
+  // Apply dot color via CSS variable override
+  if (settings.neuDotColor && currentMorphism.startsWith('neumorphic')) {
+    db.style.setProperty('--neu-dot-override', settings.neuDotColor);
+    db.querySelectorAll('.cat-dot, .mod-dot').forEach(d => {
+      d.style.background = settings.neuDotColor;
+    });
+  } else {
+    db.style.removeProperty('--neu-dot-override');
+  }
+}
+
+function applySessionsVisibility() {
+  const bar = document.querySelector('.sessions-bar');
+  const isGlass = currentDevice === 'realwear' || currentDevice === 'glass-micro';
+  if (!settings.showSessions || isGlass) {
+    bar.style.display = 'none';
+  } else {
+    bar.style.display = '';
+  }
+}
+
+// ── PseudoSpatial Parallax Controller ──
+let pxBgX = 0, pxBgY = 0, pxTargetX = 0, pxTargetY = 0;
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+document.getElementById('viewportFrame').addEventListener('mousemove', (e) => {
+  if (!parallaxEnabled) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+  const ny = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+  pxTargetX = nx * 4;
+  pxTargetY = ny * 3;
+});
+
+function animateParallax() {
+  pxBgX = lerp(pxBgX, pxTargetX, 0.08);
+  pxBgY = lerp(pxBgY, pxTargetY, 0.08);
+  const hub = document.getElementById('hubArea');
+  if (parallaxEnabled && hub) {
+    hub.style.transform = 'translate(' + pxBgX + 'px, ' + pxBgY + 'px)';
+  } else if (hub) {
+    hub.style.transform = '';
+  }
+  requestAnimationFrame(animateParallax);
+}
+animateParallax();
+
+// ══════════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════════
+function render() {
+  // Triptych uses its own full-dashboard renderer
+  if (currentLayout === 'triptych') {
+    renderTriptych();
+    applyNeuColors();
+    return;
+  }
+  // Restore normal layout if switching away from triptych
+  restoreFromTriptych();
+  if (selectedCategory !== null) {
+    renderModules();
+  } else {
+    renderCategories();
+  }
+  renderSessions();
+  applyOffsets();
+  applySessionsVisibility();
+  applyNeuColors();
+}
+
+function getComputedColor(varName) {
+  return getComputedStyle(document.getElementById('viewportFrame')).getPropertyValue(varName).trim();
+}
+
+// Responsive sizing: scale dots proportionally to device, never below base
+function getResponsiveSize(baseSize) {
+  const dev = DEVICES[currentDevice];
+  const refW = 360; // phone-p is the baseline
+  const scale = Math.max(1, Math.min(dev.w, dev.h) / refW);
+  return Math.round(baseSize * Math.min(scale, 1.6)); // cap at 1.6x
+}
+function getResponsiveFontSize(baseFontSize) {
+  const dev = DEVICES[currentDevice];
+  const refW = 360;
+  const scale = Math.max(1, Math.min(dev.w, dev.h) / refW);
+  return Math.round(baseFontSize * Math.min(scale, 1.4));
+}
+
+function positionInLayout(container, items, layout, nodeSize) {
+  const dev = DEVICES[currentDevice];
+  const deviceW = dev.w;
+  const deviceH = dev.h;
+  const isLandscape = deviceH < deviceW;
+  const containerW = Math.min(deviceW - 32, 600);
+
+  // Part A: Compute available vertical space between header and sessions/footer
+  const headerH = 50;
+  const isGlass = currentDevice === 'realwear' || currentDevice === 'glass-micro';
+  const sessionsVisible = settings.showSessions && !isGlass;
+  const sessionsH = sessionsVisible ? 90 : 0;
+  const footerH = 36;
+  const breathingRoom = 24;
+  const availH = deviceH - headerH - sessionsH - footerH - breathingRoom;
+
+  container.className = container.className.replace(/layout-\S+/g, '').trim();
+  container.classList.remove('landscape');
+
+  if (layout === 'inline' || layout === 'stacked' || layout === 'staggered') {
+    container.classList.add('layout-' + layout);
+    container.style.width = '';
+    container.style.height = '';
+
+    // Apply spacing override if set
+    if (settings.spacing != null) {
+      container.style.gap = settings.spacing + 'px';
+    } else {
+      container.style.gap = '';
+    }
+
+    // Fix 1: Stacked — force left-aligned column; landscape → 2-col grid
+    if (layout === 'stacked') {
+      if (isLandscape) {
+        container.classList.add('landscape');
+        container.style.alignItems = '';
+        container.style.paddingLeft = '';
+      } else {
+        container.style.alignItems = 'flex-start';
+        container.style.paddingLeft = '24px';
+      }
+    } else {
+      container.style.alignItems = '';
+      container.style.paddingLeft = '';
+    }
+
+    // Fix 2: Staggered — JS-driven offset (stronger 32px, skip when rows too narrow)
+    if (layout === 'staggered') {
+      const staggerAmt = (settings && settings.staggerAmount != null) ? settings.staggerAmount : 32;
+      const itemsPerRow = Math.max(1, Math.floor((containerW + 12) / (nodeSize + 12)));
+      const totalRows = Math.ceil(items.length / itemsPerRow);
+      const lastRowCount = items.length - (totalRows - 1) * itemsPerRow;
+      // Part C: Skip stagger entirely if fewer than 3 items fit per row
+      const canStagger = itemsPerRow >= 3;
+      items.forEach((el, i) => {
+        const row = Math.floor(i / itemsPerRow);
+        const colInRow = i % itemsPerRow;
+        const isLastRow = (row === totalRows - 1);
+        // Apply stagger to odd-column items; skip if row too narrow or last row < 3
+        if (canStagger && colInRow % 2 === 1 && !(isLastRow && lastRowCount < 3)) {
+          el.style.marginTop = staggerAmt + 'px';
+        } else {
+          el.style.marginTop = '';
+        }
+        el.style.left = ''; el.style.top = ''; el.style.position = '';
+      });
+    } else {
+      items.forEach(el => {
+        el.style.marginTop = '';
+        el.style.left = ''; el.style.top = ''; el.style.position = '';
+      });
+    }
+    return;
+  }
+
+  // Circular layouts — position with JS
+  // Spacing relaxes height constraint, letting radius grow for visible item separation
+  container.classList.add('layout-' + layout);
+  const cx = containerW / 2;
+  const n = items.length;
+
+  const spacingOverride = (settings && settings.spacing != null) ? settings.spacing : null;
+  const minGap = spacingOverride != null ? (nodeSize + spacingOverride) : (nodeSize + 40);
+
+  // Standard arc geometry
+  let arcSpan, startAngle;
+  if (layout === 'half-circle') {
+    arcSpan = Math.PI;
+    startAngle = Math.PI; // items arc from left to right across the bottom
+  } else {
+    arcSpan = 2 * Math.PI;
+    startAngle = -Math.PI / 2; // start at top
+  }
+
+  // Calculate ideal radius from arc spacing requirements
+  const arcStep = arcSpan / (layout === 'half-circle' ? (n + 1) : n);
+  let idealRadius = Math.max(minGap / (2 * Math.sin(arcStep / 2)), 80);
+
+  // Part A: Triple clamp — width, height, and ideal
+  const maxRadiusW = Math.min(cx - nodeSize / 2 - 8, 300);
+  const yScale = layout === 'half-circle' ? 0.50 : 1;
+
+  // Spacing relaxes the height constraint — user explicitly wants more space
+  // 0px → 1.0x (auto-fit), 30px → 1.375x, 60px → 1.75x
+  const spacingRelax = spacingOverride ? (1 + spacingOverride / 80) : 1;
+
+  let maxRadiusH;
+  if (layout === 'half-circle') {
+    maxRadiusH = Math.max((availH - nodeSize - 50) / 0.85, 60) * spacingRelax;
+  } else {
+    maxRadiusH = Math.max((availH - nodeSize - 40) / 2, 60) * spacingRelax;
+  }
+  const radius = Math.min(idealRadius, maxRadiusW, maxRadiusH);
+
+  const totalH = layout === 'half-circle'
+    ? radius * 0.85 + nodeSize + 50
+    : radius * 2 + nodeSize + 40;
+  const cy = layout === 'half-circle' ? totalH - 20 : totalH / 2;
+
+  container.style.width = containerW + 'px';
+  container.style.height = totalH + 'px';
+
+  // Allow hub to overflow when spacing pushes beyond available height
+  const hubArea = container.closest('.hub-area');
+  if (hubArea) hubArea.style.overflow = spacingOverride > 0 ? 'visible' : '';
+
+  items.forEach((el, i) => {
+    let angle;
+    if (layout === 'half-circle') {
+      angle = startAngle + (arcSpan / (n + 1)) * (i + 1);
+    } else {
+      angle = startAngle + (arcSpan / n) * i;
+    }
+    const x = cx + Math.cos(angle) * radius - nodeSize / 2;
+    const y = cy + Math.sin(angle) * radius * yScale - nodeSize / 2;
+    el.style.position = 'absolute';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+  });
+}
+
+// ── Render Categories ──
+function renderCategories() {
+  const hub = document.getElementById('categoryHub');
+  hub.innerHTML = '';
+  document.getElementById('modulePanel').style.display = 'none';
+  hub.style.display = 'flex';
+
+  const dotSize = getResponsiveSize(52);
+  const fontSize = getResponsiveFontSize(22);
+
+  CATEGORIES.forEach((cat, i) => {
+    const color = getComputedColor(cat.colorVar);
+    const node = document.createElement('div');
+    node.className = 'cat-node';
+    node.style.animationDelay = (i * 60) + 'ms';
+    node.onclick = () => selectCategory(i);
+
+    node.innerHTML =
+      '<div class="cat-dot" style="background:' + color + '18; color:' + color +
+        '; width:' + dotSize + 'px; height:' + dotSize + 'px; font-size:' + fontSize + 'px;">' +
+        cat.icon +
+        '<span class="cat-count" style="background:' + color + ';">' + cat.modules.length + '</span>' +
+      '</div>' +
+      '<div class="cat-label">' + cat.name + '</div>';
+
+    hub.appendChild(node);
+  });
+
+  const nodeLayoutSize = dotSize + 8; // dot + label approximate
+  requestAnimationFrame(() => {
+    const nodes = hub.querySelectorAll('.cat-node');
+    positionInLayout(hub, Array.from(nodes), currentLayout, nodeLayoutSize);
+    applyNeuColors(); // re-apply after DOM rebuild
+  });
+}
+
+// ── Select Category → Show Modules ──
+function selectCategory(index) {
+  selectedCategory = index;
+  renderModules();
+}
+
+function renderModules() {
+  const cat = CATEGORIES[selectedCategory];
+  const color = getComputedColor(cat.colorVar);
+
+  // Hide category hub, show module panel
+  document.getElementById('categoryHub').style.display = 'none';
+  const panel = document.getElementById('modulePanel');
+  panel.style.display = 'block';
+  document.getElementById('modulePanelTitle').textContent = cat.name;
+  document.getElementById('modulePanelTitle').style.color = color;
+
+  const hub = document.getElementById('moduleHub');
+  hub.innerHTML = '';
+
+  const modDotSize = getResponsiveSize(44);
+  const modFontSize = getResponsiveFontSize(19);
+
+  cat.modules.forEach((mod, i) => {
+    const node = document.createElement('div');
+    node.className = 'mod-node';
+    node.style.animationDelay = (i * 50) + 'ms';
+    node.onclick = () => showToast(mod.icon, 'Launching ' + mod.name, cat.name);
+
+    node.innerHTML =
+      '<span class="voice-num">' + (i + 1) + '</span>' +
+      '<div class="mod-dot" style="background:' + mod.accent + '20; color:' + mod.accent +
+        '; width:' + modDotSize + 'px; height:' + modDotSize + 'px; font-size:' + modFontSize + 'px;">' + mod.icon + '</div>' +
+      '<div class="mod-label">' + mod.name.replace('\u2122','') + '</div>';
+
+    hub.appendChild(node);
+  });
+
+  const modLayoutSize = modDotSize + 6;
+  requestAnimationFrame(() => {
+    const nodes = hub.querySelectorAll('.mod-node');
+    positionInLayout(hub, Array.from(nodes), currentLayout, modLayoutSize);
+    applyNeuColors(); // re-apply after DOM rebuild
+  });
+}
+
+function goBack() {
+  selectedCategory = null;
+  render();
+}
+
+// ── Sessions ──
+function renderSessions() {
+  const strip = document.getElementById('sessionsStrip');
+  strip.innerHTML = '';
+  SESSIONS.forEach(s => {
+    const pill = document.createElement('div');
+    pill.className = 'session-pill';
+    pill.onclick = () => showToast('\u{1F4C2}', s.name, 'Resuming session...');
+    pill.innerHTML =
+      '<span class="sp-name">' + s.name + '</span>' +
+      '<span class="sp-badge">' + s.frames + '</span>';
+    strip.appendChild(pill);
+  });
+}
+
+// ══════════════════════════════════════════
+// TRIPTYCH LAYOUT — 3-Panel Cockpit
+// ══════════════════════════════════════════
+// Left: Controls (categories: controls, web)
+// Center: Recent sessions + Favorites + Tasks
+// Right: App modules (media, creation, templates)
+let triptychActive = false;
+
+function renderTriptych() {
+  triptychActive = true;
+  const db = document.getElementById('dashboard');
+  const hubArea = document.getElementById('hubArea');
+  const sessBar = document.querySelector('.sessions-bar');
+  const header = document.querySelector('.dash-header');
+
+  // Hide normal hub/sessions, replace with triptych container
+  hubArea.style.display = 'none';
+  sessBar.style.display = 'none';
+  header.style.display = 'none';
+
+  // Remove old triptych if exists
+  const old = document.getElementById('triptychContainer');
+  if (old) old.remove();
+
+  const dotSize = getResponsiveSize(44);
+  const fSize = getResponsiveFontSize(18);
+
+  // Define panel content
+  const leftCats = CATEGORIES.filter(c => ['controls','web'].includes(c.id));
+  const rightCats = CATEGORIES.filter(c => ['media','creation','templates'].includes(c.id));
+  const centerCats = CATEGORIES.filter(c => ['tasks','favorites'].includes(c.id));
+
+  function makeCatNode(cat, clickable) {
+    const color = getComputedColor(cat.colorVar);
+    const div = document.createElement('div');
+    div.className = 'cat-node';
+    div.style.opacity = '1';
+    div.style.animation = 'none';
+    if (clickable) div.onclick = () => showToast(cat.icon, cat.name, cat.modules.length + ' modules');
+
+    div.innerHTML =
+      '<div class="cat-dot" style="background:' + color + '18; color:' + color +
+        '; width:' + dotSize + 'px; height:' + dotSize + 'px; font-size:' + fSize + 'px;">' +
+        cat.icon +
+        '<span class="cat-count" style="background:' + color + ';">' + cat.modules.length + '</span>' +
+      '</div>' +
+      '<div class="cat-label" style="font-size:10px; max-width:none; text-align:left;">' + cat.name + '</div>';
+    return div;
+  }
+
+  function makeModNode(mod) {
+    const div = document.createElement('div');
+    div.className = 'mod-node';
+    div.style.opacity = '1';
+    div.style.animation = 'none';
+    div.onclick = () => showToast(mod.icon, 'Launching ' + mod.name, '');
+
+    div.innerHTML =
+      '<div class="mod-dot" style="background:' + mod.accent + '20; color:' + mod.accent +
+        '; width:' + dotSize + 'px; height:' + dotSize + 'px; font-size:' + fSize + 'px;">' + mod.icon + '</div>' +
+      '<div class="mod-label" style="font-size:10px; max-width:none; text-align:left;">' +
+        mod.name.replace('\u2122','') + '</div>';
+    return div;
+  }
+
+  // Build triptych
+  const container = document.createElement('div');
+  container.id = 'triptychContainer';
+  container.className = 'triptych-container';
+  container.style.flex = '1';
+
+  // LEFT PANEL — Controls categories with their modules expanded
+  const leftPanel = document.createElement('div');
+  leftPanel.className = 'triptych-panel triptych-panel-left';
+  leftPanel.innerHTML = '<div class="triptych-panel-label">Controls</div>';
+  const leftItems = document.createElement('div');
+  leftItems.className = 'triptych-items';
+  leftCats.forEach(cat => {
+    cat.modules.forEach(mod => leftItems.appendChild(makeModNode(mod)));
+  });
+  leftPanel.appendChild(leftItems);
+
+  // CENTER PANEL — Title + Tasks/Favorites + Sessions
+  const centerPanel = document.createElement('div');
+  centerPanel.className = 'triptych-panel triptych-panel-center';
+  centerPanel.innerHTML =
+    '<div style="text-align:center; margin-bottom:10px;">' +
+      '<div class="dash-title" style="font-size:16px;">Cockpit</div>' +
+      '<div class="dash-subtitle" style="font-size:9px;">Triptych View</div>' +
+    '</div>';
+  const centerItems = document.createElement('div');
+  centerItems.className = 'triptych-items';
+  centerCats.forEach(cat => centerItems.appendChild(makeCatNode(cat, true)));
+  centerPanel.appendChild(centerItems);
+  // Sessions in center
+  const sessDiv = document.createElement('div');
+  sessDiv.className = 'triptych-sessions';
+  sessDiv.style.marginTop = '12px';
+  sessDiv.innerHTML = '<div class="triptych-panel-label" style="margin-bottom:4px;">Sessions</div>';
+  SESSIONS.forEach(s => {
+    const pill = document.createElement('div');
+    pill.className = 'session-pill';
+    pill.style.padding = '4px 10px';
+    pill.onclick = () => showToast('\u{1F4C2}', s.name, 'Resuming session...');
+    pill.innerHTML = '<span class="sp-name">' + s.name + '</span><span class="sp-badge">' + s.frames + '</span>';
+    sessDiv.appendChild(pill);
+  });
+  centerPanel.appendChild(sessDiv);
+
+  // RIGHT PANEL — App modules (media, creation, templates)
+  const rightPanel = document.createElement('div');
+  rightPanel.className = 'triptych-panel triptych-panel-right';
+  rightPanel.innerHTML = '<div class="triptych-panel-label">Apps</div>';
+  const rightItems = document.createElement('div');
+  rightItems.className = 'triptych-items';
+  rightCats.forEach(cat => {
+    cat.modules.forEach(mod => rightItems.appendChild(makeModNode(mod)));
+  });
+  rightPanel.appendChild(rightItems);
+
+  container.appendChild(leftPanel);
+  container.appendChild(centerPanel);
+  container.appendChild(rightPanel);
+
+  // Insert after header (which is hidden), before hubArea
+  db.insertBefore(container, hubArea);
+}
+
+function restoreFromTriptych() {
+  if (!triptychActive) return;
+  triptychActive = false;
+  const old = document.getElementById('triptychContainer');
+  if (old) old.remove();
+  document.getElementById('hubArea').style.display = '';
+  document.querySelector('.sessions-bar').style.display = '';
+  document.querySelector('.dash-header').style.display = '';
+}
+
+// ── Toast ──
+function showToast(icon, title, sub) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastIcon').innerHTML = icon;
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastSub').textContent = sub;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1400);
+}
+
+// ── Init ──
+function init() {
+  renderCategories();
+  renderSessions();
+  scaleViewport();
+}
+init();
+</script>
+</body>
+</html>

@@ -61,7 +61,7 @@ import com.augmentalis.magiccode.plugins.core.PluginLog
  * @see SignatureAlgorithm
  * @see VerificationResult
  */
-expect class SignatureVerifier {
+expect class SignatureVerifier() {
     /**
      * Verify digital signature of a plugin package.
      *

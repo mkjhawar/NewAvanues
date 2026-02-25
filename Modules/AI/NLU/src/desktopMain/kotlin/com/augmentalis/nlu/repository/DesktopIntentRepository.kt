@@ -8,6 +8,7 @@
 
 package com.augmentalis.nlu.repository
 
+import com.augmentalis.nlu.nluLogWarn
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.augmentalis.shared.nlu.db.SharedNluDatabase
 import com.augmentalis.nlu.model.UnifiedIntent
@@ -16,6 +17,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import java.io.File
+
+private const val TAG = "DesktopIntentRepository"
 
 /**
  * Desktop/JVM implementation of IntentRepository.
@@ -248,7 +251,7 @@ actual object IntentRepositoryFactory {
             SharedNluDatabase.Schema.create(driver)
         } catch (e: Exception) {
             // Schema already exists, which is fine
-            println("[DesktopIntentRepository] Database schema already exists or error: ${e.message}")
+            nluLogWarn(TAG, "Database schema already exists or error: ${e.message}")
         }
 
         val database = SharedNluDatabase(driver)

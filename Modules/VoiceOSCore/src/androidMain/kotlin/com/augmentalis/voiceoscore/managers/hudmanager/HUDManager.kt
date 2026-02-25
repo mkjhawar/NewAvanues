@@ -3,7 +3,6 @@
  * Path: /CodeImport/HUDManager/src/main/java/com/augmentalis/hudmanager/HUDManager.kt
  * 
  * Created: 2025-01-23
- * Author: VOS4 Development Team
  * Version: 1.0.0
  * 
  * Purpose: Main HUD manager for smart glasses and AR interfaces

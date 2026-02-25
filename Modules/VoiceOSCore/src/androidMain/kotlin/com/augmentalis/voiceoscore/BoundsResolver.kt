@@ -282,8 +282,9 @@ class BoundsResolver(private val service: AccessibilityService) {
             return node?.let {
                 val rect = Rect()
                 it.getBoundsInScreen(rect)
-                // Don't recycle - caller may still need it
-                Bounds(rect.left, rect.top, rect.right, rect.bottom)
+                val bounds = Bounds(rect.left, rect.top, rect.right, rect.bottom)
+                it.recycle()
+                bounds
             }
         } finally {
             root.recycle()

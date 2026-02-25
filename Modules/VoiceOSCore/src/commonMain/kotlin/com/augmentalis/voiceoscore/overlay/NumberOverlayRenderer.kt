@@ -2,8 +2,6 @@
  * NumberOverlayRenderer.kt - Renders circular number badges on UI elements
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2026-01-06
  *
  * KMP-compatible renderer for number overlay badges.

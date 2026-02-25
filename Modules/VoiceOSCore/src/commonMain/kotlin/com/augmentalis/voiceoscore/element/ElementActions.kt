@@ -2,7 +2,6 @@
  * ElementActions.kt - Unified action verb definitions for voice commands
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-12
  *
  * Defines allowed voice actions for UI elements across platforms (Android, Web, iOS).

@@ -13,6 +13,8 @@
 
 package com.augmentalis.nlu.matching
 
+import com.augmentalis.nlu.NluThresholds
+
 /**
  * Supported languages/locales for command matching.
  */
@@ -486,11 +488,11 @@ class LanguageDetector {
 
         // Return dominant script's default locale
         return when {
-            arabicCount.toFloat() / total > 0.5 -> SupportedLocale.ARABIC
-            cjkCount.toFloat() / total > 0.5 -> SupportedLocale.CHINESE_SIMPLIFIED
-            cyrillicCount.toFloat() / total > 0.5 -> SupportedLocale.RUSSIAN
-            devanagariCount.toFloat() / total > 0.5 -> SupportedLocale.HINDI
-            latinCount.toFloat() / total > 0.5 -> SupportedLocale.ENGLISH
+            arabicCount.toFloat() / total > NluThresholds.SCRIPT_MAJORITY_THRESHOLD -> SupportedLocale.ARABIC
+            cjkCount.toFloat() / total > NluThresholds.SCRIPT_MAJORITY_THRESHOLD -> SupportedLocale.CHINESE_SIMPLIFIED
+            cyrillicCount.toFloat() / total > NluThresholds.SCRIPT_MAJORITY_THRESHOLD -> SupportedLocale.RUSSIAN
+            devanagariCount.toFloat() / total > NluThresholds.SCRIPT_MAJORITY_THRESHOLD -> SupportedLocale.HINDI
+            latinCount.toFloat() / total > NluThresholds.SCRIPT_MAJORITY_THRESHOLD -> SupportedLocale.ENGLISH
             else -> null
         }
     }

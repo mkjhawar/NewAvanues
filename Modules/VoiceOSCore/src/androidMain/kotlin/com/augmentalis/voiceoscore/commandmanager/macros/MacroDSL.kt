@@ -2,7 +2,6 @@
  * MacroDSL.kt - Kotlin DSL for creating command macros
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-10-09
  *
  * Purpose: Provide intuitive Kotlin DSL for macro creation

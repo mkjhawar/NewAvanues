@@ -52,7 +52,7 @@ data class Session(
         }
 
         private fun generateSessionId(): String {
-            return "session_${System.currentTimeMillis()}_${(0..9999).random()}"
+            return "session_${kotlinx.datetime.Clock.System.now().toEpochMilliseconds()}_${(0..9999).random()}"
         }
     }
 }

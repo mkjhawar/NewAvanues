@@ -3,7 +3,6 @@
  * Path: /CodeImport/HUDManager/src/main/java/com/augmentalis/hudmanager/ui/ARVisionTheme.kt
  * 
  * Created: 2025-01-23
- * Author: VOS4 Development Team
  * Version: 1.0.0
  * 
  * Purpose: ARVision-inspired UI theme with liquid iOS vibrancy

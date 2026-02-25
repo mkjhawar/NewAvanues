@@ -3,7 +3,6 @@
  * Path: /apps/VoiceRecognition/src/main/java/com/augmentalis/voicerecognition/ui/ThemeUtils.kt
  *
  * Created: 2025-01-28
- * Author: VOS4 Development Team
  * Version: 1.0.0
  *
  * Purpose: Temporary theme utility stubs matching VoiceCursor for consistency

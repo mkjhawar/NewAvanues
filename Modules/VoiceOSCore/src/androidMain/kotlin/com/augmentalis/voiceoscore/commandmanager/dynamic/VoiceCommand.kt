@@ -5,7 +5,6 @@
  * Direct implementation with zero overhead
  *
  * @since VOS4 Week 4
- * @author VOS4 Development Team
  */
 
 package com.augmentalis.voiceoscore.commandmanager.dynamic
