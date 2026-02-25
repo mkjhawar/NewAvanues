@@ -144,6 +144,24 @@ actual object AONCodec {
         }
     }
 
+    actual suspend fun wrap(onnxData: ByteArray, config: AONWrapConfig): ByteArray {
+        val hmacKey = getHmacKey()
+        val currentTime = (Date().getTime() / 1000).toLong()
+
+        val iv: ByteArray
+        val payload: ByteArray
+
+        if (config.encrypt) {
+            iv = generateSecureIv()
+            payload = encryptAesGcm(onnxData, iv)
+        } else {
+            iv = ByteArray(16)
+            payload = onnxData
+        }
+
+        return AONWrapper.buildAonFile(payload, config, hmacKey, currentTime, iv)
+    }
+
     actual fun isAON(data: ByteArray): Boolean {
         if (data.size < AONFormat.MAGIC_SIZE) return false
         for (i in AONFormat.MAGIC.indices) {
@@ -264,6 +282,83 @@ actual object AONCodec {
         val ivBuffer = JsBufferUtils.toArrayBuffer(iv)
 
         val result: ArrayBuffer = (subtle.decrypt(
+            js("({name: 'AES-GCM', iv: ivBuffer})"),
+            cryptoKey,
+            dataBuffer
+        ) as Promise<ArrayBuffer>).await()
+
+        return JsBufferUtils.fromArrayBuffer(result)
+    }
+
+    // ─── Encryption ───────────────────────────────────────────
+
+    /**
+     * Generate a 16-byte cryptographically secure IV.
+     * Node.js: crypto.randomBytes. Browser: crypto.getRandomValues.
+     */
+    private fun generateSecureIv(): ByteArray {
+        return if (isNodeJs) {
+            val crypto = js("require('crypto')")
+            val buf = crypto.randomBytes(16)
+            JsBufferUtils.fromNodeBuffer(buf)
+        } else {
+            val arr = js("new Uint8Array(16)")
+            js("crypto.getRandomValues(arr)")
+            ByteArray(16) { i -> (arr[i] as Number).toByte() }
+        }
+    }
+
+    /**
+     * Encrypt ONNX data with AES-256-GCM.
+     */
+    private suspend fun encryptAesGcm(data: ByteArray, ivNonce: ByteArray): ByteArray {
+        return if (isNodeJs) {
+            encryptAesGcmNode(data, ivNonce)
+        } else {
+            encryptAesGcmBrowser(data, ivNonce)
+        }
+    }
+
+    private fun encryptAesGcmNode(data: ByteArray, ivNonce: ByteArray): ByteArray {
+        val crypto = js("require('crypto')")
+        val keyBytes = sha256SyncNode(AONFormat.getDefaultHmacKey())
+        val iv = ivNonce.copyOf(12)
+
+        val cipher = crypto.createCipheriv(
+            "aes-256-gcm",
+            JsBufferUtils.toNodeBuffer(keyBytes),
+            JsBufferUtils.toNodeBuffer(iv)
+        )
+
+        val encrypted1 = cipher.update(JsBufferUtils.toNodeBuffer(data))
+        val encrypted2 = cipher.final()
+        val authTag = cipher.getAuthTag()
+
+        // Concatenate: ciphertext + auth tag (matches JVM GCM output)
+        val buffer = js("Buffer")
+        val result = buffer.concat(js("[ encrypted1, encrypted2, authTag ]"))
+        return JsBufferUtils.fromNodeBuffer(result)
+    }
+
+    private suspend fun encryptAesGcmBrowser(data: ByteArray, ivNonce: ByteArray): ByteArray {
+        val subtle = js("crypto.subtle")
+        val keyData = sha256SyncPure(AONFormat.getDefaultHmacKey())
+        val iv = ivNonce.copyOf(12)
+
+        // Import AES-GCM key (non-extractable)
+        val keyBuffer = JsBufferUtils.toArrayBuffer(keyData)
+        val cryptoKey: dynamic = (subtle.importKey(
+            "raw",
+            keyBuffer,
+            js("({name: 'AES-GCM'})"),
+            false,
+            js("['encrypt']")
+        ) as Promise<dynamic>).await()
+
+        val dataBuffer = JsBufferUtils.toArrayBuffer(data)
+        val ivBuffer = JsBufferUtils.toArrayBuffer(iv)
+
+        val result: ArrayBuffer = (subtle.encrypt(
             js("({name: 'AES-GCM', iv: ivBuffer})"),
             cryptoKey,
             dataBuffer

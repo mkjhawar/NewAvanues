@@ -130,6 +130,17 @@ actual object AONCodec {
         return onnxData
     }
 
+    actual suspend fun wrap(onnxData: ByteArray, config: AONWrapConfig): ByteArray {
+        if (config.encrypt) {
+            throw AONSecurityException(
+                "AES-256-GCM encryption not yet supported on Darwin. Use encrypt=false."
+            )
+        }
+        val hmacKey = AONFormat.getDefaultHmacKey()
+        val currentTime = NSDate().timeIntervalSince1970.toLong()
+        return AONWrapper.buildAonFile(onnxData, config, hmacKey, currentTime)
+    }
+
     actual fun isAON(data: ByteArray): Boolean {
         if (data.size < AONFormat.MAGIC_SIZE) return false
         for (i in AONFormat.MAGIC.indices) {

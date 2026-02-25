@@ -9,6 +9,8 @@ import com.augmentalis.crypto.aon.AONCodec
 import com.augmentalis.crypto.aon.AONFormat
 import com.augmentalis.crypto.aon.AONFooter
 import com.augmentalis.crypto.aon.AONHeader
+import com.augmentalis.crypto.aon.AONSecurityException
+import com.augmentalis.crypto.aon.AONWrapConfig
 import com.augmentalis.crypto.digest.CryptoDigest
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -237,5 +239,151 @@ class AONFormatTest {
         val key = AONFormat.getDefaultHmacKey()
         val expected = "AVA-AON-HMAC-SECRET-KEY-V1-CHANGE-IN-PRODUCTION"
         assertEquals(expected, key.decodeToString())
+    }
+
+    // ─── AONCodec.wrap() Roundtrip Tests ────────────────────
+
+    @Test
+    fun wrap_unencrypted_roundtrip() = runTest {
+        val onnxData = ByteArray(1024) { (it % 256).toByte() }
+        val config = AONWrapConfig(
+            modelId = "test-model",
+            modelVersion = 3,
+            licenseTier = 1,
+            buildNumber = 42,
+            creatorSignature = "unit-test"
+        )
+
+        val aonBytes = AONCodec.wrap(onnxData, config)
+
+        // Verify structure: header + payload + footer
+        assertEquals(AONFormat.HEADER_SIZE + onnxData.size + AONFormat.FOOTER_SIZE, aonBytes.size)
+
+        // Verify magic bytes
+        assertTrue(AONCodec.isAON(aonBytes))
+
+        // Verify header metadata
+        val header = AONCodec.parseHeader(aonBytes)
+        assertEquals("test-model", header.modelId)
+        assertEquals(3, header.modelVersion)
+        assertEquals(1.toByte(), header.licenseTier)
+        assertEquals(AONFormat.ENCRYPTION_NONE, header.encryptionScheme)
+        assertEquals(onnxData.size.toLong(), header.onnxDataSize)
+
+        // Verify full verification passes
+        val verifyResult = AONCodec.verify(aonBytes)
+        assertTrue(verifyResult.valid, "Verification failed: ${verifyResult.errors}")
+        assertTrue(verifyResult.hmacValid)
+        assertTrue(verifyResult.integrityValid)
+
+        // Roundtrip: unwrap should return original data
+        val unwrapped = AONCodec.unwrap(aonBytes)
+        assertTrue(unwrapped.contentEquals(onnxData), "Roundtrip data mismatch")
+    }
+
+    @Test
+    fun wrap_withPackageRestrictions() = runTest {
+        val onnxData = byteArrayOf(0x08, 0x06, 0x12, 0x04)
+        val config = AONWrapConfig(
+            modelId = "restricted",
+            allowedPackages = listOf("com.augmentalis.test")
+        )
+
+        val aonBytes = AONCodec.wrap(onnxData, config)
+
+        // Should fail identity check without matching identifier
+        val verifyNoId = AONCodec.verify(aonBytes, "com.other.app")
+        assertFalse(verifyNoId.identityValid)
+
+        // Should pass with matching identifier
+        val verifyMatch = AONCodec.verify(aonBytes, "com.augmentalis.test")
+        assertTrue(verifyMatch.identityValid)
+        assertTrue(verifyMatch.valid, "Verification failed: ${verifyMatch.errors}")
+    }
+
+    @Test
+    fun wrap_withExpiry_notExpired() = runTest {
+        val onnxData = ByteArray(64) { 0xAB.toByte() }
+        val config = AONWrapConfig(
+            modelId = "expiry-test",
+            expiryTimestamp = 4102444800L // 2100-01-01 — far future
+        )
+
+        val aonBytes = AONCodec.wrap(onnxData, config)
+        val result = AONCodec.verify(aonBytes)
+        assertTrue(result.valid, "Verification failed: ${result.errors}")
+        assertFalse(result.expired)
+    }
+
+    @Test
+    fun wrap_footerIntegrity() = runTest {
+        val onnxData = ByteArray(512) { (it * 3).toByte() }
+        val config = AONWrapConfig(modelId = "footer-test", buildNumber = 99, creatorSignature = "tester")
+
+        val aonBytes = AONCodec.wrap(onnxData, config)
+
+        // Parse footer
+        val footerStart = AONFormat.HEADER_SIZE + onnxData.size
+        val footerBytes = aonBytes.copyOfRange(footerStart, footerStart + AONFormat.FOOTER_SIZE)
+        val footer = AONFooter.parse(footerBytes)
+
+        assertTrue(footer.hasValidMagic())
+        assertEquals(aonBytes.size.toLong(), footer.fileSize)
+        assertEquals(99, footer.buildNumber)
+        assertEquals("tester", footer.creatorSignature)
+
+        // Verify footer hashes match header/payload
+        val headerBytes = aonBytes.copyOfRange(0, AONFormat.HEADER_SIZE)
+        val payloadBytes = aonBytes.copyOfRange(AONFormat.HEADER_SIZE, footerStart)
+        val headerHash = CryptoDigest.sha256(headerBytes)
+        val payloadHash = CryptoDigest.sha256(payloadBytes)
+        assertTrue(headerHash.contentEquals(footer.headerHash))
+        assertTrue(payloadHash.contentEquals(footer.onnxHash))
+    }
+
+    @Test
+    fun wrap_encrypted_roundtrip() = runTest {
+        val onnxData = ByteArray(256) { (it xor 0x55).toByte() }
+        val config = AONWrapConfig(modelId = "encrypted-test", encrypt = true)
+
+        try {
+            val aonBytes = AONCodec.wrap(onnxData, config)
+            // If we get here, encryption is supported (JVM/JS)
+            assertTrue(AONCodec.isAON(aonBytes))
+
+            val header = AONCodec.parseHeader(aonBytes)
+            assertEquals(AONFormat.ENCRYPTION_AES_256_GCM, header.encryptionScheme)
+            // GCM adds 16-byte auth tag, so payload > original
+            assertTrue(header.onnxDataSize > onnxData.size,
+                "Encrypted payload should be larger: ${header.onnxDataSize} vs ${onnxData.size}")
+
+            // Full verification should pass
+            val verifyResult = AONCodec.verify(aonBytes)
+            assertTrue(verifyResult.valid, "Verification failed: ${verifyResult.errors}")
+
+            // Roundtrip: unwrap decrypts and returns original
+            val unwrapped = AONCodec.unwrap(aonBytes)
+            assertTrue(unwrapped.contentEquals(onnxData), "Encrypted roundtrip data mismatch")
+        } catch (e: AONSecurityException) {
+            // Darwin: encryption not supported — expected
+            assertTrue(e.message?.contains("not yet supported") == true,
+                "Unexpected AONSecurityException: ${e.message}")
+        }
+    }
+
+    @Test
+    fun wrap_emptyPayload() = runTest {
+        val onnxData = ByteArray(0)
+        val config = AONWrapConfig(modelId = "empty")
+
+        val aonBytes = AONCodec.wrap(onnxData, config)
+        assertEquals(AONFormat.HEADER_SIZE + AONFormat.FOOTER_SIZE, aonBytes.size)
+        assertTrue(AONCodec.isAON(aonBytes))
+
+        val result = AONCodec.verify(aonBytes)
+        assertTrue(result.valid, "Verification failed: ${result.errors}")
+
+        val unwrapped = AONCodec.unwrap(aonBytes)
+        assertEquals(0, unwrapped.size)
     }
 }

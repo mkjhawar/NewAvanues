@@ -49,6 +49,25 @@ expect object AONCodec {
     suspend fun unwrap(aonData: ByteArray, appIdentifier: String? = null): ByteArray
 
     /**
+     * Wrap raw ONNX model bytes into the AON format.
+     *
+     * Produces a complete AON file: 256-byte header + payload + 128-byte footer,
+     * with HMAC-SHA256 signature, SHA-256 integrity hashes, and CRC32 checksum.
+     *
+     * Optionally encrypts the payload with AES-256-GCM when [config].encrypt = true.
+     * Encryption support varies by platform:
+     * - JVM (Android + Desktop): Full AES-256-GCM support
+     * - JS (Node.js + Browser): Full AES-256-GCM support
+     * - Darwin (iOS + macOS): Unencrypted only (throws if encrypt=true)
+     *
+     * @param onnxData Raw ONNX model bytes to wrap
+     * @param config Wrapping configuration (model ID, version, encryption, etc.)
+     * @return Complete AON file bytes ready for distribution
+     * @throws AONSecurityException if encryption is requested but not supported
+     */
+    suspend fun wrap(onnxData: ByteArray, config: AONWrapConfig): ByteArray
+
+    /**
      * Quick check: does this data have AON magic bytes?
      * Does NOT perform any verification — just checks the first 8 bytes.
      */
