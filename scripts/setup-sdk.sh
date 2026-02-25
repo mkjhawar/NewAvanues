@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 #
-# setup-sdk.sh — Download large binaries (>75MB) from GitLab Package Registry
+# setup-sdk.sh — Download large binaries (>100MB) from GitLab Package Registry
 #
-# Policy: Files <75MB are tracked in git. Only files exceeding 75MB are
-# downloaded from the GitLab Package Registry. Run this after cloning.
+# Policy: Files <100MB per file are tracked in git (GitLab blob limit).
+# Only files exceeding 100MB are downloaded from the Package Registry.
+# Run this after cloning.
 #
 # What gets downloaded:
-#   VLM Whisper model files (~8.4GB) → VLMFiles/EN/ and VLMFiles/MUL/
+#   VLM Base models  (~141MB x4 = 564MB)  → VLMFiles/{EN,MUL}/VoiceOS-Bas-*
+#   VLM Small models (~465MB x4 = 1.9GB)  → VLMFiles/{EN,MUL}/VoiceOS-Sml-*
+#   VLM Medium models (~1.4GB x4 = 5.6GB) → VLMFiles/{EN,MUL}/VoiceOS-Med-*
+#   Total: ~8.1GB
 #
 # Already tracked in git (no download needed):
-#   Vivoka SDK AARs/JARs/JNI (~307MB)     — all files <75MB
-#   Sherpa-ONNX AAR/JARs (~40MB)           — all files <75MB
-#   VSDK ASR data (~164MB)                 — all files <75MB
-#   TVM4J core JARs (~80KB)                — all files <75MB
+#   VLM Tiny models (~74MB x4 = 296MB)    — tracked in git
+#   Vivoka SDK AARs/JARs/JNI (~307MB)     — all files <100MB
+#   Sherpa-ONNX AAR/JARs (~40MB)          — tracked in git
+#   VSDK ASR data (~164MB)                — all files <100MB
+#   TVM4J core JARs (~80KB)               — tracked in git
 #
 # Prerequisites:
 #   GITLAB_TOKEN      — Personal Access Token with 'read_api' scope
@@ -23,7 +28,7 @@
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh --en-only
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh --mul-only
-#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh --tiny-only
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh --sml-only
 #
 set -euo pipefail
 
@@ -71,23 +76,23 @@ cd "$ROOT_DIR"
 
 DOWNLOAD_EN=true
 DOWNLOAD_MUL=true
-SIZES="all"  # all | tiny
+SIZES="all"  # all | sml
 
 for arg in "$@"; do
     case "$arg" in
         --en-only)    DOWNLOAD_MUL=false ;;
         --mul-only)   DOWNLOAD_EN=false ;;
-        --tiny-only)  SIZES="tiny" ;;
+        --sml-only)   SIZES="sml" ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS]"
             echo ""
-            echo "Downloads VLM Whisper model files (~8.4GB) from GitLab Package Registry."
-            echo "All other dependencies (<75MB) are tracked in git — no download needed."
+            echo "Downloads VLM Base, Small & Medium models (>100MB) from GitLab Package Registry."
+            echo "Tiny models (<100MB) are tracked in git — no download needed."
             echo ""
             echo "Options:"
-            echo "  --en-only     Only download English models (~4.2GB)"
-            echo "  --mul-only    Only download Multilingual models (~4.2GB)"
-            echo "  --tiny-only   Only download Tiny models (~200MB, fastest)"
+            echo "  --en-only     Only download English models (~4GB)"
+            echo "  --mul-only    Only download Multilingual models (~4GB)"
+            echo "  --sml-only    Only download Small models (~1.9GB, skip Base & Medium)"
             echo "  --help        Show this help"
             exit 0
             ;;
@@ -201,18 +206,19 @@ download_generic() {
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 echo "═══════════════════════════════════════════════════════════════"
-echo "  NewAvanues — Download Large Binaries (>75MB)"
+echo "  NewAvanues — Download Large Binaries (>100MB)"
 echo "  Project: ${GITLAB_PROJECT_ID}"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
 # Build model list based on size filter
-if [[ "$SIZES" == "tiny" ]]; then
-    EN_MODELS=("VoiceOS-Tin-EN")
-    MUL_MODELS=("VoiceOS-Tin-MUL")
+# Tiny (~74MB) is tracked in git — only download Base, Small, and Medium
+if [[ "$SIZES" == "sml" ]]; then
+    EN_MODELS=("VoiceOS-Sml-EN")
+    MUL_MODELS=("VoiceOS-Sml-MUL")
 else
-    EN_MODELS=("VoiceOS-Tin-EN" "VoiceOS-Bas-EN" "VoiceOS-Sml-EN" "VoiceOS-Med-EN")
-    MUL_MODELS=("VoiceOS-Tin-MUL" "VoiceOS-Bas-MUL" "VoiceOS-Sml-MUL" "VoiceOS-Med-MUL")
+    EN_MODELS=("VoiceOS-Bas-EN" "VoiceOS-Sml-EN" "VoiceOS-Med-EN")
+    MUL_MODELS=("VoiceOS-Bas-MUL" "VoiceOS-Sml-MUL" "VoiceOS-Med-MUL")
 fi
 
 # ── VLM English Models ────────────────────────────────────────────────────────
