@@ -8,6 +8,8 @@
 # What gets downloaded:
 #   --sdk-only : Vivoka AARs/JARs/JNI + Sherpa-ONNX AAR/JARs (~310MB)
 #   --vlm-only : VLM Whisper model files (~8.4GB)
+#   --asr-only : VSDK ASR data files (~164MB)
+#   --tvm-only : TVM4J core JARs (~80K)
 #   (default)  : Everything
 #
 # Prerequisites:
@@ -19,6 +21,8 @@
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh --vlm-only
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh --sdk-only
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh --asr-only
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh --tvm-only
 #
 set -euo pipefail
 
@@ -68,15 +72,21 @@ cd "$ROOT_DIR"
 
 DOWNLOAD_SDK=true
 DOWNLOAD_VLM=true
+DOWNLOAD_ASR=true
+DOWNLOAD_TVM=true
 
 for arg in "$@"; do
     case "$arg" in
-        --vlm-only)  DOWNLOAD_SDK=false ;;
-        --sdk-only)  DOWNLOAD_VLM=false ;;
+        --vlm-only)  DOWNLOAD_SDK=false; DOWNLOAD_ASR=false; DOWNLOAD_TVM=false ;;
+        --sdk-only)  DOWNLOAD_VLM=false; DOWNLOAD_ASR=false; DOWNLOAD_TVM=false ;;
+        --asr-only)  DOWNLOAD_SDK=false; DOWNLOAD_VLM=false; DOWNLOAD_TVM=false ;;
+        --tvm-only)  DOWNLOAD_SDK=false; DOWNLOAD_VLM=false; DOWNLOAD_ASR=false ;;
         --help|-h)
-            echo "Usage: $0 [--vlm-only|--sdk-only]"
+            echo "Usage: $0 [--vlm-only|--sdk-only|--asr-only|--tvm-only]"
             echo "  --vlm-only   Only download VLM model files (~8.4GB)"
             echo "  --sdk-only   Only download SDK binaries (~310MB)"
+            echo "  --asr-only   Only download VSDK ASR data (~164MB)"
+            echo "  --tvm-only   Only download TVM4J core JARs (~80K)"
             exit 0
             ;;
         *) echo -e "${RED}Unknown argument: $arg${NC}"; exit 1 ;;
@@ -291,6 +301,51 @@ if [[ "$DOWNLOAD_SDK" == true ]]; then
     download_maven "sherpa-onnx-android"  "1.5.5" "aar" "sherpa-onnx/sherpa-onnx.aar"
     download_maven "sherpa-onnx-classes"  "1.5.5" "jar" "sherpa-onnx/sherpa-onnx-classes.jar"
     download_maven "sherpa-onnx-desktop"  "1.5.5" "jar" "sherpa-onnx/sherpa-onnx-desktop.jar"
+    echo ""
+fi
+
+# ── VSDK ASR Data ─────────────────────────────────────────────────────────────
+
+if [[ "$DOWNLOAD_ASR" == true ]]; then
+
+    echo "── VSDK ASR Data ──────────────────────────────────────────"
+    ASR_TARGET="Modules/SpeechRecognition/src/main/assets/vsdk/data"
+    # Check if the large model files already exist (use the acoustic model as sentinel)
+    if [[ -f "${ASR_TARGET}/csdk/asr/acmod/am_enu_vocon_car_202312090302.dat" ]]; then
+        log_skip "${ASR_TARGET}/ (already present)"
+        ((SKIPPED++))
+    else
+        log_info "Downloading VSDK ASR data (~164MB compressed)..."
+        local_tar="/tmp/vsdk-asr-data-$$.tar.gz"
+        url="${GITLAB_API}/projects/${GITLAB_PROJECT_ID}/packages/generic/vsdk-asr-data/1.0.0/vsdk-asr-data.tar.gz"
+
+        http_code=$(curl -s -w "%{http_code}" \
+            --header "${AUTH_HEADER}" \
+            --output "$local_tar" \
+            "$url")
+
+        if [[ "$http_code" == "200" ]]; then
+            mkdir -p "Modules/SpeechRecognition/src/main/assets/vsdk"
+            tar -xzf "$local_tar" -C Modules/SpeechRecognition/src/main/assets/vsdk
+            rm -f "$local_tar"
+            log_ok "${ASR_TARGET}/ extracted"
+            ((DOWNLOADED++))
+        else
+            log_err "VSDK ASR data download failed → HTTP ${http_code}"
+            rm -f "$local_tar"
+            ((ERRORS++))
+        fi
+    fi
+    echo ""
+fi
+
+# ── TVM4J JARs ────────────────────────────────────────────────────────────────
+
+if [[ "$DOWNLOAD_TVM" == true ]]; then
+
+    echo "── TVM4J JARs ─────────────────────────────────────────────"
+    download_maven "tvm4j-core"      "1.0.0" "jar" "Modules/AI/ALC/libs/tvm4j_core.jar"
+    download_maven "tvm4j-core-llm"  "1.0.0" "jar" "Modules/AI/LLM/libs/tvm4j_core.jar"
     echo ""
 fi
 

@@ -17,6 +17,10 @@ bfedd8275a42799a2a307b0ad612b0c98cfe521875d674436ca9fa08cec3ae34  vivoka/Android
 d16e1c2b08ded19fa7c8e1fff91b5fb43d2dd726d7bc3b6d3e8ace4e4c3e18d6  sherpa-onnx/sherpa-onnx-classes.jar
 6ecc577069e451602b080164d5699a70a354d73395682c887881bad2c56bf846  sherpa-onnx/sherpa-onnx-desktop.jar
 
+# TVM4J Core JARs
+4707694dde33cb9ce9deabd85445cf5d0fa23dbe6c11b5a227bb9829afe7a95f  Modules/AI/ALC/libs/tvm4j_core.jar
+14c28d61743c864511fc9e37d2c9a57d24bb041c2be2a47f9a2170455a4f4caf  Modules/AI/LLM/libs/tvm4j_core.jar
+
 # VLM Models — English (Whisper ONNX, AON-encrypted)
 921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f  VLMFiles/EN/VoiceOS-Tin-EN.bin
 a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002  VLMFiles/EN/VoiceOS-Bas-EN.bin

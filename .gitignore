@@ -67,6 +67,19 @@ vivoka/Android/src/main/jniLibs/
 sherpa-onnx/*.aar
 sherpa-onnx/*.jar
 
+# VSDK ASR data — large speech models (downloaded from GitLab Package Registry)
+# NOTE: asreng-US.fcf (1.3K config) stays tracked; only large model files are ignored
+Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/acmod/
+Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/asr/
+Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/clc/
+Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/lm/
+Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/ctx/ctx-primary*
+
+# TVM JARs (downloaded from GitLab Package Registry)
+Modules/AI/ALC/libs/*.jar
+Modules/AI/LLM/libs/*.jar
+Modules/AI/LLM/libs/*.jar.old
+
 # AVA Migration - Exclude large model files (>100MB)
 android/apps/AVA/external-models/**/*.bin
 android/apps/AVA/external-models/**/*.gguf

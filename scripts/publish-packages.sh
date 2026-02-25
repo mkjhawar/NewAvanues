@@ -13,6 +13,8 @@
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/publish-packages.sh
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/publish-packages.sh --sdk-only
 #   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/publish-packages.sh --vlm-only
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/publish-packages.sh --asr-only
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/publish-packages.sh --tvm-only
 #
 set -euo pipefail
 
@@ -51,15 +53,21 @@ cd "$ROOT_DIR"
 
 PUBLISH_SDK=true
 PUBLISH_VLM=true
+PUBLISH_ASR=true
+PUBLISH_TVM=true
 
 for arg in "$@"; do
     case "$arg" in
-        --sdk-only)  PUBLISH_VLM=false ;;
-        --vlm-only)  PUBLISH_SDK=false ;;
+        --sdk-only)  PUBLISH_VLM=false; PUBLISH_ASR=false; PUBLISH_TVM=false ;;
+        --vlm-only)  PUBLISH_SDK=false; PUBLISH_ASR=false; PUBLISH_TVM=false ;;
+        --asr-only)  PUBLISH_SDK=false; PUBLISH_VLM=false; PUBLISH_TVM=false ;;
+        --tvm-only)  PUBLISH_SDK=false; PUBLISH_VLM=false; PUBLISH_ASR=false ;;
         --help|-h)
-            echo "Usage: $0 [--sdk-only|--vlm-only]"
+            echo "Usage: $0 [--sdk-only|--vlm-only|--asr-only|--tvm-only]"
             echo "  --sdk-only   Only publish SDK binaries (Vivoka, Sherpa-ONNX)"
             echo "  --vlm-only   Only publish VLM model files"
+            echo "  --asr-only   Only publish VSDK ASR data files"
+            echo "  --tvm-only   Only publish TVM4J JARs"
             exit 0
             ;;
         *) echo -e "${RED}Unknown argument: $arg${NC}"; exit 1 ;;
@@ -237,6 +245,31 @@ if [[ "$PUBLISH_VLM" == true ]]; then
     echo ""
 fi
 
+# ── 6. VSDK ASR Data → Generic (tar.gz) ──────────────────────────────────────
+
+if [[ "$PUBLISH_ASR" == true ]]; then
+    echo "── VSDK ASR Data → Generic ────────────────────────────────"
+    ASR_DATA_DIR="Modules/SpeechRecognition/src/main/assets/vsdk/data"
+    if [[ -d "$ASR_DATA_DIR" ]]; then
+        ASR_TAR="/tmp/vsdk-asr-data-$$.tar.gz"
+        tar -czf "$ASR_TAR" -C Modules/SpeechRecognition/src/main/assets/vsdk data/
+        publish_generic "$ASR_TAR" "vsdk-asr-data" "1.0.0" "vsdk-asr-data.tar.gz" || ((ERRORS++))
+        rm -f "$ASR_TAR"
+    else
+        log_warn "$ASR_DATA_DIR not found, skipping"
+    fi
+    echo ""
+fi
+
+# ── 7. TVM4J JARs → Maven ───────────────────────────────────────────────────
+
+if [[ "$PUBLISH_TVM" == true ]]; then
+    echo "── TVM4J JARs → Maven ───────────────────────────────────"
+    publish_maven "Modules/AI/ALC/libs/tvm4j_core.jar"  "tvm4j-core"      "1.0.0" "jar" || ((ERRORS++))
+    publish_maven "Modules/AI/LLM/libs/tvm4j_core.jar"  "tvm4j-core-llm"  "1.0.0" "jar" || ((ERRORS++))
+    echo ""
+fi
+
 # ── Summary ────────────────────────────────────────────────────────────────────
 
 echo "═══════════════════════════════════════════════════════════════"
@@ -244,10 +277,8 @@ if [[ $ERRORS -eq 0 ]]; then
     echo -e "  ${GREEN}All packages published successfully!${NC}"
     echo ""
     echo "  Next steps:"
-    echo "    1. Update build.gradle.kts files to use Maven coordinates"
-    echo "    2. Run: git rm --cached vivoka/*.aar sherpa-onnx/*.aar sherpa-onnx/*.jar"
-    echo "    3. Update .gitignore"
-    echo "    4. Commit and push"
+    echo "    1. Run: ./scripts/setup-sdk.sh to verify downloads work"
+    echo "    2. Commit and push"
 else
     echo -e "  ${RED}${ERRORS} error(s) during publishing${NC}"
     echo "  Check network connectivity and token permissions."
