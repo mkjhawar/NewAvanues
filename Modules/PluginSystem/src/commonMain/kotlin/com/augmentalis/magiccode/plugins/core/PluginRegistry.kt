@@ -4,6 +4,7 @@ import com.augmentalis.magiccode.plugins.persistence.PluginPersistence
 import com.augmentalis.magiccode.plugins.persistence.InMemoryPluginPersistence
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.Clock
 
 /**
  * Central registry for managing plugin metadata and lifecycle state.
@@ -113,7 +114,7 @@ class PluginRegistry(
                 val info = PluginInfo(
                     manifest = manifest,
                     state = PluginState.INSTALLED,
-                    loadedAt = System.currentTimeMillis(),
+                    loadedAt = Clock.System.now().toEpochMilliseconds(),
                     namespace = namespace
                 )
                 plugins[manifest.id] = info

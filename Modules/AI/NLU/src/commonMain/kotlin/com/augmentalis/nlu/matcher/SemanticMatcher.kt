@@ -9,6 +9,7 @@
 
 package com.augmentalis.nlu.matcher
 
+import com.augmentalis.nlu.NluThresholds
 import com.augmentalis.nlu.model.IntentMatch
 import com.augmentalis.nlu.model.MatchMethod
 import com.augmentalis.nlu.model.UnifiedIntent
@@ -24,7 +25,7 @@ import kotlin.math.sqrt
  * @property maxCandidates Maximum number of candidates to return
  */
 class SemanticMatcher(
-    private val minSimilarity: Float = 0.6f,
+    private val minSimilarity: Float = NluThresholds.SEMANTIC_MIN_SIMILARITY,
     private val maxCandidates: Int = 5
 ) {
 
@@ -76,7 +77,7 @@ class SemanticMatcher(
         }
 
         return candidates
-            .sortedByDescending { it.score * (1 + it.intent.priority * 0.05f) }
+            .sortedByDescending { it.score * (1 + it.intent.priority * NluThresholds.SEMANTIC_PRIORITY_BOOST) }
             .take(maxCandidates)
     }
 

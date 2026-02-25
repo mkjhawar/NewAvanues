@@ -1,43 +1,118 @@
 package com.augmentalis.magiccode.plugins.platform
 
-import dalvik.system.DexClassLoader
+import com.avanues.avu.dsl.plugin.LoadedPlugin
+import com.avanues.avu.dsl.plugin.PluginLoadResult
+import com.avanues.avu.dsl.plugin.PluginLoader
+import com.augmentalis.magiccode.plugins.core.PluginLog
 import java.io.File
 
 /**
- * Android implementation of PluginClassLoader using DexClassLoader.
+ * Android implementation of PluginClassLoader for .avp text plugins.
  *
- * Loads plugin code from APK or JAR files containing DEX bytecode.
+ * Replaces the former DexClassLoader (bytecode-based) approach with AVU DSL
+ * text interpretation. .avp files are plain text files parsed at runtime by
+ * the AVU DSL pipeline — no compiled DEX or APK required.
+ *
+ * ## Loading pipeline
+ * 1. Read .avp file text from [pluginPath]
+ * 2. Run through [PluginLoader.load] (AvuDslLexer → AvuDslParser → manifest extraction → validation)
+ * 3. Store the resulting [LoadedPlugin] (holds AST + SandboxConfig) keyed by [entrypoint]
+ * 4. Return the [LoadedPlugin] as Any (caller in PluginLoader.kt discards the return value;
+ *    the stored plugin is retrieved later via [getLoadedPlugin] for execution)
  */
 actual class PluginClassLoader {
-    private var classLoader: DexClassLoader? = null
 
-    actual fun loadClass(className: String, pluginPath: String): Any {
-        if (classLoader == null) {
-            // Create optimized dex output directory
-            val optimizedDir = File(pluginPath).parentFile?.resolve("dex_opt")
-                ?: throw IllegalStateException("Cannot create optimized dex directory")
+    private val loadedPlugins = mutableMapOf<String, LoadedPlugin>()
 
-            if (!optimizedDir.exists()) {
-                optimizedDir.mkdirs()
-            }
+    companion object {
+        private const val TAG = "AvpPluginClassLoader"
+    }
 
-            // Create DexClassLoader for plugin
-            classLoader = DexClassLoader(
-                pluginPath,
-                optimizedDir.absolutePath,
-                null,
-                this::class.java.classLoader
+    /**
+     * Parse an .avp plugin file and store the resulting [LoadedPlugin].
+     *
+     * @param entrypoint Plugin ID expected in the .avp header `plugin_id` field
+     * @param pluginPath Absolute path to the .avp text file
+     * @return The [LoadedPlugin] containing the parsed AST and sandbox config
+     * @throws ClassNotFoundException if the file is not found or cannot be read
+     * @throws IllegalArgumentException if the .avp content fails AVU validation
+     */
+    actual fun loadClass(entrypoint: String, pluginPath: String): Any {
+        PluginLog.d(TAG, "Loading .avp plugin: $entrypoint from $pluginPath")
+
+        val avpFile = File(pluginPath)
+        if (!avpFile.exists()) {
+            throw ClassNotFoundException(
+                "AVP plugin file not found: $pluginPath (plugin: $entrypoint)"
             )
         }
 
-        val clazz = classLoader?.loadClass(className)
-            ?: throw ClassNotFoundException("Class not found: $className")
+        val avpContent = try {
+            avpFile.readText(Charsets.UTF_8)
+        } catch (e: Exception) {
+            PluginLog.e(TAG, "Failed to read .avp file: $pluginPath", e)
+            throw ClassNotFoundException(
+                "Failed to read .avp file for plugin $entrypoint: ${e.message}", e
+            )
+        }
 
-        return clazz.getDeclaredConstructor().newInstance()
+        val loadResult = PluginLoader.load(avpContent)
+
+        val loadedPlugin = when (loadResult) {
+            is PluginLoadResult.Success -> {
+                val plugin = loadResult.plugin
+                // Verify the declared plugin_id matches what PluginSystem expects
+                if (plugin.manifest.pluginId != entrypoint) {
+                    throw IllegalArgumentException(
+                        "Plugin ID mismatch in .avp file: expected '$entrypoint', " +
+                            "got '${plugin.manifest.pluginId}' in $pluginPath"
+                    )
+                }
+                PluginLog.i(TAG, "Successfully parsed .avp plugin: ${plugin.pluginId} v${plugin.manifest.version}")
+                plugin
+            }
+            is PluginLoadResult.ParseError -> {
+                val errors = loadResult.errors.joinToString("; ")
+                PluginLog.e(TAG, "AVP parse errors for $entrypoint: $errors")
+                throw IllegalArgumentException(
+                    "AVP parse errors in plugin '$entrypoint': $errors"
+                )
+            }
+            is PluginLoadResult.ValidationError -> {
+                val errors = loadResult.errors.joinToString("; ")
+                PluginLog.e(TAG, "AVP validation errors for $entrypoint: $errors")
+                throw IllegalArgumentException(
+                    "AVP validation errors in plugin '$entrypoint': $errors"
+                )
+            }
+            is PluginLoadResult.PermissionError -> {
+                val errors = loadResult.errors.joinToString("; ")
+                PluginLog.e(TAG, "AVP permission errors for $entrypoint: $errors")
+                throw IllegalArgumentException(
+                    "AVP permission errors in plugin '$entrypoint': $errors"
+                )
+            }
+        }
+
+        loadedPlugins[entrypoint] = loadedPlugin
+        return loadedPlugin
     }
 
+    /**
+     * Retrieve the parsed [LoadedPlugin] for a previously loaded plugin.
+     *
+     * @param pluginId The plugin ID (entrypoint passed to [loadClass])
+     * @return The [LoadedPlugin] or null if not yet loaded
+     */
+    actual fun getLoadedPlugin(pluginId: String): LoadedPlugin? {
+        return loadedPlugins[pluginId]
+    }
+
+    /**
+     * Unload all parsed plugins and release memory.
+     */
     actual fun unload() {
-        classLoader = null
-        // Note: DexClassLoader doesn't have explicit close, will be GC'd
+        loadedPlugins.clear()
+        PluginLog.d(TAG, "AVP plugin loader cleared")
     }
 }

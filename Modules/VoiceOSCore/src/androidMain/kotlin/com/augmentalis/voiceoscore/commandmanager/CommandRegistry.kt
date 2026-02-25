@@ -2,7 +2,6 @@
  * CommandRegistry.kt
  *
  * Created: 2025-10-10 19:08 PDT
- * Author: VOS4 Development Team
  * Version: 1.0.0
  *
  * Purpose: Centralized command routing registry for VOS4 system-wide command distribution

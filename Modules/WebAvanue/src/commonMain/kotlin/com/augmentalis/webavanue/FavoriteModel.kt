@@ -46,7 +46,7 @@ data class Favorite(
         }
 
         private fun generateFavoriteId(): String {
-            return "fav_${System.currentTimeMillis()}_${(0..9999).random()}"
+            return "fav_${kotlinx.datetime.Clock.System.now().toEpochMilliseconds()}_${(0..9999).random()}"
         }
 
         /**
@@ -77,7 +77,7 @@ data class FavoriteFolder(
     companion object {
         fun create(name: String, parentId: String? = null): FavoriteFolder {
             return FavoriteFolder(
-                id = "folder_${System.currentTimeMillis()}",
+                id = "folder_${kotlinx.datetime.Clock.System.now().toEpochMilliseconds()}",
                 name = name,
                 parentId = parentId,
                 createdAt = kotlinx.datetime.Clock.System.now()

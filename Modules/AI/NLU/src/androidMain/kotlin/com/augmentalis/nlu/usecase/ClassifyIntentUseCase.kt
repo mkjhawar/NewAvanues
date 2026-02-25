@@ -5,6 +5,7 @@ import com.augmentalis.ava.core.domain.model.TrainExample
 import com.augmentalis.ava.core.domain.repository.TrainExampleRepository
 import com.augmentalis.nlu.IntentClassification
 import com.augmentalis.nlu.IntentClassifier
+import com.augmentalis.nlu.NluThresholds
 import kotlinx.coroutines.flow.first
 
 /**
@@ -33,7 +34,7 @@ class ClassifyIntentUseCase(
     suspend operator fun invoke(
         utterance: String,
         locale: String = "en-US",
-        confidenceThreshold: Float = 0.7f
+        confidenceThreshold: Float = NluThresholds.CLASSIFY_ACCEPT_THRESHOLD
     ): Result<ClassificationResult> {
         try {
             // Get trained intents for locale

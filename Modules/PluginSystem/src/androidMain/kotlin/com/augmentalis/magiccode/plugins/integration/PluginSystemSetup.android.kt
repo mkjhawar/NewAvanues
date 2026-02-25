@@ -17,6 +17,8 @@ import android.util.Log
 import com.augmentalis.magiccode.plugins.android.*
 import com.augmentalis.magiccode.plugins.android.executors.*
 import com.augmentalis.magiccode.plugins.builtin.*
+import com.augmentalis.magiccode.plugins.security.DefaultPluginSandbox
+import com.augmentalis.magiccode.plugins.security.PermissionStorage
 import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.HandlerContext
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.ScreenContext
@@ -98,6 +100,23 @@ class AndroidPluginSystemSetup(
 
     private var config: PluginSystemConfig? = null
     private val customFactories = mutableMapOf<String, () -> Plugin>()
+
+    /**
+     * Plugin sandbox backed by encrypted [PermissionStorage].
+     *
+     * Created lazily on first access so callers that never use the sandbox
+     * don't pay the EncryptedSharedPreferences initialization cost.
+     * Permissions granted via this sandbox survive app restarts.
+     */
+    val pluginSandbox: DefaultPluginSandbox by lazy {
+        val storage = try {
+            PermissionStorage.create(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create PermissionStorage — sandbox will run without persistence", e)
+            null
+        }
+        DefaultPluginSandbox(storage = storage)
+    }
 
     override suspend fun initialize(config: PluginSystemConfig): PluginSystemSetupResult {
         if (_isInitialized.value) {

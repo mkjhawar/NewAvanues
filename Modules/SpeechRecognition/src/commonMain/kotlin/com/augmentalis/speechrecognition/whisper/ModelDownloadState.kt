@@ -49,6 +49,14 @@ sealed class ModelDownloadState {
     /** Download completed successfully */
     data class Completed(val modelSize: WhisperModelSize, val filePath: String) : ModelDownloadState()
 
+    /** Retrying after transient failure */
+    data class Retrying(
+        val modelSize: WhisperModelSize,
+        val attempt: Int,
+        val maxAttempts: Int,
+        val delayMs: Long
+    ) : ModelDownloadState()
+
     /** Download failed */
     data class Failed(val modelSize: WhisperModelSize, val error: String) : ModelDownloadState()
 

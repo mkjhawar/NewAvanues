@@ -11,9 +11,15 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 android {
     namespace = "com.augmentalis.overlay"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)
@@ -37,10 +43,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
     }
@@ -51,6 +53,9 @@ dependencies {
     implementation(project(":Modules:AVA:core:Domain"))
     implementation(project(":Modules:AVA:core:Data"))
     implementation(project(":Modules:AVA:core:Utils"))
+
+    // AvanueUI theme system
+    implementation(project(":Modules:AvanueUI"))
 
     // Feature modules for integration
     //implementation(project(":Modules:AVA:SharedNLU"))  // TODO: SharedNLU not found in current structure
@@ -63,7 +68,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // Compose
-    implementation(platform(libs.compose.bom.get()))
+    implementation(project.dependencies.platform(libs.compose.bom))
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")

@@ -88,11 +88,13 @@ object Fingerprint {
             hash = hash * 31 + char.code
         }
 
-        // Ensure positive value and convert to hex
+        // Ensure positive value and convert to hex.
+        // takeLast() preserves the least-significant (most discriminating) bits,
+        // avoiding collisions on short inputs where only trailing chars differ.
         val positiveHash = hash and 0x7FFFFFFFFFFFFFFFL
-        val hexString = positiveHash.toString(16).padStart(16, '0')
+        val hexString = positiveHash.toString(16).padStart(length, '0')
 
-        return hexString.take(length).lowercase()
+        return hexString.takeLast(length).lowercase()
     }
 
     /**

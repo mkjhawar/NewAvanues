@@ -56,7 +56,7 @@ data class Tab(
         }
 
         private fun generateTabId(): String {
-            return "tab_${System.currentTimeMillis()}_${(0..9999).random()}"
+            return "tab_${kotlinx.datetime.Clock.System.now().toEpochMilliseconds()}_${(0..9999).random()}"
         }
 
         /**

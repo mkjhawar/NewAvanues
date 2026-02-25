@@ -2,8 +2,6 @@
  * OverlayCoordinator.kt - Overlay display management and coordination
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2026-01-06
  *
  * Manages overlay show/hide/update operations and coordinates between multiple overlay types.

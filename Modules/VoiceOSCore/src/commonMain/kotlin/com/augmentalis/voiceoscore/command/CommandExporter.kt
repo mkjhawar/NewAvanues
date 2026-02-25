@@ -2,7 +2,6 @@
  * CommandExporter.kt - Implementation of ICommandExporter for Phase 5
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-22
  *
  * Exports commands from the database for backup, sharing, or device migration.

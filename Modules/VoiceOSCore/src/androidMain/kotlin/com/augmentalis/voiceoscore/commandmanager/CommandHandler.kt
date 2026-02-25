@@ -2,7 +2,6 @@
  * CommandHandler.kt
  *
  * Created: 2025-10-10 19:08 PDT
- * Author: VOS4 Development Team
  * Version: 1.0.0
  *
  * Purpose: Interface for module-level command handlers in VOS4 system-wide routing

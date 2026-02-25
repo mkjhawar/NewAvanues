@@ -2,7 +2,6 @@
  * VoiceKeyboardService.kt - Main keyboard input method service
  * 
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-09-07
  */
 package com.augmentalis.voicekeyboard.service
@@ -137,7 +136,7 @@ class VoiceKeyboardService : InputMethodService(), KeyboardActionListener {
         Log.d(TAG, "Starting input, restarting: $restarting")
         
         currentEditorInfo = attribute
-        currentInputConnection = currentInputConnection
+        currentInputConnection = getCurrentInputConnection()
         
         // Configure keyboard based on input type
         attribute?.let { configureKeyboardForInputType(it) }

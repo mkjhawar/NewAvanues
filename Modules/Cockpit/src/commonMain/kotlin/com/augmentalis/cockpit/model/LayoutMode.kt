@@ -6,11 +6,12 @@ import kotlinx.serialization.Serializable
  * Layout modes for arranging frames within a Cockpit session.
  *
  * Each mode defines how frames are positioned and sized:
+ * - DASHBOARD: Launcher/home view with module tiles and recent sessions (DEFAULT when no session active)
  * - FREEFORM: User drags windows anywhere, resizes freely
  * - GRID: Auto-arranged in a uniform grid (2x2, 2x3, etc.)
  * - SPLIT_LEFT: One large frame on left, smaller frames stacked on right
  * - SPLIT_RIGHT: One large frame on right, smaller frames stacked on left
- * - COCKPIT: Flight Deck — fixed 6-slot instrument panel (DEFAULT)
+ * - COCKPIT: Flight Deck — fixed 6-slot instrument panel (DEFAULT for active sessions)
  * - T_PANEL: Primary frame 60% top, secondaries in bottom row
  * - MOSAIC: Primary frame 50% area, remaining frames tile around it
  * - FULLSCREEN: Single selected frame fills the entire display
@@ -19,9 +20,11 @@ import kotlinx.serialization.Serializable
  * - CAROUSEL: Curved 3D swipe-through with perspective scaling
  * - SPATIAL_DICE: 4 corners + 1 center (dice-5 pattern)
  * - GALLERY: Media-only filtered grid (image, video, camera, screen cast)
+ * - TRIPTYCH: Three-panel book spread — side wings angled inward, center elevated
  */
 @Serializable
 enum class LayoutMode {
+    DASHBOARD,
     FREEFORM,
     GRID,
     SPLIT_LEFT,
@@ -34,9 +37,11 @@ enum class LayoutMode {
     ROW,
     CAROUSEL,
     SPATIAL_DICE,
-    GALLERY;
+    GALLERY,
+    TRIPTYCH;
 
     companion object {
+        /** Default layout for active sessions with frames */
         val DEFAULT = COCKPIT
 
         fun fromString(value: String): LayoutMode {
@@ -48,5 +53,8 @@ enum class LayoutMode {
 
         /** Content type IDs eligible for gallery filtering */
         val GALLERY_CONTENT_TYPES = setOf("image", "video", "camera", "screen_cast")
+
+        /** Layouts that render frames (everything except DASHBOARD) */
+        val FRAME_LAYOUTS: Set<LayoutMode> = entries.toSet() - DASHBOARD
     }
 }

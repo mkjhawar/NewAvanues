@@ -9,7 +9,6 @@
 package com.augmentalis.nlu
 
 import android.content.Context
-import android.util.Log
 import com.augmentalis.ava.core.common.Result
 import com.augmentalis.ava.core.data.db.AVADatabase
 import com.augmentalis.ava.core.data.db.DatabaseDriverFactory
@@ -94,24 +93,24 @@ class EmbeddingMigrator(
         try {
             val startTime = System.currentTimeMillis()
 
-            Log.i(TAG, "======================================")
-            Log.i(TAG, "  Embedding Migration Started")
-            Log.i(TAG, "======================================")
-            Log.i(TAG, "Target model: ${newModelVersion.name}")
-            Log.i(TAG, "Version: ${newModelVersion.version}")
-            Log.i(TAG, "Dimension: ${newModelVersion.dimension}")
-            Log.i(TAG, "======================================")
+            nluLogInfo(TAG, "======================================")
+            nluLogInfo(TAG, "  Embedding Migration Started")
+            nluLogInfo(TAG, "======================================")
+            nluLogInfo(TAG, "Target model: ${newModelVersion.name}")
+            nluLogInfo(TAG, "Version: ${newModelVersion.version}")
+            nluLogInfo(TAG, "Dimension: ${newModelVersion.dimension}")
+            nluLogInfo(TAG, "======================================")
 
             onProgress(0f)
 
             // Step 1: Clear old embeddings
-            Log.i(TAG, "Step 1/5: Clearing old embeddings...")
+            nluLogInfo(TAG, "Step 1/5: Clearing old embeddings...")
             embeddingQueries.deleteAll()
             metadataQueries.deactivateAll()
             onProgress(0.05f)
 
             // Step 2: Get all ontologies that need embeddings
-            Log.i(TAG, "Step 2/5: Loading ontologies...")
+            nluLogInfo(TAG, "Step 2/5: Loading ontologies...")
             val ontologyRecords = ontologyQueries.selectAll().executeAsList()
 
             // Convert SQLDelight records to SemanticIntentOntologyData
@@ -130,11 +129,11 @@ class EmbeddingMigrator(
             }
 
             val total = ontologies.size
-            Log.i(TAG, "Found $total ontologies to process")
+            nluLogInfo(TAG, "Found $total ontologies to process")
             onProgress(0.1f)
 
             if (total == 0) {
-                Log.w(TAG, "No ontologies found - nothing to migrate")
+                nluLogWarn(TAG, "No ontologies found - nothing to migrate")
 
                 // Still save metadata even if no embeddings
                 saveMetadata(newModelVersion, 0)
@@ -151,7 +150,7 @@ class EmbeddingMigrator(
             }
 
             // Step 3: Recompute embeddings with progress tracking
-            Log.i(TAG, "Step 3/5: Recomputing embeddings...")
+            nluLogInfo(TAG, "Step 3/5: Recomputing embeddings...")
             var successful = 0
             var failed = 0
 
@@ -181,24 +180,24 @@ class EmbeddingMigrator(
                         if ((index + 1) % 50 == 0 || index == total - 1) {
                             val progress = 0.1f + ((index + 1).toFloat() / total * 0.8f)
                             onProgress(progress)
-                            Log.i(TAG, "Migration progress: ${index + 1}/$total (${(progress * 100).toInt()}%)")
+                            nluLogInfo(TAG, "Migration progress: ${index + 1}/$total (${(progress * 100).toInt()}%)")
                         }
                     }
                     is Result.Error -> {
-                        Log.e(TAG, "Failed to compute embedding for ${ontology.intentId}", result.exception)
+                        nluLogError(TAG, "Failed to compute embedding for ${ontology.intentId}", result.exception)
                         failed++
                         // Continue with others
                     }
                 }
             }
 
-            Log.i(TAG, "Step 4/5: Completed recomputing embeddings")
-            Log.i(TAG, "  Successful: $successful")
-            Log.i(TAG, "  Failed: $failed")
+            nluLogInfo(TAG, "Step 4/5: Completed recomputing embeddings")
+            nluLogInfo(TAG, "  Successful: $successful")
+            nluLogInfo(TAG, "  Failed: $failed")
             onProgress(0.9f)
 
             // Step 4: Save new metadata
-            Log.i(TAG, "Step 5/5: Saving metadata...")
+            nluLogInfo(TAG, "Step 5/5: Saving metadata...")
             saveMetadata(newModelVersion, successful)
             onProgress(0.95f)
 
@@ -210,21 +209,21 @@ class EmbeddingMigrator(
                 duration = duration
             )
 
-            Log.i(TAG, "======================================")
-            Log.i(TAG, "  Migration Complete!")
-            Log.i(TAG, "======================================")
-            Log.i(TAG, "Total processed: $total")
-            Log.i(TAG, "Successful: $successful")
-            Log.i(TAG, "Failed: $failed")
-            Log.i(TAG, "Duration: ${duration}ms (${duration / 1000.0}s)")
-            Log.i(TAG, "======================================")
+            nluLogInfo(TAG, "======================================")
+            nluLogInfo(TAG, "  Migration Complete!")
+            nluLogInfo(TAG, "======================================")
+            nluLogInfo(TAG, "Total processed: $total")
+            nluLogInfo(TAG, "Successful: $successful")
+            nluLogInfo(TAG, "Failed: $failed")
+            nluLogInfo(TAG, "Duration: ${duration}ms (${duration / 1000.0}s)")
+            nluLogInfo(TAG, "======================================")
 
             onProgress(1.0f)
 
             Result.Success(stats)
 
         } catch (e: Exception) {
-            Log.e(TAG, "Migration failed", e)
+            nluLogError(TAG, "Migration failed", e)
             Result.Error(e, "Embedding migration failed: ${e.message}")
         }
     }
@@ -242,7 +241,7 @@ class EmbeddingMigrator(
             is_active = true,
             total_embeddings = embeddingCount.toLong()
         )
-        Log.i(TAG, "Saved new metadata: $embeddingCount embeddings")
+        nluLogInfo(TAG, "Saved new metadata: $embeddingCount embeddings")
     }
 
     /**

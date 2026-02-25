@@ -6,34 +6,36 @@ plugins {
 kotlin {
     // Android target
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-    // iOS targets - only compiled when explicitly requested
-    // To build iOS: ./gradlew :Modules:VoiceOS:core:accessibility-types:linkDebugFrameworkIosArm64
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach { iosTarget ->
-            iosTarget.binaries.framework {
-                baseName = "Common"
-                isStatic = true
-            }
+    // iOS targets
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "Common"
+            isStatic = true
         }
     }
+    // macOS targets
+    macosX64()
+    macosArm64()
+
     // Desktop JVM target
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions.jvmTarget = "17"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
+    }
+
+    // Web/JS target
+    js(IR) {
+        browser()
+        nodejs()
     }
 
     sourceSets {
@@ -58,7 +60,7 @@ kotlin {
                 api("com.jakewharton.timber:timber:5.0.1")
 
                 // Firebase Crashlytics (optional - graceful degradation if missing)
-                compileOnly(platform("com.google.firebase:firebase-bom:32.7.0"))
+                compileOnly(project.dependencies.platform("com.google.firebase:firebase-bom:32.7.0"))
                 compileOnly("com.google.firebase:firebase-crashlytics-ktx")
             }
         }
@@ -73,7 +75,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.ava.core.common"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)

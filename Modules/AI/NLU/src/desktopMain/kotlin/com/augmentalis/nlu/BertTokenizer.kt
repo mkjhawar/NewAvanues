@@ -10,6 +10,8 @@ package com.augmentalis.nlu
 
 import java.io.File
 
+private const val TAG = "BertTokenizer"
+
 /**
  * Desktop (JVM) implementation of BERT tokenizer using WordPiece algorithm
  *
@@ -255,11 +257,11 @@ actual class BertTokenizer(
                     }
                 }
                 if (vocab.isNotEmpty()) {
-                    println("[BertTokenizer] Loaded vocab from file: ${currentDirFile.absolutePath}")
+                    nluLogInfo(TAG, "Loaded vocab from file: ${currentDirFile.absolutePath}")
                     return vocab
                 }
             } catch (e: Exception) {
-                System.err.println("[BertTokenizer] Failed to load vocab from file: ${e.message}")
+                nluLogError(TAG, "Failed to load vocab from file: ${e.message}", e)
             }
         }
 
@@ -276,16 +278,16 @@ actual class BertTokenizer(
                     }
                 }
                 if (vocab.isNotEmpty()) {
-                    println("[BertTokenizer] Loaded vocab from classpath resource")
+                    nluLogInfo(TAG, "Loaded vocab from classpath resource")
                     return vocab
                 }
             }
         } catch (e: Exception) {
-            System.err.println("[BertTokenizer] Failed to load vocab from classpath: ${e.message}")
+            nluLogError(TAG, "Failed to load vocab from classpath: ${e.message}", e)
         }
 
         // Fallback: minimal stub vocabulary for testing
-        System.err.println("[BertTokenizer] WARNING: Using stub vocabulary (tokenization will be limited)")
+        nluLogWarn(TAG, "Using stub vocabulary (tokenization will be limited)")
         return mapOf(
             clsToken to 101,
             sepToken to 102,

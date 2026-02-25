@@ -10,36 +10,40 @@ kotlin {
 
     // Android target
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        val iosX64Target = iosX64()
-        val iosArm64Target = iosArm64()
-        val iosSimulatorArm64Target = iosSimulatorArm64()
+    // iOS targets
+    val iosX64Target = iosX64()
+    val iosArm64Target = iosArm64()
+    val iosSimulatorArm64Target = iosSimulatorArm64()
 
-        listOf(
-            iosX64Target,
-            iosArm64Target,
-            iosSimulatorArm64Target
-        ).forEach { iosTarget ->
-            iosTarget.binaries.framework {
-                baseName = "Domain"
-                isStatic = true
-            }
+    listOf(
+        iosX64Target,
+        iosArm64Target,
+        iosSimulatorArm64Target
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "Domain"
+            isStatic = true
         }
     }
+    // macOS targets
+    macosX64()
+    macosArm64()
+
     // Desktop JVM target
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions.jvmTarget = "17"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
+    }
+
+    // Web/JS target
+    js(IR) {
+        browser()
+        nodejs()
     }
 
     sourceSets {
@@ -61,26 +65,31 @@ kotlin {
 
         // Android-specific (currently none needed)
         val androidMain by getting
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            // iOS-specific
-            val iosMain by creating {
-                dependsOn(commonMain)
-            }
-
-            val iosX64Main by getting {
-                dependsOn(iosMain)
-            }
-
-            val iosArm64Main by getting {
-                dependsOn(iosMain)
-            }
-
-            val iosSimulatorArm64Main by getting {
-                dependsOn(iosMain)
-            }
+        // iOS-specific
+        val iosMain by creating {
+            dependsOn(commonMain)
         }
+
+        val iosX64Main by getting {
+            dependsOn(iosMain)
+        }
+
+        val iosArm64Main by getting {
+            dependsOn(iosMain)
+        }
+
+        val iosSimulatorArm64Main by getting {
+            dependsOn(iosMain)
+        }
+        // macOS-specific
+        val macosX64Main by getting
+        val macosArm64Main by getting
+        val macosMain by creating {
+            dependsOn(commonMain)
+            macosX64Main.dependsOn(this)
+            macosArm64Main.dependsOn(this)
+        }
+
         // Desktop-specific (currently none needed)
         val desktopMain by getting
     }
@@ -88,7 +97,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.ava.core.domain"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)

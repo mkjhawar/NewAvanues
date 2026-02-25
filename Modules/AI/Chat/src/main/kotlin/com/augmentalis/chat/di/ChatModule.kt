@@ -9,6 +9,8 @@ import android.content.Context
 import com.augmentalis.ava.core.domain.repository.ConversationRepository
 import com.augmentalis.ava.core.domain.repository.MessageRepository
 import com.augmentalis.ava.core.domain.usecase.ExportConversationUseCase
+import com.augmentalis.chat.coordinator.ActionCoordinator
+import com.augmentalis.chat.coordinator.IActionCoordinator
 import com.augmentalis.chat.tts.TTSPreferences
 import com.augmentalis.chat.voice.VoiceInputProvider
 import com.augmentalis.chat.voice.VoiceOSStub
@@ -151,6 +153,22 @@ object ChatModule {
     ): ExportConversationUseCase {
         return ExportConversationUseCase(conversationRepository, messageRepository)
     }
+
+    /**
+     * Binds concrete ActionCoordinator to IActionCoordinator interface.
+     *
+     * Enables dependency inversion: ChatViewModel depends on the interface,
+     * not the concrete Android implementation. This makes the ViewModel
+     * testable and platform-agnostic.
+     *
+     * @param impl Hilt-injected concrete ActionCoordinator
+     * @return IActionCoordinator interface reference
+     */
+    @Provides
+    @Singleton
+    fun provideActionCoordinator(
+        impl: ActionCoordinator
+    ): IActionCoordinator = impl
 
     /**
      * Provides VoiceInputProvider stub for future VoiceOS integration.

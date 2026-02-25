@@ -3,7 +3,6 @@
  * Path: modules/CommandManager/src/main/java/com/augmentalis/commandmanager/actions/TableActions.kt
  *
  * Created: 2026-01-27
- * Author: VOS4 Development Team
  * Module: CommandManager
  *
  * Purpose: Table and DataGrid-related voice command actions

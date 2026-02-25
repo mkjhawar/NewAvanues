@@ -1,0 +1,200 @@
+/* ============================================================
+   Cockpit Browser — themes.css
+   ALL 32 theme combinations (4 palettes x 2 appearances x 4 materials)
+   expressed as CSS custom properties via data-attributes.
+   ============================================================ */
+
+/* ---- HYDRA palette ---- */
+
+[data-palette="hydra"][data-appearance="dark"] {
+  --av-primary: #1E40AF;
+  --av-on-primary: #FFFFFF;
+  --av-secondary: #8B5CF6;
+  --av-tertiary: #34D399;
+  --av-background: #020617;
+  --av-surface: #0F172A;
+  --av-surface-elevated: #1E293B;
+  --av-text-primary: #F1F5F9;
+  --av-text-secondary: #94A3B8;
+  --av-text-tertiary: #64748B;
+  --av-border: rgba(255,255,255,0.12);
+  --av-border-subtle: rgba(255,255,255,0.06);
+  --av-border-strong: rgba(255,255,255,0.25);
+  --av-error: #EF4444;
+  --av-success: #22C55E;
+  --av-warning: #F59E0B;
+  --av-info: #3B82F6;
+  /* glass tokens */
+  --av-glass-glow: #1E40AF;
+  --av-glass-tint: #0F172A;
+}
+
+[data-palette="hydra"][data-appearance="light"] {
+  --av-primary: #1E40AF;
+  --av-on-primary: #FFFFFF;
+  --av-secondary: #7C3AED;
+  --av-tertiary: #059669;
+  --av-background: #F8FAFC;
+  --av-surface: #FFFFFF;
+  --av-surface-elevated: #F1F5F9;
+  --av-text-primary: #0F172A;
+  --av-text-secondary: #475569;
+  --av-text-tertiary: #94A3B8;
+  --av-border: rgba(0,0,0,0.12);
+  --av-border-subtle: rgba(0,0,0,0.06);
+  --av-border-strong: rgba(0,0,0,0.25);
+  --av-error: #DC2626;
+  --av-success: #16A34A;
+  --av-warning: #D97706;
+  --av-info: #2563EB;
+  --av-glass-glow: #1E40AF;
+  --av-glass-tint: #F1F5F9;
+}
+
+/* ---- SOL palette ---- */
+
+[data-palette="sol"][data-appearance="dark"] {
+  --av-primary: #D97706;
+  --av-on-primary: #FFFFFF;
+  --av-secondary: #EF4444;
+  --av-tertiary: #F472B6;
+  --av-background: #1A0F05;
+  --av-surface: #2D1B0E;
+  --av-surface-elevated: #3D2917;
+  --av-text-primary: #F5E6D3;
+  --av-text-secondary: #D4C0A8;
+  --av-text-tertiary: #A08870;
+  --av-border: rgba(255,255,255,0.20);
+  --av-border-subtle: rgba(255,255,255,0.10);
+  --av-border-strong: rgba(255,255,255,0.30);
+  --av-error: #EF4444;
+  --av-success: #22C55E;
+  --av-warning: #F59E0B;
+  --av-info: #FBBF24;
+  --av-glass-glow: #D97706;
+  --av-glass-tint: #2D1B0E;
+}
+
+[data-palette="sol"][data-appearance="light"] {
+  --av-primary: #B45309;
+  --av-on-primary: #FFFFFF;
+  --av-secondary: #DC2626;
+  --av-tertiary: #DB2777;
+  --av-background: #FFFBF0;
+  --av-surface: #FFFFFF;
+  --av-surface-elevated: #FFF7ED;
+  --av-text-primary: #1C1917;
+  --av-text-secondary: #57534E;
+  --av-text-tertiary: #A8A29E;
+  --av-border: rgba(0,0,0,0.12);
+  --av-border-subtle: rgba(0,0,0,0.06);
+  --av-border-strong: rgba(0,0,0,0.25);
+  --av-error: #DC2626;
+  --av-success: #16A34A;
+  --av-warning: #D97706;
+  --av-info: #D97706;
+  --av-glass-glow: #D97706;
+  --av-glass-tint: #FFF7ED;
+}
+
+/* ---- LUNA palette ---- */
+
+[data-palette="luna"][data-appearance="dark"] {
+  --av-primary: #818CF8;
+  --av-on-primary: #000000;
+  --av-secondary: #7C3AED;
+  --av-tertiary: #94A3B8;
+  --av-background: #0C0F1A;
+  --av-surface: #1A1D2E;
+  --av-surface-elevated: #282B3E;
+  --av-text-primary: #E2E8F0;
+  --av-text-secondary: #CBD5E1;
+  --av-text-tertiary: #94A3B8;
+  --av-border: rgba(255,255,255,0.20);
+  --av-border-subtle: rgba(255,255,255,0.10);
+  --av-border-strong: rgba(255,255,255,0.30);
+  --av-error: #EF4444;
+  --av-success: #22C55E;
+  --av-warning: #F59E0B;
+  --av-info: #818CF8;
+  --av-glass-glow: #818CF8;
+  --av-glass-tint: #1A1D2E;
+}
+
+[data-palette="luna"][data-appearance="light"] {
+  --av-primary: #6366F1;
+  --av-on-primary: #FFFFFF;
+  --av-secondary: #7C3AED;
+  --av-tertiary: #64748B;
+  --av-background: #F5F3FF;
+  --av-surface: #FFFFFF;
+  --av-surface-elevated: #EDE9FE;
+  --av-text-primary: #1E1B4B;
+  --av-text-secondary: #4B5563;
+  --av-text-tertiary: #9CA3AF;
+  --av-border: rgba(0,0,0,0.12);
+  --av-border-subtle: rgba(0,0,0,0.06);
+  --av-border-strong: rgba(0,0,0,0.25);
+  --av-error: #DC2626;
+  --av-success: #16A34A;
+  --av-warning: #D97706;
+  --av-info: #4F46E5;
+  --av-glass-glow: #818CF8;
+  --av-glass-tint: #EDE9FE;
+}
+
+/* ---- TERRA palette ---- */
+
+[data-palette="terra"][data-appearance="dark"] {
+  --av-primary: #2D7D46;
+  --av-on-primary: #FFFFFF;
+  --av-secondary: #D97706;
+  --av-tertiary: #A16207;
+  --av-background: #0F1A10;
+  --av-surface: #1A2B1C;
+  --av-surface-elevated: #253C28;
+  --av-text-primary: #E8F0E4;
+  --av-text-secondary: #BFD0B8;
+  --av-text-tertiary: #8AA080;
+  --av-border: rgba(255,255,255,0.20);
+  --av-border-subtle: rgba(255,255,255,0.10);
+  --av-border-strong: rgba(255,255,255,0.30);
+  --av-error: #EF4444;
+  --av-success: #22C55E;
+  --av-warning: #F59E0B;
+  --av-info: #2D7D46;
+  --av-glass-glow: #2D7D46;
+  --av-glass-tint: #1A2B1C;
+}
+
+[data-palette="terra"][data-appearance="light"] {
+  --av-primary: #15803D;
+  --av-on-primary: #FFFFFF;
+  --av-secondary: #B45309;
+  --av-tertiary: #92400E;
+  --av-background: #F0FDF4;
+  --av-surface: #FFFFFF;
+  --av-surface-elevated: #DCFCE7;
+  --av-text-primary: #14532D;
+  --av-text-secondary: #4B5563;
+  --av-text-tertiary: #9CA3AF;
+  --av-border: rgba(0,0,0,0.12);
+  --av-border-subtle: rgba(0,0,0,0.06);
+  --av-border-strong: rgba(0,0,0,0.25);
+  --av-error: #DC2626;
+  --av-success: #16A34A;
+  --av-warning: #D97706;
+  --av-info: #15803D;
+  --av-glass-glow: #2D7D46;
+  --av-glass-tint: #DCFCE7;
+}
+
+/* ---- Shared glass statics ---- */
+
+:root {
+  --av-glass-blur-light: 6px;
+  --av-glass-blur-medium: 8px;
+  --av-glass-blur-heavy: 10px;
+  --av-glass-border-subtle: 0.5px;
+  --av-glass-border-default: 1px;
+}

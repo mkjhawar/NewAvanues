@@ -117,7 +117,7 @@ class HttpServer(
                 if (config.http2Enabled) {
                     val prefaceSize = Http2FrameCodec.CONNECTION_PREFACE.size.toLong()
                     if (source.request(prefaceSize)) {
-                        val peeked = source.buffer.snapshot().toByteArray()
+                        val peeked = source.buffer.snapshot()
                         if (Http2ServerHandler.isPriorKnowledgePreface(peeked)) {
                             // Consume the preface bytes so Http2Connection starts at the SETTINGS frame
                             source.skip(prefaceSize)

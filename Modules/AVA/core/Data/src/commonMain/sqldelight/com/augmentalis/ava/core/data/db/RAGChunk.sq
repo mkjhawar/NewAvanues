@@ -81,6 +81,14 @@ INSERT OR REPLACE INTO rag_chunk (
     created_timestamp, is_encrypted, encryption_key_version
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+-- Update embedding blob for an existing chunk (used when re-embedding with a new model)
+updateEmbedding:
+UPDATE rag_chunk
+SET embedding_blob = ?,
+    embedding_type = ?,
+    embedding_dimension = ?
+WHERE id = ?;
+
 -- Update cluster assignment
 updateClusterAssignment:
 UPDATE rag_chunk

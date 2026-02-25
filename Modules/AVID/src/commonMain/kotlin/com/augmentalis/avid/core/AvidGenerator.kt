@@ -3,7 +3,6 @@
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-12-30
  * Migrated from VUID: 2026-01-14
  *
@@ -234,7 +233,10 @@ object AvidGenerator {
      * @param packageName Android package name (e.g., "com.instagram.android")
      * @param version App version string (e.g., "12.0.0")
      * @param typeName Full type name (e.g., "button", "input")
-     * @param elementHash Optional fingerprint hash (if null, random generated)
+     * @param elementHash Optional pre-computed fingerprint hash. When null, a deterministic
+     *   hash is derived from packageName + version + typeName so the AVID is stable across
+     *   calls for the same element. A random hash is never used because random AVIDs break
+     *   fingerprint stability and voice-command lookup across sessions.
      * @return Compact AVID string
      */
     fun generateCompact(
@@ -245,7 +247,13 @@ object AvidGenerator {
     ): String {
         val reversedPkg = reversePackage(packageName)
         val typeAbbrev = TypeAbbrev.fromTypeName(typeName)
-        val hash8 = elementHash?.take(8)?.lowercase() ?: generateHash8()
+        val hash8 = if (!elementHash.isNullOrEmpty()) {
+            elementHash.take(8).lowercase()
+        } else {
+            // Derive a deterministic 8-char hash from the identifying fields so that
+            // the same element always produces the same AVID without caller-supplied hashes.
+            deterministicHash8("$packageName:$version:$typeAbbrev")
+        }
         return "$reversedPkg:$version:$typeAbbrev:$hash8"
     }
 
@@ -356,8 +364,11 @@ object AvidGenerator {
     // ========================================================================
 
     /**
-     * Generate 8-character random hex hash
-     * Uses Kotlin's Random for KMP compatibility
+     * Generate 8-character random hex hash.
+     *
+     * Prefer [deterministicHash8] whenever element-identifying fields are available.
+     * This function should only be used for entity AVIDs (conversations, messages, etc.)
+     * that are intentionally unique each time they are created (i.e. new database records).
      */
     fun generateHash8(): String {
         return buildString {
@@ -365,6 +376,27 @@ object AvidGenerator {
                 append(HEX_CHARS[Random.nextInt(16)])
             }
         }
+    }
+
+    /**
+     * Derive a stable 8-character hex hash from an arbitrary input string.
+     *
+     * Uses a FNV-1a-inspired mix (pure Kotlin, KMP-compatible) so the result is
+     * consistent across JVM, iOS, and JS runtimes. The same [input] always produces
+     * the same 8-char lowercase hex string.
+     *
+     * @param input Any string that uniquely identifies the element (e.g. "pkg:version:type")
+     * @return 8-character lowercase hex string
+     */
+    fun deterministicHash8(input: String): String {
+        // FNV-1a 32-bit: offset basis and prime chosen for good avalanche effect.
+        var hash = 0x811c9dc5.toInt()
+        for (ch in input) {
+            hash = hash xor ch.code
+            hash *= 0x01000193.toInt()
+        }
+        // Format as 8 lowercase hex chars (zero-padded, unsigned).
+        return (hash.toLong() and 0xFFFFFFFFL).toString(16).padStart(8, '0').takeLast(8)
     }
 
     private const val HEX_CHARS = "0123456789abcdef"

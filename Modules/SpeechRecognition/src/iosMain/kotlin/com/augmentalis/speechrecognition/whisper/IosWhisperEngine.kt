@@ -27,8 +27,11 @@ import com.augmentalis.speechrecognition.logInfo
 import com.augmentalis.speechrecognition.logWarn
 import com.augmentalis.speechrecognition.whisper.vsm.IosVSMCodec
 import com.augmentalis.speechrecognition.whisper.vsm.VSMFormat
+import kotlin.concurrent.Volatile
+import kotlin.math.roundToInt
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -326,6 +329,7 @@ class IosWhisperEngine {
     /**
      * Perform the actual initialization: verify cinterop + load model.
      */
+    @OptIn(ExperimentalForeignApi::class)
     private suspend fun performInitialization(): Boolean {
         // Step 1: Verify native library is linked
         if (!IosWhisperNative.ensureAvailable()) {
@@ -337,14 +341,17 @@ class IosWhisperEngine {
             throw IllegalStateException("Failed to initialize AVAudioEngine capture")
         }
 
-        // Step 3: Initialize VAD (shared commonMain implementation)
+        // Step 3: Initialize VAD (shared commonMain implementation) — use effective params (profile-aware)
         vad = WhisperVAD(
             speechThreshold = 0f, // auto-calibrate from noise floor
-            vadSensitivity = config.vadSensitivity,
-            silenceTimeoutMs = config.silenceThresholdMs.toLong(),
-            minSpeechDurationMs = config.minSpeechDurationMs.toLong(),
+            vadSensitivity = config.effectiveVadSensitivity,
+            silenceTimeoutMs = config.effectiveSilenceThresholdMs.toLong(),
+            minSpeechDurationMs = config.effectiveMinSpeechDurationMs.toLong(),
             maxSpeechDurationMs = config.maxChunkDurationMs.toLong(),
-            paddingMs = 150
+            hangoverFrames = config.effectiveHangoverFrames,
+            paddingMs = 150,
+            thresholdAlpha = config.effectiveThresholdAlpha,
+            minThreshold = config.effectiveMinThreshold
         )
 
         // Step 4: Load model (auto-download if missing)
@@ -509,9 +516,11 @@ class IosWhisperEngine {
                 performance.recordLanguageDetection(lang)
             }
 
-            logInfo(TAG, "Transcribed: '${result.text}' " +
+            val rtfStr = ((realTimeFactor * 100).roundToInt() / 100.0).toString()
+            val confStr = ((result.confidence * 100).roundToInt() / 100.0).toString()
+            logInfo(TAG, "Transcribed ${result.text.length} chars " +
                     "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, " +
-                    "RTF=${"%.2f".format(realTimeFactor)}, conf=${"%.2f".format(result.confidence)})")
+                    "RTF=$rtfStr, conf=$confStr)")
 
             // Build word timestamps from segments with actual confidence
             val wordTimestamps = result.segments.map { seg ->

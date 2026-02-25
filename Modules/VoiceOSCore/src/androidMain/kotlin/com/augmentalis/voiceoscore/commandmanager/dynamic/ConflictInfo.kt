@@ -5,7 +5,6 @@
  * Provides detailed information about command conflicts and resolution strategies
  *
  * @since VOS4 Week 4
- * @author VOS4 Development Team
  */
 
 package com.augmentalis.voiceoscore.commandmanager.dynamic

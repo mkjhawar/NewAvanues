@@ -1,12 +1,12 @@
 package com.avanueui.data
 
-import com.augmentalis.avamagic.components.core.*
-import com.augmentalis.avamagic.components.core.ComponentStyle
-import com.augmentalis.avamagic.components.core.Size
-import com.augmentalis.avamagic.components.core.Color
-import com.augmentalis.avamagic.components.core.Spacing
-import com.augmentalis.avamagic.components.core.Border
-import com.augmentalis.avamagic.components.core.Shadow
+import com.augmentalis.avanueui.core.*
+import com.augmentalis.avanueui.core.ComponentStyle
+import com.augmentalis.avanueui.core.Size
+import com.augmentalis.avanueui.core.Color
+import com.augmentalis.avanueui.core.Spacing
+import com.augmentalis.avanueui.core.Border
+import com.augmentalis.avanueui.core.Shadow
 
 /**
  * Chip Component

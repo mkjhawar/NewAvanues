@@ -29,24 +29,34 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatStrikethrough
+import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Maximize
 import androidx.compose.material.icons.filled.Minimize
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ScreenSearchDesktop
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material.icons.filled.ViewColumn
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Icon
@@ -57,6 +67,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +77,33 @@ import com.augmentalis.cockpit.CockpitConstants
 import com.augmentalis.cockpit.model.CommandBarState
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.LayoutMode
+
+/**
+ * Typed content action emitted by the CommandBar when the user taps
+ * a content-specific chip (e.g. "Back" in WEB_ACTIONS, "Next Page" in PDF_ACTIONS).
+ *
+ * The platform layer (CockpitScreen) routes these to the appropriate content
+ * renderer (WebViewContainer, PdfViewerState, etc.) for execution.
+ */
+enum class ContentAction {
+    // Web
+    WEB_BACK, WEB_FORWARD, WEB_REFRESH, WEB_ZOOM_IN, WEB_ZOOM_OUT,
+    // PDF
+    PDF_PREV_PAGE, PDF_NEXT_PAGE, PDF_ZOOM_IN, PDF_ZOOM_OUT,
+    // Image
+    IMAGE_ZOOM_IN, IMAGE_ZOOM_OUT, IMAGE_ROTATE,
+    // Video
+    VIDEO_REWIND, VIDEO_PLAY_PAUSE, VIDEO_FULLSCREEN,
+    // Note (formatting + snapshot-based undo/redo)
+    NOTE_BOLD, NOTE_ITALIC, NOTE_UNDERLINE, NOTE_STRIKETHROUGH,
+    NOTE_UNDO, NOTE_REDO, NOTE_SAVE,
+    // Camera
+    CAMERA_FLIP, CAMERA_CAPTURE,
+    // Whiteboard / Annotation
+    WB_PEN, WB_HIGHLIGHTER, WB_ERASER, WB_UNDO, WB_REDO, WB_CLEAR,
+    // File manager
+    FILE_UP, FILE_SORT, FILE_VIEW_MODE, FILE_SELECT_ALL, FILE_SEARCH,
+}
 
 /**
  * Context-aware command bar docked at the bottom of CockpitScreen.
@@ -77,6 +116,9 @@ import com.augmentalis.cockpit.model.LayoutMode
  *
  * Back button navigates to [CommandBarState.parent]. State transitions
  * are animated with slide + fade.
+ *
+ * @param onContentAction Called when a content-specific action is triggered.
+ *   The platform layer routes this to the appropriate content renderer.
  */
 @Composable
 fun CommandBar(
@@ -88,6 +130,7 @@ fun CommandBar(
     onFrameMinimize: () -> Unit,
     onFrameMaximize: () -> Unit,
     onFrameClose: () -> Unit,
+    onContentAction: (ContentAction) -> Unit = {},
     availableLayoutModes: List<LayoutMode> = LayoutMode.entries,
     modifier: Modifier = Modifier
 ) {
@@ -172,50 +215,157 @@ fun CommandBar(
                         CommandChip(Icons.Default.Close, "Close", false, onFrameClose)
                     }
 
-                    // TODO: Content-specific chips are scaffolded for layout only.
-                    // Wire to CockpitCommandHandler dispatch when voice-to-UI bridge is ready.
                     CommandBarState.WEB_ACTIONS -> {
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Back", false) {}
-                        CommandChip(Icons.AutoMirrored.Filled.ArrowForward, "Forward", false) {}
-                        CommandChip(Icons.Default.Language, "Refresh", false) {}
-                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {}
-                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {}
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Back", false) {
+                            onContentAction(ContentAction.WEB_BACK)
+                        }
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowForward, "Forward", false) {
+                            onContentAction(ContentAction.WEB_FORWARD)
+                        }
+                        CommandChip(Icons.Default.Language, "Refresh", false) {
+                            onContentAction(ContentAction.WEB_REFRESH)
+                        }
+                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {
+                            onContentAction(ContentAction.WEB_ZOOM_IN)
+                        }
+                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {
+                            onContentAction(ContentAction.WEB_ZOOM_OUT)
+                        }
                     }
 
                     CommandBarState.PDF_ACTIONS -> {
-                        CommandChip(Icons.Default.ArrowUpward, "Prev Page", false) {}
-                        CommandChip(Icons.Default.ArrowDownward, "Next Page", false) {}
-                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {}
-                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {}
+                        CommandChip(Icons.Default.ArrowUpward, "Prev Page", false) {
+                            onContentAction(ContentAction.PDF_PREV_PAGE)
+                        }
+                        CommandChip(Icons.Default.ArrowDownward, "Next Page", false) {
+                            onContentAction(ContentAction.PDF_NEXT_PAGE)
+                        }
+                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {
+                            onContentAction(ContentAction.PDF_ZOOM_IN)
+                        }
+                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {
+                            onContentAction(ContentAction.PDF_ZOOM_OUT)
+                        }
                     }
 
                     CommandBarState.IMAGE_ACTIONS -> {
-                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {}
-                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {}
-                        CommandChip(Icons.Default.SwapHoriz, "Rotate", false) {}
+                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {
+                            onContentAction(ContentAction.IMAGE_ZOOM_IN)
+                        }
+                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {
+                            onContentAction(ContentAction.IMAGE_ZOOM_OUT)
+                        }
+                        CommandChip(Icons.Default.SwapHoriz, "Rotate", false) {
+                            onContentAction(ContentAction.IMAGE_ROTATE)
+                        }
                     }
 
                     CommandBarState.VIDEO_ACTIONS -> {
-                        CommandChip(Icons.Default.FastRewind, "Rewind", false) {}
-                        CommandChip(Icons.Default.PlayArrow, "Play/Pause", false) {}
-                        CommandChip(Icons.Default.Fullscreen, "Fullscreen", false) {}
+                        CommandChip(Icons.Default.FastRewind, "Rewind", false) {
+                            onContentAction(ContentAction.VIDEO_REWIND)
+                        }
+                        CommandChip(Icons.Default.PlayArrow, "Play/Pause", false) {
+                            onContentAction(ContentAction.VIDEO_PLAY_PAUSE)
+                        }
+                        CommandChip(Icons.Default.Fullscreen, "Fullscreen", false) {
+                            onContentAction(ContentAction.VIDEO_FULLSCREEN)
+                        }
                     }
 
                     CommandBarState.NOTE_ACTIONS -> {
-                        CommandChip(Icons.Default.Undo, "Undo", false) {}
-                        CommandChip(Icons.Default.Redo, "Redo", false) {}
+                        CommandChip(Icons.Default.FormatBold, "Bold", false) {
+                            onContentAction(ContentAction.NOTE_BOLD)
+                        }
+                        CommandChip(Icons.Default.FormatItalic, "Italic", false) {
+                            onContentAction(ContentAction.NOTE_ITALIC)
+                        }
+                        CommandChip(Icons.Default.FormatUnderlined, "Underline", false) {
+                            onContentAction(ContentAction.NOTE_UNDERLINE)
+                        }
+                        CommandChip(Icons.Default.FormatStrikethrough, "Strikethrough", false) {
+                            onContentAction(ContentAction.NOTE_STRIKETHROUGH)
+                        }
+                        CommandChip(Icons.AutoMirrored.Filled.Undo, "Undo", false) {
+                            onContentAction(ContentAction.NOTE_UNDO)
+                        }
+                        CommandChip(Icons.AutoMirrored.Filled.Redo, "Redo", false) {
+                            onContentAction(ContentAction.NOTE_REDO)
+                        }
+                        CommandChip(Icons.Default.Save, "Save", false) {
+                            onContentAction(ContentAction.NOTE_SAVE)
+                        }
                     }
 
                     CommandBarState.CAMERA_ACTIONS -> {
-                        CommandChip(Icons.Default.SwapHoriz, "Flip", false) {}
-                        CommandChip(Icons.Default.TouchApp, "Capture", false) {}
+                        CommandChip(Icons.Default.SwapHoriz, "Flip", false) {
+                            onContentAction(ContentAction.CAMERA_FLIP)
+                        }
+                        CommandChip(Icons.Default.TouchApp, "Capture", false) {
+                            onContentAction(ContentAction.CAMERA_CAPTURE)
+                        }
                     }
 
-                    CommandBarState.SCROLL_COMMANDS,
-                    CommandBarState.ZOOM_COMMANDS,
+                    CommandBarState.WHITEBOARD_ACTIONS -> {
+                        CommandChip(Icons.Default.Draw, "Pen", false) {
+                            onContentAction(ContentAction.WB_PEN)
+                        }
+                        CommandChip(Icons.Default.Brush, "Highlight", false) {
+                            onContentAction(ContentAction.WB_HIGHLIGHTER)
+                        }
+                        CommandChip(Icons.Default.Delete, "Eraser", false) {
+                            onContentAction(ContentAction.WB_ERASER)
+                        }
+                        CommandChip(Icons.AutoMirrored.Filled.Undo, "Undo", false) {
+                            onContentAction(ContentAction.WB_UNDO)
+                        }
+                        CommandChip(Icons.AutoMirrored.Filled.Redo, "Redo", false) {
+                            onContentAction(ContentAction.WB_REDO)
+                        }
+                        CommandChip(Icons.Default.Close, "Clear", false) {
+                            onContentAction(ContentAction.WB_CLEAR)
+                        }
+                    }
+
+                    CommandBarState.FILE_ACTIONS -> {
+                        CommandChip(Icons.AutoMirrored.Filled.ArrowBack, "Go Up", false) {
+                            onContentAction(ContentAction.FILE_UP)
+                        }
+                        CommandChip(Icons.Default.ArrowDownward, "Sort", false) {
+                            onContentAction(ContentAction.FILE_SORT)
+                        }
+                        CommandChip(Icons.Default.GridView, "View", false) {
+                            onContentAction(ContentAction.FILE_VIEW_MODE)
+                        }
+                        CommandChip(Icons.Default.SelectAll, "Select All", false) {
+                            onContentAction(ContentAction.FILE_SELECT_ALL)
+                        }
+                        CommandChip(Icons.Default.Search, "Search", false) {
+                            onContentAction(ContentAction.FILE_SEARCH)
+                        }
+                    }
+
+                    CommandBarState.SCROLL_COMMANDS -> {
+                        CommandChip(Icons.Default.ArrowUpward, "Scroll Up", false) {
+                            onContentAction(ContentAction.WEB_ZOOM_IN) // Reuse zoom for scroll context
+                        }
+                        CommandChip(Icons.Default.ArrowDownward, "Scroll Down", false) {
+                            onContentAction(ContentAction.WEB_ZOOM_OUT)
+                        }
+                    }
+
+                    CommandBarState.ZOOM_COMMANDS -> {
+                        CommandChip(Icons.Default.ZoomIn, "Zoom In", false) {
+                            onContentAction(ContentAction.WEB_ZOOM_IN)
+                        }
+                        CommandChip(Icons.Default.ZoomOut, "Zoom Out", false) {
+                            onContentAction(ContentAction.WEB_ZOOM_OUT)
+                        }
+                    }
+
                     CommandBarState.SPATIAL_COMMANDS -> {
-                        // Placeholder for future spatial/scroll/zoom commands
-                        CommandChip(Icons.Default.ScreenSearchDesktop, "Coming Soon", false) {}
+                        CommandChip(Icons.Default.ScreenSearchDesktop, "Reset View", false) {
+                            // Spatial reset is handled at the canvas level, not content level
+                        }
                     }
                 }
             }
@@ -247,7 +397,8 @@ private fun CommandChip(
             .border(1.dp, borderColor, chipShape)
             .background(bgColor, chipShape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 12.dp)
+            .semantics { contentDescription = "Voice: click $label" },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -270,6 +421,7 @@ private fun CommandChip(
  * Icon for each layout mode — used in CommandBar and layout picker.
  */
 fun layoutModeIcon(mode: LayoutMode): ImageVector = when (mode) {
+    LayoutMode.DASHBOARD -> Icons.Default.Dashboard
     LayoutMode.FREEFORM -> Icons.Default.Dashboard
     LayoutMode.GRID -> Icons.Default.GridView
     LayoutMode.SPLIT_LEFT, LayoutMode.SPLIT_RIGHT -> Icons.Default.Splitscreen
@@ -282,12 +434,14 @@ fun layoutModeIcon(mode: LayoutMode): ImageVector = when (mode) {
     LayoutMode.CAROUSEL -> Icons.Default.ViewCarousel
     LayoutMode.SPATIAL_DICE -> Icons.Default.Casino
     LayoutMode.GALLERY -> Icons.Default.PhotoLibrary
+    LayoutMode.TRIPTYCH -> Icons.Default.ViewColumn
 }
 
 /**
  * Human-readable label for each layout mode.
  */
 fun layoutModeLabel(mode: LayoutMode): String = when (mode) {
+    LayoutMode.DASHBOARD -> "Dashboard"
     LayoutMode.FREEFORM -> "Freeform"
     LayoutMode.GRID -> "Grid"
     LayoutMode.SPLIT_LEFT -> "Split Left"
@@ -301,21 +455,33 @@ fun layoutModeLabel(mode: LayoutMode): String = when (mode) {
     LayoutMode.CAROUSEL -> "Carousel"
     LayoutMode.SPATIAL_DICE -> "Dice-5"
     LayoutMode.GALLERY -> "Gallery"
+    LayoutMode.TRIPTYCH -> "Triptych"
 }
 
 /**
  * Content type options for the ADD_FRAME state.
  */
 fun addFrameOptions(): List<Pair<String, FrameContent>> = listOf(
+    // P0: Core content types
     "Web" to FrameContent.Web(),
     "PDF" to FrameContent.Pdf(),
     "Image" to FrameContent.Image(),
     "Video" to FrameContent.Video(),
     "Note" to FrameContent.Note(),
     "Camera" to FrameContent.Camera(),
+    "File" to FrameContent.File(),
+    // P1: Extended
     "Voice Note" to FrameContent.VoiceNote(),
+    "Voice" to FrameContent.Voice(),
+    "Form" to FrameContent.Form(),
     "Whiteboard" to FrameContent.Whiteboard(),
     "Signature" to FrameContent.Signature(),
+    // P2: Advanced
+    "Map" to FrameContent.Map(),
+    "Terminal" to FrameContent.Terminal(),
+    "Widget" to FrameContent.Widget(),
     "Screen Cast" to FrameContent.ScreenCast(),
-    "External App" to FrameContent.ExternalApp()
+    "External App" to FrameContent.ExternalApp(),
+    // Killer Features
+    "AI Summary (Beta)" to FrameContent.AiSummary(),
 )

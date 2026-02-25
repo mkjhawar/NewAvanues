@@ -1,7 +1,8 @@
 package com.augmentalis.nlu.ava.io
 
-import android.util.Log
 import com.augmentalis.ava.core.common.AVAException
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
 import com.augmentalis.nlu.ava.model.AvaFile
 import com.augmentalis.nlu.ava.model.AvaIntent
 import com.augmentalis.nlu.ava.parser.AvaFileParser
@@ -65,18 +66,18 @@ class AvaFileReader {
         val directory = File(directoryPath)
 
         if (!directory.exists() || !directory.isDirectory) {
-            Log.d(TAG, "Directory not found: $directoryPath")
+            nluLogDebug(TAG, "Directory not found: $directoryPath")
             return emptyList()
         }
 
         val allFiles = directory.listFiles()
         if (allFiles == null) {
-            Log.d(TAG, "Cannot list files in: $directoryPath")
+            nluLogDebug(TAG, "Cannot list files in: $directoryPath")
             return emptyList()
         }
 
         val avaFiles = allFiles.filter { it.extension in SUPPORTED_EXTENSIONS }
-        Log.d(TAG, "Found ${avaFiles.size} .ava/.vos files in $directoryPath")
+        nluLogDebug(TAG, "Found ${avaFiles.size} .ava/.vos files in $directoryPath")
 
         val allIntents = mutableListOf<AvaIntent>()
 
@@ -87,9 +88,9 @@ class AvaFileReader {
                     intent.copy(source = source)
                 }
                 allIntents.addAll(intents)
-                Log.d(TAG, "Loaded ${intents.size} intents from ${file.name}")
+                nluLogDebug(TAG, "Loaded ${intents.size} intents from ${file.name}")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load ${file.name}: ${e.message}", e)
+                nluLogError(TAG, "Failed to load ${file.name}: ${e.message}", e)
             }
         }
 

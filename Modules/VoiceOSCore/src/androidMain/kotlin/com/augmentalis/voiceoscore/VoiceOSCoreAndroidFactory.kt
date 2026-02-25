@@ -13,6 +13,7 @@ import android.util.Log
 import com.augmentalis.database.DatabaseDriverFactory
 import com.augmentalis.database.VoiceOSDatabase
 import com.augmentalis.database.VoiceOSDatabaseManager
+import com.augmentalis.voicecursor.overlay.CursorOverlayService
 import com.augmentalis.voiceoscore.handlers.*
 import com.augmentalis.voiceoscore.loader.StaticCommandPersistenceImpl
 
@@ -110,6 +111,8 @@ internal class AndroidHandlerFactory(
             NoteCommandHandler(service),
             CockpitCommandHandler(service),
             // Wave 4: Media/utility module handlers
+            PdfCommandHandler(service),
+            CameraCommandHandler(service),
             AnnotationCommandHandler(service),
             ImageCommandHandler(service),
             VideoCommandHandler(service),
@@ -271,26 +274,26 @@ internal class AndroidGestureHandler(
                            else HandlerResult.failure("Failed to page down")
                 }
 
-                // ── Tap/Click (standalone — screen center) ──────────────
+                // ── Tap/Click (cursor-aware: dispatch at cursor position if active, else screen center)
                 phrase == "tap" || phrase == "click" || phrase == "press" -> {
-                    val metrics = service.resources.displayMetrics
-                    val success = dispatcher.tap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    val (x, y) = getCursorPositionOrScreenCenter()
+                    val success = dispatcher.tap(x, y)
                     return if (success) HandlerResult.success("Tapped")
                            else HandlerResult.failure("Failed to tap")
                 }
 
-                // ── Long press (standalone — screen center) ─────────────
+                // ── Long press (cursor-aware) ───────────────────────────
                 phrase in listOf("long press", "long click", "hold") -> {
-                    val metrics = service.resources.displayMetrics
-                    val success = dispatcher.longPress(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    val (x, y) = getCursorPositionOrScreenCenter()
+                    val success = dispatcher.longPress(x, y)
                     return if (success) HandlerResult.success("Long pressed")
                            else HandlerResult.failure("Failed to long press")
                 }
 
-                // ── Double tap (standalone — screen center) ─────────────
+                // ── Double tap (cursor-aware) ───────────────────────────
                 phrase in listOf("double tap", "double click") -> {
-                    val metrics = service.resources.displayMetrics
-                    val success = dispatcher.doubleTap(metrics.widthPixels / 2f, metrics.heightPixels / 2f)
+                    val (x, y) = getCursorPositionOrScreenCenter()
+                    val success = dispatcher.doubleTap(x, y)
                     return if (success) HandlerResult.success("Double tapped")
                            else HandlerResult.failure("Failed to double tap")
                 }
@@ -740,6 +743,22 @@ internal class AndroidGestureHandler(
      * Extract directional keyword from a voice phrase.
      * Used for gestures that encode direction in the phrase (e.g., "fling left", "pan up").
      */
+    /**
+     * Get cursor position if cursor is active and visible, otherwise screen center.
+     * Used for standalone tap/click/long press/double tap commands.
+     */
+    private fun getCursorPositionOrScreenCenter(): Pair<Float, Float> {
+        val cursorService = CursorOverlayService.getInstance()
+        if (cursorService != null) {
+            val state = cursorService.getCursorController()?.state?.value
+            if (state != null && state.isVisible) {
+                return state.position.x to state.position.y
+            }
+        }
+        val metrics = service.resources.displayMetrics
+        return metrics.widthPixels / 2f to metrics.heightPixels / 2f
+    }
+
     private fun extractDirectionFromPhrase(phrase: String): String? {
         val normalized = phrase.lowercase()
         return when {

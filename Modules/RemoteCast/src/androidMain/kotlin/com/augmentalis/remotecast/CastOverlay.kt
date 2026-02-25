@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +32,9 @@ import com.augmentalis.avanueui.theme.AvanueTheme
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.augmentalis.remotecast.model.CastState
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 
 /**
  * Overlay UI for screen casting — shows connection status, device info,
@@ -50,6 +54,14 @@ fun CastOverlay(
     modifier: Modifier = Modifier
 ) {
     val colors = AvanueTheme.colors
+
+    // Wire voice command executor for cast controls
+    DisposableEffect(Unit) {
+        ModuleCommandCallbacks.castExecutor = { actionType, _ ->
+            executeCastCommand(actionType, castState, onConnect, onDisconnect)
+        }
+        onDispose { ModuleCommandCallbacks.castExecutor = null }
+    }
 
     Box(modifier = modifier.fillMaxSize().background(colors.background)) {
         if (castState.isStreaming) {
@@ -161,5 +173,47 @@ fun CastOverlay(
                 fontSize = 11.sp
             )
         }
+    }
+}
+
+/**
+ * Maps cast voice commands to CastOverlay callbacks.
+ * Start/stop casting, connect/disconnect device.
+ */
+private fun executeCastCommand(
+    actionType: CommandActionType,
+    castState: CastState,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
+): HandlerResult {
+    return when (actionType) {
+        CommandActionType.CAST_START, CommandActionType.CAST_CONNECT -> {
+            if (castState.isStreaming) {
+                HandlerResult.failure("Already casting", recoverable = true)
+            } else {
+                onConnect()
+                HandlerResult.success("Connecting to cast device")
+            }
+        }
+
+        CommandActionType.CAST_STOP, CommandActionType.CAST_DISCONNECT -> {
+            if (!castState.isStreaming && !castState.isConnected) {
+                HandlerResult.failure("Not currently casting", recoverable = true)
+            } else {
+                onDisconnect()
+                HandlerResult.success("Cast stopped")
+            }
+        }
+
+        CommandActionType.CAST_QUALITY -> {
+            // Quality change requires UI interaction — guide user
+            HandlerResult.failure(
+                "Quality settings require manual selection",
+                recoverable = true,
+                suggestedAction = "Open cast settings to change quality"
+            )
+        }
+
+        else -> HandlerResult.failure("Unsupported cast action: $actionType", recoverable = true)
     }
 }

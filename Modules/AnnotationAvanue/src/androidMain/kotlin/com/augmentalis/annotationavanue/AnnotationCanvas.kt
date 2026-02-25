@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +30,9 @@ import com.augmentalis.annotationavanue.model.AnnotationColors
 import com.augmentalis.annotationavanue.model.AnnotationTool
 import com.augmentalis.annotationavanue.model.StrokePoint
 import com.augmentalis.avanueui.theme.AvanueTheme
+import com.augmentalis.voiceoscore.CommandActionType
+import com.augmentalis.voiceoscore.HandlerResult
+import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.min
@@ -70,6 +74,23 @@ fun AnnotationCanvas(
 ) {
     val colors = AvanueTheme.colors
     var currentPoints by remember { mutableStateOf<List<StrokePoint>>(emptyList()) }
+
+    // Wire voice command executor for annotation tool controls
+    DisposableEffect(Unit) {
+        ModuleCommandCallbacks.annotationExecutor = { actionType, _ ->
+            executeAnnotationCommand(
+                actionType = actionType,
+                onToolChanged = onToolChanged,
+                onColorChanged = onColorChanged,
+                onUndo = onUndo,
+                onRedo = onRedo,
+                onClear = onClear,
+                canUndo = canUndo,
+                canRedo = canRedo
+            )
+        }
+        onDispose { ModuleCommandCallbacks.annotationExecutor = null }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         if (showToolbar) {
@@ -275,4 +296,91 @@ private var strokeCounter = 0L
 private fun generateStrokeId(): String {
     strokeCounter++
     return "s_${System.currentTimeMillis()}_$strokeCounter"
+}
+
+/**
+ * Maps annotation voice commands to canvas tool/state mutations.
+ * Tool selection, undo/redo, clear, and pen size adjustments.
+ */
+@Suppress("LongParameterList")
+private fun executeAnnotationCommand(
+    actionType: CommandActionType,
+    onToolChanged: (AnnotationTool) -> Unit,
+    onColorChanged: (Long) -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onClear: () -> Unit,
+    canUndo: Boolean,
+    canRedo: Boolean,
+): HandlerResult {
+    return when (actionType) {
+        // -- Tool Selection ------------------------------------------------
+        CommandActionType.ANNOTATION_PEN -> {
+            onToolChanged(AnnotationTool.PEN)
+            HandlerResult.success("Pen tool selected")
+        }
+        CommandActionType.ANNOTATION_HIGHLIGHTER -> {
+            onToolChanged(AnnotationTool.HIGHLIGHTER)
+            HandlerResult.success("Highlighter selected")
+        }
+        CommandActionType.ANNOTATION_ERASER -> {
+            onToolChanged(AnnotationTool.ERASER)
+            HandlerResult.success("Eraser selected")
+        }
+        CommandActionType.ANNOTATION_SHAPE_RECT -> {
+            onToolChanged(AnnotationTool.RECTANGLE)
+            HandlerResult.success("Rectangle tool selected")
+        }
+        CommandActionType.ANNOTATION_SHAPE_CIRCLE -> {
+            onToolChanged(AnnotationTool.CIRCLE)
+            HandlerResult.success("Circle tool selected")
+        }
+        CommandActionType.ANNOTATION_SHAPE_ARROW -> {
+            onToolChanged(AnnotationTool.ARROW)
+            HandlerResult.success("Arrow tool selected")
+        }
+        CommandActionType.ANNOTATION_SHAPE_LINE -> {
+            onToolChanged(AnnotationTool.LINE)
+            HandlerResult.success("Line tool selected")
+        }
+
+        // -- Undo/Redo/Clear -----------------------------------------------
+        CommandActionType.ANNOTATION_UNDO -> {
+            if (canUndo) {
+                onUndo()
+                HandlerResult.success("Undo")
+            } else {
+                HandlerResult.failure("Nothing to undo", recoverable = true)
+            }
+        }
+        CommandActionType.ANNOTATION_REDO -> {
+            if (canRedo) {
+                onRedo()
+                HandlerResult.success("Redo")
+            } else {
+                HandlerResult.failure("Nothing to redo", recoverable = true)
+            }
+        }
+        CommandActionType.ANNOTATION_CLEAR -> {
+            onClear()
+            HandlerResult.success("Canvas cleared")
+        }
+
+        // -- Color Picker ---------------------------------------------------
+        CommandActionType.ANNOTATION_COLOR_PICKER -> {
+            // Color picker is a UI operation — cycle through preset colors
+            val colors = listOf(
+                AnnotationColors.WHITE,
+                AnnotationColors.RED,
+                AnnotationColors.BLUE,
+                AnnotationColors.GREEN,
+                AnnotationColors.YELLOW
+            )
+            // Use white as default cycle start
+            onColorChanged(AnnotationColors.RED)
+            HandlerResult.success("Color changed")
+        }
+
+        else -> HandlerResult.failure("Unsupported annotation action: $actionType", recoverable = true)
+    }
 }

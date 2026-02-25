@@ -5,7 +5,7 @@ package com.augmentalis.magiccode.plugins.platform
  *
  * Provides cross-platform ZIP archive extraction functionality for plugin installation.
  */
-expect class ZipExtractor {
+expect class ZipExtractor() {
     /**
      * Extract ZIP archive to destination directory.
      *

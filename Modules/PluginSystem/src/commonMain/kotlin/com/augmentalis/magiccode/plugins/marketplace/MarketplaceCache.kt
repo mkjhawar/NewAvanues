@@ -3,6 +3,7 @@ package com.augmentalis.magiccode.plugins.marketplace
 import com.augmentalis.magiccode.plugins.core.PluginLog
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.Clock
 
 /**
  * In-memory cache for marketplace data with expiration support.
@@ -105,7 +106,7 @@ class MarketplaceCache(
          * @return true if entry is older than its TTL
          */
         fun isExpired(): Boolean {
-            return System.currentTimeMillis() - timestamp > ttlMs
+            return Clock.System.now().toEpochMilliseconds() - timestamp > ttlMs
         }
 
         /**
@@ -114,7 +115,7 @@ class MarketplaceCache(
          * @return Remaining TTL or 0 if expired
          */
         fun remainingTtl(): Long {
-            val remaining = ttlMs - (System.currentTimeMillis() - timestamp)
+            val remaining = ttlMs - (Clock.System.now().toEpochMilliseconds() - timestamp)
             return if (remaining > 0) remaining else 0
         }
     }
@@ -139,7 +140,7 @@ class MarketplaceCache(
         mutex.withLock {
             val key = generateSearchKey(query, filters)
             evictIfNeeded(searchCache, maxSearchEntries)
-            searchCache[key] = CacheEntry(results, System.currentTimeMillis(), searchTtlMs)
+            searchCache[key] = CacheEntry(results, Clock.System.now().toEpochMilliseconds(), searchTtlMs)
             PluginLog.d(TAG, "Cached search results for: $query (${results.size} results)")
         }
     }
@@ -196,7 +197,7 @@ class MarketplaceCache(
     suspend fun cacheDetails(pluginId: String, details: PluginDetails) {
         mutex.withLock {
             evictIfNeeded(detailsCache, maxDetailsEntries)
-            detailsCache[pluginId] = CacheEntry(details, System.currentTimeMillis(), detailsTtlMs)
+            detailsCache[pluginId] = CacheEntry(details, Clock.System.now().toEpochMilliseconds(), detailsTtlMs)
             PluginLog.d(TAG, "Cached details for: $pluginId")
         }
     }
@@ -245,7 +246,7 @@ class MarketplaceCache(
     suspend fun cacheVersions(pluginId: String, versions: List<VersionInfo>) {
         mutex.withLock {
             evictIfNeeded(versionsCache, maxDetailsEntries)
-            versionsCache[pluginId] = CacheEntry(versions, System.currentTimeMillis(), versionsTtlMs)
+            versionsCache[pluginId] = CacheEntry(versions, Clock.System.now().toEpochMilliseconds(), versionsTtlMs)
             PluginLog.d(TAG, "Cached versions for: $pluginId (${versions.size} versions)")
         }
     }

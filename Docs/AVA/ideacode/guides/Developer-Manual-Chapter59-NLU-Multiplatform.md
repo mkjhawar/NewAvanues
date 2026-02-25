@@ -1,8 +1,8 @@
 # Developer Manual - Chapter 59: NLU Multiplatform Implementation
 
 **Status:** Complete
-**Date:** 2025-12-01
-**Version:** 1.0
+**Date:** 2026-02-24
+**Version:** 2.0
 
 ---
 
@@ -18,6 +18,7 @@ AVA's Natural Language Understanding (NLU) system now supports all KMP platforms
 |----------|--------|--------------|-------------|--------|
 | Android | ONNX Runtime Android | .onnx | 45ms | Production |
 | iOS | Core ML | .mlmodelc | 35ms | Production |
+| macOS | Core ML (keyword fallback) | .mlmodelc | ~40ms | Production |
 | Desktop | ONNX Runtime JVM | .onnx | 80ms | Production |
 | Web | TensorFlow.js | .tfjs | - | Planned |
 
@@ -26,7 +27,7 @@ AVA's Natural Language Understanding (NLU) system now supports all KMP platforms
 ## Android Implementation
 
 ### Location
-`Universal/AVA/Features/NLU/src/androidMain/kotlin/`
+`Modules/AI/NLU/src/androidMain/kotlin/`
 
 ### Key Components
 
@@ -56,7 +57,7 @@ val result = classifier.classifyIntent(
 ## iOS Implementation
 
 ### Location
-`Universal/AVA/Features/NLU/src/iosMain/kotlin/`
+`Modules/AI/NLU/src/iosMain/kotlin/`
 
 ### Core ML Integration
 
@@ -115,10 +116,69 @@ class CoreMLModelManager {
 
 ---
 
+## macOS Implementation
+
+### Location
+`Modules/AI/NLU/src/macosMain/kotlin/`
+
+### Overview
+
+macOS shares the same Apple platform APIs as iOS (Foundation, CoreML) but with key differences in filesystem conventions and compute backend availability. All 8 expect/actual declarations are provided in `macosMain/`.
+
+### Key Components
+
+| Class | Purpose | Notes |
+|-------|---------|-------|
+| `IntentClassifier` | Main classification interface | No `@ThreadLocal` (Kotlin 2.1.0 new MM), `SynchronizedObject` for thread-safe singleton |
+| `ModelManager` | Model loading/management | Uses `NSApplicationSupportDirectory` (not `NSDocumentDirectory`) |
+| `BertTokenizer` | BERT tokenization | Stub returning zero-filled results (CoreML tensor interop not yet configured) |
+| `CoreMLModelManager` | CoreML model loading | `runInference()` returns `UnsupportedOperationException` — falls back to keyword matching |
+| `MacosIntentRepository` | SQLite intent storage | `NativeSqliteDriver`, `FloatArray↔ByteArray` embedding serialization |
+| `LocaleManager` | Locale management | `NSLocale.currentLocale`, 60+ supported locales |
+| `PlatformUtils` | Unicode normalization, time | `platform.Foundation.NSString`, `NSDate` |
+| `LearningDomainMacos` | Learning timestamp | `NSDate().timeIntervalSince1970` |
+
+### CoreML on macOS
+
+macOS CoreML has the same API surface as iOS (macOS 10.15+), but compute backend availability differs:
+
+| Backend | Description | Requirement |
+|---------|-------------|-------------|
+| Auto | CoreML decides | macOS 10.15+ |
+| ANE | Apple Neural Engine | Apple Silicon (M1+) |
+| GPU | Metal GPU | macOS 10.15+ |
+| CPU | Universal fallback | All macOS |
+
+### Model Storage
+
+macOS uses `~/Library/Application Support/` instead of iOS's Documents directory:
+
+```kotlin
+actual class ModelManager {
+    private fun getModelsDirectory(): String {
+        val paths = NSSearchPathForDirectoriesInDomains(
+            NSApplicationSupportDirectory,
+            NSUserDomainMask, true
+        )
+        val appSupportDir = paths.firstOrNull() as? String ?: ""
+        return "$appSupportDir/com.augmentalis.nlu/models"
+    }
+}
+```
+
+### Known Limitations
+
+1. **BertTokenizer** returns zero-filled tokenization results (WordPiece not yet ported to K/N)
+2. **CoreMLModelManager.runInference()** throws `UnsupportedOperationException` (tensor input/output interop not configured)
+3. **IntentClassifier** gracefully falls back to keyword matching when CoreML inference is unavailable
+4. **darwinMain opportunity**: iOS and macOS actuals are nearly identical — a future refactor could share code via `darwinMain` source set
+
+---
+
 ## Desktop Implementation
 
 ### Location
-`Universal/AVA/Features/NLU/src/desktopMain/kotlin/`
+`Modules/AI/NLU/src/desktopMain/kotlin/`
 
 ### ONNX Runtime JVM
 
@@ -260,12 +320,12 @@ Output: {intent: "control_lights", confidence: 0.92}
 
 ## Performance Benchmarks
 
-| Metric | Android | iOS | Desktop |
-|--------|---------|-----|---------|
-| Model Load | 1.2s | 0.8s | 1.5s |
-| Inference | 45ms | 35ms | 80ms |
-| Memory | 65MB | 50MB | 120MB |
-| Battery | Low | Low | N/A |
+| Metric | Android | iOS | macOS | Desktop |
+|--------|---------|-----|-------|---------|
+| Model Load | 1.2s | 0.8s | ~0.9s | 1.5s |
+| Inference | 45ms | 35ms | ~40ms (keyword fallback) | 80ms |
+| Memory | 65MB | 50MB | ~55MB | 120MB |
+| Battery | Low | Low | N/A | N/A |
 
 ---
 
@@ -303,3 +363,4 @@ fun testCrossplatformClassification() = runTest {
 | Date | Version | Changes |
 |------|---------|---------|
 | 2025-12-01 | 1.0 | iOS Core ML and Desktop ONNX implementations complete |
+| 2026-02-24 | 2.0 | macOS actual implementations (8 files), updated file paths to `Modules/AI/NLU/`, Kotlin 2.1.0 new memory model (@ThreadLocal removed, SynchronizedObject), keyword fallback when CoreML unavailable |

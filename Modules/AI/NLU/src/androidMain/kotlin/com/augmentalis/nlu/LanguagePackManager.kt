@@ -1,7 +1,6 @@
 package com.augmentalis.nlu
 
 import android.content.Context
-import android.util.Log
 import com.augmentalis.ava.core.common.AVAException
 import com.augmentalis.ava.core.common.Result
 import com.augmentalis.nlu.ava.AssetExtractor
@@ -65,7 +64,7 @@ import java.util.zip.ZipInputStream
  * Usage:
  *   val manager = LanguagePackManager(context)
  *   manager.downloadLanguagePack("es-ES") { progress ->
- *       Log.d("Download", "Progress: $progress%")
+ *       nluLogDebug("Download", "Progress: $progress%")
  *   }
  *   manager.setActiveLanguage("es-ES")
  */
@@ -130,7 +129,7 @@ class LanguagePackManager(
     private fun saveManifest(manifest: JSONObject) {
         val manifestFile = File(manifestPath)
         manifestFile.writeText(manifest.toString(2))
-        Log.d(TAG, "Manifest saved: $manifestPath")
+        nluLogDebug(TAG, "Manifest saved: $manifestPath")
     }
 
     /**
@@ -204,7 +203,7 @@ class LanguagePackManager(
             manifest.put("active", locale)
             saveManifest(manifest)
 
-            Log.i(TAG, "Active language set to: $locale")
+            nluLogInfo(TAG, "Active language set to: $locale")
             Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(
@@ -239,16 +238,16 @@ class LanguagePackManager(
         progressCallback: ProgressCallback? = null
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            Log.i(TAG, "Starting download for language pack: $locale")
+            nluLogInfo(TAG, "Starting download for language pack: $locale")
 
             // Get pack metadata
             val pack = getAvailableLanguagePacks().find { it.locale == locale }
                 ?: return@withContext false.also {
-                    Log.e(TAG, "Language pack not found: $locale")
+                    nluLogError(TAG, "Language pack not found: $locale")
                 }
 
             if (pack.isInstalled) {
-                Log.i(TAG, "Language pack already installed: $locale")
+                nluLogInfo(TAG, "Language pack already installed: $locale")
                 return@withContext true
             }
 
@@ -263,7 +262,7 @@ class LanguagePackManager(
             val success = downloadFile(pack.downloadUrl, tempFile, pack.size, progressCallback)
 
             if (!success) {
-                Log.e(TAG, "Download failed for $locale")
+                nluLogError(TAG, "Download failed for $locale")
                 tempFile.delete()
                 return@withContext false
             }
@@ -271,13 +270,13 @@ class LanguagePackManager(
             // Verify SHA-256 hash
             val actualHash = calculateSHA256(tempFile)
             if (actualHash != pack.sha256Hash && pack.sha256Hash != "pending") {
-                Log.e(TAG, "SHA-256 verification failed for $locale")
-                Log.e(TAG, "Expected: ${pack.sha256Hash}, Actual: $actualHash")
+                nluLogError(TAG, "SHA-256 verification failed for $locale")
+                nluLogError(TAG, "Expected: ${pack.sha256Hash}, Actual: $actualHash")
                 tempFile.delete()
                 return@withContext false
             }
 
-            Log.d(TAG, "SHA-256 verification passed for $locale")
+            nluLogDebug(TAG, "SHA-256 verification passed for $locale")
 
             // Extract .avapack to temp directory
             val tempExtractDir = File(cacheDir, "$locale-extract")
@@ -302,10 +301,10 @@ class LanguagePackManager(
             tempFile.delete()
             tempExtractDir.deleteRecursively()
 
-            Log.i(TAG, "Language pack installed successfully: $locale")
+            nluLogInfo(TAG, "Language pack installed successfully: $locale")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to download language pack $locale: ${e.message}", e)
+            nluLogError(TAG, "Failed to download language pack $locale: ${e.message}", e)
             false
         }
     }
@@ -333,7 +332,7 @@ class LanguagePackManager(
 
             val contentLength = connection.contentLength.toLong()
             if (contentLength != expectedSize && expectedSize > 0) {
-                Log.w(TAG, "Size mismatch: expected $expectedSize, got $contentLength")
+                nluLogWarn(TAG, "Size mismatch: expected $expectedSize, got $contentLength")
             }
 
             // Use .use{} for automatic resource management (prevents leaks)
@@ -356,10 +355,10 @@ class LanguagePackManager(
                 } // outputStream automatically closed
             } // inputStream automatically closed
 
-            Log.d(TAG, "Download complete: ${outputFile.absolutePath} ($totalRead bytes)")
+            nluLogDebug(TAG, "Download complete: ${outputFile.absolutePath} ($totalRead bytes)")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Download failed: ${e.message}", e)
+            nluLogError(TAG, "Download failed: ${e.message}", e)
             return false
         }
     }
@@ -415,7 +414,7 @@ class LanguagePackManager(
             }
         }
 
-        Log.d(TAG, "Extracted ZIP to ${outputDir.absolutePath}")
+        nluLogDebug(TAG, "Extracted ZIP to ${outputDir.absolutePath}")
     }
 
     /**
@@ -437,7 +436,7 @@ class LanguagePackManager(
         manifest.put("installed", JSONArray(installed))
 
         saveManifest(manifest)
-        Log.d(TAG, "Manifest updated: $locale added to installed list")
+        nluLogDebug(TAG, "Manifest updated: $locale added to installed list")
     }
 
     /**
@@ -452,13 +451,13 @@ class LanguagePackManager(
         try {
             // Cannot uninstall built-in language
             if (locale == "en-US") {
-                Log.w(TAG, "Cannot uninstall built-in language: $locale")
+                nluLogWarn(TAG, "Cannot uninstall built-in language: $locale")
                 return@withContext false
             }
 
             // Cannot uninstall active language
             if (locale == getActiveLanguage()) {
-                Log.w(TAG, "Cannot uninstall active language: $locale. Set another language first.")
+                nluLogWarn(TAG, "Cannot uninstall active language: $locale. Set another language first.")
                 return@withContext false
             }
 
@@ -466,7 +465,7 @@ class LanguagePackManager(
             val langDir = File("$coreDir/$locale")
             if (langDir.exists()) {
                 langDir.deleteRecursively()
-                Log.d(TAG, "Deleted language pack directory: ${langDir.absolutePath}")
+                nluLogDebug(TAG, "Deleted language pack directory: ${langDir.absolutePath}")
             }
 
             // Update manifest
@@ -477,10 +476,10 @@ class LanguagePackManager(
             manifest.put("installed", JSONArray(installed))
             saveManifest(manifest)
 
-            Log.i(TAG, "Language pack uninstalled: $locale")
+            nluLogInfo(TAG, "Language pack uninstalled: $locale")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to uninstall language pack $locale: ${e.message}", e)
+            nluLogError(TAG, "Failed to uninstall language pack $locale: ${e.message}", e)
             false
         }
     }

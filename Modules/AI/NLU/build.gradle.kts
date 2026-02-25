@@ -11,39 +11,37 @@ kotlin {
 
     // Android target
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach { iosTarget ->
-            iosTarget.binaries.framework {
-                baseName = "NLU"
-                isStatic = true
-            }
+    // iOS targets
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "NLU"
+            isStatic = true
         }
     }
+    // macOS targets
+    macosX64()
+    macosArm64()
+
     // Desktop JVM target (macOS, Windows, Linux)
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions.jvmTarget = "17"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
-    // Web/JS target (Phase 2 - disabled for now due to task conflicts)
-    // js(IR) {
-    //     browser()
-    //     nodejs()
-    // }
+    // Web/JS target — ONNX Runtime Web for browser-based NLU inference
+    js(IR) {
+        browser()
+        nodejs()
+    }
 
     sourceSets {
         // Common code (shared across all platforms)
@@ -51,6 +49,7 @@ kotlin {
             dependencies {
                 implementation(project(":Modules:AVA:core:Utils"))
                 implementation(project(":Modules:AVA:core:Domain"))
+                implementation(project(":Modules:Crypto"))
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
@@ -104,22 +103,32 @@ kotlin {
             }
         }
 
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
-            val iosMain by creating {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-                dependencies {
-                    implementation(libs.sqldelight.native.driver)
-                    implementation(libs.kotlinx.atomicfu)
-                }
+        // Darwin shared source set (iOS + macOS — shared Foundation/CoreML code)
+        val darwinMain by creating {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.sqldelight.native.driver)
+                implementation(libs.kotlinx.atomicfu)
             }
+        }
+
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(darwinMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+        }
+
+        // macOS source set
+        val macosX64Main by getting
+        val macosArm64Main by getting
+        val macosMain by creating {
+            dependsOn(darwinMain)
+            macosX64Main.dependsOn(this)
+            macosArm64Main.dependsOn(this)
         }
 
         // Desktop-specific code (ONNX Runtime JVM)
@@ -133,18 +142,27 @@ kotlin {
             }
         }
 
-        // JS-specific code (Phase 2 - disabled for now)
-        // val jsMain by getting {
-        //     dependencies {
-        //         // TensorFlow.js for browser-based inference (future)
-        //     }
-        // }
+        // JS/Web — ONNX Runtime Web for browser-based ML inference
+        val jsMain by getting {
+            dependencies {
+                // ONNX Runtime Web for browser WASM inference
+                implementation(npm("onnxruntime-web", "1.17.0"))
+                // SQLDelight web-worker driver for IndexedDB-backed SQL
+                implementation(libs.sqldelight.js.driver)
+            }
+        }
+
+        val jsTest by getting {
+            dependencies {
+                implementation(kotlin("test-js"))
+            }
+        }
     }
 }
 
 android {
     namespace = "com.augmentalis.nlu"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)

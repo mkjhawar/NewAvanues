@@ -1,5 +1,6 @@
 package com.augmentalis.cockpit.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -74,12 +75,14 @@ fun GalleryLayout(
         return
     }
 
-    // Responsive grid with adaptive columns
+    // Responsive grid with adaptive columns, centered arrangement
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 180.dp),
         modifier = modifier
             .fillMaxSize()
-            .padding(4.dp)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         items(mediaFrames, key = { it.id }) { frame ->
             FrameWindow(

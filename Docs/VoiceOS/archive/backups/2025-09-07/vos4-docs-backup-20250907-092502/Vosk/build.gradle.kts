@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.voiceos.vosk_models"
-    compileSdk = 34
+    compileSdk = 35
 
     sourceSets {
         named("main") {

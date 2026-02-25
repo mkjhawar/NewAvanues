@@ -2,7 +2,6 @@
  * PerformanceTestTemplate.kt - Advanced performance testing template
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: {{DATE}}
  * 
  * Comprehensive performance testing including load, stress, memory, and benchmark tests

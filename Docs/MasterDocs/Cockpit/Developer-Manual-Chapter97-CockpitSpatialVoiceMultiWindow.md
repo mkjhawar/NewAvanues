@@ -52,7 +52,7 @@ The UI follows the **SpatialVoice** design language with full **AvanueUI v5.1** 
 
 | Source Set | Contents |
 |-----------|---------|
-| `commonMain` | Models (CockpitFrame, PanelRole, FrameContent.ExternalApp), constants, all layout composables, LayoutEngine, CommandBar, CockpitScreenContent, SpatialViewportController, ISpatialOrientationSource, LayoutModeResolver, ICockpitRepository, IExternalAppResolver, ExternalAppContent |
+| `commonMain` | Models (CockpitFrame, PanelRole, FrameContent.ExternalApp), constants, all layout composables, LayoutEngine, CommandBar, CockpitScreenContent, SpatialViewportController, ISpatialOrientationSource, LayoutModeResolver, ICockpitRepository, IExternalAppResolver, ExternalAppContent, SpeechPerformanceCard |
 | `androidMain` | CockpitScreen (thin wrapper), ContentRenderer (AndroidView + ExternalApp wiring), AndroidSpatialOrientationSource (IMU), AndroidExternalAppResolver (PackageManager + Intent) |
 | `desktopMain` | DesktopSpatialOrientationSource (manual input fallback), DesktopExternalAppResolver (stub) |
 
@@ -131,15 +131,16 @@ sealed class FrameContent
 
 Each variant carries content-specific state (URL, page number, zoom level, etc.) and serializes to JSON for DB persistence.
 
-### LayoutMode (13 Modes)
+### LayoutMode (14 Modes)
 
 | Mode | Description | Best For |
 |------|------------|---------|
+| `DASHBOARD` | Launcher/home with module tiles and recent sessions | Default when no session active |
 | `FREEFORM` | Drag-and-resize windows | Custom arrangement |
 | `GRID` | Responsive column grid | General multi-content |
 | `SPLIT_LEFT` | Primary 60% left | Side-by-side comparison |
 | `SPLIT_RIGHT` | Primary 60% right | Mirror of SPLIT_LEFT |
-| `COCKPIT` | Flight-deck instrument panel | Default for tablets |
+| `COCKPIT` | Flight-deck instrument panel | Default for active sessions |
 | `T_PANEL` | Primary 60% top | Presentation + notes |
 | `MOSAIC` | Primary 50% left + grid right | Media-heavy layouts |
 | `FULLSCREEN` | Single frame | Voice-controlled switching |
@@ -151,7 +152,9 @@ Each variant carries content-specific state (URL, page number, zoom level, etc.)
 
 **Constants:**
 
+- `DEFAULT` = `COCKPIT` — default layout for active sessions with frames
 - `SPATIAL_CAPABLE` set: `FREEFORM, COCKPIT, MOSAIC, T_PANEL, SPATIAL_DICE` — layouts that support spatial viewport panning
+- `FRAME_LAYOUTS`: All modes except `DASHBOARD` — modes that render frames
 - `GALLERY_CONTENT_TYPES`: Content types shown in Gallery mode
 
 ### ContentAccent
@@ -186,23 +189,37 @@ Each position has a `label` for voice commands ("top left", "center", etc.).
 
 ```
 MAIN (root)
-├── ADD_FRAME         → content type chips
-├── LAYOUT_PICKER     → 13 layout mode chips
+├── ADD_FRAME             → content type chips
+├── LAYOUT_PICKER         → 13 layout mode chips
 ├── FRAME_ACTIONS
-│   ├── WEB_ACTIONS   → Back, Forward, Refresh, ZoomIn, ZoomOut
-│   ├── PDF_ACTIONS   → PrevPage, NextPage, ZoomIn, ZoomOut
-│   ├── IMAGE_ACTIONS → ZoomIn, ZoomOut, Rotate
-│   ├── VIDEO_ACTIONS → Rewind, Play/Pause, Fullscreen
-│   ├── NOTE_ACTIONS  → Undo, Redo
-│   └── CAMERA_ACTIONS→ Flip, Capture
-├── SCROLL_COMMANDS   → (reserved)
-├── ZOOM_COMMANDS     → (reserved)
-└── SPATIAL_COMMANDS  → (reserved)
+│   ├── WEB_ACTIONS       → Back, Forward, Refresh, ZoomIn, ZoomOut
+│   ├── PDF_ACTIONS       → PrevPage, NextPage, ZoomIn, ZoomOut
+│   ├── IMAGE_ACTIONS     → ZoomIn, ZoomOut, Rotate
+│   ├── VIDEO_ACTIONS     → Rewind, Play/Pause, Fullscreen
+│   ├── NOTE_ACTIONS      → Bold, Italic, Underline, Strikethrough, Undo, Redo, Save
+│   ├── CAMERA_ACTIONS    → Flip, Capture
+│   └── WHITEBOARD_ACTIONS→ Pen, Highlight, Eraser, Undo, Redo, Clear
+├── SCROLL_COMMANDS       → (reserved)
+├── ZOOM_COMMANDS         → (reserved)
+└── SPATIAL_COMMANDS      → (reserved)
 ```
 
 Properties: `parent` (back navigation), `isContentSpecific`, `depth` (nesting level).
 
 `CommandBarState.forContentType(typeId)` auto-selects the right state when a frame gains focus.
+
+| Content Type ID | Routed State | Module Executor |
+|----------------|-------------|-----------------|
+| `"web"` | `WEB_ACTIONS` | Direct WebView dispatch |
+| `"pdf"` | `PDF_ACTIONS` | Direct PdfViewer state |
+| `"image"` | `IMAGE_ACTIONS` | Direct zoom/rotation state |
+| `"video"` | `VIDEO_ACTIONS` | Direct VideoPlayer state |
+| `"note"`, `"voice_note"` | `NOTE_ACTIONS` | `ModuleCommandCallbacks.noteExecutor` |
+| `"camera"` | `CAMERA_ACTIONS` | `ModuleCommandCallbacks.cameraExecutor` |
+| `"whiteboard"` | `WHITEBOARD_ACTIONS` | `ModuleCommandCallbacks.annotationExecutor` |
+| (others) | `FRAME_ACTIONS` | Generic minimize/maximize/close |
+
+**Bridge pattern:** Note, Camera, and Whiteboard actions are dispatched through `ModuleCommandCallbacks` executors (VoiceOSCore), translating `ContentAction` → `CommandActionType` in `ContentRenderer`. The modules register their executors via `DisposableEffect` when mounted. NoteAvanue includes a custom `RichTextUndoManager` for snapshot-based undo/redo (compose-rich-editor RC13 lacks native undo API).
 
 ---
 
@@ -212,11 +229,14 @@ Properties: `parent` (back navigation), `isContentSpecific`, `depth` (nesting le
 
 The KMP screen shell providing:
 
-1. **SpatialVoice gradient background** — `verticalGradient(background, surface.copy(0.6f), background)`
-2. **TopAppBar** — transparent container, back button, session title
+1. **BackgroundSceneRenderer** — gradient, starfield, scanline grid, or transparent backdrop
+2. **TopAppBar** — transparent container, back button, session title, theme settings gear
 3. **LayoutEngine** — routes to the active layout composable
 4. **Status bar** — frame count + current layout mode label
 5. **CommandBar** — bottom-docked hierarchical chip bar
+6. **ThemeSettingsPanel** — overlay panel for preset/palette/material/appearance/background selection
+
+**260224 Refactor:** Read-only state is now bundled in `CockpitScreenState` data class (12 fields: `sessionName`, `frames`, `selectedFrameId`, `layoutMode`, `dashboardState`, `availableLayoutModes`, `backgroundScene`, `glassDisplayMode`, `currentPalette`, `currentMaterial`, `currentAppearance`, `currentPresetId`). Callbacks remain as separate lambda params per Compose convention (lambdas in data classes break equality and recomposition). Parameter count reduced from ~39 to ~28.
 
 Takes a `frameContent: @Composable (CockpitFrame) -> Unit` lambda slot for platform-specific content rendering (ContentRenderer on Android).
 
@@ -493,7 +513,9 @@ data class SessionExport(
 
 Export/import uses `SessionExport` for single-pass serialization (no double-encoding). Backed by SQLDelight. Content serialized as JSON. Timestamps in ISO 8601.
 
-### CockpitViewModel Lifecycle (v2.3)
+**260222 Fix:** `getSessions()` and `getSession(id)` now properly load `workflowSteps` from the database for each session. Previously, `workflowSteps` always returned an empty list, breaking workflow state reconstruction after app restart. Both Android and Desktop implementations have been updated.
+
+### CockpitViewModel Lifecycle (v2.4)
 
 - `createSession()` is `suspend` — awaits DB save before returning the session
 - `updateFrameContent(frameId, FrameContent)` — typed updates via `copy()`, no raw JSON
@@ -501,13 +523,17 @@ Export/import uses `SessionExport` for single-pass serialization (no double-enco
 - `setLayoutMode()` / `renameSession()` — propagate changes to `_sessions` list
 - `save()` — syncs `selectedFrameId` into `activeSession` before persisting
 
+**260224 Refactor (v2.4):**
+- **`updateFrame(frameId, transform)`** — private helper centralizing the map-match-copy-save pattern. All frame mutations (`selectFrame`, `moveFrame`, `resizeFrame`, `toggleMinimize`, `toggleMaximize`, `updateFrameContent`, `renameFrame`) are now one-liners calling `updateFrame`. The transform is applied first, then `copy(updatedAt = Clock.System.now().toString())` stamps the timestamp.
+- **`generateId()`** — replaced `kotlin.random.Random.nextLong()` with `kotlin.uuid.Uuid.random()` (Kotlin 2.1.0, `@ExperimentalUuidApi`). Format: `{epochMillis}_{uuid12hex}`. Cryptographic-quality randomness on all platforms (JVM `SecureRandom`, JS `crypto.getRandomValues()`).
+
 ---
 
 ## 8. App Integration
 
 ### Android Entry Points
 
-**CockpitScreen.kt** (androidMain, ~90 lines) — creates spatial pipeline and delegates to KMP shell:
+**CockpitScreen.kt** (androidMain, ~185 lines) — creates spatial pipeline, constructs state, and delegates to KMP shell:
 
 ```kotlin
 @Composable
@@ -533,17 +559,30 @@ fun CockpitScreen(viewModel: CockpitViewModel, onBack: () -> Unit) {
     }
 
     CockpitScreenContent(
-        // ... session state + callbacks ...
+        state = CockpitScreenState(
+            sessionName = session?.name ?: "Cockpit",
+            frames = frames, selectedFrameId = selectedFrameId,
+            layoutMode = layoutMode, dashboardState = dashboardState,
+            availableLayoutModes = availableModes,
+            backgroundScene = backgroundSceneState,
+            currentPalette = currentPalette, currentMaterial = currentMaterial,
+            currentAppearance = currentAppearance, currentPresetId = currentPresetId,
+        ),
         spatialController = spatialController,
-        availableLayoutModes = availableModes,
-        frameContent = { frame -> ContentRenderer(frame) }
+        frameContent = { frame -> ContentRenderer(frame, ...) },
+        // ... callbacks ...
     )
 }
 ```
 
-**CockpitScreenContent** (commonMain) conditionally wraps `LayoutEngine` with `SpatialCanvas` when `layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null`. Non-spatial modes render `LayoutEngine` directly.
+**260224 Updates:**
+- `CockpitScreenState` construction bundles 12 read-only state values collected from ViewModel StateFlows
+- Logging: replaced `android.util.Log` + `TAG` with `LoggerFactory.getLogger("CockpitScreen")` — lazy lambdas prevent string interpolation in release builds
+- Voice commands wired via `ModuleCommandCallbacks.cockpitExecutor` (dispatches to `executeCockpitCommand()`)
 
-The `availableLayoutModes` parameter filters the CommandBar's layout picker to show only modes valid for the current device profile (e.g., phone users won't see SPATIAL_DICE).
+**CockpitScreenContent** (commonMain) conditionally wraps `LayoutEngine` with `SpatialCanvas` when `state.layoutMode in LayoutMode.SPATIAL_CAPABLE && spatialController != null`. Non-spatial modes render `LayoutEngine` directly.
+
+The `state.availableLayoutModes` field filters the CommandBar's layout picker to show only modes valid for the current device profile (e.g., phone users won't see SPATIAL_DICE).
 
 **CockpitEntryViewModel** (apps/avanues) — entry point from Hub dashboard.
 
@@ -597,7 +636,7 @@ The `availableLayoutModes` parameter filters the CommandBar's layout picker to s
 2. Add `ContentAccent` mapping in `ContentAccent.forContentType()`
 3. Add icon in `FrameWindow.contentTypeIcon()`
 4. Add to `CommandBar.addFrameOptions()`
-5. Add `CommandBarState` actions if content-specific controls needed
+5. Add `CommandBarState` enum value + chips in `CommandBar.kt`; update `forContentType()` mapping; add `ContentAction` values for each chip; wire dispatch in `ContentRenderer` via `contentActionFlow` LaunchedEffect → translate `ContentAction` → `CommandActionType` → `ModuleCommandCallbacks.{module}Executor?.invoke()`
 6. Add rendering in `ContentRenderer.kt` (androidMain)
 7. Add content module dependency in `build.gradle.kts` androidMain
 
@@ -616,7 +655,7 @@ Android's security model prevents non-system apps from visually embedding 3rd-pa
 
 | Scope | Approach | Status |
 |-------|----------|--------|
-| **Own modules** (NoteAvanue, CameraAvanue, etc.) | Compose content slots | Implemented |
+| **Own modules** (NoteAvanue, PhotoAvanue, etc.) | Compose content slots | Implemented |
 | **3rd-party apps** | `FLAG_ACTIVITY_LAUNCH_ADJACENT` + split-screen | **Implemented** |
 | **Voice control across apps** | AccessibilityService overlay | Implemented |
 | **True 3rd-party embedding** | TaskOrganizer / VirtualDisplay | Not viable (requires system UID) |
@@ -655,6 +694,13 @@ interface IExternalAppResolver {
 4. If installed but not embeddable → `ExternalAppStatus.INSTALLED_NO_EMBED` → "Open in Split Screen"
 5. If not found → `ExternalAppStatus.NOT_INSTALLED` → show install suggestion
 
+### Launch Validation (260224)
+
+`launchAdjacent()` validates explicit `activityName` before launching:
+1. If `activityName` is specified, call `PackageManager.getActivityInfo(ComponentName(pkg, activity))` to verify the Activity exists and is exported
+2. If validation fails (e.g., Activity was removed in an app update), fall back to `getLaunchIntentForPackage()` (default launcher activity)
+3. If both fail, return without launching (no crash)
+
 ### ExternalAppContent (Cross-Platform Composable)
 
 Renders inside FrameWindow:
@@ -668,7 +714,81 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 
 ---
 
-## 12. Related Documentation
+## 12. Updates
+
+### 260224 — Deferred Review Fixes (10 items)
+
+**CockpitScreenState refactor:**
+- New `CockpitScreenState` data class bundles 12 read-only state params, reducing `CockpitScreenContent` from ~39 to ~28 params. Callbacks remain as separate lambda params.
+
+**CockpitViewModel v2.4:**
+- `updateFrame(frameId, transform)` helper centralizes the map-match-copy-save pattern across 7 frame mutation methods
+- `generateId()` uses `kotlin.uuid.Uuid.random()` (Kotlin 2.1.0) for cryptographic-quality IDs
+- `speechMetrics: StateFlow<SpeechMetricsSnapshot?>` — pushed by platform bridge collecting from engine StateFlow. `updateSpeechMetrics(snapshot)` sets the value. Combined into `dashboardState` via `combine(_sessions, _activeSession, _speechMetrics)`
+
+**ContentRenderer content actions:**
+- **Image:** `zoom` + `rotation` state via `graphicsLayer`, handles `IMAGE_ZOOM_IN/OUT/ROTATE`
+- **Video:** Blank-URI guard shows `VideoGalleryScreen` (MediaStore picker); on selection, `onContentStateChanged` updates the frame URI and transitions to `VideoPlayer`. Non-blank URI: `isPlaying` toggle via `VIDEO_PLAY_PAUSE`, 10s rewind via `VIDEO_REWIND`, `VIDEO_FULLSCREEN` no-op (layout concern)
+- **Map:** `shouldOverrideUrlLoading` restricts WebView navigation to `openstreetmap.org` hosts only
+
+**Security hardening:**
+- `AndroidExternalAppResolver.launchAdjacent()` validates explicit `activityName` via `getActivityInfo()` before launching, falls back to default launcher
+- Map WebView blocks all non-OSM navigation (XSS/redirect prevention)
+
+**Theme compliance:**
+- `ThemeSettingsPanel` PresetCard: replaced `material3.Card` with `AvanueCard` (P0 mandatory rule)
+
+**Performance:**
+- `NeumorphicModifier`: hoisted `Paint()` out of `drawIntoCanvas` lambda — reused across 8 blur passes
+
+**Other:**
+- `CockpitScreen` uses `LoggerFactory.getLogger()` with lazy lambdas instead of `android.util.Log`
+
+See fix doc: `docs/fixes/Cockpit/Cockpit-Fix-DeferredReviewItems-260224-V1.md`
+
+### 260224 — CommandBar Module Wiring
+
+Wired NOTE_ACTIONS, CAMERA_ACTIONS, and new WHITEBOARD_ACTIONS to their module composables via `ModuleCommandCallbacks`:
+
+- **NOTE_ACTIONS:** 7 chips (Bold, Italic, Underline, Strikethrough, Undo, Redo, Save) dispatched through `noteExecutor` → `executeNoteCommand()` in NoteAvanue. Custom `RichTextUndoManager` provides snapshot-based undo/redo for compose-rich-editor RC13.
+- **CAMERA_ACTIONS:** 2 chips (Flip, Capture) dispatched through `cameraExecutor` → PhotoAvanue.
+- **WHITEBOARD_ACTIONS:** 6 chips (Pen, Highlight, Eraser, Undo, Redo, Clear) dispatched through `annotationExecutor` → AnnotationAvanue.
+- `forContentType()` restored: `note/voice_note` → `NOTE_ACTIONS`, `camera` → `CAMERA_ACTIONS`, `whiteboard` → `WHITEBOARD_ACTIONS`.
+- `ContentAction` enum expanded with 10 new values (NOTE_BOLD/ITALIC/UNDERLINE/STRIKETHROUGH/SAVE + WB_PEN/HIGHLIGHTER/ERASER/UNDO/REDO/CLEAR).
+
+See plan: `docs/plans/Cockpit/Cockpit-Plan-CommandBarModuleWiring-260224-V1.md`
+
+### 260224 — VideoPlayer Empty URI Crash Fix
+
+Two-layer defense against `ExoPlaybackException: FileDataSource$FileDataSourceException: ENOENT` caused by `FrameContent.Video()` defaulting `uri = ""`:
+
+- **Layer 1 (ContentRenderer):** `is FrameContent.Video` branch now checks `content.uri.isBlank()`. Blank URI shows `VideoGalleryScreen` (MediaStore picker) instead of `VideoPlayer`. On video selection, `onContentStateChanged` updates the frame's URI and the composable recomposes to show the player. Parallels the existing Web guard (`url.ifBlank { "about:blank" }` at line 398).
+- **Layer 2 (VideoPlayer):** Belt-and-suspenders early-return guard at the top of `VideoPlayer` composable. Blank URI shows a centered placeholder (VideoLibrary icon + "No video selected") and returns before `ExoPlayer.Builder` is ever called. Protects against any future caller that bypasses ContentRenderer.
+
+See fix doc: `docs/fixes/videoavanue/VideoAvanue-Fix-ExoPlayerEmptyUriCrash-260224-V1.md`
+
+### 260224 — Speech Engine Metrics Dashboard Card
+
+New `SpeechPerformanceCard` composable (commonMain) displays live speech engine metrics on the Dashboard:
+
+- **DashboardState:** Added `@Transient speechMetrics: SpeechMetricsSnapshot?` field (not serialized — runtime-only metrics)
+- **CockpitViewModel:** New `_speechMetrics` StateFlow combined into `dashboardState` via `combine(_sessions, _activeSession, _speechMetrics)`. Platform bridges call `updateSpeechMetrics(snapshot)` to push data from `WhisperEngine.metricsSnapshot` or `GoogleCloudEngine.metricsSnapshot`
+- **DashboardLayout:** Full-width `SpeechPerformanceCard` in a "Speech Engine" section, shown only when `speechMetrics != null`
+- **SpeechPerformanceCard:** Compact card with engine name, model size, health dot (GOOD/WARNING/CRITICAL/IDLE), and 6 metrics (latency, RTF, confidence, success rate, total transcriptions, language). Uses `AvanueCard` + `AvanueTheme.colors`. AVID voice identifier on card root
+- **Dependency:** Cockpit `build.gradle.kts` now depends on SpeechRecognition module (commonMain)
+
+See Chapter 102 for `SpeechMetricsSnapshot` model and engine-side metrics collection.
+
+### 260222 — ContentRenderer Import Fix
+`ContentRenderer.kt` imports `CameraPreview` for the `FrameContent.Camera` content type. The import was corrected from the non-existent `com.augmentalis.cameraavanue` package to `com.augmentalis.photoavanue.CameraPreview`, which is the actual composable in the PhotoAvanue module (Chapter 98). The orphaned CameraAvanue module has been deleted — PhotoAvanue is the canonical camera module.
+
+### 260222 — Build Dependency Fixes
+- **BouncyCastle conflict:** `pdfbox-android:2.0.27.0` (in RAG module) transitively pulled `bcprov-jdk15to18:1.72`, conflicting with JSch's `bcprov-jdk18on:1.78.1`. Resolved by excluding the older `jdk15to18` artifacts from pdfbox-android.
+- **META-INF merge:** Wildcard `META-INF/versions/*/OSGI-INF/MANIFEST.MF` exclusion added to app packaging to handle JSch/BouncyCastle resource conflicts.
+
+---
+
+## 13. Related Documentation
 
 | Document | Location |
 |----------|---------|
@@ -676,6 +796,7 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 | Multi-Pane + Traffic Lights Plan | `Docs/Plans/Cockpit/Cockpit-Plan-MultiPaneWorkflowTrafficLights-260217-V1.md` |
 | Pending Work Items Plan | `Docs/Plans/Cockpit/Cockpit-Plan-PendingWorkItems-260217-V1.md` |
 | ActivityEmbedding Research | `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdPartyApps-260217-V1.md` |
+| Deferred Review Fixes | `docs/fixes/Cockpit/Cockpit-Fix-DeferredReviewItems-260224-V1.md` |
 | IMU Cursor Fix | `Docs/fixes/VoiceOSCore/VoiceOSCore-Fix-CursorIMUHeadTrackingRegression-260217-V1.md` |
 | AvanueUI Theme v5.1 | Chapter 91-92 (`Docs/MasterDocs/AvanueUI/`) |
 | Voice Enablement | Chapter 94 (`Docs/MasterDocs/NewAvanues-Developer-Manual/`) |
@@ -686,4 +807,4 @@ See full analysis: `Docs/Analysis/Cockpit/Cockpit-Analysis-ActivityEmbedding3rdP
 ---
 
 *Cockpit SpatialVoice Multi-Window System — Chapter 97*
-*NewAvanues Developer Manual — Updated 260217 (Traffic Lights, Multi-Pane Workflow, ExternalApp)*
+*NewAvanues Developer Manual — Updated 260224 (CockpitScreenState, updateFrame DRY, content actions, security hardening)*

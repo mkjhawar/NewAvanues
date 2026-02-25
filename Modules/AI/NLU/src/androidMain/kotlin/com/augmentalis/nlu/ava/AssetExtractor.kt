@@ -1,8 +1,10 @@
 package com.augmentalis.nlu.ava
 
 import android.content.Context
-import android.util.Log
 import com.augmentalis.ava.core.common.AVAException
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
 import java.io.File
 import java.io.FileOutputStream
 
@@ -67,11 +69,11 @@ class AssetExtractor(private val context: Context) {
      */
     suspend fun extractIfNeeded(): Boolean {
         if (isAlreadyExtracted()) {
-            Log.i(TAG, "Assets already extracted, skipping")
+            nluLogInfo(TAG, "Assets already extracted, skipping")
             return false
         }
 
-        Log.i(TAG, "Starting asset extraction...")
+        nluLogInfo(TAG, "Starting asset extraction...")
 
         try {
             // Create directory structure
@@ -86,10 +88,10 @@ class AssetExtractor(private val context: Context) {
             // Mark as extracted
             markAsExtracted()
 
-            Log.i(TAG, "Asset extraction complete")
+            nluLogInfo(TAG, "Asset extraction complete")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Asset extraction failed: ${e.message}", e)
+            nluLogError(TAG, "Asset extraction failed: ${e.message}", e)
             throw e
         }
     }
@@ -98,7 +100,7 @@ class AssetExtractor(private val context: Context) {
      * Force re-extraction (useful for testing or updates)
      */
     suspend fun forceExtraction() {
-        Log.i(TAG, "Force extraction requested")
+        nluLogInfo(TAG, "Force extraction requested")
         clearExtractionFlag()
         extractIfNeeded()
     }
@@ -119,7 +121,7 @@ class AssetExtractor(private val context: Context) {
      * Create directory structure on device storage
      */
     private fun createDirectoryStructure() {
-        Log.d(TAG, "Creating directory structure at: $storageBase")
+        nluLogDebug(TAG, "Creating directory structure at: $storageBase")
 
         val directories = listOf(
             storageBase,
@@ -136,12 +138,12 @@ class AssetExtractor(private val context: Context) {
             if (!dir.exists()) {
                 val created = dir.mkdirs()
                 if (created) {
-                    Log.d(TAG, "Created directory: $path")
+                    nluLogDebug(TAG, "Created directory: $path")
                 } else {
                     throw AVAException.ResourceNotFoundException("Failed to create directory: $path")
                 }
             } else {
-                Log.d(TAG, "Directory already exists: $path")
+                nluLogDebug(TAG, "Directory already exists: $path")
             }
         }
     }
@@ -150,7 +152,7 @@ class AssetExtractor(private val context: Context) {
      * Extract manifest.json from assets
      */
     private fun extractManifest() {
-        Log.d(TAG, "Extracting manifest.json...")
+        nluLogDebug(TAG, "Extracting manifest.json...")
 
         val manifestJson = """
             {
@@ -174,14 +176,14 @@ class AssetExtractor(private val context: Context) {
         val manifestFile = File("$corePath/manifest.json")
         manifestFile.writeText(manifestJson)
 
-        Log.i(TAG, "Manifest extracted to: ${manifestFile.absolutePath}")
+        nluLogInfo(TAG, "Manifest extracted to: ${manifestFile.absolutePath}")
     }
 
     /**
      * Extract .ava files from assets to device storage
      */
     private fun extractAvaFiles() {
-        Log.d(TAG, "Extracting .ava files...")
+        nluLogDebug(TAG, "Extracting .ava files...")
 
         val locale = "en-US"
         val avaFiles = listOf(
@@ -204,14 +206,14 @@ class AssetExtractor(private val context: Context) {
                 extractAsset(assetPath, targetPath)
                 extractedCount++
 
-                Log.d(TAG, "Extracted: $fileName")
+                nluLogDebug(TAG, "Extracted: $fileName")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to extract $fileName: ${e.message}", e)
+                nluLogError(TAG, "Failed to extract $fileName: ${e.message}", e)
                 throw e
             }
         }
 
-        Log.i(TAG, "Extracted $extractedCount .ava files to $corePath/$locale/")
+        nluLogInfo(TAG, "Extracted $extractedCount .ava files to $corePath/$locale/")
     }
 
     /**
@@ -230,7 +232,7 @@ class AssetExtractor(private val context: Context) {
      */
     private fun markAsExtracted() {
         prefs.edit().putBoolean(PREF_KEY_EXTRACTED, true).apply()
-        Log.d(TAG, "Marked assets as extracted")
+        nluLogDebug(TAG, "Marked assets as extracted")
     }
 
     /**
@@ -238,7 +240,7 @@ class AssetExtractor(private val context: Context) {
      */
     private fun clearExtractionFlag() {
         prefs.edit().putBoolean(PREF_KEY_EXTRACTED, false).apply()
-        Log.d(TAG, "Cleared extraction flag")
+        nluLogDebug(TAG, "Cleared extraction flag")
     }
 
     /**

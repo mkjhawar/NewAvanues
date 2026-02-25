@@ -12,7 +12,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.voicerecognition"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.augmentalis.voicerecognition"

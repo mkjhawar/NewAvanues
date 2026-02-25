@@ -21,28 +21,20 @@ plugins {
 kotlin {
     // Android Target
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
-    // iOS Targets - only compiled when explicitly requested
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        iosX64()
-        iosArm64()
-        iosSimulatorArm64()
-    }
+    // iOS Targets
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
     // Desktop/JVM Target
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -144,7 +136,7 @@ kotlin {
                 implementation(libs.androidx.activity.compose)
 
                 // Compose
-                implementation(platform(libs.compose.bom.get()))
+                implementation(project.dependencies.platform(libs.compose.bom))
                 implementation(libs.compose.ui.ui)
                 implementation(libs.compose.material3)
                 implementation(libs.compose.runtime.livedata)
@@ -197,32 +189,28 @@ kotlin {
         // ============================================================
         // iOS source sets
         // ============================================================
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
-            val iosMain by creating {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-                dependencies {
-                    implementation(libs.sqldelight.native.driver)
-                    implementation(project(":Modules:AI:NLU"))
-                }
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                implementation(libs.sqldelight.native.driver)
+                implementation(project(":Modules:AI:NLU"))
             }
+        }
 
-            val iosX64Test by getting
-            val iosArm64Test by getting
-            val iosSimulatorArm64Test by getting
-            val iosTest by creating {
-                dependsOn(commonTest)
-                iosX64Test.dependsOn(this)
-                iosArm64Test.dependsOn(this)
-                iosSimulatorArm64Test.dependsOn(this)
-            }
+        val iosX64Test by getting
+        val iosArm64Test by getting
+        val iosSimulatorArm64Test by getting
+        val iosTest by creating {
+            dependsOn(commonTest)
+            iosX64Test.dependsOn(this)
+            iosArm64Test.dependsOn(this)
+            iosSimulatorArm64Test.dependsOn(this)
         }
 
         // ============================================================
@@ -248,7 +236,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 29  // Must match Localization/VoiceOSCore/WebAvanue dependencies (minSdk 29)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -277,8 +265,8 @@ sqldelight {
     }
 }
 
-// Dokka Configuration
-tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+// Dokka v2 Configuration
+dokka {
     moduleName.set("VoiceAvanue")
     moduleVersion.set("1.0.0-alpha")
 }

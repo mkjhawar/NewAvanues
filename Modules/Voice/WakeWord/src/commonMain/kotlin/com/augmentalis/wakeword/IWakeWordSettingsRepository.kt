@@ -1,6 +1,5 @@
 // filename: Modules/AVA/WakeWord/src/commonMain/kotlin/com/augmentalis/ava/features/wakeword/IWakeWordSettingsRepository.kt
 // created: 2025-12-17
-// author: Claude Code
 // © Augmentalis Inc, Intelligent Devices LLC
 
 package com.augmentalis.wakeword

@@ -135,7 +135,7 @@ class IPCBridge {
      */
     fun registerWithIPCBus(): Boolean {
         // TODO: Register with IDEAMagic IPC Bus
-        // AVAMagicIPCBus.registerModule("browseravanue", this)
+        // AvanueIPCBus.registerModule("browseravanue", this)
         return true
     }
 
@@ -146,7 +146,7 @@ class IPCBridge {
      */
     fun unregisterFromIPCBus() {
         // TODO: Unregister from IDEAMagic IPC Bus
-        // AVAMagicIPCBus.unregisterModule("browseravanue")
+        // AvanueIPCBus.unregisterModule("browseravanue")
     }
 }
 
@@ -334,7 +334,7 @@ suspend fun IPCBridge.handleOpenUrl(url: String, onOpenUrl: suspend (String) -> 
  *
  * // After (IDEAMagic)
  * suspend fun sendToVoiceOS(message: IPCMessage) {
- *     AVAMagicIPCBus.send(
+ *     AvanueIPCBus.send(
  *         target = "voiceos",
  *         message = message.serialize()
  *     )

@@ -1,7 +1,7 @@
 package com.augmentalis.httpavanue.http2
 
-import okio.BufferedSink
-import okio.BufferedSource
+import com.augmentalis.httpavanue.io.AvanueSource
+import com.augmentalis.httpavanue.io.AvanueSink
 
 /**
  * HTTP/2 frame types (RFC 7540 Section 6)
@@ -59,7 +59,7 @@ object Http2FrameCodec {
     val CONNECTION_PREFACE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".encodeToByteArray()
 
     /** Read one HTTP/2 frame from the source */
-    fun readFrame(source: BufferedSource, maxFrameSize: Int = DEFAULT_MAX_FRAME_SIZE): Http2Frame {
+    fun readFrame(source: AvanueSource, maxFrameSize: Int = DEFAULT_MAX_FRAME_SIZE): Http2Frame {
         // Read 9-byte header
         val header = source.readByteArray(FRAME_HEADER_SIZE.toLong())
         val length = ((header[0].toInt() and 0xFF) shl 16) or
@@ -82,7 +82,7 @@ object Http2FrameCodec {
     }
 
     /** Write one HTTP/2 frame to the sink */
-    fun writeFrame(sink: BufferedSink, type: Http2FrameType, flags: Int, streamId: Int, payload: ByteArray = byteArrayOf()) {
+    fun writeFrame(sink: AvanueSink, type: Http2FrameType, flags: Int, streamId: Int, payload: ByteArray = byteArrayOf()) {
         val length = payload.size
         require(length <= MAX_MAX_FRAME_SIZE) { "Payload too large: $length" }
 
@@ -99,14 +99,14 @@ object Http2FrameCodec {
     }
 
     /** Write SETTINGS frame */
-    fun writeSettings(sink: BufferedSink, settings: Http2Settings, ack: Boolean = false) {
+    fun writeSettings(sink: AvanueSink, settings: Http2Settings, ack: Boolean = false) {
         val payload = if (ack) byteArrayOf() else Http2Settings.encode(settings)
         val flags = if (ack) Http2Flags.ACK else 0
         writeFrame(sink, Http2FrameType.SETTINGS, flags, 0, payload)
     }
 
     /** Write GOAWAY frame */
-    fun writeGoaway(sink: BufferedSink, lastStreamId: Int, errorCode: Http2ErrorCode, debugData: ByteArray = byteArrayOf()) {
+    fun writeGoaway(sink: AvanueSink, lastStreamId: Int, errorCode: Http2ErrorCode, debugData: ByteArray = byteArrayOf()) {
         val payload = ByteArray(8 + debugData.size)
         payload[0] = (lastStreamId shr 24).toByte()
         payload[1] = (lastStreamId shr 16).toByte()
@@ -122,13 +122,13 @@ object Http2FrameCodec {
     }
 
     /** Write PING frame */
-    fun writePing(sink: BufferedSink, ack: Boolean = false, opaqueData: ByteArray = ByteArray(8)) {
+    fun writePing(sink: AvanueSink, ack: Boolean = false, opaqueData: ByteArray = ByteArray(8)) {
         require(opaqueData.size == 8) { "PING payload must be 8 bytes" }
         writeFrame(sink, Http2FrameType.PING, if (ack) Http2Flags.ACK else 0, 0, opaqueData)
     }
 
     /** Write WINDOW_UPDATE frame */
-    fun writeWindowUpdate(sink: BufferedSink, streamId: Int, windowSizeIncrement: Int) {
+    fun writeWindowUpdate(sink: AvanueSink, streamId: Int, windowSizeIncrement: Int) {
         require(windowSizeIncrement > 0) { "Window size increment must be positive" }
         val payload = ByteArray(4)
         payload[0] = (windowSizeIncrement shr 24).toByte()
@@ -139,19 +139,19 @@ object Http2FrameCodec {
     }
 
     /** Write RST_STREAM frame */
-    fun writeRstStream(sink: BufferedSink, streamId: Int, errorCode: Http2ErrorCode) {
+    fun writeRstStream(sink: AvanueSink, streamId: Int, errorCode: Http2ErrorCode) {
         val code = errorCode.code.toInt()
         val payload = byteArrayOf((code shr 24).toByte(), (code shr 16).toByte(), (code shr 8).toByte(), code.toByte())
         writeFrame(sink, Http2FrameType.RST_STREAM, 0, streamId, payload)
     }
 
     /** Write DATA frame */
-    fun writeData(sink: BufferedSink, streamId: Int, data: ByteArray, endStream: Boolean = false) {
+    fun writeData(sink: AvanueSink, streamId: Int, data: ByteArray, endStream: Boolean = false) {
         writeFrame(sink, Http2FrameType.DATA, if (endStream) Http2Flags.END_STREAM else 0, streamId, data)
     }
 
     /** Write HEADERS frame */
-    fun writeHeaders(sink: BufferedSink, streamId: Int, headerBlock: ByteArray, endStream: Boolean = false, endHeaders: Boolean = true) {
+    fun writeHeaders(sink: AvanueSink, streamId: Int, headerBlock: ByteArray, endStream: Boolean = false, endHeaders: Boolean = true) {
         var flags = 0
         if (endStream) flags = flags or Http2Flags.END_STREAM
         if (endHeaders) flags = flags or Http2Flags.END_HEADERS

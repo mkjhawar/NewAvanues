@@ -2,7 +2,6 @@
  * GlassmorphismUtils.kt - Glassmorphism UI utilities for VosDataManager
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * 
  * Provides glassmorphism visual effects for data management UI

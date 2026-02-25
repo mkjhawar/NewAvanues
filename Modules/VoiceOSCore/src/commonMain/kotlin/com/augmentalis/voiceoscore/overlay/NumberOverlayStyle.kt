@@ -3,7 +3,6 @@
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: VoiceOSCoreNG Development Team
- * Code-Reviewed-By: CCA
  * Created: 2026-01-06
  *
  * Ported from VoiceOS VoiceOSCore module to KMP-compatible implementation.

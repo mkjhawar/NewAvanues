@@ -14,6 +14,7 @@ class AudioEffects {
     
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
+    @Suppress("DEPRECATION") // Virtualizer deprecated in API 35 with no replacement
     private var virtualizer: Virtualizer? = null
     private var reverb: EnvironmentalReverb? = null
     
@@ -72,6 +73,7 @@ class AudioEffects {
     /**
      * Configure virtualizer for spatial widening
      */
+    @Suppress("DEPRECATION") // Virtualizer deprecated in API 35 with no replacement
     fun configureVirtualizer(audioSessionId: Int, strength: Int = 500): Boolean {
         return try {
             virtualizer?.release()
@@ -210,6 +212,7 @@ class AudioEffects {
     /**
      * Get current effect status
      */
+    @Suppress("DEPRECATION") // Virtualizer.roundedStrength deprecated in API 35
     fun getStatus(): EffectConfig {
         return EffectConfig(
             bassBoostStrength = bassBoost?.roundedStrength?.toInt() ?: 0,

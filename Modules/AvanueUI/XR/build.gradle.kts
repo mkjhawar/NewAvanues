@@ -34,5 +34,5 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.avamagic.xr"
+    namespace = "com.augmentalis.avanueui.xr"
 }

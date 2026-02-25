@@ -2,8 +2,6 @@
  * OverlayManager.kt - Centralized overlay management system
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2026-01-06
  *
  * KMP-compatible centralized manager for all accessibility overlays.

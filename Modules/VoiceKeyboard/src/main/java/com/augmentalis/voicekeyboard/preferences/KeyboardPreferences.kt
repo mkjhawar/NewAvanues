@@ -2,7 +2,6 @@
  * KeyboardPreferences.kt - Keyboard preferences management
  * 
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-09-07
  */
 package com.augmentalis.voicekeyboard.preferences

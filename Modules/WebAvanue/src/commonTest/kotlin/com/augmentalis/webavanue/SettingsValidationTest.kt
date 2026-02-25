@@ -36,16 +36,16 @@ class SettingsValidationTest {
 
     // ========== Test 2: Scale clamping - value too high ==========
     @Test
-    fun `validate clamps initialScale above maximum to 2_0`() {
+    fun `validate clamps mobilePortraitScale above maximum to 2_0`() {
         // Given - Initial scale of 3.0 exceeds maximum of 2.0
-        val settings = BrowserSettings(initialScale = 3.0f)
+        val settings = BrowserSettings(mobilePortraitScale = 3.0f)
 
         // When
         val result = SettingsValidation.validate(settings)
 
         // Then
         assertTrue(result.isValid)
-        assertEquals(2.0f, result.correctedSettings.initialScale)
+        assertEquals(2.0f, result.correctedSettings.mobilePortraitScale)
         assertTrue(result.warnings.any { it.contains("3.0") && it.contains("2.0") })
     }
 
@@ -68,14 +68,14 @@ class SettingsValidationTest {
     @Test
     fun `validate clamps zero scale to minimum 0_5`() {
         // Given - Zero scale is invalid
-        val settings = BrowserSettings(initialScale = 0.0f)
+        val settings = BrowserSettings(mobilePortraitScale = 0.0f)
 
         // When
         val result = SettingsValidation.validate(settings)
 
         // Then
         assertTrue(result.isValid)
-        assertEquals(0.5f, result.correctedSettings.initialScale)
+        assertEquals(0.5f, result.correctedSettings.mobilePortraitScale)
         assertTrue(result.warnings.any { it.contains("0.0") && it.contains("0.5") })
     }
 
@@ -83,7 +83,8 @@ class SettingsValidationTest {
     @Test
     fun `validate passes valid zoom unchanged`() {
         // Given - Zoom of 125 is valid (within 50-200)
-        val settings = BrowserSettings(desktopModeDefaultZoom = 125)
+        // Explicitly set mobilePortraitScale to a valid value (default 0f is below min 0.5f)
+        val settings = BrowserSettings(desktopModeDefaultZoom = 125, mobilePortraitScale = 1.0f)
 
         // When
         val result = SettingsValidation.validate(settings)
@@ -203,7 +204,7 @@ class SettingsValidationTest {
         assertTrue(zoomError.contains("50") && zoomError.contains("200"))
 
         // Test invalid scale
-        val scaleError = SettingsValidation.getErrorMessage("initialScale", 3.0f)
+        val scaleError = SettingsValidation.getErrorMessage("mobilePortraitScale", 3.0f)
         assertNotNull(scaleError)
         assertTrue(scaleError.contains("0.5") && scaleError.contains("2.0"))
 
@@ -275,7 +276,7 @@ class SettingsValidationTest {
         // Given - Multiple invalid settings
         val settings = BrowserSettings(
             desktopModeDefaultZoom = 500,  // Too high
-            initialScale = -1.0f,          // Too low
+            mobilePortraitScale = -1.0f,          // Too low
             enableWebXR = true,
             enableJavaScript = false,      // Conflict with WebXR
             enableAR = true,
@@ -290,7 +291,7 @@ class SettingsValidationTest {
         // Then
         assertFalse(result.isValid) // Has errors (WebXR requires JavaScript)
         assertEquals(200, result.correctedSettings.desktopModeDefaultZoom) // Clamped
-        assertEquals(0.5f, result.correctedSettings.initialScale)         // Clamped
+        assertEquals(0.5f, result.correctedSettings.mobilePortraitScale)         // Clamped
         assertTrue(result.correctedSettings.enableWebXR)                  // Auto-enabled
         assertTrue(result.correctedSettings.enableJavaScript)             // Auto-enabled
         assertTrue(result.warnings.size >= 3)  // Multiple warnings

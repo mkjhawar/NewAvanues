@@ -1,6 +1,6 @@
-package com.augmentalis.avamagic.components.display
+package com.augmentalis.avanueui.display
 
-import com.augmentalis.avamagic.components.core.Color
+import com.augmentalis.avanueui.core.Color
 import kotlinx.serialization.Serializable
 
 /**

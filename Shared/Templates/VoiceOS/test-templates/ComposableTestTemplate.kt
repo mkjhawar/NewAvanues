@@ -2,7 +2,6 @@
  * ComposableTestTemplate.kt - Advanced Compose UI testing template
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: {{DATE}}
  * 
  * Comprehensive Compose UI testing with interactions, accessibility, and visual regression

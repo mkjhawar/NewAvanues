@@ -2,7 +2,6 @@
  * SpeechMode.kt - Recognition modes for speech processing
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-05
  *
  * KMP migration of VoiceOSCore SpeechMode enum.
@@ -66,6 +65,15 @@ enum class SpeechMode {
     FREE_SPEECH,
 
     /**
+     * Muted mode - voice muted, wake commands only
+     * - Engine stays alive with restricted grammar
+     * - Only recognizes wake/unmute commands
+     * - All other speech is ignored
+     * - Best for: Temporary silence without losing wake-word capability
+     */
+    MUTED,
+
+    /**
      * Hybrid mode - Vivoka-specific mode
      * - Switches between online/offline automatically
      * - Best quality based on connectivity
@@ -109,6 +117,7 @@ enum class SpeechMode {
         COMBINED_COMMAND -> 0.75f  // Balanced for combined
         DICTATION -> 0.6f          // Lower for continuous speech
         FREE_SPEECH -> 0.5f        // Lowest for unrestricted
+        MUTED -> 0.85f             // High confidence — only wake commands should pass
         HYBRID -> 0.7f             // Medium confidence for hybrid
     }
 
@@ -121,6 +130,7 @@ enum class SpeechMode {
         COMBINED_COMMAND -> "Static + dynamic commands"
         DICTATION -> "Continuous speech input"
         FREE_SPEECH -> "Unrestricted speech"
+        MUTED -> "Voice muted — wake commands only"
         HYBRID -> "Auto online/offline switching"
     }
 
@@ -133,6 +143,7 @@ enum class SpeechMode {
         COMBINED_COMMAND -> GrammarType.RESTRICTED
         DICTATION -> GrammarType.OPEN
         FREE_SPEECH -> GrammarType.OPEN
+        MUTED -> GrammarType.RESTRICTED
         HYBRID -> GrammarType.ADAPTIVE
     }
 

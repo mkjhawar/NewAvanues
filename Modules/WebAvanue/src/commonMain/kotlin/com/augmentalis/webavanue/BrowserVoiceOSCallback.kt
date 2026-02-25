@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 
 /**
  * VoiceOS callback implementation for WebAvanue browser.
@@ -84,6 +85,13 @@ class BrowserVoiceOSCallback(
     private val commandGenerator = VoiceCommandGenerator()
     private val commandGeneratorLock = Any()
 
+    // Stores the filtered match list from the most recent disambiguation prompt.
+    // Indexed by selectDisambiguationOption() so that user selection "1" maps to
+    // the first candidate in the disambiguation list, NOT to the first command in
+    // the full 500+ command list. Cleared after the user picks or cancels.
+    @Volatile
+    private var lastDisambiguationMatches: List<VoiceCommandGenerator.MatchResult> = emptyList()
+
     // JavaScript executor for web command execution (set by platform layer)
     @Volatile
     private var jsExecutor: IJavaScriptExecutor? = null
@@ -127,7 +135,7 @@ class BrowserVoiceOSCallback(
     private val sessionCache = mutableMapOf<String, CachedPage>()
 
     override fun onDOMScraped(result: DOMScrapeResult) {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val urlHash = computeUrlHash(result.url)
 
         // Cooldown + hash guard: if last scrape was < 2 seconds ago AND
@@ -191,7 +199,7 @@ class BrowserVoiceOSCallback(
             phrases = phrases,
             elementCount = result.elementCount,
             commandCount = count,
-            cachedAt = System.currentTimeMillis()
+            cachedAt = Clock.System.now().toEpochMilliseconds()
         )
         evictSessionCacheIfNeeded()
 
@@ -247,7 +255,7 @@ class BrowserVoiceOSCallback(
                 isWhitelisted = _isWhitelistedDomain.value
             )
 
-            println("VoiceOS: Session cache HIT for $url ($count commands, cached ${(System.currentTimeMillis() - cached.cachedAt) / 1000}s ago)")
+            println("VoiceOS: Session cache HIT for $url ($count commands, cached ${(Clock.System.now().toEpochMilliseconds() - cached.cachedAt) / 1000}s ago)")
 
             // Auto-clear the "from cache" indicator after a short delay
             scope.launch {
@@ -303,7 +311,7 @@ class BrowserVoiceOSCallback(
         if (_isWhitelistedDomain.value && whitelistRepository != null) {
             scope.launch {
                 val domain = _currentDomain.value
-                whitelistRepository.recordVisit(domain, System.currentTimeMillis())
+                whitelistRepository.recordVisit(domain, Clock.System.now().toEpochMilliseconds())
             }
         }
 
@@ -327,7 +335,7 @@ class BrowserVoiceOSCallback(
             webCommandRepository.incrementUsageByHash(
                 command.vosId,
                 domain,
-                System.currentTimeMillis()
+                Clock.System.now().toEpochMilliseconds()
             )
         }
 
@@ -421,7 +429,7 @@ class BrowserVoiceOSCallback(
 
         val domain = _currentDomain.value
         val url = result.url
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
 
         // Get URL pattern (path without query params)
         val urlPattern = extractUrlPattern(url)
@@ -468,7 +476,7 @@ class BrowserVoiceOSCallback(
      */
     private suspend fun persistWebsiteToDb(result: DOMScrapeResult, urlHash: String, commandCount: Int) {
         val repo = scrapedWebsiteRepository ?: return
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
         val existing = repo.getByUrlHash(urlHash)
 
         if (existing != null) {
@@ -519,7 +527,7 @@ class BrowserVoiceOSCallback(
 
         // Restore phrases from DB — these are interim until the fresh scrape arrives
         val phrases = savedCommands.map { it.commandText }
-        websiteRepo.updateAccessMetadata(urlHash, System.currentTimeMillis(), website.accessCount + 1)
+        websiteRepo.updateAccessMetadata(urlHash, Clock.System.now().toEpochMilliseconds(), website.accessCount + 1)
 
         _commandCount.value = savedCommands.size
         _activeWebPhrases.value = phrases
@@ -733,8 +741,12 @@ class BrowserVoiceOSCallback(
                 executeCommand(matches[0].command)
             }
             else -> {
-                // Multiple matches - need disambiguation
-                val options = matches.take(5).mapIndexed { index, match ->
+                // Multiple matches - need disambiguation.
+                // Save the trimmed candidate list so selectDisambiguationOption()
+                // can index into it instead of the full command list.
+                val candidates = matches.take(5)
+                lastDisambiguationMatches = candidates
+                val options = candidates.mapIndexed { index, match ->
                     DisambiguationOption(
                         index = index + 1,
                         text = match.command.fullText,
@@ -760,11 +772,15 @@ class BrowserVoiceOSCallback(
 
     /**
      * Select a disambiguation option and execute it.
+     *
+     * [index] is 1-based and refers to the candidate list shown in the most recent
+     * disambiguation prompt (up to 5 entries), NOT to the full command list.
      */
     suspend fun selectDisambiguationOption(index: Int) {
-        val matches = getAllCommands()
-        if (index in 1..matches.size) {
-            val command = matches[index - 1]
+        val candidates = lastDisambiguationMatches
+        if (index in 1..candidates.size) {
+            val command = candidates[index - 1].command
+            lastDisambiguationMatches = emptyList()
             executeCommand(command)
         }
     }

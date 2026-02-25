@@ -13,9 +13,14 @@ package com.augmentalis.speechrecognition.whisper
 
 import com.augmentalis.speechrecognition.logError
 import com.augmentalis.speechrecognition.logInfo
+import kotlin.concurrent.Volatile
+import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.COpaque
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.toCPointer
+import kotlinx.cinterop.toLong
 import kotlinx.cinterop.toKString
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
@@ -96,7 +101,7 @@ object IosWhisperNative {
         synchronized(lock) {
             try {
                 com.augmentalis.speechrecognition.native.whisper.whisper_bridge_free(
-                    contextPtr.toCPointer()
+                    contextPtr.toNativePtr()
                 )
             } catch (e: Exception) {
                 logError(TAG, "freeContext failed: ${e.message}")
@@ -135,7 +140,7 @@ object IosWhisperNative {
 
         return synchronized(lock) {
             memScoped {
-                val nativePtr = contextPtr.toCPointer()
+                val nativePtr = contextPtr.toNativePtr()
 
                 // Pin the float array and pass to native
                 val samplesPtr = allocArrayOf(*audioData)
@@ -203,7 +208,7 @@ object IosWhisperNative {
      * Get average token probability for a segment as confidence [0,1].
      * Called from within synchronized block — no lock needed.
      */
-    private fun getSegmentConfidenceUnsafe(contextPtr: Any?, segmentIndex: Int): Float {
+    private fun getSegmentConfidenceUnsafe(contextPtr: COpaquePointer?, segmentIndex: Int): Float {
         return try {
             val tokenCount = com.augmentalis.speechrecognition.native.whisper.whisper_bridge_segment_token_count(contextPtr, segmentIndex)
             if (tokenCount <= 0) return CONFIDENCE_UNAVAILABLE
@@ -219,12 +224,10 @@ object IosWhisperNative {
 
     /**
      * Convert Long back to opaque C pointer for cinterop calls.
+     * Uses kotlinx.cinterop.toCPointer extension (Long → CPointer<COpaque>?).
      */
-    private fun Long.toCPointer(): Any? {
-        // In Kotlin/Native, the cinterop COpaquePointer is used.
-        // The actual bridging depends on how cinterop generates the type.
-        // For void*, cinterop generates kotlinx.cinterop.COpaquePointer?
-        @Suppress("UNCHECKED_CAST")
-        return interpretCPointer<kotlinx.cinterop.COpaque>(this) as Any?
+    private fun Long.toNativePtr(): COpaquePointer? {
+        if (this == 0L) return null
+        return this.toCPointer<COpaque>()
     }
 }

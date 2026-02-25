@@ -3,7 +3,6 @@
  * Path: libraries/AvidManager/src/main/java/com/ai/uuidmgr/compose/ComposeExtensions.kt
  * 
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2024-08-20
  * 
  * Jetpack Compose modifier extensions for UUID management

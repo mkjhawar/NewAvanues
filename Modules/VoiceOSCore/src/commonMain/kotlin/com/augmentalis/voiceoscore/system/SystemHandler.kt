@@ -2,7 +2,6 @@
  * SystemHandler.kt - Handles system-level actions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-06
  *
  * KMP handler for system-level actions (back, home, recents, etc.).

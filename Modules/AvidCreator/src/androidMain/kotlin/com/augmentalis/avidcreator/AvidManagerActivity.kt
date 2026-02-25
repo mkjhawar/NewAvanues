@@ -4,7 +4,6 @@
  * Comprehensive interface for UUID registry management, element navigation,
  * and voice command processing
  * 
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  */
 package com.augmentalis.avidcreator.ui

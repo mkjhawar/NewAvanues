@@ -11,8 +11,10 @@
 package com.augmentalis.nlu.embedding
 
 import android.content.Context
-import android.util.Log
 import com.augmentalis.nlu.matcher.EmbeddingProvider
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogWarn
 import java.io.File
 
 /**
@@ -53,11 +55,11 @@ class OnnxEmbeddingProvider(
             // Load ONNX Runtime session
             // Note: Actual ONNX Runtime initialization requires the library
             // This is a placeholder that will be completed when ONNX Runtime is added
-            Log.d(TAG, "ONNX model loaded: ${modelFile.absolutePath}")
+            nluLogDebug(TAG, "ONNX model loaded: ${modelFile.absolutePath}")
             isLoaded = true
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load ONNX model", e)
+            nluLogError(TAG, "Failed to load ONNX model", e)
             isLoaded = false
             false
         }
@@ -65,7 +67,7 @@ class OnnxEmbeddingProvider(
 
     override fun generateEmbedding(text: String): FloatArray? {
         if (!isLoaded) {
-            Log.w(TAG, "Model not loaded, cannot generate embedding")
+            nluLogWarn(TAG, "Model not loaded, cannot generate embedding")
             return null
         }
 
@@ -83,7 +85,7 @@ class OnnxEmbeddingProvider(
             // This returns a placeholder embedding
             generatePlaceholderEmbedding(text)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to generate embedding", e)
+            nluLogError(TAG, "Failed to generate embedding", e)
             null
         }
     }
