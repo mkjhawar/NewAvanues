@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.voiceui"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 29  // Android 10 (Q) - Compatible with main app
@@ -47,12 +47,12 @@ android {
 
 dependencies {
     // Core Android dependencies
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation(libs.androidx.core.ktx)
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
     
     // Compose dependencies
-    implementation(platform(libs.compose.bom.get()))
+    implementation(platform(libs.compose.bom))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -62,8 +62,8 @@ dependencies {
     implementation("androidx.compose.animation:animation")
     
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.core)
     
     // GPU Acceleration
     implementation("androidx.graphics:graphics-core:1.0.0-alpha05")
@@ -74,7 +74,7 @@ dependencies {
     // implementation("com.google.mlkit:smart-reply:17.0.2")
     
     // State Management
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation(libs.androidx.datastore.preferences)
     implementation("androidx.compose.runtime:runtime-livedata")
     
     // VOS4 Dependencies
@@ -87,10 +87,10 @@ dependencies {
     implementation("androidx.metrics:metrics-performance:1.0.0-alpha04")
     
     // Testing
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.25")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.test)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

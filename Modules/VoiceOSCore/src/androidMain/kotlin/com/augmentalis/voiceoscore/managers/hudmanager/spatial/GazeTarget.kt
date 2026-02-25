@@ -3,7 +3,6 @@
  * Path: /managers/HUDManager/src/main/java/com/augmentalis/hudmanager/spatial/GazeTarget.kt
  * 
  * Created: 2025-09-06
- * Author: VOS4 Development Team
  * Version: 1.0.0
  * 
  * Purpose: Simple gaze target for VoiceAccessibility integration with x, y coordinates

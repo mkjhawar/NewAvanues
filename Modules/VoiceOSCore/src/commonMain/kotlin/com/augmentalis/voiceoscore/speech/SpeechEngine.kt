@@ -2,7 +2,6 @@
  * SpeechEngine.kt - Available speech recognition engines
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-05
  *
  * KMP migration of VoiceOSCore SpeechEngine enum.
@@ -90,7 +89,19 @@ enum class SpeechEngine {
      * - ~60MB memory usage
      * - Platforms: Android only (commercial license)
      */
-    VIVOKA;
+    VIVOKA,
+
+    /**
+     * AVX (AvaVox) - ONNX-based command recognition engine
+     * - Offline capable
+     * - Per-language tuned models (~60-75MB each)
+     * - Hot words boosting for known commands (instant, no grammar compilation)
+     * - N-best hypotheses for better command matching
+     * - 30+ languages supported
+     * - ~70MB memory usage per language
+     * - Platforms: Android, Desktop
+     */
+    AVX;
 
     /**
      * Check if engine is offline capable
@@ -232,6 +243,14 @@ object SpeechEngineRegistry {
             displayName = "Vivoka VSDK",
             memoryUsageMB = 60,
             supportedPlatforms = setOf(Platform.ANDROID)
+        ))
+        register(SpeechEngine.AVX, SpeechEngineCapabilities(
+            isOfflineCapable = true,
+            requiresApiKey = false,
+            requiresCommercialLicense = false,
+            displayName = "AvaVox Command Engine",
+            memoryUsageMB = 70,
+            supportedPlatforms = setOf(Platform.ANDROID, Platform.WINDOWS, Platform.LINUX, Platform.MACOS)
         ))
     }
 

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Avanues Hub: Stylized "A" with connecting nodes (hub/ecosystem symbol) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stylized "A" letter -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M54,24 L34,78 L40,78 L46,62 L62,62 L68,78 L74,78 L54,24 Z M48,56 L54,38 L60,56 Z" />
+    <!-- Hub dots (ecosystem nodes) -->
+    <group>
+        <!-- Top node -->
+        <path
+            android:fillColor="#7DD3FC"
+            android:pathData="M54,18 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+        <!-- Bottom-left node -->
+        <path
+            android:fillColor="#7DD3FC"
+            android:pathData="M30,82 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+        <!-- Bottom-right node -->
+        <path
+            android:fillColor="#7DD3FC"
+            android:pathData="M78,82 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+        <!-- Left node -->
+        <path
+            android:fillColor="#7DD3FC"
+            android:pathData="M26,50 m-2.5,0 a2.5,2.5 0 1,1 5,0 a2.5,2.5 0 1,1 -5,0" />
+        <!-- Right node -->
+        <path
+            android:fillColor="#7DD3FC"
+            android:pathData="M82,50 m-2.5,0 a2.5,2.5 0 1,1 5,0 a2.5,2.5 0 1,1 -5,0" />
+    </group>
+    <!-- Connection lines from A to nodes -->
+    <path
+        android:pathData="M54,24 L54,18 M34,78 L30,82 M74,78 L78,82 M40,50 L26,50 M68,50 L82,50"
+        android:strokeColor="#7DD3FC"
+        android:strokeAlpha="0.5"
+        android:strokeWidth="1"
+        android:fillColor="#00000000" />
+</vector>

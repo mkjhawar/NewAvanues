@@ -2,7 +2,6 @@
  * ActionCategory.kt - Categories of action handlers
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-06
  *
  * Categorizes action handlers for priority-based dispatch.
@@ -94,8 +93,14 @@ enum class ActionCategory {
     COCKPIT,
 
     /**
-     * Camera/photo actions (capture, flash, zoom, switch lens, etc.)
+     * PDF viewing actions (page navigation, zoom, search, etc.)
      * Priority: 14
+     */
+    PDF,
+
+    /**
+     * Camera/photo actions (capture, flash, zoom, switch lens, etc.)
+     * Priority: 15
      */
     CAMERA,
 
@@ -148,6 +153,7 @@ enum class ActionCategory {
             BROWSER,
             NOTE,
             COCKPIT,
+            PDF,
             CAMERA,
             ANNOTATION,
             IMAGE,

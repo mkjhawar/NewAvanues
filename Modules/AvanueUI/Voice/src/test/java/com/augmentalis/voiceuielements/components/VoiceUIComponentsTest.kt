@@ -2,7 +2,6 @@
  * VoiceUIComponentsTest.kt - Simplified unit tests for Voice UI Components
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-28
  * 
  * Tests reusable UI components - Mock implementation for build validation

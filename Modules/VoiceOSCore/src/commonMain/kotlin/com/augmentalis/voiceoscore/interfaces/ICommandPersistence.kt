@@ -2,7 +2,6 @@
  * ICommandPersistence.kt - Platform-agnostic command persistence interface
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-07
  *
  * This interface defines the contract for persisting QuantizedCommands.

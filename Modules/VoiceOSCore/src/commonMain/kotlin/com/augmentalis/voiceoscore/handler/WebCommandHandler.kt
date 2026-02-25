@@ -2,7 +2,6 @@
  * WebCommandHandler.kt - Handler for web voice commands
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-02-10
  *
  * Routes web-sourced voice commands to the IWebCommandExecutor

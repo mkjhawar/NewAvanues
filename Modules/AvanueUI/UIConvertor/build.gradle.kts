@@ -11,10 +11,8 @@ kotlin {
     // Target platforms
     // NOTE: Android-only for consistency with other AVAUI modules
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -55,10 +53,10 @@ kotlin {
 
 android {
     namespace = "com.avanueui.uiconvertor"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 28
     }
 
     compileOptions {

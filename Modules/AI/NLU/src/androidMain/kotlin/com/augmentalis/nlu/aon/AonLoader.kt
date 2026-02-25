@@ -6,6 +6,10 @@ import com.augmentalis.ava.core.data.db.AVADatabase
 import com.augmentalis.ava.core.data.db.DatabaseDriverFactory
 import com.augmentalis.ava.core.data.db.createDatabase
 import com.augmentalis.nlu.IntentClassifier
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
+import com.augmentalis.nlu.nluLogWarn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -35,9 +39,9 @@ import kotlinx.coroutines.withContext
  * when (result) {
  *     is Result.Success -> {
  *         val stats = result.data
- *         Log.i(TAG, "Loaded ${stats.totalIntents} intents")
+ *         nluLogInfo(TAG, "Loaded ${stats.totalIntents} intents")
  *     }
- *     is Result.Error -> Log.e(TAG, "Failed: ${result.message}")
+ *     is Result.Error -> nluLogError(TAG, "Failed: ${result.message}")
  * }
  * ```
  */
@@ -89,9 +93,9 @@ class AonLoader(
      */
     suspend fun loadAllOntologies(forceReload: Boolean = false): Result<LoadingStats> = withContext(Dispatchers.IO) {
         try {
-            android.util.Log.i(TAG, "======================================")
-            android.util.Log.i(TAG, "  AVA 2.0 Ontology Loader")
-            android.util.Log.i(TAG, "======================================")
+            nluLogInfo(TAG, "======================================")
+            nluLogInfo(TAG, "  AVA 2.0 Ontology Loader")
+            nluLogInfo(TAG, "======================================")
 
             val database = DatabaseDriverFactory(context).createDriver().createDatabase()
             val ontologyQueries = database.semanticIntentOntologyQueries
@@ -103,8 +107,8 @@ class AonLoader(
             val hasOntologies = ontologyQueries.count().executeAsOne() > 0
             if (!forceReload && hasOntologies) {
                 val existingCount = ontologyQueries.count().executeAsOne().toInt()
-                android.util.Log.i(TAG, "Ontologies already loaded ($existingCount entries)")
-                android.util.Log.i(TAG, "Use forceReload=true to reload")
+                nluLogInfo(TAG, "Ontologies already loaded ($existingCount entries)")
+                nluLogInfo(TAG, "Use forceReload=true to reload")
 
                 return@withContext Result.Success(
                     LoadingStats(
@@ -116,14 +120,14 @@ class AonLoader(
 
             // Force reload: clear existing data
             if (forceReload) {
-                android.util.Log.w(TAG, "Force reload: clearing existing data...")
+                nluLogWarn(TAG, "Force reload: clearing existing data...")
                 ontologyQueries.deleteAll()
                 embeddingQueries.deleteAll()
             }
 
             // Load for each supported locale
             for (locale in SUPPORTED_LOCALES) {
-                android.util.Log.i(TAG, "\n--- Processing locale: $locale ---")
+                nluLogInfo(TAG, "\n--- Processing locale: $locale ---")
 
                 val localeDir = "$DEFAULT_ONTOLOGY_DIR/$locale"
                 val localeStats = loadOntologiesForLocale(localeDir, locale)
@@ -131,20 +135,20 @@ class AonLoader(
                 stats.merge(localeStats)
             }
 
-            android.util.Log.i(TAG, "\n======================================")
-            android.util.Log.i(TAG, "  Loading Complete")
-            android.util.Log.i(TAG, "======================================")
-            android.util.Log.i(TAG, "Total intents:      ${stats.totalIntents}")
-            android.util.Log.i(TAG, "Files processed:    ${stats.filesProcessed}")
-            android.util.Log.i(TAG, "Embeddings created: ${stats.embeddingsCreated}")
-            android.util.Log.i(TAG, "Failures:           ${stats.failures}")
-            android.util.Log.i(TAG, "Duration:           ${stats.duration}ms")
-            android.util.Log.i(TAG, "======================================")
+            nluLogInfo(TAG, "\n======================================")
+            nluLogInfo(TAG, "  Loading Complete")
+            nluLogInfo(TAG, "======================================")
+            nluLogInfo(TAG, "Total intents:      ${stats.totalIntents}")
+            nluLogInfo(TAG, "Files processed:    ${stats.filesProcessed}")
+            nluLogInfo(TAG, "Embeddings created: ${stats.embeddingsCreated}")
+            nluLogInfo(TAG, "Failures:           ${stats.failures}")
+            nluLogInfo(TAG, "Duration:           ${stats.duration}ms")
+            nluLogInfo(TAG, "======================================")
 
             Result.Success(stats)
 
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to load ontologies", e)
+            nluLogError(TAG, "Failed to load ontologies", e)
             Result.Error(
                 exception = e,
                 message = "Ontology loading failed: ${e.message}"
@@ -175,11 +179,11 @@ class AonLoader(
                     val aonFiles = parseResult.data
 
                     if (aonFiles.isEmpty()) {
-                        android.util.Log.w(TAG, "  No .aot files found in $assetDirectory")
+                        nluLogWarn(TAG, "  No .aot files found in $assetDirectory")
                         return@withContext stats
                     }
 
-                    android.util.Log.i(TAG, "  Found ${aonFiles.size} .aot files")
+                    nluLogInfo(TAG, "  Found ${aonFiles.size} .aot files")
 
                     // Process each .aot file
                     for (aonFile in aonFiles) {
@@ -189,13 +193,13 @@ class AonLoader(
                 }
 
                 is Result.Error -> {
-                    android.util.Log.w(TAG, "  Failed to load .aot files: ${parseResult.message}")
+                    nluLogWarn(TAG, "  Failed to load .aot files: ${parseResult.message}")
                     stats.failures++
                 }
             }
 
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "  Error loading locale $locale", e)
+            nluLogError(TAG, "  Error loading locale $locale", e)
             stats.failures++
         }
 
@@ -219,9 +223,9 @@ class AonLoader(
         val stats = LoadingStats()
 
         try {
-            android.util.Log.i(TAG, "  Processing: ${aonFile.metadata.filename}")
-            android.util.Log.i(TAG, "    Category: ${aonFile.metadata.category}")
-            android.util.Log.i(TAG, "    Intents:  ${aonFile.ontologies.size}")
+            nluLogInfo(TAG, "  Processing: ${aonFile.metadata.filename}")
+            nluLogInfo(TAG, "    Category: ${aonFile.metadata.category}")
+            nluLogInfo(TAG, "    Intents:  ${aonFile.ontologies.size}")
 
             val database = DatabaseDriverFactory(context).createDriver().createDatabase()
             val ontologyQueries = database.semanticIntentOntologyQueries
@@ -245,7 +249,7 @@ class AonLoader(
                 )
                 insertedCount++
             }
-            android.util.Log.d(TAG, "    ✓ Inserted $insertedCount ontologies")
+            nluLogDebug(TAG, "    ✓ Inserted $insertedCount ontologies")
 
             stats.totalIntents += insertedCount
             stats.filesProcessed++
@@ -263,7 +267,7 @@ class AonLoader(
                     }
 
                     if (validEmbeddings.size < embeddings.size) {
-                        android.util.Log.w(TAG, "    ⚠ ${embeddings.size - validEmbeddings.size} embeddings failed quality check")
+                        nluLogWarn(TAG, "    ⚠ ${embeddings.size - validEmbeddings.size} embeddings failed quality check")
                     }
 
                     // Step 4: Insert embeddings into database using SQLDelight
@@ -285,19 +289,19 @@ class AonLoader(
                         )
                         embeddingInsertCount++
                     }
-                    android.util.Log.d(TAG, "    ✓ Inserted $embeddingInsertCount embeddings")
+                    nluLogDebug(TAG, "    ✓ Inserted $embeddingInsertCount embeddings")
 
                     stats.embeddingsCreated += embeddingInsertCount
                 }
 
                 is Result.Error -> {
-                    android.util.Log.w(TAG, "    ✗ Failed to compute embeddings: ${embeddingResult.message}")
+                    nluLogWarn(TAG, "    ✗ Failed to compute embeddings: ${embeddingResult.message}")
                     stats.failures++
                 }
             }
 
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "  Failed to process ${aonFile.metadata.filename}", e)
+            nluLogError(TAG, "  Failed to process ${aonFile.metadata.filename}", e)
             stats.failures++
         }
 
@@ -316,7 +320,7 @@ class AonLoader(
         forceReload: Boolean = false
     ): Result<LoadingStats> = withContext(Dispatchers.IO) {
         try {
-            android.util.Log.i(TAG, "Loading ontologies for locale: $locale")
+            nluLogInfo(TAG, "Loading ontologies for locale: $locale")
 
             val database = DatabaseDriverFactory(context).createDriver().createDatabase()
             val ontologyQueries = database.semanticIntentOntologyQueries
@@ -324,7 +328,7 @@ class AonLoader(
 
             // Force reload: clear existing data for locale
             if (forceReload) {
-                android.util.Log.w(TAG, "Force reload: clearing data for $locale...")
+                nluLogWarn(TAG, "Force reload: clearing data for $locale...")
                 ontologyQueries.deleteByLocale(locale)
                 embeddingQueries.deleteByLocale(locale)
             }

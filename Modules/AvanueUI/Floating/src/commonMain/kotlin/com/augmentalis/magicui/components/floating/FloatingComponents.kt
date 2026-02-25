@@ -1,4 +1,4 @@
-package com.augmentalis.avamagic.components.floating
+package com.augmentalis.avanueui.floating
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient

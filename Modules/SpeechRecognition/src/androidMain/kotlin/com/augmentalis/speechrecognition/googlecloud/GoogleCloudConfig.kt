@@ -96,7 +96,12 @@ data class GoogleCloudConfig(
     val maxRetries: Int = 3,
 
     /** Enable profanity filter */
-    val profanityFilter: Boolean = false
+    val profanityFilter: Boolean = false,
+
+    /** Enable single utterance mode for streaming. When true, the server will
+     *  detect the end of speech and finalize the result automatically.
+     *  Best for command mode where the user speaks one phrase at a time. */
+    val singleUtterance: Boolean = false
 ) {
     companion object {
         /**
@@ -117,7 +122,8 @@ data class GoogleCloudConfig(
                 },
                 silenceThresholdMs = config.timeoutDuration.coerceIn(300, 5000),
                 minSpeechDurationMs = 300,
-                profanityFilter = config.enableProfanityFilter
+                profanityFilter = config.enableProfanityFilter,
+                singleUtterance = false // Caller should set true for COMMAND speech modes
             )
         }
     }

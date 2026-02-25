@@ -1,7 +1,6 @@
 package com.augmentalis.noteavanue
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -51,6 +52,7 @@ import com.augmentalis.noteavanue.model.NoteAttachment
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.HandlerResult
 import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
+import com.mohamedrejeb.richeditor.model.RichTextState
 import com.mohamedrejeb.richeditor.model.rememberRichTextState
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditor
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditorDefaults
@@ -84,6 +86,7 @@ fun NoteEditor(
 ) {
     val colors = AvanueTheme.colors
     val richTextState = rememberRichTextState()
+    val undoManager = remember(richTextState) { RichTextUndoManager(richTextState) }
     var titleField by remember { mutableStateOf(initialTitle) }
     var hasLoaded by remember(initialContent) { mutableStateOf(false) }
 
@@ -94,9 +97,9 @@ fun NoteEditor(
     }
 
     // Wire voice command executor for note formatting/editing
-    DisposableEffect(richTextState) {
+    DisposableEffect(richTextState, undoManager) {
         ModuleCommandCallbacks.noteExecutor = { actionType, metadata ->
-            executeNoteCommand(richTextState, actionType, metadata,
+            executeNoteCommand(richTextState, undoManager, actionType, metadata,
                 getTitle = { titleField },
                 doSave = { onSave(titleField, richTextState.toMarkdown()) },
                 doAttachFile = onAttachFile,
@@ -124,7 +127,9 @@ fun NoteEditor(
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = if (boldActive) colors.primary.copy(alpha = 0.15f) else Color.Transparent
                     ),
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(36.dp)
+                        .semantics { contentDescription = "Voice: click Bold" }
                 ) {
                     Icon(
                         Icons.Default.FormatBold, "Bold",
@@ -138,7 +143,9 @@ fun NoteEditor(
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = if (italicActive) colors.primary.copy(alpha = 0.15f) else Color.Transparent
                     ),
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(36.dp)
+                        .semantics { contentDescription = "Voice: click Italic" }
                 ) {
                     Icon(
                         Icons.Default.FormatItalic, "Italic",
@@ -147,16 +154,28 @@ fun NoteEditor(
                 }
             }
             Row {
-                IconButton(onClick = onTakePhoto) {
+                IconButton(
+                    onClick = onTakePhoto,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Take Photo" }
+                ) {
                     Icon(Icons.Default.CameraAlt, "Photo", tint = colors.textPrimary)
                 }
-                IconButton(onClick = onAttachFile) {
+                IconButton(
+                    onClick = onAttachFile,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Attach File" }
+                ) {
                     Icon(Icons.Default.AttachFile, "Attach", tint = colors.textPrimary)
                 }
-                IconButton(onClick = onStartDictation) {
+                IconButton(
+                    onClick = onStartDictation,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Dictate" }
+                ) {
                     Icon(Icons.Default.Mic, "Dictate", tint = colors.primary)
                 }
-                IconButton(onClick = { onSave(titleField, richTextState.toMarkdown()) }) {
+                IconButton(
+                    onClick = { onSave(titleField, richTextState.toMarkdown()) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Save" }
+                ) {
                     Icon(Icons.Default.Save, "Save", tint = colors.primary)
                 }
             }
@@ -191,7 +210,9 @@ fun NoteEditor(
                         inner()
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Voice: type Note Title" }
             )
 
             Spacer(Modifier.height(16.dp))
@@ -216,6 +237,7 @@ fun NoteEditor(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .semantics { contentDescription = "Voice: type Note Content" }
             )
 
             // ── Attachments ──────────────────────────────────────────
@@ -233,9 +255,13 @@ fun NoteEditor(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     attachments.forEach { att ->
+                        val attLabel = att.name.ifBlank { att.type.name }
                         AssistChip(
                             onClick = {},
-                            label = { Text(att.name.ifBlank { att.type.name }, maxLines = 1) }
+                            label = { Text(attLabel, maxLines = 1) },
+                            modifier = Modifier.semantics {
+                                contentDescription = "Voice: click attachment $attLabel"
+                            }
                         )
                     }
                 }
@@ -266,7 +292,8 @@ fun NoteEditor(
  */
 @Suppress("CyclomaticComplexMethod")
 private fun executeNoteCommand(
-    richTextState: com.mohamedrejeb.richeditor.model.RichTextState,
+    richTextState: RichTextState,
+    undoManager: RichTextUndoManager,
     actionType: CommandActionType,
     metadata: Map<String, String>,
     getTitle: () -> String,
@@ -276,50 +303,65 @@ private fun executeNoteCommand(
     doStartDictation: () -> Unit,
 ): HandlerResult {
     return when (actionType) {
-        // ── Formatting ────────────────────────────────────────────────
+        // ── Formatting (snapshot before each mutation) ─────────────────
         CommandActionType.FORMAT_BOLD -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontWeight = FontWeight.Bold))
             HandlerResult.success("Bold toggled")
         }
         CommandActionType.FORMAT_ITALIC -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontStyle = FontStyle.Italic))
             HandlerResult.success("Italic toggled")
         }
         CommandActionType.FORMAT_UNDERLINE -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(textDecoration = TextDecoration.Underline))
             HandlerResult.success("Underline toggled")
         }
         CommandActionType.FORMAT_STRIKETHROUGH -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(textDecoration = TextDecoration.LineThrough))
             HandlerResult.success("Strikethrough toggled")
         }
         CommandActionType.HEADING_1 -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold))
             HandlerResult.success("Heading 1")
         }
         CommandActionType.HEADING_2 -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold))
             HandlerResult.success("Heading 2")
         }
         CommandActionType.HEADING_3 -> {
+            undoManager.captureSnapshot()
             richTextState.toggleSpanStyle(SpanStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold))
             HandlerResult.success("Heading 3")
         }
         CommandActionType.CODE_BLOCK -> {
+            undoManager.captureSnapshot()
             richTextState.toggleCodeSpan()
             HandlerResult.success("Code block toggled")
         }
 
-        // ── Editing ───────────────────────────────────────────────────
+        // ── Undo/Redo (snapshot-based via RichTextUndoManager) ────────
         CommandActionType.NOTE_UNDO -> {
-            // compose-rich-editor RC13 does not expose undo API
-            HandlerResult.failure("Undo not available in current editor version", recoverable = true)
+            if (undoManager.undo()) {
+                HandlerResult.success("Undone")
+            } else {
+                HandlerResult.failure("Nothing to undo", recoverable = true)
+            }
         }
         CommandActionType.NOTE_REDO -> {
-            // compose-rich-editor RC13 does not expose redo API
-            HandlerResult.failure("Redo not available in current editor version", recoverable = true)
+            if (undoManager.redo()) {
+                HandlerResult.success("Redone")
+            } else {
+                HandlerResult.failure("Nothing to redo", recoverable = true)
+            }
         }
         CommandActionType.CLEAR_FORMATTING -> {
+            undoManager.captureSnapshot()
             richTextState.removeSpanStyle(richTextState.currentSpanStyle)
             HandlerResult.success("Formatting cleared")
         }

@@ -35,15 +35,22 @@ class CockpitCommandHandler(
         "open cockpit", "open hub",
         // Frame management
         "add frame", "minimize frame", "maximize frame", "close frame",
-        // Layout switching
+        // Layout switching (raw modes — legacy, still supported)
         "layout picker", "grid layout", "split layout",
         "freeform layout", "fullscreen layout", "workflow layout",
+        // Arrangement intents (simplified — auto-selects best LayoutMode)
+        "focus", "compare", "overview", "present",
+        // Shell mode switching
+        "classic mode", "stream mode", "lens mode", "canvas mode",
+        // Shell-specific navigation
+        "next card", "previous card",          // AvanueViews
+        "canvas zoom in", "canvas zoom out",   // Canvas
         // Content insertion
         "add web", "add camera", "add note", "add pdf",
         "add image", "add video", "add whiteboard", "add terminal",
-        // In-frame navigation
+        // In-frame navigation — prefixed to avoid collision with NAVIGATION handler (priority 2)
         "page back", "page forward", "page refresh",
-        "scroll up", "scroll down", "zoom in", "zoom out"
+        "frame scroll up", "frame scroll down", "frame zoom in", "frame zoom out"
     )
 
     override suspend fun execute(

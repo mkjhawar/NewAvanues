@@ -47,6 +47,7 @@ enum class ScoringMethod {
     GOOGLE_CLOUD,
     ANDROID_STT,
     WHISPER,
+    AVX_ONNX,
     SIMILARITY,
     COMBINED
 }
@@ -69,7 +70,8 @@ enum class RecognitionEngine {
     VOSK,
     GOOGLE,
     ANDROID,
-    WHISPER
+    WHISPER,
+    AVX
 }
 
 /**
@@ -123,7 +125,8 @@ class ConfidenceScorer {
 
             RecognitionEngine.GOOGLE,
             RecognitionEngine.ANDROID,
-            RecognitionEngine.WHISPER -> {
+            RecognitionEngine.WHISPER,
+            RecognitionEngine.AVX -> {
                 // Already 0-1 scale, just ensure bounds
                 rawScore.coerceIn(0f, 1f)
             }
@@ -188,6 +191,7 @@ class ConfidenceScorer {
             RecognitionEngine.GOOGLE -> ScoringMethod.GOOGLE_CLOUD
             RecognitionEngine.ANDROID -> ScoringMethod.ANDROID_STT
             RecognitionEngine.WHISPER -> ScoringMethod.WHISPER
+            RecognitionEngine.AVX -> ScoringMethod.AVX_ONNX
         }
 
         return ConfidenceResult(

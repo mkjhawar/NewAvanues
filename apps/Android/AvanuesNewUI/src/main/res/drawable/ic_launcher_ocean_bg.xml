@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared ocean gradient background for all Avanues launcher icons -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Deep ocean base -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M0,0h108v108h-108z" />
+    <!-- Ocean mid gradient layer -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.6"
+        android:pathData="M0,30 Q54,20 108,35 L108,108 L0,108 Z" />
+    <!-- Ocean shallow accent -->
+    <path
+        android:fillColor="#334155"
+        android:fillAlpha="0.4"
+        android:pathData="M0,55 Q54,45 108,60 L108,108 L0,108 Z" />
+</vector>

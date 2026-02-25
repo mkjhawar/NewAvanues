@@ -33,7 +33,13 @@ data class VoiceCommandEntity(
     val domain: String = "app",
     val priority: Int = 50,
     val isFallback: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    /** v3.1: Android resource ID for Layer 3 BoundsResolver lookup (e.g., "com.app:id/btn_save") */
+    val resourceId: String? = null,
+    /** v3.1: Content-hash fingerprint for cross-session element matching */
+    val elementHash: String? = null,
+    /** v3.1: Element class name for tree search (e.g., "android.widget.Button") */
+    val className: String? = null
 ) {
     companion object {
         fun getCategoryFromId(actionId: String): String {
@@ -86,6 +92,9 @@ data class VoiceCommandEntity(
         priority = priority.toLong(),
         isFallback = if (isFallback) 1L else 0L,
         isEnabled = 1L,
+        resourceId = resourceId,
+        elementHash = elementHash,
+        className = className,
         createdAt = createdAt,
         updatedAt = createdAt
     )
@@ -117,31 +126,28 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
 
     suspend fun insert(command: VoiceCommandEntity): Long = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        queries.insertCommandFull(
-            command_id = command.id,
-            locale = command.locale,
-            trigger_phrase = command.primaryText,
-            synonyms = command.synonyms,
-            action = command.resolvedAction,
-            description = command.description,
-            category = command.category,
-            domain = command.domain,
-            priority = command.priority.toLong(),
-            is_fallback = if (command.isFallback) 1L else 0L,
-            is_enabled = 1L,
-            created_at = command.createdAt,
-            updated_at = now
-        )
         queries.transactionWithResult {
-            queries.lastInsertRowId().executeAsOne()
-        }
-    }
-
-    suspend fun insertBatch(commands: List<VoiceCommandEntity>): List<Long> = withContext(Dispatchers.IO) {
-        val ids = mutableListOf<Long>()
-        val now = System.currentTimeMillis()
-        queries.transaction {
-            commands.forEach { command ->
+            val hasTargeting = command.resourceId != null || command.elementHash != null || command.className != null
+            if (hasTargeting) {
+                queries.insertCommandWithTargeting(
+                    command_id = command.id,
+                    locale = command.locale,
+                    trigger_phrase = command.primaryText,
+                    synonyms = command.synonyms,
+                    action = command.resolvedAction,
+                    description = command.description,
+                    category = command.category,
+                    domain = command.domain,
+                    priority = command.priority.toLong(),
+                    is_fallback = if (command.isFallback) 1L else 0L,
+                    is_enabled = 1L,
+                    element_hash = command.elementHash,
+                    resource_id = command.resourceId,
+                    class_name = command.className,
+                    created_at = command.createdAt,
+                    updated_at = now
+                )
+            } else {
                 queries.insertCommandFull(
                     command_id = command.id,
                     locale = command.locale,
@@ -157,6 +163,53 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
                     created_at = command.createdAt,
                     updated_at = now
                 )
+            }
+            queries.lastInsertRowId().executeAsOne()
+        }
+    }
+
+    suspend fun insertBatch(commands: List<VoiceCommandEntity>): List<Long> = withContext(Dispatchers.IO) {
+        val ids = mutableListOf<Long>()
+        val now = System.currentTimeMillis()
+        queries.transaction {
+            commands.forEach { command ->
+                val hasTargeting = command.resourceId != null || command.elementHash != null || command.className != null
+                if (hasTargeting) {
+                    queries.insertCommandWithTargeting(
+                        command_id = command.id,
+                        locale = command.locale,
+                        trigger_phrase = command.primaryText,
+                        synonyms = command.synonyms,
+                        action = command.resolvedAction,
+                        description = command.description,
+                        category = command.category,
+                        domain = command.domain,
+                        priority = command.priority.toLong(),
+                        is_fallback = if (command.isFallback) 1L else 0L,
+                        is_enabled = 1L,
+                        element_hash = command.elementHash,
+                        resource_id = command.resourceId,
+                        class_name = command.className,
+                        created_at = command.createdAt,
+                        updated_at = now
+                    )
+                } else {
+                    queries.insertCommandFull(
+                        command_id = command.id,
+                        locale = command.locale,
+                        trigger_phrase = command.primaryText,
+                        synonyms = command.synonyms,
+                        action = command.resolvedAction,
+                        description = command.description,
+                        category = command.category,
+                        domain = command.domain,
+                        priority = command.priority.toLong(),
+                        is_fallback = if (command.isFallback) 1L else 0L,
+                        is_enabled = 1L,
+                        created_at = command.createdAt,
+                        updated_at = now
+                    )
+                }
                 ids.add(queries.lastInsertRowId().executeAsOne())
             }
         }
@@ -291,16 +344,6 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
         queries.getCommandsForApp(locale).executeAsList().map { it.toEntity() }
     }
 
-    suspend fun getScreensForApp(packageName: String): List<String> {
-        // Placeholder - schema extension needed
-        return emptyList()
-    }
-
-    suspend fun getCommandsForScreen(packageName: String, screenName: String, locale: String = "en-US"): List<VoiceCommandEntity> {
-        // Placeholder - schema extension needed
-        return emptyList()
-    }
-
     // ==================== EXTENSION ====================
 
     // RENAMED (2025-12-05): Voice_commands -> Commands_static
@@ -316,6 +359,9 @@ class VoiceCommandDaoAdapter(private val database: VoiceOSDatabase) {
         domain = this.domain,
         priority = this.priority.toInt(),
         isFallback = this.is_fallback == 1L,
-        createdAt = this.created_at
+        createdAt = this.created_at,
+        resourceId = this.resource_id,
+        elementHash = this.element_hash,
+        className = this.class_name
     )
 }

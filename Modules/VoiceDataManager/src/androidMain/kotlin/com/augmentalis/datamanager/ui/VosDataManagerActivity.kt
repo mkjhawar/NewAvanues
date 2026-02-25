@@ -2,7 +2,6 @@
  * VosDataManagerActivity.kt - Main UI for VOS Data Manager
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * Updated: 2026-01-28 - Migrated to KMP structure
  *
@@ -32,6 +31,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -316,7 +317,10 @@ fun StorageOverviewCard(
                     color = Color.White
                 )
                 
-                IconButton(onClick = onRefresh) {
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Refresh Storage" }
+                ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
                         contentDescription = "Refresh",
@@ -324,9 +328,9 @@ fun StorageOverviewCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Storage bar
             LinearProgressIndicator(
                 progress = { storageInfo.percentUsed / 100f },
@@ -404,7 +408,10 @@ fun DataStatisticsCard(
                     color = Color.White
                 )
                 
-                IconButton(onClick = onRefresh) {
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Refresh Statistics" }
+                ) {
                     Icon(
                         imageVector = Icons.Filled.Analytics,
                         contentDescription = "Refresh Stats",
@@ -480,7 +487,7 @@ fun QuickActionsCard(
                     icon = Icons.Filled.Upload,
                     onClick = onExport,
                     enabled = !isLoading,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { contentDescription = "Voice: click Export Data" },
                     color = DataColors.ActionExport
                 )
                 ActionButton(
@@ -488,7 +495,7 @@ fun QuickActionsCard(
                     icon = Icons.Filled.Download,
                     onClick = onImport,
                     enabled = !isLoading,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { contentDescription = "Voice: click Import Data" },
                     color = DataColors.ActionImport
                 )
             }
@@ -504,7 +511,7 @@ fun QuickActionsCard(
                     icon = Icons.Filled.CleaningServices,
                     onClick = onCleanup,
                     enabled = !isLoading,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { contentDescription = "Voice: click Cleanup Old Data" },
                     color = DataColors.ActionCleanup
                 )
                 ActionButton(
@@ -512,7 +519,7 @@ fun QuickActionsCard(
                     icon = Icons.Filled.DeleteForever,
                     onClick = onClear,
                     enabled = !isLoading,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { contentDescription = "Voice: click Clear All Data" },
                     color = DataColors.StatusError
                 )
             }
@@ -599,7 +606,10 @@ fun RecentHistoryCard(
                     color = Color.White
                 )
                 
-                TextButton(onClick = onViewAll) {
+                TextButton(
+                    onClick = onViewAll,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click View All History" }
+                ) {
                     Text(
                         text = "View All",
                         color = DataColors.TypeHistory
@@ -642,6 +652,7 @@ fun RetentionSettingsCard(
         modifier = Modifier
             .fillMaxWidth()
             .glassMorphism(DataGlassConfigs.Primary)
+            .semantics { contentDescription = "Voice: click Data Retention Settings" }
             .clickable { onSettingsClick() }
             .testTag("retention_card"),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -752,6 +763,7 @@ fun DataTypeCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
+            .semantics { contentDescription = "Voice: click $type Data" }
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = getDataTypeColor(type).copy(alpha = 0.1f)
@@ -923,7 +935,8 @@ fun ExportDataDialog(
                             onCheckedChange = { checked ->
                                 if (checked) selectedTypes.add(type)
                                 else selectedTypes.remove(type)
-                            }
+                            },
+                            modifier = Modifier.semantics { contentDescription = "Voice: toggle Export $type" }
                         )
                         Text(
                             text = type,
@@ -933,20 +946,24 @@ fun ExportDataDialog(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Cancel Export" }
+                    ) {
                         Text("Cancel", color = Color.White.copy(alpha = 0.7f))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { onExport(selectedTypes) },
-                        enabled = selectedTypes.isNotEmpty()
+                        enabled = selectedTypes.isNotEmpty(),
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Export Selected Data" }
                     ) {
                         Text("Export")
                     }
@@ -994,26 +1011,32 @@ fun ImportDataDialog(
                     value = filePath,
                     onValueChange = { filePath = it },
                     label = { Text("File path") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: enter Import File Path" },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
                     )
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Cancel Import" }
+                    ) {
                         Text("Cancel", color = Color.White.copy(alpha = 0.7f))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { onImport(filePath) },
-                        enabled = filePath.isNotEmpty()
+                        enabled = filePath.isNotEmpty(),
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Import Data" }
                     ) {
                         Text("Import")
                     }
@@ -1065,7 +1088,9 @@ fun CleanupDialog(
                         value = days.toFloat(),
                         onValueChange = { days = it.toInt() },
                         valueRange = 7f..365f,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = "Voice: adjust Cleanup Days slider" }
                     )
                     Text(
                         text = "$days days",
@@ -1074,18 +1099,24 @@ fun CleanupDialog(
                         modifier = Modifier.padding(start = 16.dp)
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Cancel Cleanup" }
+                    ) {
                         Text("Cancel", color = Color.White.copy(alpha = 0.7f))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { onCleanup(days) }) {
+                    Button(
+                        onClick = { onCleanup(days) },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Run Cleanup" }
+                    ) {
                         Text("Cleanup")
                     }
                 }
@@ -1139,7 +1170,10 @@ fun ClearDataDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Cancel Clear Data" }
+                    ) {
                         Text("Cancel", color = Color.White.copy(alpha = 0.7f))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1147,7 +1181,8 @@ fun ClearDataDialog(
                         onClick = onClear,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = DataColors.StatusError
-                        )
+                        ),
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Confirm Clear All Data" }
                     ) {
                         Text("Clear All")
                     }
@@ -1200,7 +1235,9 @@ fun RetentionSettingsDialog(
                         value = days.toFloat(),
                         onValueChange = { days = it.toInt() },
                         valueRange = 7f..365f,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = "Voice: adjust Retention Days slider" }
                     )
                     Text(
                         text = "$days days",
@@ -1209,9 +1246,9 @@ fun RetentionSettingsDialog(
                         modifier = Modifier.padding(start = 16.dp)
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -1224,21 +1261,28 @@ fun RetentionSettingsDialog(
                     )
                     Switch(
                         checked = autoCleanup,
-                        onCheckedChange = { autoCleanup = it }
+                        onCheckedChange = { autoCleanup = it },
+                        modifier = Modifier.semantics { contentDescription = "Voice: toggle Auto Cleanup" }
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Cancel Retention Settings" }
+                    ) {
                         Text("Cancel", color = Color.White.copy(alpha = 0.7f))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { onSave(days, autoCleanup) }) {
+                    Button(
+                        onClick = { onSave(days, autoCleanup) },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Save Retention Settings" }
+                    ) {
                         Text("Save")
                     }
                 }
@@ -1255,7 +1299,10 @@ fun ErrorDisplay(
     Snackbar(
         modifier = Modifier.padding(16.dp),
         action = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Dismiss Error" }
+            ) {
                 Text("Dismiss")
             }
         }
@@ -1281,7 +1328,10 @@ fun SuccessDisplay(
     Snackbar(
         modifier = Modifier.padding(16.dp),
         action = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Dismiss Success" }
+            ) {
                 Text("Dismiss")
             }
         }

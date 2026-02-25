@@ -3,7 +3,6 @@
  *
  * Manages VUID registry state, element navigation, and command processing
  *
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  */
 package com.augmentalis.avidcreator.ui

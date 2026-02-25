@@ -2,7 +2,6 @@
  * DeviceCapabilityManager.ios.kt - iOS actual implementation
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-28
  *
  * iOS implementation of DeviceCapabilityManager.

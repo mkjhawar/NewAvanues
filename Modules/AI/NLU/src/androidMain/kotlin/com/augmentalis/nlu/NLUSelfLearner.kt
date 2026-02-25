@@ -33,10 +33,10 @@ class NLUSelfLearner @Inject constructor(
 ) {
     companion object {
         /** Minimum confidence to save variations */
-        const val VARIATION_CONFIDENCE_THRESHOLD = 0.85f
+        val VARIATION_CONFIDENCE_THRESHOLD = NluThresholds.HIGH_CONFIDENCE
 
         /** Minimum confidence to save at all */
-        const val MIN_CONFIDENCE_THRESHOLD = 0.60f
+        val MIN_CONFIDENCE_THRESHOLD = NluThresholds.MIN_LEARNING_CONFIDENCE
 
         /** Maximum utterance length to save */
         const val MAX_UTTERANCE_LENGTH = 500
@@ -156,7 +156,7 @@ class NLUSelfLearner @Inject constructor(
                             scheduleEmbeddingComputation(
                                 utterance = variation,
                                 intent = input.intent,
-                                confidence = input.confidence * 0.9f // Slightly lower for generated
+                                confidence = input.confidence * NluThresholds.VARIATION_CONFIDENCE_DISCOUNT // Slightly lower for generated
                             )
                         }
                     }

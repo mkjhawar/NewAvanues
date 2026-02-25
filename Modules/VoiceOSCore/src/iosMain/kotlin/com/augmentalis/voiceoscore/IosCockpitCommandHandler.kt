@@ -43,9 +43,16 @@ class IosCockpitCommandHandler : BaseHandler() {
         "open cockpit", "open hub",
         // Frame management
         "add frame", "minimize frame", "maximize frame", "close frame",
-        // Layout switching
+        // Layout switching (raw modes — legacy, still supported)
         "layout picker", "grid layout", "split layout",
         "freeform layout", "fullscreen layout", "workflow layout",
+        // Arrangement intents (simplified — auto-selects best LayoutMode)
+        "focus", "compare", "overview", "present",
+        // Shell mode switching
+        "classic mode", "stream mode", "lens mode", "canvas mode",
+        // Shell-specific navigation
+        "next card", "previous card",          // AvanueViews
+        "canvas zoom in", "canvas zoom out",   // Canvas
         // Content insertion
         "add web", "add camera", "add note", "add pdf",
         "add image", "add video", "add whiteboard", "add terminal",
@@ -75,13 +82,28 @@ class IosCockpitCommandHandler : BaseHandler() {
             CommandActionType.MINIMIZE_FRAME,
             CommandActionType.MAXIMIZE_FRAME,
             CommandActionType.CLOSE_FRAME,
-            // Layout switching
+            // Layout switching (raw modes)
             CommandActionType.LAYOUT_PICKER,
             CommandActionType.LAYOUT_GRID,
             CommandActionType.LAYOUT_SPLIT,
             CommandActionType.LAYOUT_FREEFORM,
             CommandActionType.LAYOUT_FULLSCREEN,
             CommandActionType.LAYOUT_WORKFLOW,
+            // Arrangement intents
+            CommandActionType.LAYOUT_FOCUS,
+            CommandActionType.LAYOUT_COMPARE,
+            CommandActionType.LAYOUT_OVERVIEW,
+            CommandActionType.LAYOUT_PRESENT,
+            // Shell mode switching
+            CommandActionType.SHELL_CLASSIC,
+            CommandActionType.SHELL_AVANUE_VIEWS,
+            CommandActionType.SHELL_LENS,
+            CommandActionType.SHELL_CANVAS,
+            // Shell-specific navigation
+            CommandActionType.STREAM_NEXT_CARD,
+            CommandActionType.STREAM_PREVIOUS_CARD,
+            CommandActionType.CANVAS_ZOOM_IN,
+            CommandActionType.CANVAS_ZOOM_OUT,
             // Content insertion
             CommandActionType.ADD_WEB,
             CommandActionType.ADD_CAMERA,

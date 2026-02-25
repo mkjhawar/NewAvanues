@@ -13,6 +13,7 @@ import com.augmentalis.magiccode.plugins.core.PluginLog
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.datetime.Clock
 
 /**
  * Represents an attempted permission escalation event.
@@ -572,5 +573,5 @@ class PermissionEscalationDetector(
      * Get current time in milliseconds.
      * Extracted for testability.
      */
-    internal fun currentTimeMillis(): Long = System.currentTimeMillis()
+    internal fun currentTimeMillis(): Long = Clock.System.now().toEpochMilliseconds()
 }

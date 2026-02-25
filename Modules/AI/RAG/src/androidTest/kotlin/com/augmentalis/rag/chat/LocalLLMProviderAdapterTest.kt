@@ -60,7 +60,7 @@ class LocalLLMProviderAdapterTest {
         // Note: Will fail without initialized model, but interface is correct
         try {
             val result = adapter.generate("Test prompt")
-            assertTrue("generate should return String", result is String)
+            assertNotNull("generate should return a result", result)
         } catch (e: Exception) {
             // Expected if model not initialized - test passes
             assertTrue("Exception expected without model", true)
@@ -70,10 +70,8 @@ class LocalLLMProviderAdapterTest {
     @Test
     fun testAdapterImplementsRAGInterface() {
         // Verify adapter implements RAGChatEngine's LLMProvider interface
-        assertTrue(
-            "Adapter must implement LLMProvider from RAG module",
-            adapter is LLMProvider
-        )
+        val provider: LLMProvider = adapter
+        assertNotNull("Adapter must implement LLMProvider from RAG module", provider)
     }
 
     @Test

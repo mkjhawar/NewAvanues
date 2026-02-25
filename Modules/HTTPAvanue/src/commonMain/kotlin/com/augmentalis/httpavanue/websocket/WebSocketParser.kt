@@ -1,12 +1,12 @@
 package com.augmentalis.httpavanue.websocket
 
-import okio.BufferedSource
+import com.augmentalis.httpavanue.io.AvanueSource
 
 /**
  * WebSocket frame parser (RFC 6455)
  */
 internal object WebSocketParser {
-    suspend fun parseFrame(source: BufferedSource, maxMessageSize: Long = 10 * 1024 * 1024): WebSocketFrame {
+    suspend fun parseFrame(source: AvanueSource, maxMessageSize: Long = 10 * 1024 * 1024): WebSocketFrame {
         val byte1 = source.readByte().toInt() and 0xFF
         val isFinal = (byte1 and 0x80) != 0
         val opcode = WebSocketOpcode.from(byte1 and 0x0F)

@@ -2,7 +2,6 @@
  * LicenseManagerActivity.kt - Main UI for License Management
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * 
  * Provides comprehensive license management interface with glassmorphism design
@@ -68,6 +67,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -273,7 +274,10 @@ private fun ErrorCard(
                 modifier = Modifier.weight(1f)
             )
             
-            IconButton(onClick = onDismiss) {
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Dismiss Error" }
+            ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Dismiss",
@@ -329,7 +333,10 @@ internal fun LicenseStatusCard(
                     fontWeight = FontWeight.SemiBold
                 )
                 
-                IconButton(onClick = onRefresh) {
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Refresh License Status" }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh",
@@ -636,7 +643,8 @@ private fun ActionButton(
         enabled = !isLoading,
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(56.dp)
+            .semantics { contentDescription = "Voice: click $text" },
         colors = ButtonDefaults.buttonColors(
             containerColor = color.copy(alpha = 0.2f),
             contentColor = Color.White
@@ -722,9 +730,10 @@ internal fun ValidationInfoCard(
                     contentColor = Color.White
                 ),
                 border = androidx.compose.foundation.BorderStroke(
-                    1.dp, 
+                    1.dp,
                     Color.White.copy(alpha = 0.3f)
-                )
+                ),
+                modifier = Modifier.semantics { contentDescription = "Voice: click Refresh License Validation" }
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
@@ -773,7 +782,9 @@ internal fun LicenseActivationDialog(
                     onValueChange = { licenseKey = it },
                     label = { Text("License Key") },
                     placeholder = { Text("PREMIUM-XXXX-XXXX-XXXX") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Voice: enter License Key" },
                     singleLine = true
                 )
                 
@@ -796,7 +807,8 @@ internal fun LicenseActivationDialog(
                         onActivate(licenseKey.trim())
                     }
                 },
-                enabled = licenseKey.isNotBlank() && !isLoading
+                enabled = licenseKey.isNotBlank() && !isLoading,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Activate License" }
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -809,7 +821,10 @@ internal fun LicenseActivationDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Cancel License Activation" }
+            ) {
                 Text("Cancel")
             }
         }

@@ -77,13 +77,14 @@ class GoogleCloudApiClient(
      */
     suspend fun recognize(
         audioData: FloatArray,
-        speechMode: String = ""
+        speechMode: String = "",
+        phraseHints: List<String> = emptyList()
     ): RecognizeResponse = withContext(Dispatchers.IO) {
         val pcmBytes = floatArrayToPcmBytes(audioData)
         val audioBase64 = Base64.encodeToString(pcmBytes, Base64.NO_WRAP)
         val audioDurationMs = (audioData.size * 1000L) / SAMPLE_RATE
 
-        val requestJson = buildRequestJson(audioBase64)
+        val requestJson = buildRequestJson(audioBase64, phraseHints)
 
         var lastError: SpeechError? = null
 
@@ -182,27 +183,7 @@ class GoogleCloudApiClient(
     /**
      * Build the JSON request body for the v2 recognize endpoint.
      */
-    private fun buildRequestJson(audioBase64: String): String {
-        val recognition = JsonObject().apply {
-            addProperty("languageCodes", config.language)
-            addProperty("model", config.model)
-
-            val features = JsonObject().apply {
-                addProperty("enableAutomaticPunctuation", config.enableAutoPunctuation)
-                addProperty("enableWordTimeOffsets", config.enableWordTimeOffsets)
-                addProperty("enableWordConfidence", config.enableWordConfidence)
-                addProperty("maxAlternatives", config.maxAlternatives)
-                addProperty("profanityFilter", config.profanityFilter)
-            }
-            add("features", features)
-        }
-
-        val audioConfig = JsonObject().apply {
-            addProperty("encoding", "LINEAR16")
-            addProperty("sampleRateHertz", SAMPLE_RATE)
-            addProperty("audioChannelCount", 1)
-        }
-
+    private fun buildRequestJson(audioBase64: String, phraseHints: List<String> = emptyList()): String {
         val request = JsonObject().apply {
             add("config", JsonObject().apply {
                 add("autoDecodingConfig", JsonObject())
@@ -217,6 +198,24 @@ class GoogleCloudApiClient(
                     addProperty("maxAlternatives", config.maxAlternatives)
                     addProperty("profanityFilter", config.profanityFilter)
                 })
+
+                // Phrase hints via adaptation — biases recognition toward expected commands
+                if (phraseHints.isNotEmpty()) {
+                    add("adaptation", JsonObject().apply {
+                        val phraseSets = com.google.gson.JsonArray()
+                        phraseSets.add(JsonObject().apply {
+                            val phrases = com.google.gson.JsonArray()
+                            phraseHints.take(500).forEach { hint ->
+                                phrases.add(JsonObject().apply {
+                                    addProperty("value", hint)
+                                    addProperty("boost", 10.0)
+                                })
+                            }
+                            add("phrases", phrases)
+                        })
+                        add("phraseSets", phraseSets)
+                    })
+                }
             })
             addProperty("content", audioBase64)
         }

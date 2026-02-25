@@ -5,7 +5,7 @@ package com.augmentalis.magiccode.plugins.platform
  *
  * Provides file system access for reading plugin manifests and validating directory structures.
  */
-expect class FileIO {
+expect class FileIO() {
     /**
      * Read file contents as string.
      *

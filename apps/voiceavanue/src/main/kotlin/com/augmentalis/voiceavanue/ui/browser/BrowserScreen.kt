@@ -23,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -46,15 +48,24 @@ fun BrowserScreen(
                 TopAppBar(
                     title = { Text("WebAvanue") },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Close Browser" }
+                        ) {
                             Icon(Icons.Default.Close, contentDescription = "Close")
                         }
                     },
                     actions = {
-                        IconButton(onClick = { webView?.reload() }) {
+                        IconButton(
+                            onClick = { webView?.reload() },
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Reload Page" }
+                        ) {
                             Icon(Icons.Default.Refresh, contentDescription = "Reload")
                         }
-                        IconButton(onClick = { /* TODO: Voice command */ }) {
+                        IconButton(
+                            onClick = { /* TODO: Voice command */ },
+                            modifier = Modifier.semantics { contentDescription = "Voice: click Voice Command" }
+                        ) {
                             Icon(Icons.Default.Mic, contentDescription = "Voice")
                         }
                     }
@@ -66,7 +77,8 @@ fun BrowserScreen(
                     onValueChange = { urlInput = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .semantics { contentDescription = "Voice: enter URL or Search Query" },
                     placeholder = { Text("Enter URL or search") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -91,7 +103,10 @@ fun BrowserScreen(
                     },
                     trailingIcon = {
                         if (urlInput.isNotEmpty()) {
-                            IconButton(onClick = { urlInput = "" }) {
+                            IconButton(
+                                onClick = { urlInput = "" },
+                                modifier = Modifier.semantics { contentDescription = "Voice: click Clear URL" }
+                            ) {
                                 Icon(Icons.Default.Clear, contentDescription = "Clear")
                             }
                         }
@@ -107,30 +122,41 @@ fun BrowserScreen(
                 ) {
                     IconButton(
                         onClick = { webView?.goBack() },
-                        enabled = canGoBack
+                        enabled = canGoBack,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Go Back" }
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
 
                     IconButton(
                         onClick = { webView?.goForward() },
-                        enabled = canGoForward
+                        enabled = canGoForward,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Go Forward" }
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
                     }
 
-                    IconButton(onClick = {
-                        currentUrl = "https://www.google.com"
-                        webView?.loadUrl(currentUrl)
-                    }) {
+                    IconButton(
+                        onClick = {
+                            currentUrl = "https://www.google.com"
+                            webView?.loadUrl(currentUrl)
+                        },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Go Home" }
+                    ) {
                         Icon(Icons.Default.Home, contentDescription = "Home")
                     }
 
-                    IconButton(onClick = { /* TODO: Bookmarks */ }) {
+                    IconButton(
+                        onClick = { /* TODO: Bookmarks */ },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Bookmarks" }
+                    ) {
                         Icon(Icons.Default.BookmarkBorder, contentDescription = "Bookmarks")
                     }
 
-                    IconButton(onClick = { /* TODO: Tabs */ }) {
+                    IconButton(
+                        onClick = { /* TODO: Tabs */ },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Tabs" }
+                    ) {
                         Icon(Icons.Default.Tab, contentDescription = "Tabs")
                     }
                 }

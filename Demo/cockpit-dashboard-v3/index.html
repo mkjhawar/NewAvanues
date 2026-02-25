@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cockpit Dashboard v3 — Avenue Metaphor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #020617; --surface: #0F172A; --surface-elevated: #1E293B;
+    --primary: #1E40AF; --primary-light: #3B82F6;
+    --text-primary: #F1F5F9; --text-secondary: #94A3B8; --text-muted: #475569;
+    --glass-bg: rgba(15,23,42,0.65); --glass-border: rgba(255,255,255,0.08);
+    --sapphire: #1E40AF; --amethyst: #8B5CF6; --emerald: #34D399;
+  }
+
+  body {
+    background: #0a0a14;
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  /* ── Device Toolbar ── */
+  .device-toolbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 16px;
+    background: rgba(2,6,23,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-wrap: wrap;
+  }
+  .device-toolbar .toolbar-label {
+    font-size: 11px; color: var(--text-muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; margin-right: 8px;
+  }
+  .device-btn {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+    background: transparent; color: var(--text-secondary); font-size: 11px;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .device-btn:hover { border-color: var(--primary-light); color: var(--text-primary); }
+  .device-btn.active {
+    background: rgba(30,64,175,0.25); border-color: var(--primary);
+    color: var(--primary-light);
+  }
+  .device-info {
+    font-size: 10px; color: var(--text-muted); margin-left: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Viewport Frame ── */
+  .viewport-wrapper {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 70px 20px 20px; width: 100%; min-height: 100vh;
+  }
+  .viewport-frame {
+    position: relative;
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 20px; overflow: hidden;
+    background: var(--bg);
+    box-shadow: 0 0 60px rgba(30,64,175,0.08), 0 0 1px rgba(255,255,255,0.1);
+    transform-origin: center center;
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+
+  /* ── Dashboard ── */
+  .dashboard {
+    width: 100%; height: 100%;
+    overflow-y: auto; overflow-x: hidden;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 40%, var(--bg) 100%);
+    position: relative;
+  }
+  .dashboard::-webkit-scrollbar { width: 3px; }
+  .dashboard::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+  /* ── Header ── */
+  .dash-header {
+    padding: 20px 16px 8px; display: flex; align-items: center;
+    justify-content: space-between; z-index: 2; position: relative;
+  }
+  .dash-title {
+    font-size: 20px; font-weight: 700;
+    background: linear-gradient(135deg, var(--text-primary), var(--primary-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .dash-subtitle {
+    font-size: 11px; color: var(--text-secondary); margin-top: 1px;
+  }
+  .session-count {
+    padding: 4px 10px; border-radius: 12px;
+    background: rgba(30,64,175,0.2); border: 1px solid rgba(30,64,175,0.3);
+    font-size: 11px; font-weight: 600; color: var(--primary-light);
+  }
+
+  /* ══════════════════════════════════════════
+     AVENUE LANES
+     ══════════════════════════════════════════ */
+  .avenue-lanes {
+    padding: 8px 16px; display: flex; flex-direction: column; gap: 12px;
+    position: relative; z-index: 2;
+  }
+
+  .avenue-lane {
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s;
+  }
+  .avenue-lane:hover { border-color: rgba(255,255,255,0.12); }
+
+  /* Lane Header */
+  .lane-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer;
+    position: relative; transition: all 0.25s;
+  }
+  .lane-header:hover { background: rgba(255,255,255,0.02); }
+  .lane-accent-bar {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  }
+  .lane-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .lane-title { font-size: 14px; font-weight: 700; flex: 1; }
+  .lane-count {
+    font-size: 10px; color: var(--text-muted);
+    padding: 2px 8px; border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+  }
+  .lane-chevron {
+    font-size: 12px; color: var(--text-muted);
+    transition: transform 0.3s; display: inline-block;
+  }
+  .lane-chevron.open { transform: rotate(180deg); }
+
+  /* Street name badge */
+  .street-badge {
+    position: absolute; top: -1px; right: 14px;
+    font-size: 8px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.2px; padding: 2px 8px;
+    border-radius: 0 0 6px 6px;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* Lane Body */
+  .lane-body {
+    overflow: hidden;
+    max-height: 400px;
+    transition: max-height 0.4s ease, padding 0.3s;
+    padding: 0 14px 12px;
+  }
+  .lane-body.collapsed {
+    max-height: 0; padding-top: 0; padding-bottom: 0;
+  }
+
+  /* Module Cards inside Lanes */
+  .lane-modules {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding: 4px 0; scrollbar-width: none;
+  }
+  .lane-modules::-webkit-scrollbar { display: none; }
+
+  .module-card {
+    flex-shrink: 0; width: 120px; min-height: 100px;
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: 10px; padding: 12px 10px;
+    cursor: pointer; transition: all 0.25s;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px; text-align: center; position: relative;
+    opacity: 0; animation: cardSlideIn 0.35s ease-out forwards;
+  }
+  .module-card:hover {
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+  .module-card .card-accent {
+    position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
+    border-radius: 0 3px 3px 0;
+  }
+  .module-card .card-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+  }
+  .module-card .card-name {
+    font-size: 11px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    width: 100%;
+  }
+  .module-card .card-sub {
+    font-size: 9px; color: var(--text-secondary); margin-top: -2px;
+  }
+  .module-card .voice-badge {
+    display: none; position: absolute; top: 6px; right: 8px;
+    font-size: 12px; font-weight: 700; color: var(--primary-light);
+  }
+
+  @keyframes cardSlideIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Lane divider gradient */
+  .lane-divider {
+    height: 1px; margin: 0 16px;
+    background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+  }
+
+  /* ══════════════════════════════════════════
+     SESSIONS ZONE
+     ══════════════════════════════════════════ */
+  .sessions-zone {
+    padding: 4px 16px 80px; position: relative; z-index: 2;
+  }
+  .section-header {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin: 12px 0 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-header::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--glass-border), transparent);
+  }
+  .sessions-strip {
+    display: flex; gap: 10px; overflow-x: auto;
+    padding: 4px 0 8px; scrollbar-width: none;
+  }
+  .sessions-strip::-webkit-scrollbar { display: none; }
+  .session-card {
+    flex-shrink: 0; width: 150px; min-height: 64px;
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: 10px; padding: 10px 12px;
+    cursor: pointer; transition: all 0.25s;
+    backdrop-filter: blur(10px); display: flex; flex-direction: column;
+    justify-content: space-between;
+  }
+  .session-card:hover {
+    border-color: var(--primary-light);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(30,64,175,0.15);
+  }
+  .session-card .s-name { font-size: 12px; font-weight: 600; }
+  .session-card .s-meta {
+    font-size: 10px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 4px; margin-top: 4px;
+  }
+  .session-card .s-badge {
+    background: var(--primary); color: white; font-size: 9px;
+    padding: 1px 5px; border-radius: 6px; font-weight: 700;
+  }
+
+  /* FAB */
+  .fab {
+    position: absolute; bottom: 20px; right: 16px; z-index: 10;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--primary); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; cursor: pointer; border: none;
+    box-shadow: 0 4px 16px rgba(30,64,175,0.4); transition: all 0.25s;
+  }
+  .fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(30,64,175,0.6); }
+
+  /* HUD Footer */
+  .hud-footer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px;
+    background: linear-gradient(180deg, transparent, rgba(2,6,23,0.9)); z-index: 10;
+  }
+  .hud-footer .vos-badge { color: var(--primary-light); font-weight: 700; font-size: 9px; }
+  .hud-footer .tagline { font-style: italic; margin-left: 6px; }
+
+  /* Toast */
+  .toast {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--glass-bg); border: 1px solid var(--primary);
+    border-radius: 14px; padding: 20px 36px;
+    backdrop-filter: blur(20px); text-align: center;
+    z-index: 50; pointer-events: none;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .toast.show { opacity: 1; }
+  .toast .toast-icon { font-size: 28px; margin-bottom: 6px; }
+  .toast .toast-title { font-size: 14px; font-weight: 600; }
+  .toast .toast-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ══════════════════════════════════════════
+     DEVICE-SPECIFIC OVERRIDES
+     ══════════════════════════════════════════ */
+
+  /* Phone Portrait: vertical stack, horizontal scroll per lane */
+  .device-phone-p .avenue-lanes { flex-direction: column; }
+  .device-phone-p .lane-modules { flex-wrap: nowrap; }
+
+  /* Phone Landscape: 2 lanes visible, scroll for 3rd */
+  .device-phone-l .avenue-lanes { flex-direction: column; gap: 8px; }
+  .device-phone-l .lane-modules { flex-wrap: nowrap; }
+  .device-phone-l .module-card { width: 100px; min-height: 80px; }
+  .device-phone-l .module-card .card-icon { width: 28px; height: 28px; font-size: 14px; }
+  .device-phone-l .lane-header { padding: 8px 12px; }
+
+  /* Tablet Portrait: full-width cards, 3 per lane row */
+  .device-tablet-p .lane-modules { flex-wrap: wrap; }
+  .device-tablet-p .module-card { width: calc(33% - 6px); flex-shrink: 1; }
+
+  /* Tablet Landscape: 3 lanes as columns */
+  .device-tablet-l .avenue-lanes { flex-direction: row; align-items: flex-start; }
+  .device-tablet-l .avenue-lane { flex: 1; min-width: 0; }
+  .device-tablet-l .lane-modules { flex-direction: column; }
+  .device-tablet-l .module-card { width: 100%; flex-shrink: 0; }
+
+  /* RealWear: voice-paginated, single avenue at a time */
+  .device-realwear .dash-header { padding: 12px 16px 4px; }
+  .device-realwear .dash-title { font-size: 16px; }
+  .device-realwear .avenue-lanes { gap: 8px; }
+  .device-realwear .lane-modules { flex-direction: column; }
+  .device-realwear .module-card {
+    width: 100%; flex-direction: row; min-height: auto;
+    padding: 12px 14px; gap: 10px; text-align: left;
+  }
+  .device-realwear .module-card .card-name { font-size: 15px; }
+  .device-realwear .module-card .voice-badge { display: block; position: static; margin-right: 4px; }
+  .device-realwear .sessions-zone { display: none; }
+
+  /* Glass Micro: single avenue at a time, voice nav */
+  .device-glass-micro .dash-header { padding: 12px 16px 4px; }
+  .device-glass-micro .dash-title { font-size: 14px; }
+  .device-glass-micro .dash-subtitle { display: none; }
+  .device-glass-micro .lane-modules { flex-direction: column; }
+  .device-glass-micro .module-card {
+    width: 100%; flex-direction: row; min-height: auto;
+    padding: 10px 12px; gap: 8px; text-align: left;
+  }
+  .device-glass-micro .module-card .voice-badge { display: block; position: static; }
+  .device-glass-micro .module-card .card-name { font-size: 14px; }
+  .device-glass-micro .module-card .card-sub { display: none; }
+  .device-glass-micro .sessions-zone { display: none; }
+
+  /* Samsung Fold */
+  .device-fold .lane-modules { flex-wrap: wrap; }
+  .device-fold .module-card { width: calc(50% - 4px); flex-shrink: 1; }
+
+  /* iPad */
+  .device-ipad .lane-modules { flex-wrap: wrap; }
+  .device-ipad .module-card { width: calc(33% - 6px); flex-shrink: 1; }
+
+  /* ── Glass-only page nav ── */
+  .page-nav {
+    display: none; padding: 8px 16px;
+    justify-content: center; gap: 8px; z-index: 2; position: relative;
+  }
+  .device-glass-micro .page-nav,
+  .device-realwear .page-nav { display: flex; }
+  .page-nav-btn {
+    padding: 6px 14px; border-radius: 8px;
+    border: 1px solid var(--glass-border); background: var(--glass-bg);
+    color: var(--text-secondary); font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .page-nav-btn:hover { border-color: var(--primary-light); color: var(--primary-light); }
+  .page-nav-btn.active {
+    background: rgba(30,64,175,0.25); border-color: var(--primary);
+    color: var(--primary-light);
+  }
+</style>
+</head>
+<body>
+
+<!-- Device Toolbar -->
+<div class="device-toolbar">
+  <span class="toolbar-label">Device</span>
+  <button class="device-btn active" onclick="switchDevice('phone-p')">Phone P</button>
+  <button class="device-btn" onclick="switchDevice('phone-l')">Phone L</button>
+  <button class="device-btn" onclick="switchDevice('tablet-p')">Tablet P</button>
+  <button class="device-btn" onclick="switchDevice('tablet-l')">Tablet L</button>
+  <button class="device-btn" onclick="switchDevice('realwear')">RealWear</button>
+  <button class="device-btn" onclick="switchDevice('glass-micro')">Glass Micro</button>
+  <button class="device-btn" onclick="switchDevice('fold')">Samsung Fold</button>
+  <button class="device-btn" onclick="switchDevice('ipad')">iPad</button>
+  <span class="device-info" id="deviceInfo">360 x 800</span>
+</div>
+
+<!-- Viewport -->
+<div class="viewport-wrapper">
+  <div class="viewport-frame" id="viewportFrame" style="width:360px; height:800px;">
+
+    <div class="dashboard" id="dashboard">
+
+      <!-- Header -->
+      <div class="dash-header">
+        <div>
+          <div class="dash-title">Cockpit</div>
+          <div class="dash-subtitle">City of Avanues &mdash; v3</div>
+        </div>
+        <div class="session-count">5 sessions</div>
+      </div>
+
+      <!-- Glass/RealWear page nav (hidden on other devices) -->
+      <div class="page-nav" id="pageNav">
+        <button class="page-nav-btn active" onclick="showAvenue(0)">Control</button>
+        <button class="page-nav-btn" onclick="showAvenue(1)">Media</button>
+        <button class="page-nav-btn" onclick="showAvenue(2)">Creator</button>
+      </div>
+
+      <!-- Avenue Lanes -->
+      <div class="avenue-lanes" id="avenueLanes"></div>
+
+      <!-- Sessions -->
+      <div class="sessions-zone">
+        <div class="section-header">Recent Sessions</div>
+        <div class="sessions-strip" id="sessionsStrip"></div>
+      </div>
+
+      <!-- FAB -->
+      <button class="fab" onclick="showToast('\u2795','New Session','Choose template or blank')">+</button>
+
+      <!-- HUD Footer -->
+      <div class="hud-footer">
+        <span class="vos-badge">VoiceOS&reg;</span>
+        <span>Cockpit</span>
+        <span style="color:var(--primary); margin:0 4px;">&#9679;</span>
+        <span class="tagline">Where Avanues Meet</span>
+      </div>
+
+      <!-- Toast -->
+      <div class="toast" id="toast">
+        <div class="toast-icon" id="toastIcon"></div>
+        <div class="toast-title" id="toastTitle"></div>
+        <div class="toast-sub" id="toastSub"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ──
+const AVENUES = [
+  {
+    name: 'Control Avanue',
+    icon: '\u{1F3AE}',
+    accent: '#1E40AF',
+    modules: [
+      { id:'voiceavanue', name:'VoiceTouch\u2122', sub:'Voice commands', icon:'\u{1F3A4}', accent:'#1E40AF' },
+      { id:'webavanue',   name:'WebAvanue',        sub:'Voice browser', icon:'\u{1F310}', accent:'#00897B' },
+      { id:'voicecursor', name:'CursorAvanue',     sub:'Cursor control',icon:'\u{1F5B1}', accent:'#FF7043' }
+    ]
+  },
+  {
+    name: 'Media Avanue',
+    icon: '\u{1F4F7}',
+    accent: '#8B5CF6',
+    modules: [
+      { id:'photoavanue', name:'PhotoAvanue',  sub:'Camera',       icon:'\u{1F4F7}', accent:'#7E57C2' },
+      { id:'imageavanue', name:'ImageAvanue',  sub:'Image viewer', icon:'\u{1F5BC}', accent:'#43A047' },
+      { id:'videoavanue', name:'VideoAvanue',  sub:'Video player', icon:'\u{1F3A5}', accent:'#E91E63' },
+      { id:'remotecast',  name:'CastAvanue',   sub:'Screen cast',  icon:'\u{1F4E1}', accent:'#26C6DA' }
+    ]
+  },
+  {
+    name: 'Creator Avanue',
+    icon: '\u270F\uFE0F',
+    accent: '#34D399',
+    modules: [
+      { id:'pdfavanue',   name:'PDFAvanue',   sub:'PDF viewer',   icon:'\u{1F4C4}', accent:'#E53935' },
+      { id:'noteavanue',  name:'NoteAvanue',   sub:'Rich notes',   icon:'\u{1F4DD}', accent:'#FFA726' },
+      { id:'annotationavanue', name:'DrawAvanue', sub:'Whiteboard', icon:'\u270F\uFE0F', accent:'#EF5350' }
+    ]
+  }
+];
+
+const SESSIONS = [
+  { name:'Research', layout:'Flight Deck', frames:4 },
+  { name:'Meeting Notes', layout:'Split Left', frames:2 },
+  { name:'Field Inspection', layout:'Grid', frames:3 },
+  { name:'Developer', layout:'Mosaic', frames:5 },
+  { name:'Remote Assist', layout:'T-Panel', frames:2 }
+];
+
+const DEVICES = {
+  'phone-p':    { w:360, h:800,  css:'device-phone-p',     label:'Phone Portrait' },
+  'phone-l':    { w:800, h:360,  css:'device-phone-l',     label:'Phone Landscape' },
+  'tablet-p':   { w:800, h:1280, css:'device-tablet-p',    label:'Tablet Portrait' },
+  'tablet-l':   { w:1280,h:800,  css:'device-tablet-l',    label:'Tablet Landscape' },
+  'realwear':   { w:854, h:480,  css:'device-realwear',    label:'RealWear Nav520' },
+  'glass-micro':{ w:480, h:480,  css:'device-glass-micro', label:'Vuzix Blade' },
+  'fold':       { w:884, h:1104, css:'device-fold',        label:'Samsung Fold' },
+  'ipad':       { w:1024,h:1366, css:'device-ipad',        label:'iPad Pro 11"' }
+};
+
+let currentDevice = 'phone-p';
+let openLanes = [0, 1, 2]; // all open by default
+let toastTimer = null;
+let voiceCounter = 0;
+
+// ── Device Switching ──
+function switchDevice(id) {
+  currentDevice = id;
+  const d = DEVICES[id];
+  const vf = document.getElementById('viewportFrame');
+  const db = document.getElementById('dashboard');
+
+  document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  vf.style.width = d.w + 'px';
+  vf.style.height = d.h + 'px';
+  db.className = 'dashboard ' + d.css;
+
+  scaleViewport();
+  document.getElementById('deviceInfo').textContent = d.w + ' \u00D7 ' + d.h + ' \u2014 ' + d.label;
+
+  // On glass/realwear, show only first avenue; others collapse
+  if (d.css === 'device-glass-micro' || d.css === 'device-realwear') {
+    openLanes = [0];
+  } else {
+    openLanes = [0, 1, 2];
+  }
+
+  renderLanes();
+  renderSessions();
+  updatePageNav();
+}
+
+function scaleViewport() {
+  const vf = document.getElementById('viewportFrame');
+  const ww = window.innerWidth - 40;
+  const wh = window.innerHeight - 90;
+  const vw = parseInt(vf.style.width);
+  const vh = parseInt(vf.style.height);
+  const scale = Math.min(1, ww / vw, wh / vh);
+  vf.style.transform = 'scale(' + scale + ')';
+}
+window.addEventListener('resize', scaleViewport);
+
+// ── Avenue Lanes ──
+function renderLanes() {
+  const container = document.getElementById('avenueLanes');
+  container.innerHTML = '';
+  voiceCounter = 0;
+
+  AVENUES.forEach((ave, ai) => {
+    const isOpen = openLanes.includes(ai);
+    const lane = document.createElement('div');
+    lane.className = 'avenue-lane';
+    lane.style.background = ave.accent + '08';
+
+    // Street badge
+    const badge = document.createElement('div');
+    badge.className = 'street-badge';
+    badge.style.background = ave.accent + '40';
+    badge.textContent = ave.name;
+    lane.appendChild(badge);
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'lane-header';
+    header.onclick = () => toggleLane(ai);
+    header.innerHTML =
+      '<div class="lane-accent-bar" style="background:' + ave.accent + ';"></div>' +
+      '<div class="lane-icon" style="background:' + ave.accent + '22; color:' + ave.accent + ';">' + ave.icon + '</div>' +
+      '<div class="lane-title">' + ave.name + '</div>' +
+      '<span class="lane-count">' + ave.modules.length + '</span>' +
+      '<span class="lane-chevron ' + (isOpen ? 'open' : '') + '">\u25BC</span>';
+    lane.appendChild(header);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'lane-body' + (isOpen ? '' : ' collapsed');
+    body.id = 'lane-body-' + ai;
+
+    const modulesWrap = document.createElement('div');
+    modulesWrap.className = 'lane-modules';
+
+    ave.modules.forEach((m, mi) => {
+      voiceCounter++;
+      const card = document.createElement('div');
+      card.className = 'module-card';
+      card.style.animationDelay = (mi * 60) + 'ms';
+      card.onclick = () => showToast(m.icon, 'Launching ' + m.name, m.sub);
+
+      card.innerHTML =
+        '<div class="card-accent" style="background:' + m.accent + ';"></div>' +
+        '<span class="voice-badge">' + voiceCounter + '</span>' +
+        '<div class="card-icon" style="background:' + m.accent + '22; color:' + m.accent + ';">' + m.icon + '</div>' +
+        '<div class="card-name">' + m.name + '</div>' +
+        '<div class="card-sub">' + m.sub + '</div>';
+
+      modulesWrap.appendChild(card);
+    });
+
+    body.appendChild(modulesWrap);
+    lane.appendChild(body);
+    container.appendChild(lane);
+  });
+}
+
+function toggleLane(index) {
+  const body = document.getElementById('lane-body-' + index);
+  if (!body) return;
+
+  const d = DEVICES[currentDevice];
+  // On glass/realwear, only one lane open at a time
+  if (d.css === 'device-glass-micro' || d.css === 'device-realwear') {
+    openLanes = openLanes.includes(index) ? [] : [index];
+  } else {
+    if (openLanes.includes(index)) {
+      openLanes = openLanes.filter(i => i !== index);
+    } else {
+      openLanes.push(index);
+    }
+  }
+
+  renderLanes();
+  updatePageNav();
+}
+
+// ── Glass/RealWear Page Nav ──
+function showAvenue(index) {
+  openLanes = [index];
+  renderLanes();
+  updatePageNav();
+
+  // Scroll to that lane
+  const lane = document.querySelectorAll('.avenue-lane')[index];
+  if (lane) lane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updatePageNav() {
+  const btns = document.querySelectorAll('.page-nav-btn');
+  btns.forEach((btn, i) => {
+    btn.classList.toggle('active', openLanes.includes(i));
+  });
+}
+
+// ── Sessions ──
+function renderSessions() {
+  const strip = document.getElementById('sessionsStrip');
+  strip.innerHTML = '';
+
+  SESSIONS.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'session-card';
+    card.onclick = () => showToast('\u{1F4C2}', 'Resuming ' + s.name, s.layout);
+    card.innerHTML =
+      '<div class="s-name">' + s.name + '</div>' +
+      '<div class="s-meta"><span>' + s.layout + '</span><span class="s-badge">' + s.frames + '</span></div>';
+    strip.appendChild(card);
+  });
+}
+
+// ── Toast ──
+function showToast(icon, title, sub) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastIcon').innerHTML = icon;
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastSub').textContent = sub;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+// ── Init ──
+function init() {
+  renderLanes();
+  renderSessions();
+  scaleViewport();
+}
+init();
+</script>
+</body>
+</html>

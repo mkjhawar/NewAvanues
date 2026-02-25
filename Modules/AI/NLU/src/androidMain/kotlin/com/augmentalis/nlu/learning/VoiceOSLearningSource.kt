@@ -3,8 +3,10 @@ package com.augmentalis.nlu.learning
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
-import android.util.Log
 import com.augmentalis.nlu.learning.domain.*
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CopyOnWriteArrayList
@@ -64,7 +66,7 @@ class VoiceOSLearningSource @Inject constructor(
                 "LIMIT 1"
             )?.use { it.count >= 0 } ?: false
         } catch (e: Exception) {
-            Log.d(TAG, "VoiceOS not available: ${e.message}")
+            nluLogDebug(TAG, "VoiceOS not available: ${e.message}")
             false
         }
     }
@@ -74,7 +76,7 @@ class VoiceOSLearningSource @Inject constructor(
      */
     override suspend fun getUnsyncedCommands(limit: Int): List<LearnedCommand> = withContext(Dispatchers.IO) {
         if (!isVoiceOSAvailable()) {
-            Log.d(TAG, "VoiceOS not available, returning empty list")
+            nluLogDebug(TAG, "VoiceOS not available, returning empty list")
             return@withContext emptyList()
         }
 
@@ -98,9 +100,9 @@ class VoiceOSLearningSource @Inject constructor(
                 }
             }
 
-            Log.d(TAG, "Found ${commands.size} unsynced commands")
+            nluLogDebug(TAG, "Found ${commands.size} unsynced commands")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to query unsynced commands: ${e.message}", e)
+            nluLogError(TAG, "Failed to query unsynced commands: ${e.message}", e)
         }
 
         commands
@@ -121,9 +123,9 @@ class VoiceOSLearningSource @Inject constructor(
                 }
                 context.contentResolver.update(uri, values, null, null)
             }
-            Log.d(TAG, "Marked ${commandIds.size} commands as synced")
+            nluLogDebug(TAG, "Marked ${commandIds.size} commands as synced")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to mark synced: ${e.message}", e)
+            nluLogError(TAG, "Failed to mark synced: ${e.message}", e)
         }
     }
 
@@ -148,7 +150,7 @@ class VoiceOSLearningSource @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get command count: ${e.message}", e)
+            nluLogError(TAG, "Failed to get command count: ${e.message}", e)
         }
 
         0
@@ -180,9 +182,9 @@ class VoiceOSLearningSource @Inject constructor(
                 }
             }
 
-            Log.d(TAG, "Found ${commands.size} high-confidence commands")
+            nluLogDebug(TAG, "Found ${commands.size} high-confidence commands")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to query high-confidence commands: ${e.message}", e)
+            nluLogError(TAG, "Failed to query high-confidence commands: ${e.message}", e)
         }
 
         commands
@@ -214,7 +216,7 @@ class VoiceOSLearningSource @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to query user-approved commands: ${e.message}", e)
+            nluLogError(TAG, "Failed to query user-approved commands: ${e.message}", e)
         }
 
         commands
@@ -248,7 +250,7 @@ class VoiceOSLearningSource @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to query commands by package: ${e.message}", e)
+            nluLogError(TAG, "Failed to query commands by package: ${e.message}", e)
         }
 
         commands
@@ -258,12 +260,12 @@ class VoiceOSLearningSource @Inject constructor(
 
     override fun addLearningListener(listener: LearningEventListener) {
         listeners.add(listener)
-        Log.d(TAG, "Added listener, total: ${listeners.size}")
+        nluLogDebug(TAG, "Added listener, total: ${listeners.size}")
     }
 
     override fun removeLearningListener(listener: LearningEventListener) {
         listeners.remove(listener)
-        Log.d(TAG, "Removed listener, total: ${listeners.size}")
+        nluLogDebug(TAG, "Removed listener, total: ${listeners.size}")
     }
 
     /**
@@ -274,7 +276,7 @@ class VoiceOSLearningSource @Inject constructor(
             try {
                 listener.onLearningEvent(event)
             } catch (e: Exception) {
-                Log.e(TAG, "Listener failed: ${e.message}", e)
+                nluLogError(TAG, "Listener failed: ${e.message}", e)
             }
         }
     }
@@ -323,7 +325,7 @@ class VoiceOSLearningSource @Inject constructor(
                 usageCount = usageCount
             ).copy(id = id)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse cursor: ${e.message}")
+            nluLogError(TAG, "Failed to parse cursor: ${e.message}")
             null
         }
     }
@@ -407,7 +409,7 @@ class VoiceOSLearningSource @Inject constructor(
                 voiceosAvailable = true
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get stats: ${e.message}", e)
+            nluLogError(TAG, "Failed to get stats: ${e.message}", e)
             VoiceOSLearningStats(0, 0, 0, 0, 0, false)
         }
     }

@@ -1,9 +1,10 @@
 package com.augmentalis.universal.thememanager
 
-import com.augmentalis.avamagic.components.core.Theme
+import com.augmentalis.avanueui.core.Theme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.datetime.Clock
 
 /**
  * Theme synchronization system
@@ -113,7 +114,7 @@ class ThemeSync(
                 }
             }
 
-            _lastSyncTime.value = System.currentTimeMillis()
+            _lastSyncTime.value = Clock.System.now().toEpochMilliseconds()
             _syncState.value = SyncState.Success
         } catch (e: Exception) {
             _syncState.value = SyncState.Error("Failed to sync from cloud: ${e.message}")
@@ -144,7 +145,7 @@ class ThemeSync(
                 }
             }
 
-            _lastSyncTime.value = System.currentTimeMillis()
+            _lastSyncTime.value = Clock.System.now().toEpochMilliseconds()
             _syncState.value = SyncState.Success
         } catch (e: Exception) {
             _syncState.value = SyncState.Error("Failed to sync to cloud: ${e.message}")
@@ -165,7 +166,7 @@ class ThemeSync(
             // Then, sync to cloud to upload any local changes
             syncToCloud()
 
-            _lastSyncTime.value = System.currentTimeMillis()
+            _lastSyncTime.value = Clock.System.now().toEpochMilliseconds()
             _syncState.value = SyncState.Success
         } catch (e: Exception) {
             _syncState.value = SyncState.Error("Failed to perform bidirectional sync: ${e.message}")
@@ -177,7 +178,7 @@ class ThemeSync(
      */
     fun shouldSync(intervalMillis: Long = DEFAULT_SYNC_INTERVAL): Boolean {
         val lastSync = _lastSyncTime.value ?: return true
-        return System.currentTimeMillis() - lastSync >= intervalMillis
+        return Clock.System.now().toEpochMilliseconds() - lastSync >= intervalMillis
     }
 
     /**

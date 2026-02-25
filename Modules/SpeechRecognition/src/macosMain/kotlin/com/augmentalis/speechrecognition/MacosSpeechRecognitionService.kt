@@ -14,7 +14,13 @@
 package com.augmentalis.speechrecognition
 
 import com.augmentalis.nlu.matching.CommandMatchingService
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.value
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -32,7 +38,7 @@ import platform.Speech.*
  *
  * macOS 10.15+ required for SFSpeechRecognizer support.
  */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class, ExperimentalCoroutinesApi::class)
 class MacosSpeechRecognitionService : SpeechRecognitionService {
 
     companion object {
@@ -206,7 +212,15 @@ class MacosSpeechRecognitionService : SpeechRecognitionService {
 
             // Start audio engine
             audioEngine?.prepare()
-            audioEngine?.startAndReturnError(null)
+            audioEngine?.let { engine ->
+                memScoped {
+                    val startError = alloc<ObjCObjectVar<NSError?>>()
+                    engine.startAndReturnError(startError.ptr)
+                    startError.value?.let { nsError ->
+                        logError(TAG, "Audio engine start failed: ${nsError.localizedDescription}")
+                    }
+                }
+            }
 
             // Start recognition task
             recognitionTask = speechRecognizer?.recognitionTaskWithRequest(request) { result, error ->
@@ -289,7 +303,15 @@ class MacosSpeechRecognitionService : SpeechRecognitionService {
     override suspend fun resume(): Result<Unit> {
         return try {
             if (state == ServiceState.PAUSED) {
-                audioEngine?.startAndReturnError(null)
+                audioEngine?.let { engine ->
+                    memScoped {
+                        val startError = alloc<ObjCObjectVar<NSError?>>()
+                        engine.startAndReturnError(startError.ptr)
+                        startError.value?.let { nsError ->
+                            logError(TAG, "Audio engine resume failed: ${nsError.localizedDescription}")
+                        }
+                    }
+                }
                 updateState(ServiceState.LISTENING)
                 logInfo(TAG, "Resumed")
             }

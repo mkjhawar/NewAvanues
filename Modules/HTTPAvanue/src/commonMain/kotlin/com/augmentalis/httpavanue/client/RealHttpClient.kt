@@ -9,8 +9,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
-import okio.Buffer
-import okio.BufferedSink
+import com.augmentalis.httpavanue.io.AvanueBuffer
+import com.augmentalis.httpavanue.io.AvanueSink
 import kotlin.math.min
 import kotlin.math.pow
 
@@ -121,13 +121,13 @@ class RealHttpClient(
         }
     }
 
-    private suspend fun writeRequest(sink: BufferedSink, request: ClientRequest, url: ParsedUrl) {
-        val buffer = Buffer()
+    private suspend fun writeRequest(sink: AvanueSink, request: ClientRequest, url: ParsedUrl) {
+        val buffer = AvanueBuffer()
         buffer.writeUtf8("${request.method.name} ${url.path} HTTP/1.1\r\n")
         val headers = buildHeaders(request, url)
         headers.forEach { (name, value) -> buffer.writeUtf8("$name: $value\r\n") }
         buffer.writeUtf8("\r\n")
-        sink.write(buffer, buffer.size)
+        sink.write(buffer.toByteArray())
         sink.flush()
         request.body?.let { body -> sink.write(body); sink.flush() }
     }

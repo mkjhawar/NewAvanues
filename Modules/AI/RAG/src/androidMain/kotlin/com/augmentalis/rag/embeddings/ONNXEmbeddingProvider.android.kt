@@ -10,6 +10,7 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
 import com.augmentalis.ava.core.common.AVAException
+import com.augmentalis.nlu.BertTokenizer
 import com.augmentalis.rag.domain.Embedding
 import java.io.File
 import java.nio.LongBuffer
@@ -86,6 +87,12 @@ class ONNXEmbeddingProvider(
         "AVA-ONX-384-BASE-INT8" to "all-MiniLM-L6-v2",
         "AVA-ONX-384-MULTI-INT8" to "paraphrase-multilingual-MiniLM-L12-v2"
     )
+
+    // Real WordPiece tokenizer — vocabulary loaded from assets/models/vocab.txt or
+    // files/models/vocab.txt. Falls back to a 4-token stub only if neither is present,
+    // which causes inference to produce [UNK]-only sequences. Deploy vocab.txt alongside
+    // the ONNX model to get correct token IDs.
+    private val bertTokenizer = BertTokenizer(context, maxSequenceLength = 128)
 
     private var ortEnvironment: OrtEnvironment? = null
     private var ortSession: OrtSession? = null
@@ -360,8 +367,8 @@ class ONNXEmbeddingProvider(
         return try {
             if (!initialized) initialize()
 
-            // Tokenize input
-            val tokenized = SimpleTokenizer.tokenize(text)
+            // Tokenize input using real BERT WordPiece tokenization
+            val tokenized = bertTokenizer.tokenize(text)
 
             // Run inference
             val embedding = runInference(
@@ -418,10 +425,10 @@ class ONNXEmbeddingProvider(
             val env = ortEnvironment ?: throw AVAException.InitializationException("ONNX Runtime not initialized")
             val session = ortSession ?: throw AVAException.InitializationException("ONNX session not created")
 
-            // Tokenize all texts
-            val tokenizedInputs = texts.map { SimpleTokenizer.tokenize(it) }
+            // Tokenize all texts using real BERT WordPiece tokenization
+            val tokenizedInputs = texts.map { bertTokenizer.tokenize(it) }
             val batchSize = texts.size
-            val seqLength = 128 // MAX_SEQ_LENGTH from SimpleTokenizer
+            val seqLength = 128 // max sequence length shared with BertTokenizer
 
             // Stack tokenized inputs into batch tensors
             val batchInputIds = LongArray(batchSize * seqLength)

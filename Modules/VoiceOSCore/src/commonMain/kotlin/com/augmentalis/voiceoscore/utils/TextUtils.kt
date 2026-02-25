@@ -3,7 +3,6 @@
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-11-17
  */
 package com.augmentalis.voiceoscore

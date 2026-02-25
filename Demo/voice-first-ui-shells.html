@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-First UI Shells — Avanues Cockpit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --hydra-primary: #1565C0;
+            --hydra-secondary: #42A5F5;
+            --hydra-surface: #121212;
+            --hydra-on-surface: #FFFFFF;
+            --hydra-on-surface-variant: #E0E0E0;
+            --hydra-scrim: rgba(0, 0, 0, 0.4);
+            --glass-effect: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
+            color: var(--hydra-on-surface);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            border-bottom: 1px solid rgba(21, 101, 192, 0.2);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--hydra-secondary), var(--hydra-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: var(--hydra-on-surface-variant);
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(21, 101, 192, 0.1);
+            overflow-x: auto;
+            padding-bottom: 12px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            color: var(--hydra-on-surface-variant);
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 200ms ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--hydra-on-surface);
+            border-bottom-color: rgba(21, 101, 192, 0.3);
+        }
+
+        .tab-btn.active {
+            color: var(--hydra-primary);
+            border-bottom-color: var(--hydra-primary);
+        }
+
+        .shell-content {
+            display: none;
+        }
+
+        .shell-content.active {
+            display: block;
+            animation: fadeIn 300ms ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Shared shell styling */
+        .shell-container {
+            background: var(--hydra-surface);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-effect);
+        }
+
+        .shell-viewport {
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Top bar */
+        .top-bar {
+            background: rgba(18, 18, 18, 0.8);
+            border-bottom: 1px solid rgba(21, 101, 192, 0.1);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .top-bar-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--hydra-primary);
+        }
+
+        /* CLASSIC Shell */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .module-tile {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.2), rgba(66, 165, 245, 0.1));
+            border: 1px solid var(--glass-effect);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 200ms ease;
+            gap: 8px;
+        }
+
+        .module-tile:hover {
+            transform: translateY(-4px);
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.3), rgba(66, 165, 245, 0.2));
+            border-color: var(--hydra-primary);
+        }
+
+        .module-icon {
+            font-size: 2em;
+        }
+
+        .module-name {
+            font-size: 0.85em;
+            font-weight: 600;
+            text-align: center;
+            color: var(--hydra-on-surface-variant);
+        }
+
+        /* AVANUE_VIEWS Shell */
+        .card-stream {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .ambient-card {
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.15), rgba(66, 165, 245, 0.05));
+            border: 1px solid var(--glass-effect);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 200ms ease;
+        }
+
+        .ambient-card:hover {
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.25), rgba(66, 165, 245, 0.15));
+            border-color: var(--hydra-primary);
+        }
+
+        .card-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--hydra-on-surface);
+        }
+
+        .card-preview {
+            font-size: 0.9em;
+            color: var(--hydra-on-surface-variant);
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .card-action {
+            display: inline-block;
+            background: rgba(21, 101, 192, 0.2);
+            color: var(--hydra-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border: 1px solid var(--hydra-primary);
+        }
+
+        /* LENS Shell */
+        .lens-viewport {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .search-bar {
+            width: 100%;
+            max-width: 500px;
+            height: 56px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--hydra-primary);
+            border-radius: 28px;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            font-size: 1em;
+            color: var(--hydra-on-surface);
+        }
+
+        .search-icon {
+            font-size: 1.3em;
+            opacity: 0.6;
+        }
+
+        .search-placeholder {
+            color: var(--hydra-on-surface-variant);
+            flex: 1;
+            text-align: left;
+        }
+
+        .quick-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 20px;
+        }
+
+        .result-chip {
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.2), rgba(66, 165, 245, 0.1));
+            border: 1px solid var(--glass-effect);
+            border-radius: 24px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 150ms ease;
+            text-align: center;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .result-chip:hover {
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.3), rgba(66, 165, 245, 0.2));
+            border-color: var(--hydra-primary);
+            transform: scale(1.05);
+        }
+
+        /* CANVAS Shell */
+        .canvas-viewport {
+            position: relative;
+            flex: 1;
+            background: radial-gradient(circle at 50% 50%, rgba(21, 101, 192, 0.05), transparent);
+            overflow: hidden;
+        }
+
+        .canvas-grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(21, 101, 192, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(21, 101, 192, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .canvas-island {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.25), rgba(66, 165, 245, 0.15));
+            border: 1px solid var(--glass-effect);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: grab;
+            transition: all 200ms ease;
+            min-width: 140px;
+            text-align: center;
+        }
+
+        .canvas-island:hover {
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.35), rgba(66, 165, 245, 0.25));
+            border-color: var(--hydra-primary);
+            box-shadow: 0 10px 30px rgba(21, 101, 192, 0.3);
+        }
+
+        .canvas-island:active {
+            cursor: grabbing;
+        }
+
+        .island-icon {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        .island-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--hydra-on-surface-variant);
+        }
+
+        /* Action Bar (Bottom) */
+        .action-bar {
+            background: rgba(18, 18, 18, 0.9);
+            border-top: 1px solid rgba(21, 101, 192, 0.1);
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            overflow-x: auto;
+        }
+
+        .action-chip {
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.2), rgba(66, 165, 245, 0.1));
+            border: 1px solid var(--glass-effect);
+            color: var(--hydra-on-surface);
+            padding: 10px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 150ms ease;
+            white-space: nowrap;
+            font-size: 0.9em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-chip:hover {
+            background: linear-gradient(135deg, rgba(21, 101, 192, 0.3), rgba(66, 165, 245, 0.2));
+            border-color: var(--hydra-primary);
+            color: var(--hydra-primary);
+        }
+
+        .action-icon {
+            font-size: 1.1em;
+        }
+
+        .action-spacer {
+            flex: 1;
+        }
+
+        .more-button {
+            background: var(--hydra-primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 150ms ease;
+        }
+
+        .more-button:hover {
+            background: var(--hydra-secondary);
+            transform: translateY(-2px);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 20px 20px;
+            color: var(--hydra-on-surface-variant);
+            font-size: 0.9em;
+            border-top: 1px solid rgba(21, 101, 192, 0.1);
+            margin-top: 40px;
+        }
+
+        .credit {
+            margin-bottom: 8px;
+        }
+
+        .version {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .shell-viewport {
+                min-height: 500px;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab-btn {
+                padding: 10px 16px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Voice-First UI Shells</h1>
+            <p class="subtitle">Avanues Cockpit v1.0</p>
+            <p class="subtitle" style="font-size: 0.95em; margin-top: 15px;">Four interaction paradigms optimized for different user profiles and devices</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('classic')">
+                📊 Classic
+            </button>
+            <button class="tab-btn" onclick="switchTab('avanue-views')">
+                🌊 AvanueViews
+            </button>
+            <button class="tab-btn" onclick="switchTab('lens')">
+                🔍 Lens
+            </button>
+            <button class="tab-btn" onclick="switchTab('canvas')">
+                🎨 Canvas
+            </button>
+        </div>
+
+        <!-- CLASSIC Shell -->
+        <div id="classic" class="shell-content active">
+            <div class="shell-container">
+                <div class="top-bar">
+                    <div class="top-bar-title">Cockpit Dashboard</div>
+                    <div style="font-size: 0.9em; color: var(--hydra-on-surface-variant);">15 layouts available</div>
+                </div>
+                <div class="shell-viewport">
+                    <div class="dashboard-grid">
+                        <div class="module-tile" onclick="alert('Opened: WebAvanue')">
+                            <div class="module-icon">🌐</div>
+                            <div class="module-name">WebAvanue</div>
+                        </div>
+                        <div class="module-tile" onclick="alert('Opened: PhotoAvanue')">
+                            <div class="module-icon">📷</div>
+                            <div class="module-name">PhotoAvanue</div>
+                        </div>
+                        <div class="module-tile" onclick="alert('Opened: NoteAvanue')">
+                            <div class="module-icon">📝</div>
+                            <div class="module-name">NoteAvanue</div>
+                        </div>
+                        <div class="module-tile" onclick="alert('Opened: PDFAvanue')">
+                            <div class="module-icon">📄</div>
+                            <div class="module-name">PDFAvanue</div>
+                        </div>
+                        <div class="module-tile" onclick="alert('Opened: WhiteboardAvanue')">
+                            <div class="module-icon">✏️</div>
+                            <div class="module-name">Whiteboard</div>
+                        </div>
+                        <div class="module-tile" onclick="alert('Opened: VideoAvanue')">
+                            <div class="module-icon">🎬</div>
+                            <div class="module-name">VideoAvanue</div>
+                        </div>
+                        <div class="module-tile" onclick="alert('Opened: MapAvanue')">
+                            <div class="module-icon">🗺️</div>
+                            <div class="module-name">MapAvanue</div>
+                        </div>
+                        <div class="module-tile" onclick="alert('Opened: Settings')">
+                            <div class="module-icon">⚙️</div>
+                            <div class="module-name">Settings</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <span style="color: var(--hydra-on-surface-variant); font-size: 0.9em;">Layout:</span>
+                    <button class="action-chip" onclick="alert('Switched to: Grid')">📐 Grid</button>
+                    <button class="action-chip" onclick="alert('Switched to: Cockpit')">✈️ Cockpit</button>
+                    <button class="action-chip" onclick="alert('Switched to: Carousel')">🎠 Carousel</button>
+                    <button class="action-chip" onclick="alert('Switched to: Freeform')">🎨 Freeform</button>
+                    <div class="action-spacer"></div>
+                    <button class="more-button" onclick="alert('Opening full layout selector...')">More Layouts</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AVANUE_VIEWS Shell -->
+        <div id="avanue-views" class="shell-content">
+            <div class="shell-container">
+                <div class="top-bar">
+                    <div class="top-bar-title">AvanueViews — Ambient Card Stream</div>
+                    <div style="font-size: 0.9em; color: var(--hydra-on-surface-variant);">Context-aware, priority-sorted</div>
+                </div>
+                <div class="shell-viewport">
+                    <div class="card-stream">
+                        <div class="ambient-card" onclick="alert('Opened: Active Meeting Notes')">
+                            <div class="card-title">📝 Active Session: Meeting Notes</div>
+                            <div class="card-preview">You were editing your meeting notes 5 minutes ago. 847 words, last edit at 14:32.</div>
+                            <span class="card-action">Resume Editing</span>
+                        </div>
+                        <div class="ambient-card" onclick="alert('Opened: Research Paper')">
+                            <div class="card-title">📄 Research: Quantum Computing Trends</div>
+                            <div class="card-preview">3 open PDFs related to your current research. Latest update from arXiv this morning.</div>
+                            <span class="card-action">View Papers</span>
+                        </div>
+                        <div class="ambient-card" onclick="alert('Opened: Recent Photo')">
+                            <div class="card-title">📸 Suggested: Morning Sketches</div>
+                            <div class="card-preview">You captured 12 whiteboard sketches this morning. Ready to convert to digital notes?</div>
+                            <span class="card-action">Convert Now</span>
+                        </div>
+                        <div class="ambient-card" onclick="alert('Opened: Web Article')">
+                            <div class="card-title">🌐 Reading: AI in Healthcare</div>
+                            <div class="card-preview">Article from TechCrunch about recent developments. 8-minute read, saved to your library.</div>
+                            <span class="card-action">Continue Reading</span>
+                        </div>
+                        <div class="ambient-card" onclick="alert('Opened: Suggested Action')">
+                            <div class="card-title">✨ Smart Suggestion: Export Whiteboard</div>
+                            <div class="card-preview">You sketched 3 diagrams. Export as SVG for your presentation?</div>
+                            <span class="card-action">Export</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-chip" onclick="alert('Filter: Active')">⭐ Active</button>
+                    <button class="action-chip" onclick="alert('Filter: Suggested')">💡 Suggested</button>
+                    <button class="action-chip" onclick="alert('Filter: Recent')">🕐 Recent</button>
+                    <div class="action-spacer"></div>
+                    <button class="more-button" onclick="alert('Opening card preferences...')">Preferences</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LENS Shell -->
+        <div id="lens" class="shell-content">
+            <div class="shell-container">
+                <div class="top-bar">
+                    <div class="top-bar-title">Lens — Universal Command Palette</div>
+                    <div style="font-size: 0.9em; color: var(--hydra-on-surface-variant);">One search bar for everything</div>
+                </div>
+                <div class="shell-viewport lens-viewport">
+                    <div class="search-bar">
+                        <span class="search-icon">🔍</span>
+                        <span class="search-placeholder">Search modules, commands, settings, files... (or say it aloud)</span>
+                    </div>
+                    <div class="quick-results">
+                        <div class="result-chip" onclick="alert('Command: Open WebAvanue')">🌐 Web</div>
+                        <div class="result-chip" onclick="alert('Command: New Note')">📝 Note</div>
+                        <div class="result-chip" onclick="alert('Command: Take Photo')">📷 Camera</div>
+                        <div class="result-chip" onclick="alert('Command: Open PDF')">📄 PDF</div>
+                        <div class="result-chip" onclick="alert('Command: Draw')">✏️ Whiteboard</div>
+                        <div class="result-chip" onclick="alert('Command: Settings')">⚙️ Settings</div>
+                        <div class="result-chip" onclick="alert('Command: Search Files')">📂 Files</div>
+                        <div class="result-chip" onclick="alert('Command: Voice Commands')">🎤 Help</div>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-chip" onclick="alert('Recent: WebAvanue')">🌐 Recent</button>
+                    <button class="action-chip" onclick="alert('Starred: NoteAvanue')">⭐ Starred</button>
+                    <button class="action-chip" onclick="alert('Focus Mode')">🎯 Focus</button>
+                    <div class="action-spacer"></div>
+                    <button class="more-button" onclick="alert('Opening voice help...')">🎤 Voice</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CANVAS Shell -->
+        <div id="canvas" class="shell-content">
+            <div class="shell-container">
+                <div class="top-bar">
+                    <div class="top-bar-title">Canvas — Spatial Zen</div>
+                    <div style="font-size: 0.9em; color: var(--hydra-on-surface-variant);">Zoom to navigate, organic layout</div>
+                </div>
+                <div class="shell-viewport canvas-viewport">
+                    <div class="canvas-grid"></div>
+                    <div class="canvas-island" style="top: 50px; left: 80px; width: 160px;" onclick="alert('Opened: WebAvanue')">
+                        <div class="island-icon">🌐</div>
+                        <div class="island-label">WebAvanue</div>
+                    </div>
+                    <div class="canvas-island" style="top: 250px; left: 100px; width: 160px;" onclick="alert('Opened: NoteAvanue')">
+                        <div class="island-icon">📝</div>
+                        <div class="island-label">NoteAvanue</div>
+                    </div>
+                    <div class="canvas-island" style="top: 120px; right: 100px; width: 160px;" onclick="alert('Opened: PhotoAvanue')">
+                        <div class="island-icon">📷</div>
+                        <div class="island-label">PhotoAvanue</div>
+                    </div>
+                    <div class="canvas-island" style="top: 300px; right: 80px; width: 160px;" onclick="alert('Opened: PDFAvanue')">
+                        <div class="island-icon">📄</div>
+                        <div class="island-label">PDFAvanue</div>
+                    </div>
+                    <div class="canvas-island" style="bottom: 150px; left: 50%; transform: translateX(-50%); width: 160px;" onclick="alert('Opened: Whiteboard')">
+                        <div class="island-icon">✏️</div>
+                        <div class="island-label">Whiteboard</div>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-chip" onclick="alert('Zoom: 100%')">🔍 1.0x</button>
+                    <button class="action-chip" onclick="alert('Zoom: 75%')">🔍 0.75x</button>
+                    <button class="action-chip" onclick="alert('Zoom: 50%')">🔍 0.5x</button>
+                    <button class="action-chip" onclick="alert('Reset Layout')">↩️ Reset</button>
+                    <div class="action-spacer"></div>
+                    <button class="more-button" onclick="alert('Opening canvas settings...')">Canvas Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="credit">
+            Designed by Manoj Jhawar / Aman Jhawar, Intelligent Devices LLC
+        </div>
+        <div class="version">
+            Voice-First UI Shells • Avanues Cockpit v1.0 • February 2026
+        </div>
+    </footer>
+
+    <script>
+        function switchTab(tabName) {
+            // Hide all shells
+            document.querySelectorAll('.shell-content').forEach(shell => {
+                shell.classList.remove('active');
+            });
+
+            // Remove active state from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected shell
+            document.getElementById(tabName).classList.add('active');
+
+            // Mark tab as active
+            event.target.classList.add('active');
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const tabs = ['classic', 'avanue-views', 'lens', 'canvas'];
+            const active = document.querySelector('.shell-content.active');
+            const currentIndex = tabs.indexOf(active.id);
+
+            if (e.key === 'ArrowRight' && currentIndex < tabs.length - 1) {
+                switchTab(tabs[currentIndex + 1]);
+                document.querySelectorAll('.tab-btn')[currentIndex + 1].click();
+            } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                switchTab(tabs[currentIndex - 1]);
+                document.querySelectorAll('.tab-btn')[currentIndex - 1].click();
+            }
+        });
+
+        // Canvas island dragging simulation (visual feedback)
+        document.querySelectorAll('.canvas-island').forEach(island => {
+            island.addEventListener('mousedown', function(e) {
+                const rect = this.getBoundingClientRect();
+                const offsetX = e.clientX - rect.left;
+                const offsetY = e.clientY - rect.top;
+                const container = this.parentElement;
+                const containerRect = container.getBoundingClientRect();
+
+                const onMouseMove = (moveEvent) => {
+                    const newX = moveEvent.clientX - containerRect.left - offsetX;
+                    const newY = moveEvent.clientY - containerRect.top - offsetY;
+                    this.style.left = Math.max(0, Math.min(newX, containerRect.width - rect.width)) + 'px';
+                    this.style.top = Math.max(0, Math.min(newY, containerRect.height - rect.height)) + 'px';
+                };
+
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        });
+    </script>
+</body>
+</html>

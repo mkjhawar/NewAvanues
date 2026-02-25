@@ -2,7 +2,6 @@
  * GestureHandler.kt - Handles gesture commands for voice control
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-06
  *
  * KMP handler for gesture actions (tap, swipe, pinch, rotate).

@@ -28,6 +28,7 @@ import com.augmentalis.speechrecognition.VoiceStateManager
 import com.augmentalis.speechrecognition.whisper.OnSpeechChunkReady
 import com.augmentalis.speechrecognition.whisper.WhisperAudio
 import com.augmentalis.speechrecognition.whisper.WhisperEngineState
+import com.augmentalis.speechrecognition.whisper.WhisperPerformance
 import com.augmentalis.speechrecognition.whisper.WhisperVAD
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -36,9 +37,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicReference
@@ -94,6 +99,13 @@ class GoogleCloudEngine(
     private val _errorFlow = MutableSharedFlow<SpeechError>(replay = 1)
     val errorFlow: SharedFlow<SpeechError> = _errorFlow.asSharedFlow()
 
+    // Performance tracking (same WhisperPerformance used by Whisper engines)
+    val performance = WhisperPerformance()
+
+    // Metrics snapshot — updated after each transcription
+    private val _metricsSnapshot = MutableStateFlow<SpeechMetricsSnapshot?>(null)
+    val metricsSnapshot: StateFlow<SpeechMetricsSnapshot?> = _metricsSnapshot.asStateFlow()
+
     /**
      * Initialize the engine with Google Cloud-specific configuration.
      *
@@ -140,7 +152,9 @@ class GoogleCloudEngine(
                 silenceTimeoutMs = config.silenceThresholdMs,
                 minSpeechDurationMs = config.minSpeechDurationMs,
                 maxSpeechDurationMs = config.maxChunkDurationMs,
-                paddingMs = 150
+                paddingMs = 150,
+                thresholdAlpha = WhisperVAD.DEFAULT_THRESHOLD_ALPHA,
+                minThreshold = WhisperVAD.DEFAULT_MIN_THRESHOLD
             )
 
             // Step 3: Create API clients based on mode
@@ -408,7 +422,7 @@ class GoogleCloudEngine(
             return
         }
 
-        client.startStreaming(speechMode.name)
+        client.startStreaming(speechMode.name, phraseHints = commandCache.getAllCommands())
 
         while (scope.isActive && engineState.get() == WhisperEngineState.LISTENING) {
             delay(STREAM_CHUNK_MS)
@@ -436,18 +450,31 @@ class GoogleCloudEngine(
             val audioDurationMs = (audioData.size * 1000L) / WhisperAudio.SAMPLE_RATE
             Log.d(TAG, "Recognizing chunk: ${audioData.size} samples, ~${audioDurationMs}ms")
 
-            val response = client.recognize(audioData, speechMode.name)
+            val apiStartMs = System.currentTimeMillis()
+            val response = client.recognize(audioData, speechMode.name, phraseHints = commandCache.getAllCommands())
+            val processingTimeMs = System.currentTimeMillis() - apiStartMs
 
             when (response) {
                 is RecognizeResponse.Success -> {
                     val result = response.result
                     if (!result.isEmpty()) {
+                        performance.recordTranscription(
+                            audioDurationMs = audioDurationMs,
+                            processingTimeMs = processingTimeMs,
+                            textLength = result.text.length,
+                            segmentCount = result.alternatives.size,
+                            avgConfidence = result.confidence
+                        )
                         Log.i(TAG, "Recognized: '${result.text}' (conf=${result.confidence})")
                         _resultFlow.emit(result)
                         voiceStateManager?.updateCommandExecutionTime()
                     } else {
+                        performance.recordEmptyTranscription(audioDurationMs, processingTimeMs)
                         Log.d(TAG, "Empty recognition result for ${audioDurationMs}ms chunk")
                     }
+                    _metricsSnapshot.value = performance.toSnapshot(
+                        ENGINE_NAME, engineState.get().name, System.currentTimeMillis()
+                    )
                 }
                 is RecognizeResponse.Error -> {
                     Log.w(TAG, "Recognition error: ${response.error.message}")

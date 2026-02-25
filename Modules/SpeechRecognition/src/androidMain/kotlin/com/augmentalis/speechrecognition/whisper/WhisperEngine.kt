@@ -13,6 +13,7 @@
  */
 package com.augmentalis.speechrecognition.whisper
 
+import android.app.ActivityManager
 import android.content.Context
 import android.util.Log
 import com.augmentalis.speechrecognition.CommandCache
@@ -31,10 +32,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -94,6 +98,10 @@ class WhisperEngine(
 
     // Performance tracking
     val performance = WhisperPerformance()
+
+    // Metrics snapshot — updated after each transcription
+    private val _metricsSnapshot = MutableStateFlow<SpeechMetricsSnapshot?>(null)
+    val metricsSnapshot: StateFlow<SpeechMetricsSnapshot?> = _metricsSnapshot.asStateFlow()
 
     // Legacy accessors for backward compatibility
     val totalTranscriptions: Int get() = performance.totalTranscriptions
@@ -350,15 +358,45 @@ class WhisperEngine(
             }
         }
 
-        // Step 2b: Initialize VAD
+        // Step 2b: Initialize VAD — use effective params (profile-aware)
         vad = WhisperVAD(
             speechThreshold = 0f, // auto-calibrate from noise floor
-            vadSensitivity = config.vadSensitivity,
-            silenceTimeoutMs = config.silenceThresholdMs,
-            minSpeechDurationMs = config.minSpeechDurationMs,
+            vadSensitivity = config.effectiveVadSensitivity,
+            silenceTimeoutMs = config.effectiveSilenceThresholdMs,
+            minSpeechDurationMs = config.effectiveMinSpeechDurationMs,
             maxSpeechDurationMs = config.maxChunkDurationMs,
-            paddingMs = 150
+            hangoverFrames = config.effectiveHangoverFrames,
+            paddingMs = 150,
+            thresholdAlpha = config.effectiveThresholdAlpha,
+            minThreshold = config.effectiveMinThreshold
         )
+
+        // Step 2c: Memory-aware model selection — check AVAILABLE RAM at load time.
+        // autoTuned() selects based on totalMem, but availMem can be much lower when
+        // other apps are active. Loading a model that exceeds availMem causes a page
+        // fault storm (146K+ faults) that starves the main thread and triggers ANR.
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memInfo)
+        val availableMB = (memInfo.availMem / (1024 * 1024)).toInt()
+
+        if (memInfo.lowMemory) {
+            // Android reports critical low memory — force smallest model
+            val tinyModel = if (config.modelSize.isEnglishOnly) WhisperModelSize.TINY_EN else WhisperModelSize.TINY
+            Log.w(TAG, "Device in low memory state (${availableMB}MB available). " +
+                "Forcing ${tinyModel.displayName} to prevent ANR")
+            config = config.copy(modelSize = tinyModel)
+        } else if (availableMB < config.modelSize.minRAMMB) {
+            val isEnglish = config.modelSize.isEnglishOnly
+            val downgradedModel = WhisperModelSize.forAvailableRAM(availableMB, isEnglish)
+            Log.w(TAG, "Insufficient available RAM for ${config.modelSize.displayName} " +
+                "(need ${config.modelSize.minRAMMB}MB, have ${availableMB}MB available). " +
+                "Downgrading to ${downgradedModel.displayName}")
+            config = config.copy(modelSize = downgradedModel)
+        } else {
+            Log.d(TAG, "Memory check OK: ${availableMB}MB available, " +
+                "${config.modelSize.displayName} needs ${config.modelSize.minRAMMB}MB")
+        }
 
         // Step 3: Load model (auto-download if missing)
         var modelPath = config.resolveModelPath(context)
@@ -495,6 +533,9 @@ class WhisperEngine(
             if (result.text.isBlank()) {
                 Log.d(TAG, "Empty transcription result (${audioDurationMs}ms audio, ${result.processingTimeMs}ms processing)")
                 performance.recordEmptyTranscription(audioDurationMs, result.processingTimeMs)
+                _metricsSnapshot.value = performance.toSnapshot(
+                    ENGINE_NAME, engineState.get().name, System.currentTimeMillis()
+                )
                 return
             }
 
@@ -515,6 +556,11 @@ class WhisperEngine(
             result.detectedLanguage?.let { lang ->
                 performance.recordLanguageDetection(lang)
             }
+
+            // Emit updated metrics snapshot
+            _metricsSnapshot.value = performance.toSnapshot(
+                ENGINE_NAME, engineState.get().name, System.currentTimeMillis()
+            )
 
             Log.i(TAG, "Transcribed: '${result.text}' " +
                     "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, " +

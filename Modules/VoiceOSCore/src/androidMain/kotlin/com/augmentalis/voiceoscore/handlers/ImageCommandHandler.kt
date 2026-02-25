@@ -31,7 +31,7 @@ class ImageCommandHandler(
     override val supportedActions: List<String> = listOf(
         "open image", "open gallery", "grayscale", "sepia",
         "blur image", "sharpen image", "adjust brightness", "adjust contrast",
-        "rotate left", "rotate right", "flip horizontal", "flip vertical",
+        "image rotate left", "image rotate right", "flip horizontal", "flip vertical",
         "crop image", "share image", "delete image", "image info",
         "next image", "previous image"
     )

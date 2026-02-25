@@ -1,6 +1,7 @@
 package com.augmentalis.magiccode.plugins.marketplace
 
 import com.augmentalis.magiccode.plugins.core.PluginLog
+import kotlinx.datetime.Clock
 
 /**
  * Validator for plugin package submissions to the marketplace.
@@ -284,7 +285,7 @@ class SubmissionValidator {
         if (timestamp <= 0) {
             errors.add("Publication timestamp must be positive")
         } else {
-            val now = System.currentTimeMillis()
+            val now = Clock.System.now().toEpochMilliseconds()
             // Timestamp shouldn't be in the future (allow 1 minute tolerance)
             if (timestamp > now + 60_000) {
                 errors.add("Publication timestamp is in the future")

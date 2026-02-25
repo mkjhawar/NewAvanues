@@ -2,10 +2,15 @@ package com.augmentalis.nlu.aon
 
 import android.content.Context
 import com.augmentalis.ava.core.common.Result
+import com.augmentalis.nlu.nluLogDebug
+import com.augmentalis.nlu.nluLogError
+import com.augmentalis.nlu.nluLogInfo
+import com.augmentalis.nlu.nluLogWarn
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import com.augmentalis.nlu.BertTokenizer
 import com.augmentalis.nlu.IntentClassifier
+import com.augmentalis.nlu.NluThresholds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -41,7 +46,7 @@ import kotlinx.coroutines.withContext
  *         val embedding = result.data
  *         // Insert into database
  *     }
- *     is Result.Error -> Log.e(TAG, "Failed: ${result.message}")
+ *     is Result.Error -> nluLogError(TAG, "Failed: ${result.message}")
  * }
  * ```
  */
@@ -136,35 +141,36 @@ class AonEmbeddingComputer(
         ontology: SemanticIntentOntologyData
     ): Result<IntentEmbeddingData> = withContext(Dispatchers.Default) {
         try {
-            android.util.Log.d(TAG, "Computing embedding for intent: ${ontology.intentId} (${ontology.locale})")
+            nluLogDebug(TAG, "Computing embedding for intent: ${ontology.intentId} (${ontology.locale})")
 
             // Step 1: Create embedding text from .aot ontology data
             val embeddingText = createEmbeddingTextFromOntology(ontology)
 
-            android.util.Log.d(TAG, "  Embedding text (${embeddingText.length} chars): ${embeddingText.take(100)}...")
+            // PII-safe: log length only, not content
+            nluLogDebug(TAG, "  Embedding text: ${embeddingText.length} chars")
 
             // Step 2: Tokenize with mALBERT tokenizer (TVM 0.22 compatible)
             val tokenizer = BertTokenizer(context)
             val tokens = tokenizer.tokenize(embeddingText)
 
-            android.util.Log.d(TAG, "  Tokenized: ${tokens.inputIds.size} tokens")
+            nluLogDebug(TAG, "  Tokenized: ${tokens.inputIds.size} tokens")
 
             // Step 3: Compute embedding using mALBERT model
             // Note: IntentClassifier currently uses MobileBERT (384-dim)
             // TODO: Switch to mALBERT (768-dim) in production
             val embedding = computeRawEmbedding(embeddingText)
 
-            android.util.Log.d(TAG, "  Raw embedding computed: ${embedding.size} dimensions")
+            nluLogDebug(TAG, "  Raw embedding computed: ${embedding.size} dimensions")
 
             // Step 4: L2 normalize (essential for cosine similarity)
             val normalizedEmbedding = l2Normalize(embedding)
 
-            android.util.Log.d(TAG, "  Normalized embedding (L2 norm should be ~1.0)")
+            nluLogDebug(TAG, "  Normalized embedding (L2 norm should be ~1.0)")
 
             // Step 5: Serialize to ByteArray for database storage
             val embeddingBytes = IntentEmbeddingData.serializeEmbedding(normalizedEmbedding)
 
-            android.util.Log.d(TAG, "  Serialized to ByteArray: ${embeddingBytes.size} bytes")
+            nluLogDebug(TAG, "  Serialized to ByteArray: ${embeddingBytes.size} bytes")
 
             // Step 6: Create IntentEmbeddingData
             val entity = IntentEmbeddingData(
@@ -179,11 +185,11 @@ class AonEmbeddingComputer(
                 source = "AON_SEMANTIC"
             )
 
-            android.util.Log.i(TAG, "✓ Successfully computed embedding for ${ontology.intentId}")
+            nluLogInfo(TAG, "✓ Successfully computed embedding for ${ontology.intentId}")
             Result.Success(entity)
 
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to compute embedding for ${ontology.intentId}", e)
+            nluLogError(TAG, "Failed to compute embedding for ${ontology.intentId}", e)
             Result.Error(
                 exception = e,
                 message = "Embedding computation failed: ${e.message}"
@@ -283,7 +289,7 @@ class AonEmbeddingComputer(
         ontologies: List<SemanticIntentOntologyData>
     ): Result<List<IntentEmbeddingData>> = withContext(Dispatchers.Default) {
         try {
-            android.util.Log.i(TAG, "=== Batch Computing Embeddings for ${ontologies.size} intents ===")
+            nluLogInfo(TAG, "=== Batch Computing Embeddings for ${ontologies.size} intents ===")
 
             val embeddings = mutableListOf<IntentEmbeddingData>()
             var successCount = 0
@@ -296,13 +302,13 @@ class AonEmbeddingComputer(
                         successCount++
                     }
                     is Result.Error -> {
-                        android.util.Log.w(TAG, "Failed to compute embedding for ${ontology.intentId}: ${result.message}")
+                        nluLogWarn(TAG, "Failed to compute embedding for ${ontology.intentId}: ${result.message}")
                         failureCount++
                     }
                 }
             }
 
-            android.util.Log.i(TAG, "=== Batch Complete: $successCount success, $failureCount failures ===")
+            nluLogInfo(TAG, "=== Batch Complete: $successCount success, $failureCount failures ===")
 
             if (embeddings.isEmpty()) {
                 Result.Error(
@@ -332,9 +338,9 @@ class AonEmbeddingComputer(
     suspend fun computeEmbeddingsFromAonFile(
         aonFile: AonFile
     ): Result<List<IntentEmbeddingData>> {
-        android.util.Log.i(TAG, "Computing embeddings from .aot file: ${aonFile.sourceFile}")
-        android.util.Log.i(TAG, "  Locale: ${aonFile.locale}")
-        android.util.Log.i(TAG, "  Ontologies: ${aonFile.ontologies.size}")
+        nluLogInfo(TAG, "Computing embeddings from .aot file: ${aonFile.sourceFile}")
+        nluLogInfo(TAG, "  Locale: ${aonFile.locale}")
+        nluLogInfo(TAG, "  Ontologies: ${aonFile.ontologies.size}")
 
         return computeEmbeddingsFromOntologies(aonFile.ontologies)
     }
@@ -357,13 +363,13 @@ class AonEmbeddingComputer(
 
             // Check dimension
             if (vector.size != expectedDim) {
-                android.util.Log.w(TAG, "  ✗ Dimension mismatch: ${vector.size} != $expectedDim")
+                nluLogWarn(TAG, "  ✗ Dimension mismatch: ${vector.size} != $expectedDim")
                 return false
             }
 
             // Check for NaN or infinite values
             if (vector.any { it.isNaN() || it.isInfinite() }) {
-                android.util.Log.w(TAG, "  ✗ Contains NaN or infinite values")
+                nluLogWarn(TAG, "  ✗ Contains NaN or infinite values")
                 return false
             }
 
@@ -374,16 +380,16 @@ class AonEmbeddingComputer(
             }
             norm = kotlin.math.sqrt(norm)
 
-            if (kotlin.math.abs(norm - 1.0f) > 0.01f) {
-                android.util.Log.w(TAG, "  ✗ L2 norm not normalized: $norm (expected ~1.0)")
+            if (kotlin.math.abs(norm - 1.0f) > NluThresholds.EMBEDDING_NORM_TOLERANCE) {
+                nluLogWarn(TAG, "  ✗ L2 norm not normalized: $norm (expected ~1.0)")
                 return false
             }
 
-            android.util.Log.d(TAG, "  ✓ Embedding quality verified (dim=$expectedDim, norm=$norm)")
+            nluLogDebug(TAG, "  ✓ Embedding quality verified (dim=$expectedDim, norm=$norm)")
             return true
 
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "  ✗ Quality verification failed", e)
+            nluLogError(TAG, "  ✗ Quality verification failed", e)
             return false
         }
     }

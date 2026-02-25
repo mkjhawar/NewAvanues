@@ -3,7 +3,6 @@
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-12-23
  * Updated: 2026-01-14 - Migrated from VUID to AVID
  *

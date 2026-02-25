@@ -2,7 +2,6 @@
  * DeviceManagerActivity.kt - Main UI for Device Manager
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * 
  * Comprehensive device management interface with glassmorphism design
@@ -36,6 +35,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -133,7 +134,10 @@ fun DeviceManagerContent(viewModel: DeviceViewModel) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.refreshAllData() }) {
+                    IconButton(
+                        onClick = { viewModel.refreshAllData() },
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Refresh" }
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = "Refresh",
@@ -163,37 +167,43 @@ fun DeviceManagerContent(viewModel: DeviceViewModel) {
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     text = { Text("Overview") },
-                    icon = { Icon(Icons.Filled.Dashboard, contentDescription = null) }
+                    icon = { Icon(Icons.Filled.Dashboard, contentDescription = null) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Overview tab" }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     text = { Text("Hardware") },
-                    icon = { Icon(Icons.Filled.Memory, contentDescription = null) }
+                    icon = { Icon(Icons.Filled.Memory, contentDescription = null) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Hardware tab" }
                 )
                 Tab(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     text = { Text("Sensors") },
-                    icon = { Icon(Icons.Filled.Sensors, contentDescription = null) }
+                    icon = { Icon(Icons.Filled.Sensors, contentDescription = null) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Sensors tab" }
                 )
                 Tab(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
                     text = { Text("Network") },
-                    icon = { Icon(Icons.Filled.NetworkCheck, contentDescription = null) }
+                    icon = { Icon(Icons.Filled.NetworkCheck, contentDescription = null) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Network tab" }
                 )
                 Tab(
                     selected = selectedTab == 4,
                     onClick = { selectedTab = 4 },
                     text = { Text("Audio") },
-                    icon = { Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null) }
+                    icon = { Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Audio tab" }
                 )
                 Tab(
                     selected = selectedTab == 5,
                     onClick = { selectedTab = 5 },
                     text = { Text("Display") },
-                    icon = { Icon(Icons.Filled.Monitor, contentDescription = null) }
+                    icon = { Icon(Icons.Filled.Monitor, contentDescription = null) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Display tab" }
                 )
             }
             
@@ -649,7 +659,8 @@ fun DiagnosticsCard(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = DeviceColors.StatusWarning.copy(alpha = 0.2f),
                     contentColor = DeviceColors.StatusWarning
-                )
+                ),
+                modifier = Modifier.semantics { contentDescription = "Voice: click Run Diagnostics" }
             ) {
                 Icon(
                     imageVector = Icons.Filled.PlayArrow,
@@ -1001,7 +1012,10 @@ fun ErrorSnackbar(
     Snackbar(
         modifier = Modifier.padding(16.dp),
         action = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Dismiss Error" }
+            ) {
                 Text("Dismiss")
             }
         }
@@ -1027,7 +1041,10 @@ fun SuccessSnackbar(
     Snackbar(
         modifier = Modifier.padding(16.dp),
         action = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.semantics { contentDescription = "Voice: click Dismiss Success" }
+            ) {
                 Text("Dismiss")
             }
         }
@@ -1219,7 +1236,8 @@ fun TestSensorsCard(onTest: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             /*.glassMorphism(DeviceGlassConfigs.Sensors)*/
-          .clickable { onTest() },
+            .clickable { onTest() }
+            .semantics { contentDescription = "Voice: click Test All Sensors" },
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Row(
@@ -1329,7 +1347,10 @@ fun WiFiSection(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                IconButton(onClick = onScan) {
+                IconButton(
+                    onClick = onScan,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Scan WiFi Networks" }
+                ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
                         contentDescription = "Scan",
@@ -1382,7 +1403,10 @@ fun BluetoothSection(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                IconButton(onClick = onScan) {
+                IconButton(
+                    onClick = onScan,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Scan Bluetooth Devices" }
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.BluetoothSearching,
                         contentDescription = "Scan",

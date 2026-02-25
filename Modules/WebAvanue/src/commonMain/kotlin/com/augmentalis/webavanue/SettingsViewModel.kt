@@ -1,6 +1,5 @@
 package com.augmentalis.webavanue
 
-import android.util.Log
 import com.augmentalis.webavanue.BrowserSettings
 import com.augmentalis.webavanue.BrowserRepository
 import com.augmentalis.webavanue.SettingsPreset

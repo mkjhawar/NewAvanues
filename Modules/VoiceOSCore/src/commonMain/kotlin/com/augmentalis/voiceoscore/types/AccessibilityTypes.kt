@@ -2,7 +2,6 @@
  * AccessibilityTypes.kt - Core accessibility type definitions
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-11-17
  *
  * Pure Kotlin accessibility types for cross-platform use.

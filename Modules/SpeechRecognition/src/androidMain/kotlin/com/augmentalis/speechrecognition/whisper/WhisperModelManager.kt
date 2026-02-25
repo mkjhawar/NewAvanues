@@ -60,6 +60,9 @@ class WhisperModelManager(private val context: Context) {
         private const val CHECKSUM_SUFFIX = ".sha256"
         private const val BUFFER_SIZE = 8192
         private const val SPEED_SAMPLE_INTERVAL_MS = 500L
+        private const val MAX_RETRY_ATTEMPTS = 3
+        private const val INITIAL_RETRY_DELAY_MS = 2_000L
+        private const val MAX_RETRY_DELAY_MS = 30_000L
     }
 
     // Download state
@@ -85,7 +88,18 @@ class WhisperModelManager(private val context: Context) {
      * @param modelSize Which model to download
      * @return true if download completed successfully
      */
-    suspend fun downloadModel(modelSize: WhisperModelSize): Boolean {
+    /**
+     * Download a model from HuggingFace with automatic retry on transient failures.
+     * Uses exponential backoff: 2s -> 4s -> 8s (capped at 30s).
+     *
+     * @param modelSize Which model to download
+     * @param maxRetries Max retry attempts (default 3)
+     * @return true if download completed successfully
+     */
+    suspend fun downloadModel(
+        modelSize: WhisperModelSize,
+        maxRetries: Int = MAX_RETRY_ATTEMPTS
+    ): Boolean {
         // Check if already downloaded
         if (isModelDownloaded(modelSize)) {
             _downloadState.value = ModelDownloadState.Completed(
@@ -94,20 +108,43 @@ class WhisperModelManager(private val context: Context) {
             return true
         }
 
-        return try {
-            coroutineScope {
-                downloadJob = coroutineContext[Job]
-                performDownload(modelSize)
+        var lastError: String? = null
+
+        for (attempt in 1..maxRetries) {
+            try {
+                val success = coroutineScope {
+                    downloadJob = coroutineContext[Job]
+                    performDownload(modelSize)
+                }
+                if (success) return true
+
+                lastError = (_downloadState.value as? ModelDownloadState.Failed)?.error
+                    ?: "Download returned false"
+            } catch (e: CancellationException) {
+                _downloadState.value = ModelDownloadState.Cancelled(modelSize)
+                Log.i(TAG, "Download cancelled: ${modelSize.displayName}")
+                return false
+            } catch (e: Exception) {
+                lastError = e.message ?: "Unknown error"
             }
-        } catch (e: CancellationException) {
-            _downloadState.value = ModelDownloadState.Cancelled(modelSize)
-            Log.i(TAG, "Download cancelled: ${modelSize.displayName}")
-            false
-        } catch (e: Exception) {
-            _downloadState.value = ModelDownloadState.Failed(modelSize, e.message ?: "Unknown error")
-            Log.e(TAG, "Download failed: ${modelSize.displayName}", e)
-            false
+
+            // Retry with exponential backoff (skip delay on final attempt)
+            if (attempt < maxRetries) {
+                val delayMs = (INITIAL_RETRY_DELAY_MS * (1L shl (attempt - 1)))
+                    .coerceAtMost(MAX_RETRY_DELAY_MS)
+                Log.w(TAG, "Download attempt $attempt/$maxRetries failed: $lastError, retrying in ${delayMs}ms")
+                _downloadState.value = ModelDownloadState.Retrying(
+                    modelSize, attempt, maxRetries, delayMs
+                )
+                kotlinx.coroutines.delay(delayMs)
+            }
         }
+
+        _downloadState.value = ModelDownloadState.Failed(
+            modelSize, lastError ?: "Failed after $maxRetries attempts"
+        )
+        Log.e(TAG, "Download failed after $maxRetries attempts: ${modelSize.displayName}")
+        return false
     }
 
     /**

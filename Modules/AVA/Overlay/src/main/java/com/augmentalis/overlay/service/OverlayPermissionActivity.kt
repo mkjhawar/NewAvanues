@@ -84,9 +84,9 @@ class OverlayPermissionActivity : ComponentActivity() {
 
         setContent {
             AvanueThemeProvider(
-                colors = HydraColors.dark,
-                glass = HydraGlass.dark,
-                water = HydraWater.dark,
+                colors = HydraColors,
+                glass = HydraGlass,
+                water = HydraWater,
                 materialMode = MaterialMode.Water,
                 isDark = true
             ) {

@@ -1,6 +1,6 @@
 package com.augmentalis.httpavanue.http2
 
-import okio.BufferedSink
+import com.augmentalis.httpavanue.io.AvanueSink
 
 /**
  * HTTP/2 flow control manager — connection-level + stream-level window management (RFC 7540 Section 6.9)
@@ -35,7 +35,7 @@ class Http2FlowControl(
     }
 
     /** Send WINDOW_UPDATE to peer for connection or stream */
-    fun sendWindowUpdate(sink: BufferedSink, streamId: Int, increment: Int) {
+    fun sendWindowUpdate(sink: AvanueSink, streamId: Int, increment: Int) {
         if (increment <= 0) return
         Http2FrameCodec.writeWindowUpdate(sink, streamId, increment)
         if (streamId == 0) connectionReceiveWindow += increment

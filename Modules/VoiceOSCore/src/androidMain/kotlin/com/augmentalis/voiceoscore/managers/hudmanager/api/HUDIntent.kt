@@ -3,7 +3,6 @@
  * Path: CodeImport/HUDManager/src/main/java/com/augmentalis/hudmanager/api/HUDIntent.kt
  * 
  * Created: 2025-01-23
- * Author: VOS4 Development Team
  * Version: 1.0.0
  * 
  * Purpose: Public intent definitions for HUD system access

@@ -1,5 +1,7 @@
 package com.augmentalis.magiccode.plugins.security
 
+import kotlinx.datetime.Clock
+
 /**
  * Result of permission migration operation from plain-text to encrypted storage.
  *
@@ -38,7 +40,7 @@ sealed class MigrationResult {
      */
     data class Success(
         val migratedCount: Int,
-        val migrationTimestamp: Long = System.currentTimeMillis()
+        val migrationTimestamp: Long = Clock.System.now().toEpochMilliseconds()
     ) : MigrationResult()
 
     /**

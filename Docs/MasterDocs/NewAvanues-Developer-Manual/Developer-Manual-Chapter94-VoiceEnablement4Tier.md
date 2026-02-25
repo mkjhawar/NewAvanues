@@ -578,7 +578,8 @@ and similar patterns in third-party app labels.
 
 ### 6.1 Why It's Not a Problem
 
-**AVID hash** = `hash(className + resourceId + text + contentDescription)`
+**AVID hash** = `hash(packageName + className + resourceId + text + contentDescription)`
+- `packageName` included for cross-app uniqueness (260215 unified AVID fix)
 - NO bounds in the hash
 - Same AVID on Pixel 7, Galaxy Fold, tablet, portrait, landscape
 
@@ -833,6 +834,43 @@ The overlay render and the voice grammar share the same badge number because the
    ```
 4. AVID is automatically assigned by `ElementFingerprint.fromElementInfo()`
 
+**260222 Status: Phase 5 AVID Sweep Expansion Complete** — AVID coverage now spans **20+ modules/apps** with **120+ UI elements** added this phase:
+
+| Module | UI Files | Coverage | Key Screens |
+|--------|----------|----------|-------------|
+| apps/avanues | 12 | 100% | HomeScreen, SettingsScreen, BrowserScreen |
+| NoteAvanue | 3 | 100% | NoteEditor (toolbar + action buttons) |
+| PhotoAvanue | 4 | 100% | Camera controls, ModeChip, MiniChip, pro slider locks |
+| PDFAvanue | 2 | 100% | Page navigation, zoom buttons |
+| DeviceManager | 5 | 100% | Tabs, diagnostic buttons, scan buttons, switches, radios |
+| VoiceDataManager | 3 | 100% | 26 elements (export/import/cleanup buttons, sliders, switches, checkboxes) |
+| LicenseManager | 2 | 100% | Activation dialog, action buttons |
+| VoiceRecognition | 2 | 100% | Engine chips, mic FAB, settings |
+| VoiceCursor (Android) | 3 | 100% | Cursor overlay, show/hide/click commands, settings |
+| WebAvanue | 4 | 100% | Address bar, tab controls, form fields |
+
+**Element pattern (universal):**
+```kotlin
+// Pattern: Modifier.semantics for ALL interactive elements
+Button(
+    onClick = { },
+    modifier = Modifier.semantics {
+        contentDescription = "Voice: click Camera"
+    }
+) { Text("Camera") }
+```
+
+**New elements added (260222):**
+- NoteAvanue: Save, Undo, Redo, Format toolbar (12 elements)
+- PhotoAvanue: Mode selector, quality slider, lock buttons, flip, delete (18 elements)
+- PDFAvanue: Page prev/next, zoom in/out, search, toc toggle (12 elements)
+- DeviceManager: Tab selectors, scan/reset buttons, permission toggles (16 elements)
+- VoiceDataManager: Export/import, cleanup, archive, restore dialogs (26 elements)
+- Licensing: Activate, refresh, restore buttons (8 elements)
+- VoiceRecognition: Engine selector chips, start/stop FAB (10 elements)
+- Cursor overlay: Show/hide toggle, click modes (6 elements)
+- WebAvanue: Address input, back/forward, tab new/close, reload (12 elements)
+
 ### 10.2 For Third-Party Developers (Tier 2)
 
 Tell them to add `(Voice: phrase)` to `contentDescription`. That's it.
@@ -849,7 +887,7 @@ To improve quality, use the App Trainer to create a .VOS profile.
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| AVID hash inputs | className + resourceId + text + contentDescription | Device-independent identity |
+| AVID hash inputs | packageName + className + resourceId + text + contentDescription | Cross-app unique, device-independent identity |
 | AVID hash inputs exclude | bounds, position, DPI | Portability across devices |
 | .VOS format | AVU compact wire protocol | 70% smaller than JSON, aligned with AVU ecosystem |
 | .VOS bounds | NOT included | Profiles must be device-portable |
@@ -860,6 +898,19 @@ To improve quality, use the App Trainer to create a .VOS profile.
 
 ---
 
+## 12. AVID Hash Truncation Fix (260222)
+
+`Fingerprint.deterministicHash()` in `Modules/AVID/src/commonMain/.../Fingerprint.kt` was producing collisions on short inputs because it used `.take(length)` (most-significant hex digits) instead of `.takeLast(length)` (least-significant hex digits).
+
+**Root cause:** For inputs like `"input-a"` and `"input-b"`, the polynomial hash values differ by 1 (96444125982 vs 96444125983). When zero-padded to 16 hex chars, the difference is only in the last digit (`...931e` vs `...931f`). `.take(8)` grabbed the leading zeros `00000016` for both — a collision.
+
+**Fix:** Changed to `.takeLast(length)` which preserves the least-significant (most discriminating) bits. This is the standard approach for truncated hashes — the low-order bits carry the most entropy for polynomial hash functions.
+
+**Impact:** All AVID identifiers generated from short inputs will change. Existing `.VOS` profiles with cached AVIDs may need regeneration. Runtime AVID generation (from live accessibility tree) is unaffected since AVIDs are always regenerated fresh on each screen scrape.
+
+---
+
 *Chapter 94 | 4-Tier Voice Enablement Architecture*
-*Created: 2026-02-11 | Updated: 2026-02-19 (overlay-aligned numeric command system, AUTO mode badge rendering, Section 9 added)*
+*Created: 2026-02-11 | Updated: 2026-02-22 (Phase 5 AVID sweep, AVID hash truncation fix — takeLast for LSB preservation)*
+*Previous: 2026-02-19 (overlay-aligned numeric command system, AUTO mode badge rendering, Section 9 added)*
 *Related: Chapter 93 (Voice Command Pipeline), Chapter 03 (VoiceOSCore Deep Dive)*

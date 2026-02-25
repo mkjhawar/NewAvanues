@@ -1,7 +1,7 @@
 package com.augmentalis.nlu.ava.converter
 
-import android.util.Log
 import com.augmentalis.nlu.ava.model.AvaIntent
+import com.augmentalis.nlu.nluLogInfo
 import java.security.MessageDigest
 
 /**
@@ -54,7 +54,7 @@ object AvaToEntityConverter {
             }
         }
 
-        Log.i(TAG, "Converted ${intents.size} intents to ${params.size} examples")
+        nluLogInfo(TAG, "Converted ${intents.size} intents to ${params.size} examples")
         return params
     }
 
