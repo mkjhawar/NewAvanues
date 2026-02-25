@@ -168,7 +168,7 @@ actual fun Modifier.platformWaterEffect(
                 Modifier.drawWithContent {
                     drawContent()
                     val causticAlpha = WaterTokens.causticIntensity *
-                        (0.5f + 0.5f * kotlin.math.sin(time * 2f * Math.PI.toFloat()))
+                        (0.5f + 0.5f * kotlin.math.sin(time * 2f * kotlin.math.PI.toFloat()))
                     drawRect(
                         brush = Brush.linearGradient(
                             colors = listOf(

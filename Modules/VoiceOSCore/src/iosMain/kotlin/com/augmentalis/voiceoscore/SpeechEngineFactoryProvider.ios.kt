@@ -49,6 +49,7 @@ internal class IOSSpeechEngineFactory : ISpeechEngineFactory {
             SpeechEngine.ANDROID_STT -> false // Android only
             SpeechEngine.VOSK -> false // Not yet implemented for iOS
             SpeechEngine.VIVOKA -> false // Android only
+            SpeechEngine.AVX -> false // Android/Desktop only (Sherpa-ONNX transducer)
         }
     }
 
