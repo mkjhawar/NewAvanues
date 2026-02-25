@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import io.github.aakira.napier.Napier
+import kotlinx.datetime.Clock
 
 /**
  * Reconnection state
@@ -138,14 +139,14 @@ class KeepAliveManager(
         if (config.pingIntervalMs <= 0) return
 
         stop()
-        lastPongReceived = System.currentTimeMillis()
+        lastPongReceived = Clock.System.now().toEpochMilliseconds()
 
         pingJob = scope.launch {
             while (isActive) {
                 delay(config.pingIntervalMs)
 
                 // Check if last pong was too long ago
-                val timeSinceLastPong = System.currentTimeMillis() - lastPongReceived
+                val timeSinceLastPong = Clock.System.now().toEpochMilliseconds() - lastPongReceived
                 if (timeSinceLastPong > config.pingIntervalMs * 2) {
                     Napier.w("Pong timeout (${timeSinceLastPong}ms)", tag = TAG)
                     onTimeout()
@@ -168,7 +169,7 @@ class KeepAliveManager(
      * Record pong received
      */
     fun onPongReceived() {
-        lastPongReceived = System.currentTimeMillis()
+        lastPongReceived = Clock.System.now().toEpochMilliseconds()
         if (config.debugLogging) {
             Napier.d("Pong received", tag = "KeepAliveManager")
         }

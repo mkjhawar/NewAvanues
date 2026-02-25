@@ -3,8 +3,8 @@ package com.augmentalis.httpavanue.server
 import com.augmentalis.httpavanue.http.HttpMethod
 import com.augmentalis.httpavanue.http.HttpRequest
 import com.augmentalis.httpavanue.http.PayloadTooLargeException
-import okio.Buffer
-import okio.BufferedSource
+import com.augmentalis.httpavanue.io.AvanueBuffer
+import com.augmentalis.httpavanue.io.AvanueSource
 
 /**
  * HTTP/1.1 request parser — NanoHTTPD-inspired, rewritten for Kotlin + Okio
@@ -15,7 +15,7 @@ internal object HttpParser {
     private const val MAX_HEADER_SIZE = 8192
     private const val MAX_REQUEST_LINE_SIZE = 2048
 
-    suspend fun parse(source: BufferedSource, maxBodySize: Long = 10 * 1024 * 1024): HttpRequest {
+    suspend fun parse(source: AvanueSource, maxBodySize: Long = 10 * 1024 * 1024): HttpRequest {
         val requestLine = source.readUtf8Line(MAX_REQUEST_LINE_SIZE)
             ?: throw HttpParseException("Empty request line")
         val (method, uri, version) = parseRequestLine(requestLine)
@@ -48,7 +48,7 @@ internal object HttpParser {
         return Triple(method, parts[1], parts[2])
     }
 
-    private suspend fun parseBody(source: BufferedSource, headers: Map<String, String>, maxBodySize: Long): ByteArray? {
+    private suspend fun parseBody(source: AvanueSource, headers: Map<String, String>, maxBodySize: Long): ByteArray? {
         val transferEncoding = headers["Transfer-Encoding"]?.lowercase()
         if (transferEncoding == "chunked") return parseChunkedBody(source, maxBodySize)
         val contentLength = headers["Content-Length"]?.toLongOrNull() ?: return null
@@ -59,8 +59,8 @@ internal object HttpParser {
         return source.readByteArray(contentLength)
     }
 
-    private suspend fun parseChunkedBody(source: BufferedSource, maxBodySize: Long): ByteArray {
-        val buffer = Buffer()
+    private suspend fun parseChunkedBody(source: AvanueSource, maxBodySize: Long): ByteArray {
+        val buffer = AvanueBuffer()
         var totalSize = 0L
         while (true) {
             val chunkSizeLine = source.readUtf8Line(MAX_REQUEST_LINE_SIZE)
@@ -85,7 +85,7 @@ internal object HttpParser {
             if (trailingLine == null || trailingLine.isNotEmpty())
                 throw HttpParseException("Missing CRLF after chunk data")
         }
-        return buffer.readByteArray()
+        return buffer.toByteArray()
     }
 
     private fun parseQueryParams(uri: String): Map<String, List<String>> {
@@ -102,20 +102,20 @@ internal object HttpParser {
         return params
     }
 
-    private fun BufferedSource.readUtf8Line(maxLength: Int): String? {
-        val buffer = Buffer()
+    private fun AvanueSource.readUtf8Line(maxLength: Int): String? {
+        val buf = AvanueBuffer()
         var length = 0L
         while (length < maxLength) {
-            if (!request(1)) return if (length > 0) buffer.readUtf8() else null
+            if (!request(1)) return if (length > 0) buf.readUtf8() else null
             val b = readByte()
             length++
             if (b == CR) {
                 if (request(1) && peek().readByte() == LF) { skip(1); length++ }
-                return buffer.readUtf8()
+                return buf.readUtf8()
             } else if (b == LF) {
-                return buffer.readUtf8()
+                return buf.readUtf8()
             } else {
-                buffer.writeByte(b.toInt())
+                buf.writeByte(b.toInt())
             }
         }
         throw HttpParseException("Line too long (> $maxLength bytes)")

@@ -2,7 +2,6 @@
  * LocalizationModule.kt - Direct implementation localization manager
  * 
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-08-22
  */
 

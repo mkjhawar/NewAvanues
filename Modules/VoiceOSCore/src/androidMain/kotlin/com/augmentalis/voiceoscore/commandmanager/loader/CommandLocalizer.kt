@@ -3,7 +3,6 @@
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-10-09
  */
 package com.augmentalis.voiceoscore.commandmanager.loader
@@ -13,8 +12,8 @@ import android.util.Log
 import com.augmentalis.voiceoscore.commandmanager.database.CommandDatabase
 import com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandEntity
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -46,7 +45,7 @@ class CommandLocalizer(
     private val commandDao: com.augmentalis.voiceoscore.commandmanager.database.sqldelight.VoiceCommandDaoAdapter
 ) {
     private val _currentLocale = MutableStateFlow(Locale.getDefault().toLanguageTag())
-    val currentLocale: Flow<String> = _currentLocale.asStateFlow()
+    val currentLocale: StateFlow<String> = _currentLocale.asStateFlow()
 
     private val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -331,7 +330,7 @@ class CommandLocalizer(
      * so this is a no-op. Reserved for future caching implementation.
      */
     fun clearCache() {
-        // TODO: Implement caching layer if needed for performance
+        // No caching layer — database queries are direct via SQLDelight
         Log.d(TAG, "clearCache() called - no cache to clear (database queries are direct)")
     }
 
@@ -342,7 +341,7 @@ class CommandLocalizer(
      * @return Empty map (no cache stats available)
      */
     fun getCacheStats(): Map<String, Int> {
-        // TODO: Implement caching layer if needed for performance
+        // No caching layer — database queries are direct via SQLDelight
         return emptyMap()
     }
 

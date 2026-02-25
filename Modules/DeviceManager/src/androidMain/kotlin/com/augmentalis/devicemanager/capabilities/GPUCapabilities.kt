@@ -2,8 +2,6 @@
  * GPUCapabilities.kt - GPU capability detection for all modules
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2025-12-27
  *
  * Detects GPU acceleration availability and provides fallback strategy.

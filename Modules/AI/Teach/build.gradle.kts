@@ -9,17 +9,15 @@ plugins {
 
 kotlin {
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
     // Desktop JVM target (macOS, Windows, Linux)
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions.jvmTarget = "17"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -94,7 +92,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.teach"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)

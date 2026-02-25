@@ -2,7 +2,6 @@
  * SynonymParser.kt - Parser for .syn text format
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-08
  *
  * Parses human-readable .syn synonym files into SynonymMap objects.

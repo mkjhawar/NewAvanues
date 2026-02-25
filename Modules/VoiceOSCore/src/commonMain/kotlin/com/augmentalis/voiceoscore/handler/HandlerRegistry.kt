@@ -2,7 +2,6 @@
  * HandlerRegistry.kt - Registry for action handlers
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-06
  *
  * KMP registry for managing handler registration and priority-based lookup.

@@ -2,7 +2,6 @@
  * MessageHandler.kt - Simplified message debouncing with user settings
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-09-06
  */
 package com.augmentalis.voiceoscore.managers.localizationmanager.ui.components

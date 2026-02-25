@@ -2,7 +2,6 @@
  * StaticCommandRegistry.kt - Predefined static voice commands
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-05
  *
  * Registry of predefined voice commands that work system-wide,
@@ -80,6 +79,12 @@ object StaticCommandRegistry {
      */
     fun byCategory(category: CommandCategory): List<StaticCommand> =
         all().filter { it.category == category }
+
+    /**
+     * Find command by its unique ID (e.g., "voice_wake", "nav_back").
+     */
+    fun findById(id: String): StaticCommand? =
+        all().find { it.id == id }
 
     /**
      * Find command matching phrase
@@ -219,7 +224,7 @@ data class StaticCommand(
     val id: String = "",
 
     /**
-     * Alternative phrases that trigger this command
+     * Phrases that trigger this command (must have at least one).
      */
     val phrases: List<String>,
 
@@ -251,6 +256,10 @@ data class StaticCommand(
      */
     val domain: String = "app"
 ) {
+    init {
+        require(phrases.isNotEmpty()) { "StaticCommand '$id' must have at least one phrase" }
+    }
+
     /**
      * Primary phrase (first in list)
      */

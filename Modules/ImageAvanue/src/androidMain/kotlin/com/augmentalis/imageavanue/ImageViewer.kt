@@ -171,7 +171,7 @@ fun ImageViewer(
         }
 
         // Bottom control bar
-        if (imageList.size > 1 || true) {
+        if (imageList.size > 1) {
             Row(
                 Modifier
                     .fillMaxWidth()

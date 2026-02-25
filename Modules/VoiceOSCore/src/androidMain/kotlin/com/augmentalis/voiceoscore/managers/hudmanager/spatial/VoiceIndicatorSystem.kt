@@ -3,7 +3,6 @@
  * Path: /CodeImport/HUDManager/src/main/java/com/augmentalis/hudmanager/spatial/VoiceIndicatorSystem.kt
  * 
  * Created: 2025-01-23
- * Author: VOS4 Development Team
  * Version: 1.0.0
  * 
  * Purpose: Spatial voice command visualization system for smart glasses

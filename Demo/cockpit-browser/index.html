@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cockpit Browser — Avanues</title>
+
+  <!-- Theme system (CSS custom properties for all 32 combos) -->
+  <link rel="stylesheet" href="css/themes.css">
+  <!-- Material mode effects -->
+  <link rel="stylesheet" href="css/glass.css">
+  <!-- Layout modes -->
+  <link rel="stylesheet" href="css/layouts.css">
+  <!-- Components, chrome, base styles -->
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body data-palette="hydra" data-appearance="dark" class="mode-glass">
+
+  <div id="app">
+
+    <!-- ======== TOP BAR ======== -->
+    <header class="top-bar" role="banner">
+      <div class="top-bar-left">
+        <button
+          id="topBarBack"
+          class="top-bar-back"
+          aria-label="Back to dashboard"
+          data-avid="BTN-back-dashboard"
+        >&#8592;</button>
+        <span id="topBarTitle" class="top-bar-title">Avanues</span>
+      </div>
+      <div class="top-bar-right">
+        <button
+          id="themeToggleBtn"
+          class="top-bar-icon-btn"
+          aria-label="Open theme settings"
+          data-avid="BTN-theme-settings"
+        >&#9881;</button>
+      </div>
+    </header>
+
+    <!-- ======== CONTENT ======== -->
+    <div id="contentWrapper" class="content-wrapper" role="main">
+      <!-- Rendered by app.js -->
+    </div>
+
+    <!-- ======== STATUS BAR ======== -->
+    <div id="statusBar" class="status-bar hidden" role="status" aria-live="polite">
+      0 frames
+    </div>
+
+    <!-- ======== COMMAND BAR ======== -->
+    <nav id="commandBar" class="command-bar hidden" role="toolbar" aria-label="Command bar">
+      <!-- Rendered by command-bar.js -->
+    </nav>
+
+  </div>
+
+  <!-- ======== THEME PANEL OVERLAY ======== -->
+  <div id="themePanelOverlay" class="theme-panel-overlay" role="dialog" aria-label="Theme settings" aria-modal="true">
+    <div id="themePanel" class="theme-panel">
+      <!-- Rendered by app.js renderThemePanel() -->
+    </div>
+  </div>
+
+  <!-- App entry point -->
+  <script type="module" src="js/app.js"></script>
+
+</body>
+</html>

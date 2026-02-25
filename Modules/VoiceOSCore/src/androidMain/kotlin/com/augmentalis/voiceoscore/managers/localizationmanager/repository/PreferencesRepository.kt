@@ -2,7 +2,6 @@
  * PreferencesRepository.kt - Repository for user preferences
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-09-06
  * Updated: 2025-12-01 - Migrated to use SQLDelight adapter
  */

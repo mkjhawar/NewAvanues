@@ -3,7 +3,6 @@
  * Path: libraries/AvidCreator/src/main/java/com/augmentalis/uuidcreator/thirdparty/ThirdPartyAvidGenerator.kt
  *
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-10-08
  *
  * Generates deterministic UUIDs for third-party Android apps via accessibility scanning

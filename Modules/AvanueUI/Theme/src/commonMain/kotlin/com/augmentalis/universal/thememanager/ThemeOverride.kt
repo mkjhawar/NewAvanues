@@ -1,6 +1,7 @@
 package com.augmentalis.universal.thememanager
 
-import com.augmentalis.avamagic.components.core.Theme
+import com.augmentalis.avanueui.core.Theme
+import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 
 /**
@@ -71,12 +72,12 @@ data class ThemeOverride(
     /**
      * Timestamp when this override was created
      */
-    val createdAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
 
     /**
      * Timestamp when this override was last modified
      */
-    val modifiedAt: Long = System.currentTimeMillis()
+    val modifiedAt: Long = Clock.System.now().toEpochMilliseconds()
 ) {
     /**
      * Check if a specific property is inherited from universal theme
@@ -97,7 +98,7 @@ data class ThemeOverride(
      * Create a copy with updated timestamp
      */
     fun withUpdatedTimestamp(): ThemeOverride {
-        return copy(modifiedAt = System.currentTimeMillis())
+        return copy(modifiedAt = Clock.System.now().toEpochMilliseconds())
     }
 }
 

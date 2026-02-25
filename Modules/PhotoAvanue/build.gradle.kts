@@ -22,14 +22,14 @@ kotlin {
     }
 
     androidTarget {
-        compilations.all {
-            kotlinOptions { jvmTarget = "17" }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
     jvm("desktop") {
-        compilations.all {
-            kotlinOptions { jvmTarget = "17" }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -62,6 +62,9 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
+                // VoiceOSCore — Tier 4 voice command executor
+                implementation(project(":Modules:VoiceOSCore"))
+
                 // Android Core
                 implementation(libs.androidx.core.ktx)
                 implementation(libs.androidx.activity.compose)
@@ -76,6 +79,13 @@ kotlin {
 
                 // EXIF — GPS metadata tagging
                 implementation(libs.androidx.exifinterface)
+
+                // ListenableFuture — CameraX returns ListenableFuture<T> types.
+                // Guava is already on runtime classpath (via DeviceManager→UWB, gRPC),
+                // but consistent resolution forces listenablefuture:1.0 → 9999.0-empty.
+                // Explicit Guava here restores the class on compile classpath (zero APK cost).
+                implementation("androidx.concurrent:concurrent-futures:1.1.0")
+                implementation("com.google.guava:guava:32.1.3-android")
             }
         }
 
@@ -92,7 +102,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.photoavanue"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig { minSdk = 29 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

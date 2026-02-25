@@ -508,7 +508,7 @@ class DiscoveryIntegrationTest {
         val android = PluginSource.AndroidPackage(
             packageName = "com.example.plugin",
             className = "PluginService",
-            versionCode = 123
+            versionCode = 123L
         )
         assertEquals("Android Package", android.displayName())
         assertEquals("com.example.plugin", android.packageName)
@@ -544,7 +544,7 @@ class DiscoveryIntegrationTest {
         )
         assertEquals(1, withPlugins.pluginCount)
         assertTrue(withPlugins.isSuccessful)
-        assertEquals(100, withPlugins.durationMs)
+        assertEquals(100L, withPlugins.durationMs)
 
         // Test result with errors
         val withErrors = DiscoveryResult.fromError(
@@ -661,8 +661,9 @@ class DiscoveryIntegrationTest {
         composite.discoverWithDetails()
 
         // Assert
-        assertNotNull(receivedResult, "Listener should receive result")
-        assertEquals(1, receivedResult?.pluginCount)
+        val actualResult = receivedResult
+        assertNotNull(actualResult, "Listener should receive result")
+        assertEquals(1, actualResult.pluginCount)
     }
 
     // =========================================================================
@@ -725,7 +726,7 @@ class DiscoveryIntegrationTest {
         var exceptionThrown = false
         try {
             composite.addSource(source)
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
             exceptionThrown = true
         }
 
@@ -784,6 +785,7 @@ class TestPluginDiscovery(
         descriptors.add(descriptor)
     }
 
+    @Suppress("unused")
     fun addPlugin(descriptor: PluginDescriptor, plugin: UniversalPlugin) {
         descriptors.add(descriptor)
         plugins[descriptor.pluginId] = plugin

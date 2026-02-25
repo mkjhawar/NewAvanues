@@ -2,7 +2,6 @@
  * MainActivity.kt - Main activity for Voice Recognition
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-28
  * 
  * Purpose: Main entry point for Voice Recognition test app

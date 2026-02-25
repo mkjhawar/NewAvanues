@@ -1,7 +1,7 @@
-package com.augmentalis.avamagic.examples
+package com.augmentalis.avanueui.examples
 
-import com.augmentalis.avamagic.core.*
-import com.augmentalis.avamagic.dsl.*
+import com.augmentalis.avanueui.core.*
+import com.augmentalis.avanueui.dsl.*
 
 /**
  * Example: Login Screen using AvaElements DSL

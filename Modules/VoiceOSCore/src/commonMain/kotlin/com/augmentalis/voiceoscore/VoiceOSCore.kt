@@ -97,6 +97,19 @@ class VoiceOSCore private constructor(
     var onSystemAction: ((String) -> Unit)? = null
 
     /**
+     * Current speech mode — tracks the active recognition mode (COMBINED_COMMAND, DICTATION, MUTED, etc.)
+     * Used by the accessibility service to gate command execution (e.g., suppress commands in MUTED mode).
+     */
+    @Volatile
+    private var currentSpeechMode: SpeechMode = SpeechMode.COMBINED_COMMAND
+
+    /**
+     * Public accessor for the current speech mode.
+     * VoiceOSAccessibilityService reads this to implement mute guard and dictation routing.
+     */
+    val speechMode: SpeechMode get() = currentSpeechMode
+
+    /**
      * Current speech configuration (set during init, updated during mode switch).
      * Used by setSpeechMode() to build new config without losing existing settings.
      */
@@ -147,15 +160,20 @@ class VoiceOSCore private constructor(
                 try {
                     val count = staticCommandPersistence.populateIfNeeded()
                     if (count > 0) {
-                        println("[VoiceOSCore] Populated $count static commands to database")
+                        LoggingUtils.d("Populated $count static commands to database", TAG)
                     } else {
-                        println("[VoiceOSCore] Static commands already in database")
+                        LoggingUtils.d("Static commands already in database", TAG)
                     }
                 } catch (e: Exception) {
-                    println("[VoiceOSCore] Static command persistence error: ${e.message}")
+                    LoggingUtils.w("Static command persistence error: ${e.message}", TAG, e)
                     // Continue without persistence - static commands still work in memory
                 }
             }
+
+            stateManager.transition(ServiceState.Initializing(0.35f, "Initializing adaptive timing"))
+
+            // Initialize AdaptiveTimingManager with confidence threshold from config
+            AdaptiveTimingManager.setConfidenceFloor(configuration.confidenceThreshold)
 
             stateManager.transition(ServiceState.Initializing(0.4f, "Initializing synonyms"))
 
@@ -163,7 +181,7 @@ class VoiceOSCore private constructor(
             if (configuration.synonymsEnabled && activeSynonymProvider != null) {
                 CommandMatcher.synonymProvider = activeSynonymProvider
                 CommandMatcher.defaultLanguage = configuration.effectiveSynonymLanguage()
-                println("[VoiceOSCore] Synonym provider initialized for ${configuration.effectiveSynonymLanguage()}")
+                LoggingUtils.d("Synonym provider initialized for ${configuration.effectiveSynonymLanguage()}", TAG)
             }
 
             stateManager.transition(ServiceState.Initializing(0.5f, "Initializing speech engine"))
@@ -182,7 +200,7 @@ class VoiceOSCore private constructor(
                     val initResult = speechEngine?.initialize(config)
                     if (initResult?.isFailure == true) {
                         // Log error but don't fail - voice is optional
-                        println("[VoiceOSCore] Speech engine initialization failed: ${initResult.exceptionOrNull()?.message}")
+                        LoggingUtils.w("Speech engine initialization failed: ${initResult.exceptionOrNull()?.message}", TAG)
                     }
 
                     // Register static commands and handler phrases with speech engine for voice recognition
@@ -204,13 +222,13 @@ class VoiceOSCore private constructor(
                             if (allPhrases.isNotEmpty()) {
                                 val updateResult = speechEngine?.updateCommands(allPhrases)
                                 if (updateResult?.isSuccess == true) {
-                                    println("[VoiceOSCore] Registered ${allPhrases.size} phrases with speech engine (${staticPhrases.size} static, ${handlerPhrases.size} from handlers)")
+                                    LoggingUtils.i("Registered ${allPhrases.size} phrases with speech engine (${staticPhrases.size} static, ${handlerPhrases.size} from handlers)", TAG)
                                 } else {
-                                    println("[VoiceOSCore] Failed to register commands with speech engine: ${updateResult?.exceptionOrNull()?.message}")
+                                    LoggingUtils.w("Failed to register commands with speech engine: ${updateResult?.exceptionOrNull()?.message}", TAG)
                                 }
                             }
                         } catch (e: Exception) {
-                            println("[VoiceOSCore] Error registering commands: ${e.message}")
+                            LoggingUtils.w("Error registering commands: ${e.message}", TAG, e)
                             // Continue - commands can still be processed, just not speech-recognized
                         }
                     }
@@ -220,10 +238,10 @@ class VoiceOSCore private constructor(
                         speechEngine?.startListening()
                     }
                 } else {
-                    println("[VoiceOSCore] Speech engine creation failed: ${engineResult.exceptionOrNull()?.message}")
+                    LoggingUtils.w("Speech engine creation failed: ${engineResult.exceptionOrNull()?.message}", TAG)
                 }
             } catch (e: Exception) {
-                println("[VoiceOSCore] Speech engine setup failed: ${e.message}")
+                LoggingUtils.w("Speech engine setup failed: ${e.message}", TAG, e)
                 // Continue without speech - handlers still work
             }
 
@@ -371,43 +389,81 @@ class VoiceOSCore private constructor(
         // Stop current recognition
         engine.stopListening()
 
+        // Track the active mode
+        currentSpeechMode = mode
+
         // Reconfigure the engine for the new mode
         val newConfig = currentSpeechConfig.withMode(mode)
         currentSpeechConfig = newConfig
         engine.updateConfiguration(newConfig)
 
-        if (mode == SpeechMode.DICTATION && exitCommands.isNotEmpty()) {
-            // In dictation mode, only register exit commands so the user
-            // can say "stop dictation" to return to command mode
-            engine.updateCommands(exitCommands)
-        } else if (mode.usesCommandMatching()) {
-            // Restore full command grammar
-            val staticPhrases = staticCommandPersistence?.getAllPhrases()
-                ?: StaticCommandRegistry.allPhrases()
-            val dynamicPhrases = coordinator.getDynamicCommands().map { it.phrase }
-            val fullGrammar = buildSet {
-                addAll(staticPhrases)
-                addAll(appHandlerPhrases)
-                addAll(dynamicPhrases)
-                addAll(webCommandPhrases)
+        when {
+            mode == SpeechMode.MUTED -> {
+                // Muted mode: engine stays alive with ONLY wake commands in grammar.
+                // This allows the user to say "wake up voice" to unmute while all
+                // other speech is ignored at both grammar and guard levels.
+                if (exitCommands.isNotEmpty()) {
+                    engine.updateCommands(exitCommands)
+                } else {
+                    // Defensive fallback: load wake commands from registry
+                    val fallbackWake = StaticCommandRegistry.findById("voice_wake")?.phrases
+                        ?: listOf("wake up voice", "start listening", "voice on")
+                    engine.updateCommands(fallbackWake)
+                    LoggingUtils.d("MUTED with no exitCommands — auto-loaded ${fallbackWake.size} wake commands", TAG)
+                }
             }
-            engine.updateCommands(fullGrammar.toList())
-            allRegisteredCommands.clear()
-            allRegisteredCommands.addAll(fullGrammar)
+            mode == SpeechMode.DICTATION -> {
+                // In dictation mode, only register exit commands so the user
+                // can say "stop dictation" to return to command mode
+                if (exitCommands.isNotEmpty()) {
+                    engine.updateCommands(exitCommands)
+                } else {
+                    // Defensive fallback: load stop-dictation commands from registry
+                    val fallbackExit = StaticCommandRegistry.findById("voice_dict_stop")?.phrases
+                        ?: listOf("stop dictation", "end dictation", "command mode")
+                    engine.updateCommands(fallbackExit)
+                    LoggingUtils.d("DICTATION with no exitCommands — auto-loaded ${fallbackExit.size} exit commands", TAG)
+                }
+            }
+            mode.usesCommandMatching() -> {
+                // Restore full command grammar
+                val staticPhrases = staticCommandPersistence?.getAllPhrases()
+                    ?: StaticCommandRegistry.allPhrases()
+                val dynamicPhrases = coordinator.getDynamicCommands().map { it.phrase }
+                val fullGrammar = buildSet {
+                    addAll(staticPhrases)
+                    addAll(appHandlerPhrases)
+                    addAll(dynamicPhrases)
+                    addAll(webCommandPhrases)
+                }
+                engine.updateCommands(fullGrammar.toList())
+                allRegisteredCommands.clear()
+                allRegisteredCommands.addAll(fullGrammar)
+            }
         }
 
         // Restart recognition with new configuration
         val result = engine.startListening()
         if (result.isSuccess) {
-            stateManager.transition(
-                ServiceState.Listening(
-                    speechEngine = configuration.speechEngine,
-                    wakeWordEnabled = configuration.enableWakeWord
+            if (mode == SpeechMode.MUTED) {
+                // Transition to Ready (not Listening) so UI shows muted state
+                stateManager.transition(
+                    ServiceState.Ready(
+                        speechEngineActive = true,
+                        handlerCount = coordinator.getAllSupportedActions().size
+                    )
                 )
-            )
+            } else {
+                stateManager.transition(
+                    ServiceState.Listening(
+                        speechEngine = configuration.speechEngine,
+                        wakeWordEnabled = configuration.enableWakeWord
+                    )
+                )
+            }
         }
 
-        println("[VoiceOSCore] Speech mode switched to $mode (exit commands: ${exitCommands.size})")
+        LoggingUtils.d("Speech mode switched to $mode (exit commands: ${exitCommands.size})", TAG)
     }
 
     /**
@@ -608,6 +664,40 @@ class VoiceOSCore private constructor(
     }
 
     /**
+     * Update wake word settings at runtime.
+     *
+     * Called by the platform lifecycle manager (e.g., accessibility service) when
+     * AvanuesSettings wake word fields change. Delegates to the speech engine's
+     * IWakeWordCapable interface if the engine supports it.
+     *
+     * @param enabled Whether wake word detection should be active
+     * @param wakePhrase The spoken wake phrase (e.g. "hey ava")
+     * @param sensitivity Detection confidence threshold (0.1-0.9)
+     */
+    suspend fun updateWakeWordSettings(
+        enabled: Boolean,
+        wakePhrase: String,
+        sensitivity: Float
+    ): Result<Unit> {
+        val engine = speechEngine
+        if (engine == null) {
+            return Result.failure(IllegalStateException("Speech engine not initialized"))
+        }
+
+        // Check if the engine supports wake word (IWakeWordCapable)
+        val wakeCapable = engine as? IWakeWordCapable
+            ?: return Result.failure(UnsupportedOperationException(
+                "Current engine (${engine.getEngineType()}) does not support wake word detection"
+            ))
+
+        return if (enabled) {
+            wakeCapable.enableWakeWord(wakePhrase, sensitivity)
+        } else {
+            wakeCapable.disableWakeWord()
+        }
+    }
+
+    /**
      * Get debug information.
      */
     suspend fun getDebugInfo(): String {
@@ -749,6 +839,7 @@ class VoiceOSCore private constructor(
     }
 
     companion object {
+        private const val TAG = "VoiceOSCore"
         const val VERSION = "1.0.0"
         const val MODULE_NAME = "VoiceOSCore"
 

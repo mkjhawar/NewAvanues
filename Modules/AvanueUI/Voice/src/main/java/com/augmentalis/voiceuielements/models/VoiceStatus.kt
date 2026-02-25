@@ -2,7 +2,6 @@
  * VoiceStatus.kt - Voice recognition status data model
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team  
  * Created: 2025-01-28
  * 
  * Data model for voice recognition status

@@ -8,31 +8,27 @@ group = "com.augmentalis.magiccode"
 version = "1.0.0"
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     // Android target
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
     // JVM target for desktop/server
     jvm("jvm") {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets
-        iosX64()
-        iosArm64()
-        iosSimulatorArm64()
-    }
+    // iOS targets
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -45,6 +41,9 @@ kotlin {
                 // Unified Database - for repository interfaces
                 api(project(":Modules:Database"))
 
+                // AVU - for AvuDslLexer, AvuDslParser, AvuInterpreter, PluginLoader (.avp text plugin dispatch)
+                implementation(project(":Modules:AVU"))
+
                 // YAML parsing
                 implementation("net.mamoe.yamlkt:yamlkt:0.13.0")
 
@@ -54,6 +53,9 @@ kotlin {
 
                 // Coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
+                // DateTime
+                implementation(libs.kotlinx.datetime)
 
                 // Semver for dependency resolution
                 implementation("io.github.z4kn4fein:semver:2.0.0")
@@ -115,38 +117,34 @@ kotlin {
                 implementation(kotlin("test-junit"))
             }
         }
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            // iOS source sets - shared intermediate source set
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
+        // iOS source sets - shared intermediate source set
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
 
-            val iosMain by creating {
-                dependsOn(commonMain)
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-            }
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+        }
 
-            val iosX64Test by getting
-            val iosArm64Test by getting
-            val iosSimulatorArm64Test by getting
+        val iosX64Test by getting
+        val iosArm64Test by getting
+        val iosSimulatorArm64Test by getting
 
-            val iosTest by creating {
-                dependsOn(commonTest)
-                iosX64Test.dependsOn(this)
-                iosArm64Test.dependsOn(this)
-                iosSimulatorArm64Test.dependsOn(this)
-            }
+        val iosTest by creating {
+            dependsOn(commonTest)
+            iosX64Test.dependsOn(this)
+            iosArm64Test.dependsOn(this)
+            iosSimulatorArm64Test.dependsOn(this)
         }
     }
 }
 
 android {
     namespace = "com.augmentalis.magiccode.plugins"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 29  // Match VoiceOSCore requirement

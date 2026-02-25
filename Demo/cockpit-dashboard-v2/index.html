@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cockpit Dashboard v2 — Orbital Hybrid</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #020617; --surface: #0F172A; --surface-elevated: #1E293B;
+    --primary: #1E40AF; --primary-light: #3B82F6; --primary-glow: rgba(30,64,175,0.35);
+    --secondary: #8B5CF6; --tertiary: #34D399;
+    --text-primary: #F1F5F9; --text-secondary: #94A3B8; --text-muted: #475569;
+    --glass-bg: rgba(15,23,42,0.65); --glass-border: rgba(255,255,255,0.08);
+    --accent-voice: #1E40AF; --accent-web: #00897B; --accent-cursor: #FF7043;
+    --accent-pdf: #E53935; --accent-image: #43A047; --accent-video: #E91E63;
+    --accent-note: #FFA726; --accent-photo: #7E57C2; --accent-cast: #26C6DA;
+    --accent-draw: #EF5350;
+  }
+
+  body {
+    background: #0a0a14;
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Device Toolbar ── */
+  .device-toolbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 16px;
+    background: rgba(2,6,23,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-wrap: wrap;
+  }
+  .device-toolbar .toolbar-label {
+    font-size: 11px; color: var(--text-muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; margin-right: 8px;
+  }
+  .device-btn {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+    background: transparent; color: var(--text-secondary); font-size: 11px;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .device-btn:hover { border-color: var(--primary-light); color: var(--text-primary); }
+  .device-btn.active {
+    background: rgba(30,64,175,0.25); border-color: var(--primary);
+    color: var(--primary-light);
+  }
+  .device-info {
+    font-size: 10px; color: var(--text-muted); margin-left: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Viewport Frame ── */
+  .viewport-wrapper {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 70px 20px 20px;
+    width: 100%; min-height: 100vh;
+  }
+  .viewport-frame {
+    position: relative;
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    overflow: hidden;
+    background: var(--bg);
+    box-shadow: 0 0 60px rgba(30,64,175,0.08), 0 0 1px rgba(255,255,255,0.1);
+    transform-origin: center center;
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+  .viewport-bezel {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: var(--text-muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    background: rgba(2,6,23,0.9); padding: 4px 12px; border-radius: 0 0 8px 8px;
+    white-space: nowrap; z-index: 5;
+  }
+
+  /* ── Dashboard Inside Viewport ── */
+  .dashboard {
+    width: 100%; height: 100%;
+    overflow-y: auto; overflow-x: hidden;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 40%, var(--bg) 100%);
+    position: relative;
+  }
+  .dashboard::-webkit-scrollbar { width: 3px; }
+  .dashboard::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+  /* ── Scanline Grid ── */
+  .scanline-grid {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(241,245,249,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(241,245,249,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* ══════════════════════════════════════════
+     ZONE 1: Orbital Hero
+     ══════════════════════════════════════════ */
+  .orbital-hero {
+    position: relative; width: 100%; padding: 24px 16px 12px;
+    display: flex; flex-direction: column; align-items: center;
+    z-index: 2;
+  }
+
+  /* Brain icon with pulse */
+  .brain-core {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: radial-gradient(circle, var(--primary) 0%, rgba(30,64,175,0.3) 70%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; position: relative; z-index: 10;
+    animation: brainPulse 3s ease-in-out infinite;
+    box-shadow: 0 0 20px var(--primary-glow), 0 0 60px rgba(30,64,175,0.15);
+  }
+  @keyframes brainPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 20px var(--primary-glow), 0 0 60px rgba(30,64,175,0.15); }
+    50% { transform: scale(1.06); box-shadow: 0 0 30px var(--primary-glow), 0 0 80px rgba(30,64,175,0.25); }
+  }
+
+  /* Orbit canvas (behind brain) */
+  .orbit-canvas {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    pointer-events: none; z-index: 1;
+  }
+
+  /* Arc module nodes */
+  .arc-modules {
+    position: relative; width: 100%; display: flex; justify-content: center;
+    margin-top: -20px; z-index: 5; min-height: 60px;
+  }
+  .arc-node {
+    position: absolute;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; transition: transform 0.3s ease;
+    animation: arcNodeIn 0.5s ease-out backwards;
+  }
+  .arc-node:hover { transform: scale(1.12) !important; }
+  .arc-node .node-dot {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; border: 2px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px); transition: all 0.25s;
+  }
+  .arc-node:hover .node-dot {
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 0 16px rgba(255,255,255,0.1);
+  }
+  .arc-node .node-label {
+    font-size: 9px; font-weight: 600; color: var(--text-secondary);
+    text-align: center; white-space: nowrap;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+  @keyframes arcNodeIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* Hero title */
+  .hero-title {
+    font-size: 18px; font-weight: 700; margin-top: 8px;
+    background: linear-gradient(135deg, var(--text-primary), var(--primary-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; text-align: center; z-index: 5;
+  }
+  .hero-subtitle {
+    font-size: 11px; color: var(--text-secondary); z-index: 5;
+    letter-spacing: 0.3px;
+  }
+
+  /* ══════════════════════════════════════════
+     ZONE 2: Quick Launch Grid
+     ══════════════════════════════════════════ */
+  .quick-launch {
+    position: relative; z-index: 2;
+    padding: 8px 16px 12px;
+  }
+  .section-header {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin: 12px 0 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-header::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--glass-border), transparent);
+  }
+
+  .launch-grid {
+    display: grid; gap: 8px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .launch-card {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: 10px; padding: 10px 12px;
+    cursor: pointer; transition: all 0.25s ease;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    position: relative; overflow: hidden;
+    opacity: 0; animation: cardFadeIn 0.3s ease-out forwards;
+  }
+  .launch-card:hover {
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .launch-card .accent-strip {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    border-radius: 10px 0 0 10px;
+  }
+  .launch-card .card-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .launch-card .card-info { flex: 1; min-width: 0; }
+  .launch-card .card-name {
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .launch-card .card-sub {
+    font-size: 10px; color: var(--text-secondary);
+  }
+  .launch-card .voice-badge {
+    display: none; font-size: 14px; font-weight: 700;
+    color: var(--primary-light); margin-right: 4px;
+  }
+
+  @keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ══════════════════════════════════════════
+     ZONE 3: Sessions & Templates
+     ══════════════════════════════════════════ */
+  .sessions-zone {
+    position: relative; z-index: 2;
+    padding: 4px 16px 80px;
+  }
+  .sessions-strip {
+    display: flex; gap: 10px; overflow-x: auto;
+    padding: 4px 0 8px; scrollbar-width: none;
+  }
+  .sessions-strip::-webkit-scrollbar { display: none; }
+  .session-card {
+    flex-shrink: 0; width: 150px; min-height: 64px;
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: 10px; padding: 10px 12px;
+    cursor: pointer; transition: all 0.25s;
+    backdrop-filter: blur(10px); display: flex; flex-direction: column;
+    justify-content: space-between;
+  }
+  .session-card:hover {
+    border-color: var(--primary-light);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(30,64,175,0.15);
+  }
+  .session-card .s-name { font-size: 12px; font-weight: 600; }
+  .session-card .s-meta {
+    font-size: 10px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 4px; margin-top: 4px;
+  }
+  .session-card .s-badge {
+    background: var(--primary); color: white; font-size: 9px;
+    padding: 1px 5px; border-radius: 6px; font-weight: 700;
+  }
+
+  .templates-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+    margin-top: 4px;
+  }
+  .template-card {
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: 10px; padding: 10px 12px;
+    cursor: pointer; transition: all 0.25s;
+    backdrop-filter: blur(10px);
+  }
+  .template-card:hover {
+    border-color: var(--primary-light); transform: translateY(-2px);
+  }
+  .template-card .t-name { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .template-card .t-desc { font-size: 10px; color: var(--text-secondary); line-height: 1.3; }
+
+  /* New Session FAB */
+  .fab {
+    position: absolute; bottom: 20px; right: 16px; z-index: 10;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--primary); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; cursor: pointer; border: none;
+    box-shadow: 0 4px 16px rgba(30,64,175,0.4);
+    transition: all 0.25s;
+  }
+  .fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(30,64,175,0.6); }
+
+  /* HUD Footer */
+  .hud-footer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px;
+    background: linear-gradient(180deg, transparent, rgba(2,6,23,0.9));
+    z-index: 10;
+  }
+  .hud-footer .vos-badge {
+    color: var(--primary-light); font-weight: 700; font-size: 9px;
+  }
+
+  /* ══════════════════════════════════════════
+     Device-Specific Responsive Overrides
+     ══════════════════════════════════════════ */
+
+  /* RealWear: voice-numbered single column, no orbital */
+  .device-realwear .orbital-hero { display: none; }
+  .device-realwear .launch-grid { grid-template-columns: 1fr; max-width: 500px; margin: 0 auto; }
+  .device-realwear .launch-card .voice-badge { display: block; }
+  .device-realwear .launch-card .card-name { font-size: 16px; }
+  .device-realwear .launch-card { padding: 14px 16px; }
+  .device-realwear .templates-grid { display: none; }
+  .device-realwear .scanline-grid { display: none; }
+
+  /* Glass Micro: brain only, voice list, 3 items visible */
+  .device-glass-micro .orbital-hero .arc-modules { display: none; }
+  .device-glass-micro .orbital-hero { padding: 16px 16px 4px; }
+  .device-glass-micro .brain-core { width: 44px; height: 44px; font-size: 22px; }
+  .device-glass-micro .hero-title { font-size: 14px; }
+  .device-glass-micro .hero-subtitle { display: none; }
+  .device-glass-micro .launch-grid { grid-template-columns: 1fr; max-width: 400px; margin: 0 auto; }
+  .device-glass-micro .launch-card .voice-badge { display: block; }
+  .device-glass-micro .launch-card .card-name { font-size: 15px; }
+  .device-glass-micro .sessions-zone { display: none; }
+  .device-glass-micro .scanline-grid { display: none; }
+
+  /* Phone Portrait: 2 columns */
+  .device-phone-p .launch-grid { grid-template-columns: repeat(2, 1fr); }
+  .device-phone-p .arc-modules { max-width: 280px; }
+  .device-phone-p .templates-grid { grid-template-columns: 1fr; }
+
+  /* Phone Landscape: 3 columns, compact hero */
+  .device-phone-l .orbital-hero { flex-direction: row; gap: 16px; padding: 12px 16px 4px; }
+  .device-phone-l .brain-core { width: 40px; height: 40px; font-size: 20px; }
+  .device-phone-l .hero-title { font-size: 14px; }
+  .device-phone-l .hero-subtitle { display: none; }
+  .device-phone-l .arc-modules { display: none; }
+  .device-phone-l .launch-grid { grid-template-columns: repeat(3, 1fr); }
+  .device-phone-l .templates-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* Tablet Portrait: 3 columns, full arc */
+  .device-tablet-p .launch-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* Tablet Landscape: 4-column grid, sidebar sessions */
+  .device-tablet-l .dashboard { display: flex; flex-wrap: wrap; }
+  .device-tablet-l .orbital-hero { width: 100%; }
+  .device-tablet-l .quick-launch { flex: 1; min-width: 0; }
+  .device-tablet-l .launch-grid { grid-template-columns: repeat(4, 1fr); }
+  .device-tablet-l .sessions-zone { width: 280px; flex-shrink: 0; padding-top: 24px; }
+  .device-tablet-l .sessions-strip { flex-direction: column; }
+  .device-tablet-l .session-card { width: 100%; }
+
+  /* Samsung Fold */
+  .device-fold .launch-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* iPad */
+  .device-ipad .launch-grid { grid-template-columns: repeat(3, 1fr); }
+  .device-ipad .templates-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* ── Status Toast ── */
+  .toast {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--glass-bg); border: 1px solid var(--primary);
+    border-radius: 14px; padding: 20px 36px;
+    backdrop-filter: blur(20px); text-align: center;
+    z-index: 50; pointer-events: none;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .toast.show { opacity: 1; }
+  .toast .toast-icon { font-size: 28px; margin-bottom: 6px; }
+  .toast .toast-title { font-size: 14px; font-weight: 600; }
+  .toast .toast-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Device Toolbar -->
+<div class="device-toolbar">
+  <span class="toolbar-label">Device</span>
+  <button class="device-btn active" onclick="switchDevice('phone-p')">Phone P</button>
+  <button class="device-btn" onclick="switchDevice('phone-l')">Phone L</button>
+  <button class="device-btn" onclick="switchDevice('tablet-p')">Tablet P</button>
+  <button class="device-btn" onclick="switchDevice('tablet-l')">Tablet L</button>
+  <button class="device-btn" onclick="switchDevice('realwear')">RealWear</button>
+  <button class="device-btn" onclick="switchDevice('glass-micro')">Glass Micro</button>
+  <button class="device-btn" onclick="switchDevice('fold')">Samsung Fold</button>
+  <button class="device-btn" onclick="switchDevice('ipad')">iPad</button>
+  <span class="device-info" id="deviceInfo">360 x 800</span>
+</div>
+
+<!-- Viewport -->
+<div class="viewport-wrapper">
+  <div class="viewport-frame" id="viewportFrame" style="width:360px; height:800px;">
+
+    <!-- Dashboard Content -->
+    <div class="dashboard" id="dashboard">
+      <div class="scanline-grid"></div>
+
+      <!-- ZONE 1: Orbital Hero -->
+      <div class="orbital-hero" id="orbitalHero">
+        <canvas class="orbit-canvas" id="orbitCanvas"></canvas>
+        <div class="brain-core" id="brainCore">&#x1F9E0;</div>
+        <div class="arc-modules" id="arcModules"></div>
+        <div class="hero-title">Cockpit Dashboard</div>
+        <div class="hero-subtitle">Orbital Hybrid &mdash; v2</div>
+      </div>
+
+      <!-- ZONE 2: Quick Launch -->
+      <div class="quick-launch">
+        <div class="section-header">Quick Launch</div>
+        <div class="launch-grid" id="launchGrid"></div>
+      </div>
+
+      <!-- ZONE 3: Sessions & Templates -->
+      <div class="sessions-zone">
+        <div class="section-header">Recent Sessions</div>
+        <div class="sessions-strip" id="sessionsStrip"></div>
+        <div class="section-header" style="margin-top:8px;">Templates</div>
+        <div class="templates-grid" id="templatesGrid"></div>
+      </div>
+
+      <!-- FAB -->
+      <button class="fab" onclick="showToast('&#x2795;','New Session','Choose template or blank')">+</button>
+
+      <!-- HUD Footer -->
+      <div class="hud-footer">
+        <span class="vos-badge">VoiceOS&reg;</span>
+        <span>Avanues EcoSystem</span>
+        <span style="color:var(--primary); margin-left:8px;">&#9679;</span>
+        <span>Dashboard v2</span>
+      </div>
+
+      <!-- Toast -->
+      <div class="toast" id="toast">
+        <div class="toast-icon" id="toastIcon"></div>
+        <div class="toast-title" id="toastTitle"></div>
+        <div class="toast-sub" id="toastSub"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ──
+const MODULES = [
+  { id:'voiceavanue', name:'VoiceTouch\u2122', sub:'Voice commands', icon:'\u{1F3A4}', accent:'#1E40AF', group:'core' },
+  { id:'webavanue',   name:'WebAvanue',        sub:'Voice browser', icon:'\u{1F310}', accent:'#00897B', group:'core' },
+  { id:'voicecursor', name:'CursorAvanue',     sub:'Cursor control',icon:'\u{1F5B1}', accent:'#FF7043', group:'core' },
+  { id:'pdfavanue',   name:'PDFAvanue',        sub:'PDF viewer',    icon:'\u{1F4C4}', accent:'#E53935', group:'content' },
+  { id:'imageavanue', name:'ImageAvanue',       sub:'Image viewer',  icon:'\u{1F5BC}', accent:'#43A047', group:'content' },
+  { id:'videoavanue', name:'VideoAvanue',       sub:'Video player',  icon:'\u{1F3A5}', accent:'#E91E63', group:'content' },
+  { id:'noteavanue',  name:'NoteAvanue',        sub:'Rich notes',    icon:'\u{1F4DD}', accent:'#FFA726', group:'content' },
+  { id:'photoavanue', name:'PhotoAvanue',       sub:'Camera',        icon:'\u{1F4F7}', accent:'#7E57C2', group:'content' },
+  { id:'remotecast',  name:'CastAvanue',        sub:'Screen cast',   icon:'\u{1F4E1}', accent:'#26C6DA', group:'content' },
+  { id:'annotationavanue', name:'DrawAvanue',   sub:'Whiteboard',    icon:'\u270F\uFE0F', accent:'#EF5350', group:'content' }
+];
+
+const SESSIONS = [
+  { name:'Research', layout:'Flight Deck', frames:4 },
+  { name:'Meeting Notes', layout:'Split Left', frames:2 },
+  { name:'Field Inspection', layout:'Grid', frames:3 },
+  { name:'Developer', layout:'Mosaic', frames:5 },
+  { name:'Remote Assist', layout:'T-Panel', frames:2 }
+];
+
+const TEMPLATES = [
+  { name:'Field Inspection', desc:'Camera + Notes + Checklist' },
+  { name:'Research', desc:'Web + PDF + Notes + AI' },
+  { name:'Meeting Notes', desc:'Notes + Audio + Summary' },
+  { name:'Remote Assist', desc:'Cast + Annotate' },
+  { name:'Training', desc:'Video + Notes + Checklist' }
+];
+
+const DEVICES = {
+  'phone-p':    { w:360, h:800,  css:'device-phone-p',    label:'Phone Portrait',    arcCount:3 },
+  'phone-l':    { w:800, h:360,  css:'device-phone-l',    label:'Phone Landscape',   arcCount:0 },
+  'tablet-p':   { w:800, h:1280, css:'device-tablet-p',   label:'Tablet Portrait',   arcCount:10 },
+  'tablet-l':   { w:1280,h:800,  css:'device-tablet-l',   label:'Tablet Landscape',  arcCount:10 },
+  'realwear':   { w:854, h:480,  css:'device-realwear',   label:'RealWear Nav520',   arcCount:0 },
+  'glass-micro':{ w:480, h:480,  css:'device-glass-micro', label:'Vuzix Blade',      arcCount:0 },
+  'fold':       { w:884, h:1104, css:'device-fold',       label:'Samsung Fold',      arcCount:7 },
+  'ipad':       { w:1024,h:1366, css:'device-ipad',       label:'iPad Pro 11"',      arcCount:10 }
+};
+
+let currentDevice = 'phone-p';
+let toastTimer = null;
+
+// ── Device Switching ──
+function switchDevice(id) {
+  currentDevice = id;
+  const d = DEVICES[id];
+  const vf = document.getElementById('viewportFrame');
+  const db = document.getElementById('dashboard');
+
+  // Update button states
+  document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  // Set viewport size
+  vf.style.width = d.w + 'px';
+  vf.style.height = d.h + 'px';
+
+  // Remove all device classes, add current
+  db.className = 'dashboard ' + d.css;
+
+  // Scale to fit browser window
+  scaleViewport();
+
+  // Update info label
+  document.getElementById('deviceInfo').textContent = d.w + ' \u00D7 ' + d.h + ' \u2014 ' + d.label;
+
+  // Re-render content
+  renderArc(d.arcCount);
+  renderGrid();
+  renderSessions();
+  renderTemplates();
+
+  // Redraw orbit canvas
+  drawOrbits();
+}
+
+function scaleViewport() {
+  const vf = document.getElementById('viewportFrame');
+  const ww = window.innerWidth - 40;
+  const wh = window.innerHeight - 90;
+  const vw = parseInt(vf.style.width);
+  const vh = parseInt(vf.style.height);
+  const scale = Math.min(1, ww / vw, wh / vh);
+  vf.style.transform = 'scale(' + scale + ')';
+}
+window.addEventListener('resize', scaleViewport);
+
+// ── Orbit Canvas ──
+function drawOrbits() {
+  const canvas = document.getElementById('orbitCanvas');
+  const hero = document.getElementById('orbitalHero');
+  const d = DEVICES[currentDevice];
+
+  if (d.css === 'device-realwear' || d.css === 'device-glass-micro' || d.css === 'device-phone-l') {
+    canvas.style.display = 'none';
+    return;
+  }
+  canvas.style.display = 'block';
+
+  const w = Math.min(d.w, 600);
+  const h = 180;
+  canvas.width = w; canvas.height = h;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h;
+  const radii = [70, 110, 150];
+  const time = Date.now() / 1000;
+
+  radii.forEach((r, i) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+    const alpha = 0.06 + Math.sin(time + i) * 0.03;
+    ctx.strokeStyle = 'rgba(59, 130, 246, ' + alpha + ')';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  requestAnimationFrame(drawOrbits);
+}
+
+// ── Arc Module Nodes ──
+function renderArc(count) {
+  const container = document.getElementById('arcModules');
+  container.innerHTML = '';
+
+  if (count === 0) return;
+
+  const mods = count <= 3 ? MODULES.slice(0, 3) : MODULES.slice(0, count);
+  const containerW = DEVICES[currentDevice].w - 32;
+  const radius = Math.min(containerW * 0.4, 180);
+
+  mods.forEach((m, i) => {
+    const angle = Math.PI + (Math.PI / (mods.length + 1)) * (i + 1);
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius * 0.5;
+
+    const node = document.createElement('div');
+    node.className = 'arc-node';
+    node.style.left = 'calc(50% + ' + x + 'px)';
+    node.style.top = (50 + y) + 'px';
+    node.style.transform = 'translate(-50%, -50%)';
+    node.style.animationDelay = (i * 70) + 'ms';
+    node.onclick = () => showToast(m.icon, 'Launching ' + m.name, m.sub);
+
+    node.innerHTML =
+      '<div class="node-dot" style="background:' + m.accent + '22; color:' + m.accent + ';">' + m.icon + '</div>' +
+      '<div class="node-label">' + m.name.replace('\u2122','') + '</div>';
+
+    container.appendChild(node);
+  });
+}
+
+// ── Launch Grid ──
+function renderGrid() {
+  const grid = document.getElementById('launchGrid');
+  grid.innerHTML = '';
+
+  MODULES.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'launch-card';
+    card.style.animationDelay = (i * 50) + 'ms';
+    card.onclick = () => showToast(m.icon, 'Launching ' + m.name, 'Opening in Cockpit workspace...');
+
+    card.innerHTML =
+      '<div class="accent-strip" style="background:' + m.accent + ';"></div>' +
+      '<span class="voice-badge">' + (i + 1) + '.</span>' +
+      '<div class="card-icon" style="background:' + m.accent + '22; color:' + m.accent + ';">' + m.icon + '</div>' +
+      '<div class="card-info">' +
+        '<div class="card-name">' + m.name + '</div>' +
+        '<div class="card-sub">' + m.sub + '</div>' +
+      '</div>';
+
+    grid.appendChild(card);
+  });
+}
+
+// ── Sessions ──
+function renderSessions() {
+  const strip = document.getElementById('sessionsStrip');
+  strip.innerHTML = '';
+
+  SESSIONS.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'session-card';
+    card.onclick = () => showToast('\u{1F4C2}', 'Resuming ' + s.name, s.layout);
+    card.innerHTML =
+      '<div class="s-name">' + s.name + '</div>' +
+      '<div class="s-meta"><span>' + s.layout + '</span><span class="s-badge">' + s.frames + '</span></div>';
+    strip.appendChild(card);
+  });
+}
+
+// ── Templates ──
+function renderTemplates() {
+  const grid = document.getElementById('templatesGrid');
+  grid.innerHTML = '';
+
+  TEMPLATES.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'template-card';
+    card.onclick = () => showToast('\u{1F4CB}', 'New Session', 'Template: ' + t.name);
+    card.innerHTML =
+      '<div class="t-name">' + t.name + '</div>' +
+      '<div class="t-desc">' + t.desc + '</div>';
+    grid.appendChild(card);
+  });
+}
+
+// ── Toast ──
+function showToast(icon, title, sub) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastIcon').innerHTML = icon;
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastSub').textContent = sub;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+// ── Init ──
+function init() {
+  renderArc(DEVICES[currentDevice].arcCount);
+  renderGrid();
+  renderSessions();
+  renderTemplates();
+  drawOrbits();
+  scaleViewport();
+}
+init();
+</script>
+</body>
+</html>

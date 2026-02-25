@@ -2,7 +2,6 @@
  * VoiceUITheme.kt - Voice UI Theme for Compose
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team  
  * Created: 2025-01-28
  * 
  * Theme configuration for Voice UI components

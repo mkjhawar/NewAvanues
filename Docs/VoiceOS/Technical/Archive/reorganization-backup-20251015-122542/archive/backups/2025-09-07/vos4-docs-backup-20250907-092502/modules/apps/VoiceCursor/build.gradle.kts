@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.voiceos.cursor"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.augmentalis.voiceos.cursor"

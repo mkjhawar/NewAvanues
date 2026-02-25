@@ -265,6 +265,24 @@ sealed class FrameContent {
         override val typeId: String = TYPE_SCREEN_CAST
     }
 
+    // ── File Management ──────────────────────────────────────────────
+
+    /**
+     * File browser — cross-platform file manager using FileAvanue module.
+     * Supports local, cloud, and network storage providers.
+     * Dashboard mode (blank path) shows categories; directory mode shows file listing.
+     */
+    @Serializable
+    @SerialName("file")
+    data class File(
+        val path: String = "",
+        val viewMode: String = "list",
+        val sortMode: String = "name_asc",
+        val providerId: String = "local",
+    ) : FrameContent() {
+        override val typeId: String = TYPE_FILE
+    }
+
     // ── Mini Widgets ─────────────────────────────────────────────────
 
     /**
@@ -321,6 +339,7 @@ sealed class FrameContent {
         const val TYPE_AI_SUMMARY = "ai_summary"
         const val TYPE_SCREEN_CAST = "screen_cast"
         const val TYPE_WIDGET = "widget"
+        const val TYPE_FILE = "file"
         const val TYPE_EXTERNAL_APP = "external_app"
 
         /** All type IDs for validation */
@@ -329,7 +348,7 @@ sealed class FrameContent {
             TYPE_VOICE_NOTE, TYPE_FORM, TYPE_SIGNATURE, TYPE_VOICE,
             TYPE_MAP, TYPE_WHITEBOARD, TYPE_TERMINAL,
             TYPE_AI_SUMMARY, TYPE_SCREEN_CAST, TYPE_WIDGET,
-            TYPE_EXTERNAL_APP,
+            TYPE_FILE, TYPE_EXTERNAL_APP,
         )
     }
 }

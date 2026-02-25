@@ -2,7 +2,6 @@
  * VivokaEngineFactory.ios.kt - iOS actual implementation
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-17
  *
  * iOS implementation of Vivoka engine factory.

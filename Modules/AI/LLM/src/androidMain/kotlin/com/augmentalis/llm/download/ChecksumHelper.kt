@@ -21,6 +21,7 @@
 
 package com.augmentalis.llm.download
 
+import android.util.Log
 import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
@@ -29,6 +30,18 @@ import java.security.MessageDigest
  * Helper object for checksum operations
  */
 object ChecksumHelper {
+
+    private const val TAG = "ChecksumHelper"
+
+    /**
+     * Sentinel prefix used in KnownChecksums constants when the real SHA-256
+     * has not yet been generated (model not yet downloaded in CI/build).
+     *
+     * When an expected checksum starts with this prefix, verification is skipped
+     * and a warning is emitted instead of deleting the file.  The sentinel must be
+     * replaced with the real SHA-256 before shipping to production.
+     */
+    private const val TODO_PREFIX = "TODO"
 
     /**
      * Calculate SHA-256 checksum for a file
@@ -65,13 +78,24 @@ object ChecksumHelper {
     }
 
     /**
-     * Verify file checksum
+     * Verify file checksum.
+     *
+     * When [expectedChecksum] starts with [TODO_PREFIX] the known checksum has
+     * not yet been generated (model was not pre-downloaded at build time).
+     * In that case verification is skipped and a warning is logged so the download
+     * can proceed rather than being silently deleted.  Replace the TODO constant
+     * in [KnownChecksums] with the real SHA-256 before releasing to production.
      *
      * @param file File to verify
-     * @param expectedChecksum Expected SHA-256 checksum (hex-encoded)
-     * @return True if checksums match (case-insensitive)
+     * @param expectedChecksum Expected SHA-256 checksum (hex-encoded), or a TODO sentinel
+     * @return True if checksums match, or true with a warning when checksum is a TODO sentinel
      */
     fun verifyChecksum(file: File, expectedChecksum: String): Boolean {
+        if (expectedChecksum.startsWith(TODO_PREFIX)) {
+            Log.w(TAG, "Checksum verification skipped — known checksum not yet generated for '${file.name}'. " +
+                    "Replace the TODO constant in KnownChecksums with the real SHA-256 before releasing.")
+            return true
+        }
         val actualChecksum = calculateSHA256(file)
         return actualChecksum.equals(expectedChecksum, ignoreCase = true)
     }

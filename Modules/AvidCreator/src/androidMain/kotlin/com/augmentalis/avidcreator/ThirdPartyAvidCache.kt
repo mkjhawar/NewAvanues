@@ -3,7 +3,6 @@
  * Path: libraries/AvidCreator/src/main/java/com/augmentalis/uuidcreator/thirdparty/ThirdPartyAvidCache.kt
  *
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-10-08
  *
  * In-memory cache for generated third-party UUIDs to avoid repeated generation

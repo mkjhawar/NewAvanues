@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.licensemanager"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 29
@@ -25,16 +25,16 @@ android {
             )
         }
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    
+
     kotlinOptions {
         jvmTarget = "17"
     }
-    
+
     testOptions {
         unitTests {
             isReturnDefaultValues = true
@@ -53,6 +53,7 @@ android {
 dependencies {
     // Android
     implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
     
@@ -60,7 +61,7 @@ dependencies {
     implementation(project(":Modules:AvanueUI"))
 
     // Compose BOM
-    implementation(platform(libs.compose.bom.get()))
+    implementation(platform(libs.compose.bom))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")

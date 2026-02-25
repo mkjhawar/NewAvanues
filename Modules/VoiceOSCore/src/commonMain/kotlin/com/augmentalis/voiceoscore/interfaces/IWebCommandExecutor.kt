@@ -2,7 +2,6 @@
  * IWebCommandExecutor.kt - Interface for web command execution
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-02-10
  *
  * KMP-safe interface that decouples VoiceOSCore from WebView.

@@ -1,363 +1,173 @@
-#!/bin/bash
+#!/bin/sh
 
-# Claude Code Enhanced Status Line (v11.4.0)
-# Format: IDEACODE v# | API-R:provider | repo | branch | git-stats | CXT: %% (K/K) | context-indicator | model | CLI version | RESTART CLIENT
-# Features: Auto-save at 80%, context warnings, git status, version tracking, API status colors, RAG detection
-# Indicators: API (basic), API-R:O (RAG+Ollama), API-R:AI (RAG+OpenAI), >>API-R:O<< (needs restart)
-# RAG Providers: :O (Ollama - free, local), :AI (OpenAI - cloud, paid)
-# Colors: Green API (running), Red flashing API (needs restart), Red RESTART CLIENT (version/instruction changes)
+# Claude Code Status Line v3 (Consolidated)
+# Single curl to /statusline replaces 6 separate API calls.
+# Output: ic | API | model | Ctx:XX% | R:count | repo:branch | CC:ver [alert]
 
-# Read JSON input from stdin
+# Read JSON input from Claude Code
 input=$(cat)
 
-# Extract values
-model_name=$(echo "$input" | jq -r '.model.display_name // "Claude"')
-cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // "~"')
-
-# Get the RUNNING Claude Code version from JSON input
-running_version=$(echo "$input" | jq -r '.version // "unknown"')
-version="$running_version"
-
-# Get short model name (e.g., "Sonnet 4.5")
-model_short=$(echo "$model_name" | sed 's/Claude //' | sed 's/3.5//' | xargs)
-
-# Get context window limit for model
-get_context_limit() {
-    local model="$1"
-    case "$model" in
-        *"Opus 4.5"*) echo "200000" ;;
-        *"Sonnet 4.5"*) echo "200000" ;;
-        *"Haiku 4.5"*) echo "200000" ;;
-        *"Opus 3"*) echo "200000" ;;
-        *"Sonnet 3.5"*) echo "200000" ;;
-        *"Haiku 3"*) echo "200000" ;;
-        *) echo "200000" ;;  # Default fallback
-    esac
-}
-
-context_limit=$(get_context_limit "$model_name")
-
-# Extract cost and session info from Claude Code JSON
-session_id=$(echo "$input" | jq -r '.session_id // ""')
-total_cost=$(echo "$input" | jq -r '.cost.total_cost_usd // 0')
-duration_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // 0')
-lines_added=$(echo "$input" | jq -r '.cost.total_lines_added // 0')
-lines_removed=$(echo "$input" | jq -r '.cost.total_lines_removed // 0')
-
-# Format cost (if > 0)
-cost_display=""
-if [[ "$total_cost" != "0" ]] && [[ "$total_cost" != "null" ]]; then
-    cost_display=$(printf "\$%.2f" "$total_cost" 2>/dev/null || echo "")
-fi
-
-# Format duration (ms to minutes)
-duration_display=""
-if [[ "$duration_ms" != "0" ]] && [[ "$duration_ms" != "null" ]]; then
-    duration_min=$((duration_ms / 60000))
-    if [[ $duration_min -gt 0 ]]; then
-        duration_display="${duration_min}m"
+# Extract context percentage from Claude Code JSON
+context_pct=""
+if [ -n "$input" ]; then
+    pct=$(echo "$input" | sed -n 's/.*"used_percentage"[[:space:]]*:[[:space:]]*\([0-9.]*\).*/\1/p' | head -1)
+    if [ -n "$pct" ] && [ "$pct" != "null" ]; then
+        pct=$(printf "%.0f" "$pct" 2>/dev/null || echo "")
+        [ -n "$pct" ] && context_pct="${pct}%"
     fi
-fi
-
-# Short session ID (first 8 chars)
-session_short=""
-if [[ -n "$session_id" ]] && [[ "$session_id" != "null" ]]; then
-    session_short="${session_id:0:8}"
-fi
-
-# Get IDEACODE framework version from central version-info.json
-ideacode_version="?"
-central_version_file="/Volumes/M-Drive/Coding/ideacode/version-info.json"
-if [[ -f "$central_version_file" ]]; then
-    ideacode_version=$(jq -r '.framework_version // "?"' "$central_version_file" 2>/dev/null)
-fi
-
-# Git info with detailed status
-repo=""
-branch=""
-git_stats=""
-git_dirty=""
-if git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
-    branch=$(git -C "$cwd" branch --show-current 2>/dev/null || echo "detached")
-    repo=$(basename "$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")
-
-    # Get detailed git status (+added, ~modified, -deleted)
-    status_output=$(git -C "$cwd" status --porcelain 2>/dev/null)
-    if [[ -n "$status_output" ]]; then
-        git_dirty="*"  # Mark branch as dirty
-        added=$(echo "$status_output" | grep -c "^??" 2>/dev/null) || added=0
-        modified=$(echo "$status_output" | grep -cE "^ M|^M |^MM" 2>/dev/null) || modified=0
-        deleted=$(echo "$status_output" | grep -cE "^ D|^D " 2>/dev/null) || deleted=0
-        staged=$(echo "$status_output" | grep -cE "^[MADRC]" 2>/dev/null) || staged=0
-
-        parts=""
-        [[ "$added" -gt 0 ]] && parts="+$added"
-        [[ "$modified" -gt 0 ]] && parts="$parts ~$modified"
-        [[ "$deleted" -gt 0 ]] && parts="$parts -$deleted"
-        [[ "$staged" -gt 0 ]] && parts="$parts S:$staged"
-        git_stats=$(echo "$parts" | xargs)
-    fi
-fi
-
-# Context status - enhanced with token usage display
-transcript_path=$(echo "$input" | jq -r '.transcript_path // ""')
-context_indicator=""
-context_saved=""
-context_display=""
-
-if [[ -f "$transcript_path" ]]; then
-    transcript_size=$(wc -c < "$transcript_path" 2>/dev/null || echo "0")
-
-    # Status-based context indicator: OK, COMPACT, or CLEAR-{filename}
-    # Thresholds: <1MB = OK, 1MB-2MB = COMPACT, >2MB = CLEAR (create handover)
-    if [[ $transcript_size -gt 2000000 ]]; then
-        # CLEAR state - create handover document
-        save_dir="$cwd/contextsave"
-        mkdir -p "$save_dir" 2>/dev/null
-        timestamp=$(date +%Y%m%d-%H%M)
-        handover_file="handover-$timestamp.md"
-        handover_path="$save_dir/$handover_file"
-
-        # Create handover document if not already exists
-        if [[ ! -f "$handover_path" ]]; then
-            {
-                echo "# Handover Document - $timestamp"
-                echo ""
-                echo "**Repository:** $repo"
-                echo "**Branch:** $branch"
-                echo "**Created:** $(date)"
-                echo ""
-                echo "## Context Summary"
-                echo "This conversation has exceeded the context window limit (>2MB)."
-                echo "Use this handover document to resume work after running /clear."
-                echo ""
-                echo "## Next Steps"
-                echo "1. Review the conversation transcript below"
-                echo "2. Run /clear to start fresh"
-                echo "3. Reference this document to resume where you left off"
-                echo ""
-                echo "---"
-                echo ""
-                echo "## Full Conversation Transcript"
-                echo ""
-                cat "$transcript_path"
-            } > "$handover_path" 2>/dev/null
-
-            # Cleanup old handovers (keep last 3)
-            cd "$save_dir" 2>/dev/null && ls -t handover-*.md 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null
+    if [ -z "$context_pct" ]; then
+        rem=$(echo "$input" | sed -n 's/.*"remaining_percentage"[[:space:]]*:[[:space:]]*\([0-9.]*\).*/\1/p' | head -1)
+        if [ -n "$rem" ] && [ "$rem" != "null" ]; then
+            pct=$(printf "%.0f" "$rem" 2>/dev/null || echo "")
+            [ -n "$pct" ] && context_pct="${pct}%R"
         fi
-
-        context_display="CXT: CLEAR-$handover_file"
-    elif [[ $transcript_size -gt 1000000 ]]; then
-        # COMPACT state - getting full, should compact soon
-        context_display="CXT: COMPACT"
-    else
-        # OK state - normal usage
-        context_display="CXT: OK"
     fi
 fi
 
-# Check for newer Claude Code version (cached hourly)
-version_cache="$HOME/.claude/.version_check"
-newest_version="$version"
-cache_stale=true
-if [[ -f "$version_cache" ]]; then
-    cache_age=$(($(date +%s) - $(stat -f %m "$version_cache" 2>/dev/null || echo 0)))
-    if [[ $cache_age -lt 3600 ]]; then
-        cache_stale=false
-        newest_version=$(cat "$version_cache" 2>/dev/null || echo "$version")
-    fi
-fi
-if [[ "$cache_stale" == true ]]; then
-    latest=$(curl -sf --max-time 2 https://registry.npmjs.org/@anthropic-ai/claude-code/latest 2>/dev/null | jq -r '.version // ""')
-    if [[ -n "$latest" ]] && [[ "$latest" != "null" ]] && [[ "$latest" != "" ]]; then
-        echo "$latest" > "$version_cache"
-        newest_version="$latest"
-    elif [[ -f "$version_cache" ]]; then
-        newest_version=$(cat "$version_cache" 2>/dev/null || echo "$version")
-    fi
+# Extract CLI model from Claude Code JSON input (actual model, not API config)
+cli_model=""
+if [ -n "$input" ]; then
+    cli_model=$(echo "$input" | sed -n 's/.*"model"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
 fi
 
-# Track IDEACODE version changes and instruction file changes
-restart_needed=false
+# Claude Code version (installed binary)
+CC_VER=$(claude --version 2>/dev/null | sed 's/ .*//' || echo "?")
 
-# Get repo name for repo-specific tracking
-repo_name=$(basename "$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || basename "$cwd")
+# Session version (captured at session start by startup-banner.sh)
+CC_SESSION_VER=""
+if [ -f "$HOME/.claude/.session-version" ]; then
+    CC_SESSION_VER=$(cat "$HOME/.claude/.session-version" 2>/dev/null)
+fi
 
-# Global version tracking (IDEACODE framework version applies to all repos)
-version_last_file="$HOME/.claude/.ideacode_version_last"
+# Git info
+repo="unknown"
+branch="unknown"
 
-# Per-repo checksum tracking (prevents false warnings when switching repos)
-checksum_file="$HOME/.claude/.instruction_checksums_${repo_name}"
+if git rev-parse --git-dir >/dev/null 2>&1; then
+    branch=$(git branch --show-current 2>/dev/null || echo "detached")
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+    repo=$(basename "$repo_root" 2>/dev/null || echo "unknown")
+fi
 
-# Check IDEACODE version change
-if [[ -f "$version_last_file" ]]; then
-    last_version=$(cat "$version_last_file" 2>/dev/null)
-    if [[ "$last_version" != "$ideacode_version" ]]; then
-        restart_needed=true
-    fi
+# LLMIM status (prompt enrichment)
+ic_state_file="$HOME/.claude/.ic-enabled"
+if [ -f "$ic_state_file" ] && [ "$(cat "$ic_state_file" 2>/dev/null)" = "0" ]; then
+    ic_flag="ic:OFF"
 else
-    echo "$ideacode_version" > "$version_last_file" 2>/dev/null
+    ic_flag="ic"
 fi
 
-# Check instruction file changes (CLAUDE.md and config files)
-# Get git repo root (consistent regardless of subfolder)
-git_root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "$cwd")
-
-instruction_files=(
-    "/Volumes/M-Drive/Coding/.claude/CLAUDE.md"
-    "$git_root/.claude/CLAUDE.md"
-    "$git_root/.ideacode/config.ideacode"
-)
-
-current_checksums=""
-for file in "${instruction_files[@]}"; do
-    if [[ -f "$file" ]]; then
-        checksum=$(md5 -q "$file" 2>/dev/null || echo "")
-        if [[ -n "$current_checksums" ]]; then
-            current_checksums="${current_checksums}"$'\n'"${file}:${checksum}"
-        else
-            current_checksums="${file}:${checksum}"
-        fi
-    fi
-done
-
-if [[ -f "$checksum_file" ]]; then
-    last_checksums=$(cat "$checksum_file" 2>/dev/null)
-    if [[ "$last_checksums" != "$current_checksums" ]]; then
-        restart_needed=true
-    fi
+# Dual version: show both if session differs from installed binary
+if [ -n "$CC_SESSION_VER" ] && [ "$CC_SESSION_VER" != "$CC_VER" ] && [ "$CC_SESSION_VER" != "?" ]; then
+    cc_version_display="v${CC_VER}(bin) v${CC_SESSION_VER}(sess)"
 else
-    echo "$current_checksums" > "$checksum_file" 2>/dev/null
+    cc_version_display="v$CC_VER"
 fi
 
-# Always update tracking files to current state (allows cross-session eventual consistency)
-# This prevents lock-in where restart_needed stays true indefinitely
-echo "$ideacode_version" > "$version_last_file" 2>/dev/null
-echo "$current_checksums" > "$checksum_file" 2>/dev/null
+# Initialize API-sourced variables
+api_flag="API:OFF"
+cli_part=""
+rag_flag=""
+llm_active=""
+mcp=""
 
-# Build statusline
-status_parts=()
+# ============================================================================
+# SINGLE API CALL - replaces 6 separate curls
+# ============================================================================
+sl_url="http://localhost:3850/statusline"
+[ "$repo" != "unknown" ] && sl_url="${sl_url}?repo=${repo}"
 
-# IDEACODE version (always show, use "?" if not found)
-status_parts+=("IDEACODE v${ideacode_version}")
+sl_data=$(curl -s --connect-timeout 0.3 --max-time 0.5 "$sl_url" 2>/dev/null)
 
-# Check if IDEACODE API is running, auto-start if not
-api_marker="$HOME/.claude/.ideacode_api_started"
-api_status=""
-
-# Check if RAG is available (database exists and has data)
-rag_available=false
-rag_provider=""
-rag_db="/Volumes/M-Drive/Coding/ideacode/ideacode-api/data/rag.db"
-if [[ -f "$rag_db" ]]; then
-    # Check if database has indexed data (commands table has rows)
-    rag_count=$(sqlite3 "$rag_db" "SELECT COUNT(*) FROM command_library;" 2>/dev/null || echo "0")
-    if [[ "$rag_count" -gt 0 ]]; then
-        rag_available=true
-        # Get the active provider with most embeddings (the one actually used)
-        rag_provider=$(sqlite3 "$rag_db" "SELECT provider FROM embeddings_metadata WHERE is_active=1 ORDER BY total_embeddings DESC LIMIT 1;" 2>/dev/null || echo "")
-        # Short provider name: ollama -> O, openai -> AI
-        case "$rag_provider" in
-            "ollama") rag_provider=":O" ;;
-            "openai") rag_provider=":AI" ;;
-            *) rag_provider="" ;;
-        esac
-    fi
-fi
-
-if curl -s --connect-timeout 0.5 http://localhost:3847/health > /dev/null 2>&1; then
-    # API is running - show API-R:provider if RAG available, API if not
-    if [[ "$restart_needed" == true ]]; then
-        if [[ "$rag_available" == true ]]; then
-            api_status=">>API-R${rag_provider}<<"
-        else
-            api_status=">>API<<"
-        fi
-    else
-        if [[ "$rag_available" == true ]]; then
-            api_status="API-R${rag_provider}"
-        else
-            api_status="API"
-        fi
-    fi
-    touch "$api_marker" 2>/dev/null
-else
-    # Auto-start API server if not already attempted this session
-    if [[ ! -f "$api_marker" ]]; then
-        api_dir="/Volumes/M-Drive/Coding/ideacode/ideacode-api"
-        if [[ -d "$api_dir" ]]; then
-            # Start API server in background
-            (cd "$api_dir" && npm start > /dev/null 2>&1 &) &
-            touch "$api_marker" 2>/dev/null
-            # Give it a moment to start
-            sleep 0.5
-            if curl -s --connect-timeout 0.5 http://localhost:3847/health > /dev/null 2>&1; then
-                if [[ "$restart_needed" == true ]]; then
-                    if [[ "$rag_available" == true ]]; then
-                        api_status=">>API-R${rag_provider}<<"
-                    else
-                        api_status=">>API<<"
-                    fi
-                else
-                    if [[ "$rag_available" == true ]]; then
-                        api_status="API-R${rag_provider}"
-                    else
-                        api_status="API"
-                    fi
-                fi
+if [ -n "$sl_data" ] && echo "$sl_data" | grep -q '"api":true'; then
+    # API is online
+    # MCP status (local file check, not from API)
+    mcp_status_file="${CODING_ROOT:-/tmp}/.codeavenue/mcp-status.txt"
+    if [ -f "$mcp_status_file" ]; then
+        file_age=$(($(date +%s) - $(stat -f %m "$mcp_status_file" 2>/dev/null || echo 0)))
+        if [ "$file_age" -lt 300 ]; then
+            mcp_content=$(cat "$mcp_status_file" 2>/dev/null)
+            if echo "$mcp_content" | grep -q "MCP:ON"; then
+                mcp="+MCP"
             fi
         fi
     fi
-fi
+    api_flag="API${mcp}"
 
-# Add API status if set
-[[ -n "$api_status" ]] && status_parts+=("$api_status")
-
-# Repository (always show if in git repo)
-if [[ -n "$repo" ]]; then
-    status_parts+=("$repo")
-else
-    # Fallback: use directory name
-    repo_fallback=$(basename "$cwd" 2>/dev/null || echo "unknown")
-    [[ "$repo_fallback" != "~" ]] && status_parts+=("$repo_fallback")
-fi
-
-# Branch (with * if dirty)
-if [[ -n "$branch" ]]; then
-    status_parts+=("${git_dirty}${branch}")
-fi
-
-# Git stats (if any changes)
-[[ -n "$git_stats" ]] && status_parts+=("$git_stats")
-
-# Context display (token usage)
-[[ -n "$context_display" ]] && status_parts+=("$context_display")
-
-# Model
-status_parts+=("$model_short")
-
-# CLI version - only show both if update available
-if [[ "$version" != "$newest_version" ]]; then
-    status_parts+=("v${version} -> v${newest_version}")
-else
-    status_parts+=("v${version}")
-fi
-
-# Add restart message if needed (version or instruction changes)
-if [[ "$restart_needed" == true ]]; then
-    status_parts+=("restart")
-fi
-
-# Manually join with " | " separator
-status=""
-for i in "${!status_parts[@]}"; do
-    if [[ $i -eq 0 ]]; then
-        status="${status_parts[$i]}"
-    else
-        status="${status} | ${status_parts[$i]}"
+    # LLM mode:primary from response
+    mode=$(echo "$sl_data" | sed -n 's/.*"mode"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+    primary=$(echo "$sl_data" | sed -n 's/.*"primary"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+    if [ -n "$mode" ] && [ -n "$primary" ]; then
+        cli_part=$(echo "$mode" | tr '[:lower:]' '[:upper:]')":${primary}"
     fi
-done
 
-# Output
-printf "%s" "$status"
+    # RAG counts - prefer repo count, fallback to total
+    rag_repo_val=$(echo "$sl_data" | sed -n 's/.*"repo"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)
+    rag_total_val=$(echo "$sl_data" | sed -n 's/.*"total"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)
+    if [ -n "$rag_repo_val" ] && [ "$rag_repo_val" -gt 0 ] 2>/dev/null; then
+        rag_flag="R:${rag_repo_val}"
+    elif [ -n "$rag_total_val" ] && [ "$rag_total_val" -gt 0 ] 2>/dev/null; then
+        rag_flag="R:${rag_total_val}"
+    fi
+
+    # Active LLM operations
+    active_ops_val=$(echo "$sl_data" | sed -n 's/.*"activeOps"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)
+    if [ -n "$active_ops_val" ] && [ "$active_ops_val" -gt 0 ] 2>/dev/null; then
+        llm_active=" [LLM...]"
+    fi
+
+    # Version check - override CC display if update available
+    has_update=$(echo "$sl_data" | sed -n 's/.*"hasUpdate"[[:space:]]*:[[:space:]]*\(true\).*/\1/p' | head -1)
+    if [ "$has_update" = "true" ]; then
+        vc_display=$(echo "$sl_data" | sed -n 's/.*"display"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+        [ -n "$vc_display" ] && cc_version_display="$vc_display"
+    fi
+fi
+
+# Handover alert (flashing - alternates between two states on each refresh)
+handover_alert=""
+flash_tick=$(( $(date +%s) % 2 ))
+if [ -d ".claude/handovers" ]; then
+    handover_count=$(ls -1 .claude/handovers/*.md 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$handover_count" -gt 0 ] 2>/dev/null; then
+        if [ "$flash_tick" -eq 0 ]; then
+            handover_alert=">>> HANDOVER READY - /clear <<<"
+        else
+            handover_alert="                              "
+        fi
+    fi
+fi
+if [ -d ".ava" ] && [ -f ".ava/session-state.json" ]; then
+    ava_state=$(cat .ava/session-state.json 2>/dev/null)
+    if echo "$ava_state" | grep -q '"completed":true\|"blocked":true'; then
+        if [ "$flash_tick" -eq 0 ]; then
+            handover_alert=">>> AVA COMPLETE - /clear <<<"
+        else
+            handover_alert="                             "
+        fi
+    fi
+fi
+
+# =============================================================================
+# BUILD OUTPUT (single line)
+# =============================================================================
+
+# CLI model: prefer Claude Code's own model, fallback to API config
+cli_display=""
+if [ -n "$cli_model" ]; then
+    cli_display=$(echo "$cli_model" | sed 's/^claude-//' | sed 's/-[0-9]\{8,\}$//')
+elif [ -n "$cli_part" ]; then
+    cli_display="$cli_part"
+fi
+
+# Build single line: ic | API | model | Ctx:XX% | R:count | repo:branch | CC:ver [alert]
+line="$ic_flag | $api_flag"
+[ -n "$cli_display" ] && line="$line | $cli_display"
+[ -n "$context_pct" ] && line="$line | Ctx:$context_pct"
+[ -n "$rag_flag" ] && line="$line | $rag_flag"
+line="$line | $repo:$branch"
+line="$line | $cc_version_display"
+[ -n "$llm_active" ] && line="$line$llm_active"
+[ -n "$handover_alert" ] && line="$line | $handover_alert"
+
+printf "%s" "$line"

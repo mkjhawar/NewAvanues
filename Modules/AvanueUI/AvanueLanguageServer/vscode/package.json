@@ -1,8 +1,8 @@
 {
-  "name": "magicui-lsp",
-  "displayName": "MagicUI Language Support",
-  "description": "Language Server for MagicUI DSL files (.magic.yaml, .magic.json, .magicui)",
-  "version": "1.0.0",
+  "name": "avanueui-lsp",
+  "displayName": "AvanueUI Language Support",
+  "description": "Language Server for AvanueUI DSL files (.avanueui.yaml, .avanueui.json, .avanueui and legacy .magic.yaml, .magic.json, .magicui)",
+  "version": "2.0.0",
   "publisher": "augmentalis",
   "engines": {
     "vscode": "^1.75.0"
@@ -18,28 +18,28 @@
   "contributes": {
     "languages": [
       {
-        "id": "magicui-yaml",
-        "aliases": ["MagicUI YAML", "magicui"],
-        "extensions": [".magic.yaml", ".magicui"],
+        "id": "avanueui-yaml",
+        "aliases": ["AvanueUI YAML", "avanueui"],
+        "extensions": [".avanueui.yaml", ".magic.yaml", ".magicui"],
         "configuration": "./language-configuration.json"
       },
       {
-        "id": "magicui-json",
-        "aliases": ["MagicUI JSON"],
-        "extensions": [".magic.json"],
+        "id": "avanueui-json",
+        "aliases": ["AvanueUI JSON"],
+        "extensions": [".avanueui.json", ".magic.json"],
         "configuration": "./language-configuration.json"
       }
     ],
     "configuration": {
       "type": "object",
-      "title": "MagicUI Language Server",
+      "title": "AvanueUI Language Server",
       "properties": {
-        "magicui.server.jarPath": {
+        "avanueui.server.jarPath": {
           "type": "string",
           "default": "",
-          "description": "Path to MagicUI Language Server JAR file"
+          "description": "Path to AvanueUI Language Server JAR file"
         },
-        "magicui.trace.server": {
+        "avanueui.trace.server": {
           "type": "string",
           "enum": ["off", "messages", "verbose"],
           "default": "off",

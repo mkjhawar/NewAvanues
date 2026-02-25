@@ -5,16 +5,14 @@ plugins {
     id("org.jetbrains.compose")
 }
 
-group = "com.augmentalis.avanues.avamagic"
+group = "com.augmentalis.avanueui"
 version = "1.0.0"
 
 kotlin {
     // NOTE: Android-only until Core module supports multiplatform
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -87,11 +85,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.avanues.avamagic.components.adapters"
-    compileSdk = 34
+    namespace = "com.augmentalis.avanueui.adapters"
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 28
     }
 
     compileOptions {

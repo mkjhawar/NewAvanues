@@ -5,7 +5,6 @@
  * Provides high-level namespace management and module isolation
  *
  * @since VOS4 Week 4
- * @author VOS4 Development Team
  */
 
 package com.augmentalis.voiceoscore.commandmanager.dynamic

@@ -19,7 +19,7 @@
  * - Google AI (Gemini)
  *
  * Created: 2025-11-03
- * Author: AVA AI Team
+ * Author: Manoj Jhawar
  */
 
 package com.augmentalis.llm.security
@@ -84,16 +84,13 @@ class ApiKeyManager(context: Context) {
     )
 
     /**
-     * Get API key for a provider
+     * Synchronous API key retrieval — no suspension points.
      *
-     * Priority:
-     * 1. Environment variable (for development/testing)
-     * 2. Encrypted SharedPreferences (for production)
-     *
-     * @param provider Provider type
-     * @return LLMResult.Success with API key, or LLMResult.Error if not found
+     * All operations (System.getenv, EncryptedSharedPreferences.getString) are
+     * synchronous, so this does not need to be a suspend function. Use this from
+     * non-coroutine contexts (e.g., Hilt @Provides methods) to avoid runBlocking.
      */
-    suspend fun getApiKey(provider: ProviderType): LLMResult<String> {
+    fun getApiKeyBlocking(provider: ProviderType): LLMResult<String> {
         return try {
             // Ignore LOCAL provider (doesn't need API keys)
             if (provider == ProviderType.LOCAL) {
@@ -136,18 +133,19 @@ class ApiKeyManager(context: Context) {
     }
 
     /**
-     * Save API key to encrypted storage
-     *
-     * Validates key format before saving.
-     * NEVER logs the actual API key (security).
-     *
-     * @param provider Provider type
-     * @param apiKey API key to save
-     * @return LLMResult.Success if saved, LLMResult.Error if validation fails
+     * Suspend wrapper for coroutine callers — delegates to [getApiKeyBlocking].
+     * Retained for backward compatibility with existing suspend call sites.
      */
-    suspend fun saveApiKey(provider: ProviderType, apiKey: String): LLMResult<Unit> {
+    suspend fun getApiKey(provider: ProviderType): LLMResult<String> {
+        return getApiKeyBlocking(provider)
+    }
+
+    /**
+     * Synchronous save — no suspension points (SharedPreferences.apply is async-to-disk).
+     * Use from non-coroutine contexts to avoid runBlocking.
+     */
+    fun saveApiKeyBlocking(provider: ProviderType, apiKey: String): LLMResult<Unit> {
         return try {
-            // Validate provider
             if (provider == ProviderType.LOCAL) {
                 return LLMResult.Error(
                     message = "Cannot save API key for LOCAL provider",
@@ -155,10 +153,8 @@ class ApiKeyManager(context: Context) {
                 )
             }
 
-            // Trim whitespace
             val trimmedKey = apiKey.trim()
 
-            // Validate key format
             if (!validateKeyFormat(provider, trimmedKey)) {
                 Timber.w("Invalid API key format for ${provider.name}")
                 return LLMResult.Error(
@@ -168,11 +164,9 @@ class ApiKeyManager(context: Context) {
                 )
             }
 
-            // Save to encrypted prefs
             val prefKey = getPreferenceKey(provider)
             encryptedPrefs.edit().putString(prefKey, trimmedKey).apply()
 
-            // NEVER log the actual key (security)
             Timber.i("API key saved successfully for ${provider.name} (masked: ${maskKey(trimmedKey)})")
             LLMResult.Success(Unit)
 
@@ -185,13 +179,16 @@ class ApiKeyManager(context: Context) {
         }
     }
 
+    /** Suspend wrapper for coroutine callers — delegates to [saveApiKeyBlocking]. */
+    suspend fun saveApiKey(provider: ProviderType, apiKey: String): LLMResult<Unit> {
+        return saveApiKeyBlocking(provider, apiKey)
+    }
+
     /**
-     * Delete API key from encrypted storage
-     *
-     * @param provider Provider type
-     * @return LLMResult.Success if deleted, LLMResult.Error on failure
+     * Synchronous delete — no suspension points.
+     * Use from non-coroutine contexts to avoid runBlocking.
      */
-    suspend fun deleteApiKey(provider: ProviderType): LLMResult<Unit> {
+    fun deleteApiKeyBlocking(provider: ProviderType): LLMResult<Unit> {
         return try {
             val prefKey = getPreferenceKey(provider)
             encryptedPrefs.edit().remove(prefKey).apply()
@@ -206,6 +203,11 @@ class ApiKeyManager(context: Context) {
                 cause = e
             )
         }
+    }
+
+    /** Suspend wrapper for coroutine callers — delegates to [deleteApiKeyBlocking]. */
+    suspend fun deleteApiKey(provider: ProviderType): LLMResult<Unit> {
+        return deleteApiKeyBlocking(provider)
     }
 
     /**

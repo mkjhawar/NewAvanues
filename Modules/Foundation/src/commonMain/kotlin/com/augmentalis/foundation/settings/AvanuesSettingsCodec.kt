@@ -42,6 +42,13 @@ object AvanuesSettingsCodec : SettingsCodec<AvanuesSettings> {
             themePalette = palette,
             themeStyle = style,
             themeAppearance = reader.getString(SettingsKeys.THEME_APPEARANCE, AvanuesSettings.DEFAULT_THEME_APPEARANCE),
+            voiceIsolationEnabled = reader.getBoolean(SettingsKeys.VOICE_ISOLATION_ENABLED, AvanuesSettings.DEFAULT_VOICE_ISOLATION_ENABLED),
+            voiceIsolationNoiseSuppression = reader.getBoolean(SettingsKeys.VOICE_ISOLATION_NOISE_SUPPRESSION, true),
+            voiceIsolationEchoCancellation = reader.getBoolean(SettingsKeys.VOICE_ISOLATION_ECHO_CANCELLATION, false),
+            voiceIsolationAgc = reader.getBoolean(SettingsKeys.VOICE_ISOLATION_AGC, true),
+            voiceIsolationNsLevel = reader.getFloat(SettingsKeys.VOICE_ISOLATION_NS_LEVEL, AvanuesSettings.DEFAULT_VOICE_ISOLATION_NS_LEVEL),
+            voiceIsolationGainLevel = reader.getFloat(SettingsKeys.VOICE_ISOLATION_GAIN_LEVEL, AvanuesSettings.DEFAULT_VOICE_ISOLATION_GAIN_LEVEL),
+            voiceIsolationMode = reader.getString(SettingsKeys.VOICE_ISOLATION_MODE, AvanuesSettings.DEFAULT_VOICE_ISOLATION_MODE),
             vosSyncEnabled = reader.getBoolean(SettingsKeys.VOS_SYNC_ENABLED, false),
             vosSftpHost = reader.getString(SettingsKeys.VOS_SFTP_HOST, ""),
             vosSftpPort = reader.getInt(SettingsKeys.VOS_SFTP_PORT, AvanuesSettings.DEFAULT_SFTP_PORT),
@@ -75,6 +82,13 @@ object AvanuesSettingsCodec : SettingsCodec<AvanuesSettings> {
         writer.putString(SettingsKeys.THEME_PALETTE, value.themePalette)
         writer.putString(SettingsKeys.THEME_STYLE, value.themeStyle)
         writer.putString(SettingsKeys.THEME_APPEARANCE, value.themeAppearance)
+        writer.putBoolean(SettingsKeys.VOICE_ISOLATION_ENABLED, value.voiceIsolationEnabled)
+        writer.putBoolean(SettingsKeys.VOICE_ISOLATION_NOISE_SUPPRESSION, value.voiceIsolationNoiseSuppression)
+        writer.putBoolean(SettingsKeys.VOICE_ISOLATION_ECHO_CANCELLATION, value.voiceIsolationEchoCancellation)
+        writer.putBoolean(SettingsKeys.VOICE_ISOLATION_AGC, value.voiceIsolationAgc)
+        writer.putFloat(SettingsKeys.VOICE_ISOLATION_NS_LEVEL, value.voiceIsolationNsLevel)
+        writer.putFloat(SettingsKeys.VOICE_ISOLATION_GAIN_LEVEL, value.voiceIsolationGainLevel)
+        writer.putString(SettingsKeys.VOICE_ISOLATION_MODE, value.voiceIsolationMode)
         writer.putBoolean(SettingsKeys.VOS_SYNC_ENABLED, value.vosSyncEnabled)
         writer.putString(SettingsKeys.VOS_SFTP_HOST, value.vosSftpHost)
         writer.putInt(SettingsKeys.VOS_SFTP_PORT, value.vosSftpPort)

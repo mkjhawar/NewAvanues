@@ -5,6 +5,7 @@ import com.augmentalis.magiccode.plugins.platform.FileIO
 import com.augmentalis.magiccode.plugins.platform.ZipExtractor
 import com.augmentalis.magiccode.plugins.security.*
 import kotlinx.serialization.decodeFromString
+import kotlinx.datetime.Clock
 import net.mamoe.yamlkt.Yaml
 
 /**
@@ -57,7 +58,7 @@ class PluginInstaller(
 
         try {
             // Step 1: Create temporary extraction directory
-            tempExtractDir = "$appDataDir/$TEMP_EXTRACT_PREFIX${System.currentTimeMillis()}"
+            tempExtractDir = "$appDataDir/$TEMP_EXTRACT_PREFIX${Clock.System.now().toEpochMilliseconds()}"
             if (!fileIO.createDirectory(tempExtractDir)) {
                 return InstallResult.Failure("Failed to create temporary extraction directory")
             }

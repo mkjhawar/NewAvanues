@@ -4,7 +4,7 @@ plugins {
     application
 }
 
-group = "com.augmentalis.magicui"
+group = "com.augmentalis.avaui"
 version = "1.0.0"
 
 dependencies {
@@ -21,12 +21,11 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.9")
     implementation("ch.qos.logback:logback-classic:1.4.14")
 
-    // TODO: Re-enable when modules are added to settings.gradle.kts
-    // implementation(project(":Modules:AVAMagic:MagicUI:Components:ThemeBuilder"))
-    // implementation(project(":Modules:AVAMagic:MagicUI:CodeGen:Parser"))
-    // implementation(project(":Modules:AVAMagic:MagicUI:CodeGen:Generators"))
-    // implementation(project(":Modules:VoiceOS:libraries:VUIDCreator"))
-    // implementation(project(":Modules:AVAMagic:MagicUI:Components:Core"))
+    // TODO: Re-enable when AvanueUI parser modules are added to settings.gradle.kts
+    // implementation(project(":Modules:AvanueUI:Components:ThemeBuilder"))
+    // implementation(project(":Modules:AvanueUI:CodeGen:Parser"))
+    // implementation(project(":Modules:AvanueUI:CodeGen:Generators"))
+    // implementation(project(":Modules:AvanueUI:Components:Core"))
 
     // Testing
     testImplementation(kotlin("test"))
@@ -36,7 +35,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("com.augmentalis.magicui.lsp.MagicUILanguageServerLauncher")
+    mainClass.set("com.augmentalis.avaui.lsp.AvanueUILanguageServerLauncher")
 }
 
 tasks.test {
@@ -45,7 +44,7 @@ tasks.test {
 
 tasks.jar {
     manifest {
-        attributes["Main-Class"] = "com.augmentalis.magicui.lsp.MagicUILanguageServerLauncher"
+        attributes["Main-Class"] = "com.augmentalis.avaui.lsp.AvanueUILanguageServerLauncher"
     }
 
     // Create fat JAR with all dependencies

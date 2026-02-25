@@ -1,4 +1,4 @@
-package com.augmentalis.avamagic.components.layout
+package com.augmentalis.avanueui.layout
 
 import kotlinx.serialization.Serializable
 

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Avanues - Consolidated Modular Platform
-  Three launcher icons: Avanues (hub) + VoiceAvanue (voice) + WebAvanue (browser)
+  10 launcher icons: Avanues (hub) + VoiceAvanue + WebAvanue + PDFAvanue + ImageAvanue
+    + VideoAvanue + NoteAvanue + PhotoAvanue + CastAvanue + DrawAvanue
   Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -42,20 +43,6 @@
 
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-
-    <!-- System settings modification for brightness/rotation voice commands -->
-    <uses-permission android:name="android.permission.WRITE_SETTINGS"
-        tools:ignore="ProtectedPermissions" />
-
-    <!-- Bluetooth control for voice commands -->
-    <uses-permission android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
-    <!-- WiFi control for voice commands (pre-Android 10 direct toggle) -->
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <!-- System settings modification for brightness/rotation voice commands -->
     <uses-permission android:name="android.permission.WRITE_SETTINGS"
@@ -126,6 +113,123 @@
             </intent-filter>
         </activity>
 
+        <!-- VoiceAvanue launcher alias — voice-first entry point -->
+        <activity-alias
+            android:name=".VoiceAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="VoiceAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- WebAvanue launcher alias — browser entry point -->
+        <activity-alias
+            android:name=".WebAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="WebAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- PDFAvanue launcher alias — document viewer entry point -->
+        <activity-alias
+            android:name=".PDFAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="PDFAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- ImageAvanue launcher alias — gallery entry point -->
+        <activity-alias
+            android:name=".ImageAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="ImageAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- VideoAvanue launcher alias — media player entry point -->
+        <activity-alias
+            android:name=".VideoAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="VideoAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- NoteAvanue launcher alias — note editor entry point -->
+        <activity-alias
+            android:name=".NoteAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="NoteAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- PhotoAvanue launcher alias — camera entry point -->
+        <activity-alias
+            android:name=".PhotoAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="PhotoAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- CastAvanue launcher alias — remote cast entry point -->
+        <activity-alias
+            android:name=".CastAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="CastAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- DrawAvanue launcher alias — annotation/drawing entry point -->
+        <activity-alias
+            android:name=".DrawAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="DrawAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Accessibility Service for VoiceOS -->
         <service
             android:name=".service.VoiceAvanueAccessibilityService"
@@ -181,7 +285,7 @@
         <!-- Boot Receiver -->
         <receiver
             android:name=".service.BootReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />

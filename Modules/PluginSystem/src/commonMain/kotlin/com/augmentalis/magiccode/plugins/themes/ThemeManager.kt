@@ -7,6 +7,7 @@ import com.augmentalis.magiccode.plugins.core.PluginRegistry
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.decodeFromString
+import kotlinx.datetime.Clock
 import net.mamoe.yamlkt.Yaml
 
 /**
@@ -128,7 +129,7 @@ class ThemeManager(
                 loadedThemes[themeId] = LoadedTheme(
                     definition = theme,
                     pluginId = pluginId,
-                    loadedAt = System.currentTimeMillis(),
+                    loadedAt = Clock.System.now().toEpochMilliseconds(),
                     assetReferences = assetReferences,
                     loadedFonts = loadedFontsList
                 )

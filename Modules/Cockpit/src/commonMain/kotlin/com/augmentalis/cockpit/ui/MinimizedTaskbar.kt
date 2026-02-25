@@ -105,4 +105,5 @@ fun contentTypeLabel(content: com.augmentalis.cockpit.model.FrameContent): Strin
     is com.augmentalis.cockpit.model.FrameContent.ScreenCast -> "Cast"
     is com.augmentalis.cockpit.model.FrameContent.Widget -> "Widget"
     is com.augmentalis.cockpit.model.FrameContent.ExternalApp -> "App"
+    is com.augmentalis.cockpit.model.FrameContent.File -> "File"
 }

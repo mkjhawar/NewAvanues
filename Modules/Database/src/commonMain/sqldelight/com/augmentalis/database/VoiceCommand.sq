@@ -17,6 +17,9 @@ CREATE TABLE commands_static (
     priority INTEGER NOT NULL DEFAULT 50,
     is_fallback INTEGER NOT NULL DEFAULT 0,
     is_enabled INTEGER NOT NULL DEFAULT 1,
+    element_hash TEXT,
+    resource_id TEXT,
+    class_name TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -27,6 +30,8 @@ CREATE INDEX idx_vc_trigger ON commands_static(trigger_phrase);
 CREATE INDEX idx_vc_category ON commands_static(category);
 CREATE INDEX idx_vc_domain ON commands_static(domain);
 CREATE INDEX idx_vc_fallback ON commands_static(is_fallback);
+CREATE INDEX idx_vc_element_hash ON commands_static(element_hash);
+CREATE INDEX idx_vc_resource_id ON commands_static(resource_id);
 CREATE UNIQUE INDEX idx_vc_unique ON commands_static(command_id, locale);
 
 -- Get all commands
@@ -74,6 +79,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 insertCommandFull:
 INSERT OR REPLACE INTO commands_static (command_id, locale, trigger_phrase, synonyms, action, description, category, domain, priority, is_fallback, is_enabled, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Insert command (v3.1 - with targeting metadata)
+insertCommandWithTargeting:
+INSERT OR REPLACE INTO commands_static (command_id, locale, trigger_phrase, synonyms, action, description, category, domain, priority, is_fallback, is_enabled, element_hash, resource_id, class_name, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- Update command
 updateCommand:
@@ -188,6 +198,19 @@ ORDER BY locale;
 insertBatch:
 INSERT OR REPLACE INTO commands_static (command_id, locale, trigger_phrase, synonyms, action, description, category, domain, priority, is_fallback, is_enabled, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Insert batch with targeting (v3.1)
+insertBatchWithTargeting:
+INSERT OR REPLACE INTO commands_static (command_id, locale, trigger_phrase, synonyms, action, description, category, domain, priority, is_fallback, is_enabled, element_hash, resource_id, class_name, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Find commands by element hash (cross-session matching)
+getCommandsByElementHash:
+SELECT * FROM commands_static WHERE element_hash = ? ORDER BY priority DESC;
+
+-- Find commands by resource ID (Layer 3 resolution)
+getCommandsByResourceId:
+SELECT * FROM commands_static WHERE resource_id = ? AND locale = ? ORDER BY priority DESC;
 
 -- ==================== Domain-Aware Queries (v3.1) ====================
 

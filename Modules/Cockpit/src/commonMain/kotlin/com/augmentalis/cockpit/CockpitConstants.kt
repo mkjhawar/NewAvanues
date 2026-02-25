@@ -83,4 +83,17 @@ object CockpitConstants {
 
     /** Corner frame weight in Dice-5 layout (fraction of total area) */
     const val DICE_CORNER_WEIGHT = 0.45f
+
+    // ── Triptych ───────────────────────────────────────────
+    /** Left wing weight in Triptych layout (angled inward) */
+    const val TRIPTYCH_LEFT_WEIGHT = 0.82f
+
+    /** Center panel weight in Triptych layout (elevated, primary) */
+    const val TRIPTYCH_CENTER_WEIGHT = 1.5f
+
+    /** Right wing weight in Triptych layout (angled inward) */
+    const val TRIPTYCH_RIGHT_WEIGHT = 0.82f
+
+    /** Y-axis rotation in degrees for triptych side panels */
+    const val TRIPTYCH_ROTATION_DEGREES = 16f
 }

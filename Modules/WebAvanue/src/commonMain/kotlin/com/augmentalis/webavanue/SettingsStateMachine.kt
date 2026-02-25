@@ -44,6 +44,9 @@ class SettingsStateMachine(
     // Currently applying settings (for error recovery)
     private var currentSettings: BrowserSettings? = null
 
+    // Tracks retry attempts across the apply cycle (survives Applying state transitions)
+    private var currentRetryCount = 0
+
     /**
      * Request settings update. Queues if update in progress.
      *
@@ -82,7 +85,8 @@ class SettingsStateMachine(
                     )
                 }
                 is SettingsState.Error -> {
-                    // Retry from error state with new settings
+                    // New request from error state — reset retry tracking
+                    currentRetryCount = 0
                     startApplying(newSettings, applyFunction)
                 }
             }
@@ -131,7 +135,8 @@ class SettingsStateMachine(
         mutex.withLock {
             result.fold(
                 onSuccess = {
-                    // Application successful
+                    // Application successful — reset retry tracking
+                    currentRetryCount = 0
                     // Check if there's a queued update
                     val queued = pendingSettings
                     if (queued != null) {
@@ -144,11 +149,11 @@ class SettingsStateMachine(
                     }
                 },
                 onFailure = { error ->
-                    // Application failed, enter error state
+                    // Application failed — preserve retry count from retryError cycle
                     _state.value = SettingsState.Error(
                         settings = currentSettings!!,
                         error = error,
-                        retryCount = 0
+                        retryCount = currentRetryCount
                     )
                 }
             )
@@ -192,8 +197,9 @@ class SettingsStateMachine(
                 // Calculate exponential backoff delay
                 val delayMs = (1000L * (1 shl errorState.retryCount)) // 1s, 2s, 4s, 8s...
 
-                // Update state to show retry attempt
-                _state.value = errorState.copy(retryCount = errorState.retryCount + 1)
+                // Update state and persist retry count across the apply cycle
+                currentRetryCount = errorState.retryCount + 1
+                _state.value = errorState.copy(retryCount = currentRetryCount)
 
                 // Launch retry with delay
                 scope.launch {
@@ -224,6 +230,7 @@ class SettingsStateMachine(
         mutex.withLock {
             pendingSettings = null
             currentSettings = null
+            currentRetryCount = 0
             _state.value = SettingsState.Idle
         }
     }

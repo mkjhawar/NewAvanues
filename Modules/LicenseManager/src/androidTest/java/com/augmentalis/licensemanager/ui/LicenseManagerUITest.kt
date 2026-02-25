@@ -2,7 +2,6 @@
  * LicenseManagerUITest.kt - UI instrumentation tests for License Manager
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-02
  * 
  * Instrumentation tests for License Manager UI components

@@ -1,6 +1,7 @@
 package com.augmentalis.avacode.workflows
 
 import com.augmentalis.avacode.forms.ValidationResult
+import kotlinx.datetime.Clock
 
 /**
  * Active workflow instance with state management.
@@ -91,7 +92,7 @@ data class WorkflowInstance(
         history.add(WorkflowTransition(
             fromStep = currentStepIndex,
             toStep = currentStepIndex + 1,
-            timestamp = System.currentTimeMillis(),
+            timestamp = Clock.System.now().toEpochMilliseconds(),
             action = TransitionAction.NEXT
         ))
 
@@ -155,7 +156,7 @@ data class WorkflowInstance(
         history.add(WorkflowTransition(
             fromStep = currentStepIndex,
             toStep = currentStepIndex - 1,
-            timestamp = System.currentTimeMillis(),
+            timestamp = Clock.System.now().toEpochMilliseconds(),
             action = TransitionAction.BACK
         ))
 
@@ -199,7 +200,7 @@ data class WorkflowInstance(
         history.add(WorkflowTransition(
             fromStep = currentStepIndex,
             toStep = currentStepIndex + 1,
-            timestamp = System.currentTimeMillis(),
+            timestamp = Clock.System.now().toEpochMilliseconds(),
             action = TransitionAction.SKIP
         ))
 
@@ -226,7 +227,7 @@ data class WorkflowInstance(
         history.add(WorkflowTransition(
             fromStep = currentStepIndex,
             toStep = targetIndex,
-            timestamp = System.currentTimeMillis(),
+            timestamp = Clock.System.now().toEpochMilliseconds(),
             action = TransitionAction.JUMP
         ))
 

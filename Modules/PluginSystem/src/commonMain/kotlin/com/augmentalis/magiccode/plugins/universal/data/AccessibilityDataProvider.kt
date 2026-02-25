@@ -13,6 +13,7 @@ import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.ScreenC
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.QuantizedElement
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 
 /**
@@ -443,7 +444,7 @@ data class ContextPreference(
          * @return Global ContextPreference
          */
         fun global(key: String, value: String): ContextPreference {
-            val now = System.currentTimeMillis()
+            val now = Clock.System.now().toEpochMilliseconds()
             return ContextPreference(
                 key = key,
                 value = value,
@@ -461,7 +462,7 @@ data class ContextPreference(
          * @return Package-scoped ContextPreference
          */
         fun forPackage(key: String, value: String, packageName: String): ContextPreference {
-            val now = System.currentTimeMillis()
+            val now = Clock.System.now().toEpochMilliseconds()
             return ContextPreference(
                 key = key,
                 value = value,

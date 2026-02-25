@@ -153,3 +153,47 @@ The repo has accumulated apps in inconsistent locations (`/Apps/`, `/android/App
 3. Read appearance: `AvanueTheme.isDark` for appearance-aware logic
 4. Use unified components (`AvanueCard`, `AvanueSurface`, `AvanueButton`, etc.) — they handle all 4 material modes
 5. Default palette: HYDRA (royal sapphire). Default style: Water. Default appearance: Auto
+
+---
+
+## MANDATORY RULE #4: FLAT PACKAGE STRUCTURE (NEW FILES ONLY)
+
+**All NEW files MUST use a flat package structure. Do NOT create nested subdirectories when the folder name is redundant with its contents.**
+
+### The Rule
+
+When creating a new Kotlin file, the package path after the module's base package should be **at most 2 levels deep**. Do not nest further unless the subdirectory adds genuine semantic meaning that isn't already in the class name or sibling folder.
+
+### Redundancy Examples (BAD → GOOD)
+
+| BAD (redundant nesting) | GOOD (flat) | Why |
+|---|---|---|
+| `commandmanager/database/sqldelight/VoiceCommandDaoAdapter.kt` | `commandmanager/sqldelight/VoiceCommandDaoAdapter.kt` | `database` is redundant — `sqldelight` already implies DB |
+| `voiceavanue/service/VoiceAvanueAccessibilityService.kt` | `voiceavanue/VoiceAvanueAccessibilityService.kt` | `service/` is redundant — the class name says "Service" |
+| `commandmanager/loader/CommandLoader.kt` | `commandmanager/CommandLoader.kt` | `loader/` is redundant — the class name says "Loader" |
+| `commandmanager/registry/CommandRegistry.kt` | `commandmanager/CommandRegistry.kt` | `registry/` is redundant — the class name says "Registry" |
+
+### When Nesting IS Acceptable
+
+| Pattern | Acceptable? | Why |
+|---|---|---|
+| `handlers/MediaHandler.kt` | YES | Groups 12+ handlers by concern — genuine category |
+| `ui/editor/CommandEditorViewModel.kt` | YES | `ui/` separates UI from logic, `editor/` groups related screens |
+| `speech/SpeechMode.kt` | YES | `speech/` is a distinct domain, not redundant with class name |
+| `vos/VosFileImporter.kt` | YES | `vos/` groups VOS-specific operations (importer, exporter, sync) |
+
+### Deciding: Nest or Not?
+
+Ask: **"If I removed this folder, would the file's purpose be ambiguous?"**
+- YES → keep the folder (it adds semantic value)
+- NO → remove it (the class name already tells you what it is)
+
+### Scope
+
+- **New files only** — do NOT retroactively move existing files (breaks imports, Hilt DI, KSP codegen, git history)
+- **Flatten opportunistically** — when refactoring an area (e.g., removing a deprecated class), flatten its neighbors if convenient
+- **Never flatten across module boundaries** — KMP source sets (`commonMain`, `androidMain`, etc.) structure is sacred
+
+### Why this rule exists:
+
+The repo has accumulated deeply nested packages where folder names repeat information already in the class name (`database/sqldelight/`, `service/SomeService.kt`, `loader/SomeLoader.kt`). This makes paths longer without adding clarity. A flatter structure is easier to navigate and follows KMP conventions where packages reflect domain boundaries, not implementation roles.

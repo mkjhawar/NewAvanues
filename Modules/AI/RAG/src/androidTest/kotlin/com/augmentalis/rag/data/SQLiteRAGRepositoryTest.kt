@@ -123,7 +123,7 @@ class SQLiteRAGRepositoryTest {
         // Verify chunks persist
         val chunks = newRepository.getChunks(documentId).getOrThrow()
         // May be empty if processing failed, but should not throw
-        assertTrue("getChunks should succeed", chunks is List)
+        assertNotNull("getChunks should succeed", chunks)
     }
 
     // ========== ADD DOCUMENT TESTS ==========

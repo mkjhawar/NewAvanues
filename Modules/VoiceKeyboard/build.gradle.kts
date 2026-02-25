@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "com.augmentalis.voicekeyboard"
-    compileSdk = 34  // Match project standard
+    compileSdk = 35  // Match project standard
 
     defaultConfig {
         minSdk = 29  // Android 10 (Q) - Project minimum
         // Note: targetSdk and versionCode/versionName removed for library modules
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         // Version info for library
         buildConfigField("String", "MODULE_VERSION", "\"1.0.0\"")
         buildConfigField("String", "MODULE_NAME", "\"VoiceKeyboard\"")
@@ -29,16 +29,16 @@ android {
             )
         }
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    
+
     kotlinOptions {
         jvmTarget = "17"
     }
-    
+
     buildFeatures {
         buildConfig = true
         compose = true
@@ -61,7 +61,7 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     
     // Compose - Using project's forced BOM version
-    implementation(platform(libs.compose.bom.get()))
+    implementation(platform(libs.compose.bom))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")

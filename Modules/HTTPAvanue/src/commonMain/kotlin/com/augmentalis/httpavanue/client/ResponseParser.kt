@@ -1,9 +1,9 @@
 package com.augmentalis.httpavanue.client
 
 import com.augmentalis.httpavanue.http.HttpClientException
+import com.augmentalis.httpavanue.io.AvanueBuffer
+import com.augmentalis.httpavanue.io.AvanueSource
 import com.augmentalis.httpavanue.platform.currentTimeMillis
-import okio.Buffer
-import okio.BufferedSource
 
 /**
  * HTTP response parser for client-side response reading
@@ -14,7 +14,7 @@ internal object ResponseParser {
     private const val CR = '\r'.code.toByte()
     private const val LF = '\n'.code.toByte()
 
-    suspend fun parse(source: BufferedSource, maxBodySize: Long = 50 * 1024 * 1024): ClientResponse {
+    suspend fun parse(source: AvanueSource, maxBodySize: Long = 50 * 1024 * 1024): ClientResponse {
         val startTime = currentTimeMillis()
         val statusLine = source.readUtf8Line(MAX_STATUS_LINE_SIZE)
             ?: throw HttpClientException("Empty status line")
@@ -47,7 +47,7 @@ internal object ResponseParser {
         return statusCode to (if (parts.size >= 3) parts[2] else "")
     }
 
-    private suspend fun parseBody(source: BufferedSource, headers: Map<String, String>, maxBodySize: Long): ByteArray? {
+    private suspend fun parseBody(source: AvanueSource, headers: Map<String, String>, maxBodySize: Long): ByteArray? {
         val transferEncoding = headers["Transfer-Encoding"]?.lowercase()
         if (transferEncoding == "chunked") return parseChunkedBody(source, maxBodySize)
         val contentLength = headers["Content-Length"]?.toLongOrNull() ?: return null
@@ -58,8 +58,8 @@ internal object ResponseParser {
         return source.readByteArray(contentLength)
     }
 
-    private suspend fun parseChunkedBody(source: BufferedSource, maxBodySize: Long): ByteArray {
-        val buffer = Buffer()
+    private suspend fun parseChunkedBody(source: AvanueSource, maxBodySize: Long): ByteArray {
+        val buffer = AvanueBuffer()
         var totalSize = 0L
         while (true) {
             val chunkSizeLine = source.readUtf8Line(MAX_STATUS_LINE_SIZE)
@@ -84,11 +84,11 @@ internal object ResponseParser {
             if (trailingLine == null || trailingLine.isNotEmpty())
                 throw HttpClientException("Missing CRLF after chunk data")
         }
-        return buffer.readByteArray()
+        return buffer.toByteArray()
     }
 
-    private fun BufferedSource.readUtf8Line(maxLength: Int): String? {
-        val buffer = Buffer()
+    private fun AvanueSource.readUtf8Line(maxLength: Int): String? {
+        val buffer = AvanueBuffer()
         var length = 0L
         while (length < maxLength) {
             if (!request(1)) return null

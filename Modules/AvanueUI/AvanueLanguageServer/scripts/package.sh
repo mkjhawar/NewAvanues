@@ -15,10 +15,10 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "Building Language Server..."
-./gradlew :Modules:AVAMagic:MagicTools:LanguageServer:clean
-./gradlew :Modules:AVAMagic:MagicTools:LanguageServer:jar
+./gradlew :Modules:AvanueUI:AvanueLanguageServer:clean
+./gradlew :Modules:AvanueUI:AvanueLanguageServer:jar
 
-JAR_FILE="Modules/AVAMagic/MagicTools/LanguageServer/build/libs/LanguageServer-1.0.0.jar"
+JAR_FILE="Modules/AvanueUI/AvanueLanguageServer/build/libs/LanguageServer-1.0.0.jar"
 
 if [ -f "$JAR_FILE" ]; then
     echo ""

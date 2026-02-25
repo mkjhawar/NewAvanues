@@ -1,5 +1,4 @@
 // Author: Manoj Jhawar
-// Code-Reviewed-By: CCA
 // TODO: Complete SQLDelight migration - this file is currently stubbed
 // Original Room implementation needs to be adapted for SQLDelight
 

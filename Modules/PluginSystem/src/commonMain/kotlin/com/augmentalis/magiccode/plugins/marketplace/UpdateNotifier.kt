@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.Clock
 
 /**
  * Background service for checking and notifying about plugin updates.
@@ -240,7 +241,7 @@ class UpdateNotifier(
      * @return true if check was initiated, false if debounced
      */
     suspend fun checkNow(force: Boolean = false): Boolean {
-        val now = System.currentTimeMillis()
+        val now = Clock.System.now().toEpochMilliseconds()
 
         // Debounce unless forced
         if (!force && (now - lastCheckTime) < DEBOUNCE_DELAY_MS) {
@@ -339,7 +340,7 @@ class UpdateNotifier(
 
             result.fold(
                 onSuccess = { updates ->
-                    lastCheckTime = System.currentTimeMillis()
+                    lastCheckTime = Clock.System.now().toEpochMilliseconds()
                     _lastCheckTimestamp.value = lastCheckTime
                     consecutiveFailures = 0
 

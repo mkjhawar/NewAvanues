@@ -31,10 +31,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -88,6 +91,10 @@ class DesktopWhisperEngine {
 
     // Performance tracking
     val performance = WhisperPerformance()
+
+    // Metrics snapshot — updated after each transcription
+    private val _metricsSnapshot = MutableStateFlow<SpeechMetricsSnapshot?>(null)
+    val metricsSnapshot: StateFlow<SpeechMetricsSnapshot?> = _metricsSnapshot.asStateFlow()
 
     val totalTranscriptions: Int get() = performance.totalTranscriptions
     val averageLatencyMs: Long get() = performance.getAverageLatencyMs()
@@ -300,16 +307,18 @@ class DesktopWhisperEngine {
             }
         }
 
-        // Step 3: Initialize VAD (from commonMain)
+        // Step 3: Initialize VAD (from commonMain) — use effective params (profile-aware)
         vad = WhisperVAD(
             speechThreshold = 0f, // auto-calibrate
-            vadSensitivity = config.vadSensitivity,
-            silenceTimeoutMs = config.silenceThresholdMs,
-            minSpeechDurationMs = config.minSpeechDurationMs,
+            vadSensitivity = config.effectiveVadSensitivity,
+            silenceTimeoutMs = config.effectiveSilenceThresholdMs,
+            minSpeechDurationMs = config.effectiveMinSpeechDurationMs,
             maxSpeechDurationMs = config.maxChunkDurationMs,
-            hangoverFrames = 5,
+            hangoverFrames = config.effectiveHangoverFrames,
             paddingMs = 150,
-            sampleRate = DesktopWhisperAudio.SAMPLE_RATE
+            sampleRate = DesktopWhisperAudio.SAMPLE_RATE,
+            thresholdAlpha = config.effectiveThresholdAlpha,
+            minThreshold = config.effectiveMinThreshold
         )
 
         // Step 4: Load model (auto-download if missing)
@@ -439,6 +448,9 @@ class DesktopWhisperEngine {
             if (result.text.isBlank()) {
                 logDebug(TAG, "Empty transcription (${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc)")
                 performance.recordEmptyTranscription(audioDurationMs, result.processingTimeMs)
+                _metricsSnapshot.value = performance.toSnapshot(
+                    ENGINE_NAME, engineState.get().name, System.currentTimeMillis()
+                )
                 return
             }
 
@@ -457,6 +469,11 @@ class DesktopWhisperEngine {
             result.detectedLanguage?.let { lang ->
                 performance.recordLanguageDetection(lang)
             }
+
+            // Emit updated metrics snapshot
+            _metricsSnapshot.value = performance.toSnapshot(
+                ENGINE_NAME, engineState.get().name, System.currentTimeMillis()
+            )
 
             logInfo(TAG, "Transcribed: '${result.text}' " +
                     "(${audioDurationMs}ms audio, ${result.processingTimeMs}ms proc, " +

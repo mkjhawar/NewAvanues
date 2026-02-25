@@ -2,7 +2,6 @@
  * UniversalInitializationManager.kt - Thread-safe initialization manager for all speech engines
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-09-07
  * Updated: 2026-01-27 - Migrated to KMP androidMain
  *

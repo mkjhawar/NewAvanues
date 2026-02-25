@@ -6,21 +6,15 @@ plugins {
 
 kotlin {
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-    if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-        gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-    ) {
-        // iOS targets — AVU supports iOS unconditionally
-        listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
-            it.binaries.framework {
-                baseName = "AvaMagicIPC"
-                isStatic = true
-            }
+    // iOS targets
+    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework {
+            baseName = "AvanueIPC"
+            isStatic = true
         }
     }
     jvm("desktop")
@@ -45,29 +39,25 @@ kotlin {
             // DeviceManager for identity and capability detection (Android-only)
             implementation(project(":Modules:DeviceManager"))
         }
-        if (project.findProperty("kotlin.mpp.enableNativeTargets") == "true" ||
-            gradle.startParameter.taskNames.any { it.contains("ios", ignoreCase = true) || it.contains("Framework", ignoreCase = true) }
-        ) {
-            // iOS source sets
-            val iosX64Main by getting
-            val iosArm64Main by getting
-            val iosSimulatorArm64Main by getting
-            val iosMain by creating {
-                dependsOn(commonMain.get())
-                iosX64Main.dependsOn(this)
-                iosArm64Main.dependsOn(this)
-                iosSimulatorArm64Main.dependsOn(this)
-            }
+        // iOS source sets
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain.get())
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
         }
     }
 }
 
 android {
-    namespace = "com.augmentalis.avamagic.ipc"
-    compileSdk = 34
+    namespace = "com.augmentalis.avanueui.ipc"
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 28  // Must match AvanueUI/DeviceManager dependency chain (minSdk 28)
     }
 
     compileOptions {

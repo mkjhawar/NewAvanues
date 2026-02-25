@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.augmentalis.devicemanager"
-    compileSdk = 34  // Android 14 (API 34) - Latest stable for Android 15-17 preparation
+    compileSdk = 35  // Android 14 (API 34) - Latest stable for Android 15-17 preparation
     // compileSdkPreview = "VanillaIceCream"  // Android 15 - will enable when available
 
     defaultConfig {

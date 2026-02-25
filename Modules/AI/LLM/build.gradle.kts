@@ -18,6 +18,18 @@ kotlin {
         }
     }
 
+    // iOS targets
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "AvaLLM"
+            isStatic = true
+        }
+    }
+
     // Desktop/JVM target
     jvm("desktop") {
         compilations.all {
@@ -111,6 +123,30 @@ kotlin {
             }
         }
 
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                // Ktor Darwin engine for iOS
+                implementation("io.ktor:ktor-client-darwin:${libs.versions.ktor.get()}")
+            }
+        }
+
+        val iosX64Test by getting
+        val iosArm64Test by getting
+        val iosSimulatorArm64Test by getting
+        val iosTest by creating {
+            dependsOn(commonTest)
+            iosX64Test.dependsOn(this)
+            iosArm64Test.dependsOn(this)
+            iosSimulatorArm64Test.dependsOn(this)
+        }
+
         val desktopMain by getting {
             dependencies {
                 // Ktor CIO engine for desktop
@@ -136,7 +172,7 @@ kotlin {
 
 android {
     namespace = "com.augmentalis.llm"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28  // Android 9+ (Pie and above)

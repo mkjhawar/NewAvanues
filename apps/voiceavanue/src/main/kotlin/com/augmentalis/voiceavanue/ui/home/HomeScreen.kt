@@ -20,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
@@ -44,7 +46,10 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("AVA Unified") },
                 actions = {
-                    IconButton(onClick = onNavigateToSettings) {
+                    IconButton(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier.semantics { contentDescription = "Voice: click Open Settings" }
+                    ) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
@@ -231,7 +236,10 @@ fun StatusCard(
             }
 
             if (!isEnabled) {
-                Button(onClick = onEnable) {
+                Button(
+                    onClick = onEnable,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Enable $title" }
+                ) {
                     Text("Enable")
                 }
             } else {
@@ -253,7 +261,7 @@ fun QuickActionCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.semantics { contentDescription = "Voice: click $title" },
         onClick = onClick
     ) {
         Column(

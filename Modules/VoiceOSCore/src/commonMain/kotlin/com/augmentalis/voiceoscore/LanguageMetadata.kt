@@ -2,7 +2,6 @@
  * LanguageMetadata.kt - Language configuration for synonym packs
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-08
  *
  * Contains metadata about a language's writing system and tokenization needs.

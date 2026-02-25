@@ -2,8 +2,6 @@
  * OverlayDisposal.kt - Overlay disposal management
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
- * Code-Reviewed-By: CCA
  * Created: 2026-01-08
  *
  * Single Responsibility: Manages overlay disposal and cleanup.

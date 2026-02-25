@@ -2,7 +2,6 @@
  * VivokaInitializationManager.kt - Vivoka-specific initialization with comprehensive error handling
  *
  * Copyright (C) Augmentalis Inc, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-09-06
  * Updated: 2026-01-27 - Migrated to KMP androidMain
  *

@@ -2,7 +2,6 @@
  * CursorActions.kt
  *
  * Created: 2025-10-10 18:01 PDT
- * Author: VOS4 Development Team
  * Version: 4.0.0
  *
  * Purpose: Voice command handlers for VoiceCursor - uses CursorController directly

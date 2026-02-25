@@ -3,7 +3,6 @@
  * Path: libraries/AvidCreator/src/main/java/com/augmentalis/uuidcreator/thirdparty/PackageVersionResolver.kt
  *
  * Author: Manoj Jhawar
- * Code-Reviewed-By: CCA
  * Created: 2025-10-08
  *
  * Resolves Android app version information for UUID namespace isolation
@@ -208,7 +207,7 @@ class PackageVersionResolver(
 
         return packages
             .filter { pkg ->
-                includeSystemApps || (pkg.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0
+                includeSystemApps || ((pkg.applicationInfo?.flags ?: 0) and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0
             }
             .map { it.packageName }
     }

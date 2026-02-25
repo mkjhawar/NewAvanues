@@ -2,7 +2,7 @@
 title: "Chapter 09 — Developer Runbook (Build, Debug, Extend)"
 owner: "Developer Experience"
 status: "active"
-last_reviewed: "2026-02-09"
+last_reviewed: "2026-02-23"
 source_of_truth: true
 ---
 
@@ -17,6 +17,31 @@ Provide a pragmatic operating guide for contributors who need to build, run, deb
 - Monorepo root build orchestration uses Gradle Kotlin DSL.
 - Module graph includes VoiceOSCore, AvanueUI, WebAvanue, AI modules, and app shells.
 - Consolidated app path includes `apps:avanues`.
+
+### 9.2.1 Version Catalog (`gradle/libs.versions.toml`)
+
+The single source of truth for all dependency versions. Key entries (as of 2026-02-23):
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| Kotlin | 2.1.0 | K2 compiler enabled |
+| Compose Multiplatform | 1.8.1 | JetBrains Compose (requires Kotlin 2.1.0+) |
+| AGP | 8.7.3 | Android Gradle Plugin |
+| Gradle | 8.14.3 | Wrapper version |
+| Compose BOM | 2025.01.01 | AndroidX Compose alignment |
+| compileSdk | 35 | All modules (required by Compose 1.8.x) |
+| KSP | 2.1.0-1.0.29 | Pinned to Kotlin 2.1.0 |
+| Hilt | 2.54 | Updated for K2 metadata compatibility |
+
+**Upgrade protocol**: Always update `libs.versions.toml` first, then cascade `compileSdk` changes to all module `build.gradle.kts` files. Run `./gradlew assembleDebug` to verify.
+
+### 9.2.2 Kotlin 2.1.0 K2 Compiler Notes
+
+The K2 compiler introduces stricter behavior for KMP expect/actual declarations:
+
+- **Expect classes must declare explicit constructors.** `expect class Foo { ... }` no longer synthesizes an implicit default constructor. Use `expect class Foo() { ... }` if the class is instantiated from common code.
+- **`-Xexpect-actual-classes` compiler flag** is required for modules with expect classes that have bodies (PluginSystem, Foundation).
+- **Known upstream warning**: `DefaultArtifactPublicationSet.addCandidate` deprecation (3 occurrences) — this is a Kotlin Gradle plugin issue, fixed in Kotlin 2.1.20+.
 
 ## 9.3 Typical Developer Workflow
 
@@ -34,6 +59,8 @@ Provide a pragmatic operating guide for contributors who need to build, run, deb
 
 - [ ] Repository sync and dependency resolution successful
 - [ ] Affected modules compile in isolation and in aggregate
+- [ ] `./gradlew assembleDebug` passes with no errors (deprecation warnings acceptable)
+- [ ] `build/reports/problems/problems-report.html` reviewed for new warnings
 - [ ] Voice command critical path tested (recognition -> execution -> feedback)
 - [ ] UI validated in at least two display profiles
 - [ ] Web command flow validated for key paths if web changes are included

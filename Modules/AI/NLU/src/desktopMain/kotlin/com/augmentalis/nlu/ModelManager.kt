@@ -9,12 +9,15 @@
 package com.augmentalis.nlu
 
 import com.augmentalis.ava.core.common.Result
+import com.augmentalis.crypto.aon.AONCodec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+
+private const val TAG = "ModelManager"
 
 /**
  * Desktop (JVM) implementation of ModelManager
@@ -56,39 +59,44 @@ actual class ModelManager {
      * Detect and select the best available model
      *
      * Search priority:
-     * 1. mobilebert_model.onnx in home directory
-     * 2. mobilebert_model.onnx in current directory
-     * 3. model.onnx in classpath (fallback)
+     * 1. AVA-384-Base-INT8.AON in home directory (shared ~/.ava/models)
+     * 2. AVA-384-Base-INT8.AON in current directory
+     * 3. Legacy .onnx names (backward compatibility)
+     * 4. model.onnx in classpath (fallback)
      */
     private fun detectBestModel(): File? {
-        // Priority 1: Home directory (shared)
-        val homeModelFile = File(homeModelsDir, "mobilebert_model.onnx")
-        if (homeModelFile.exists()) {
-            activeModelFile = homeModelFile
-            println("[ModelManager] Using shared model: ${homeModelFile.absolutePath}")
-            return activeModelFile
-        }
-
-        // Priority 2: Current directory
-        val currentModelFile = File(currentDirModelsDir, "mobilebert_model.onnx")
-        if (currentModelFile.exists()) {
-            activeModelFile = currentModelFile
-            println("[ModelManager] Using local model: ${currentModelFile.absolutePath}")
-            return activeModelFile
-        }
-
-        // Priority 3: Try alternate names
-        val alternateNames = listOf("model.onnx", "bert_model.onnx")
-        for (name in alternateNames) {
-            val file = File(currentDirModelsDir, name)
-            if (file.exists()) {
-                activeModelFile = file
-                println("[ModelManager] Using model: ${file.absolutePath}")
+        // Priority 1: Home directory — try AVA naming first, then legacy
+        for (type in ModelType.entries) {
+            val homeModelFile = File(homeModelsDir, type.modelFileName)
+            if (homeModelFile.exists()) {
+                activeModelFile = homeModelFile
+                nluLogInfo(TAG, "Using shared model: ${homeModelFile.absolutePath}")
                 return activeModelFile
             }
         }
 
-        println("[ModelManager] No local model found - download required")
+        // Priority 2: Current directory — AVA naming
+        for (type in ModelType.entries) {
+            val currentModelFile = File(currentDirModelsDir, type.modelFileName)
+            if (currentModelFile.exists()) {
+                activeModelFile = currentModelFile
+                nluLogInfo(TAG, "Using local model: ${currentModelFile.absolutePath}")
+                return activeModelFile
+            }
+        }
+
+        // Priority 3: Legacy alternate names (backward compatibility)
+        val alternateNames = listOf("mobilebert_model.onnx", "model.onnx", "bert_model.onnx")
+        for (name in alternateNames) {
+            val file = File(currentDirModelsDir, name)
+            if (file.exists()) {
+                activeModelFile = file
+                nluLogInfo(TAG, "Using legacy model: ${file.absolutePath}")
+                return activeModelFile
+            }
+        }
+
+        nluLogWarn(TAG, "No local model found - download required")
         return null
     }
 
@@ -105,7 +113,10 @@ actual class ModelManager {
      */
     private fun checkClasspathModel(): Boolean {
         return try {
-            val resourceStream = Thread.currentThread().contextClassLoader.getResourceAsStream("models/mobilebert_model.onnx")
+            val primaryName = ModelType.MOBILEBERT.modelFileName
+            val resourceStream = Thread.currentThread().contextClassLoader.getResourceAsStream("models/$primaryName")
+                ?: this::class.java.getResourceAsStream("/models/$primaryName")
+                ?: Thread.currentThread().contextClassLoader.getResourceAsStream("models/mobilebert_model.onnx")
                 ?: this::class.java.getResourceAsStream("/models/mobilebert_model.onnx")
             resourceStream != null
         } catch (e: Exception) {
@@ -123,7 +134,7 @@ actual class ModelManager {
         }
 
         // Try to return default location (might not exist yet)
-        return File(currentDirModelsDir, "mobilebert_model.onnx").absolutePath
+        return File(currentDirModelsDir, ModelType.MOBILEBERT.modelFileName).absolutePath
     }
 
     /**
@@ -144,7 +155,7 @@ actual class ModelManager {
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (isModelAvailable()) {
-                println("[ModelManager] Models already available")
+                nluLogDebug(TAG, "Models already available")
                 return@withContext Result.Success(Unit)
             }
 
@@ -153,11 +164,11 @@ actual class ModelManager {
                 currentDirModelsDir.mkdirs()
             }
 
-            val modelFile = File(currentDirModelsDir, "mobilebert_model.onnx")
+            val modelFile = File(currentDirModelsDir, ModelType.MOBILEBERT.modelFileName)
 
             // Download MobileBERT model
             if (!modelFile.exists()) {
-                println("[ModelManager] Downloading MobileBERT model...")
+                nluLogInfo(TAG, "Downloading MobileBERT model...")
                 onProgress(0.1f)
 
                 val modelResult = downloadFile(
@@ -177,7 +188,7 @@ actual class ModelManager {
 
             // Download vocabulary
             if (!vocabFile.exists()) {
-                println("[ModelManager] Downloading vocabulary...")
+                nluLogInfo(TAG, "Downloading vocabulary...")
                 onProgress(0.9f)
 
                 val vocabResult = downloadFile(
@@ -197,10 +208,10 @@ actual class ModelManager {
 
             onProgress(1.0f)
             detectBestModel()
-            println("[ModelManager] Download complete")
+            nluLogInfo(TAG, "Download complete")
             Result.Success(Unit)
         } catch (e: Exception) {
-            println("[ModelManager] Download failed: ${e.message}")
+            nluLogError(TAG, "Download failed: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Failed to download models: ${e.message}"
@@ -217,7 +228,7 @@ actual class ModelManager {
         onProgress: (Float) -> Unit
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            println("[ModelManager] Downloading from: $url")
+            nluLogInfo(TAG, "Downloading from: $url")
 
             val connection = URL(url).openConnection() as? HttpURLConnection
                 ?: return@withContext Result.Error(
@@ -266,10 +277,10 @@ actual class ModelManager {
                 )
             }
 
-            println("[ModelManager] Downloaded: ${destination.name} (${destination.length() / 1024 / 1024} MB)")
+            nluLogInfo(TAG, "Downloaded: ${destination.name} (${destination.length() / 1024 / 1024} MB)")
             Result.Success(Unit)
         } catch (e: Exception) {
-            println("[ModelManager] Download error: ${e.message}")
+            nluLogError(TAG, "Download error: ${e.message}", e)
             if (destination.exists()) {
                 destination.delete()
             }
@@ -287,25 +298,27 @@ actual class ModelManager {
      */
     actual suspend fun copyModelFromAssets(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            println("[ModelManager] Copying models from classpath resources...")
+            nluLogInfo(TAG, "Copying models from classpath resources...")
 
             if (!currentDirModelsDir.exists()) {
                 currentDirModelsDir.mkdirs()
             }
 
-            // Copy model from classpath
-            val modelResourcePath = "/models/mobilebert_model.onnx"
+            // Copy model from classpath (try AVA naming first, then legacy)
+            val primaryName = ModelType.MOBILEBERT.modelFileName
+            val modelResourcePath = this::class.java.getResourceAsStream("/models/$primaryName")
+                ?: this::class.java.getResourceAsStream("/models/mobilebert_model.onnx")
             val vocabResourcePath = "/models/vocab.txt"
 
-            val modelStream = this::class.java.getResourceAsStream(modelResourcePath)
+            val modelStream = modelResourcePath
             if (modelStream != null) {
-                val modelFile = File(currentDirModelsDir, "mobilebert_model.onnx")
+                val modelFile = File(currentDirModelsDir, primaryName)
                 modelStream.use { input ->
                     FileOutputStream(modelFile).use { output ->
                         input.copyTo(output)
                     }
                 }
-                println("[ModelManager] Copied model from resources: ${modelFile.length() / 1024 / 1024} MB")
+                nluLogInfo(TAG, "Copied model from resources: ${modelFile.length() / 1024 / 1024} MB")
             }
 
             val vocabStream = this::class.java.getResourceAsStream(vocabResourcePath)
@@ -315,13 +328,13 @@ actual class ModelManager {
                         input.copyTo(output)
                     }
                 }
-                println("[ModelManager] Copied vocabulary from resources")
+                nluLogInfo(TAG, "Copied vocabulary from resources")
             }
 
             detectBestModel()
             Result.Success(Unit)
         } catch (e: Exception) {
-            println("[ModelManager] Failed to copy from resources: ${e.message}")
+            nluLogError(TAG, "Failed to copy from resources: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Failed to copy models from resources: ${e.message}"
@@ -334,19 +347,22 @@ actual class ModelManager {
      */
     actual fun clearModels(): Result<Unit> {
         return try {
-            val modelFile = File(currentDirModelsDir, "mobilebert_model.onnx")
-            if (modelFile.exists()) {
-                modelFile.delete()
-                println("[ModelManager] Deleted model file")
+            // Clear both model types
+            for (type in ModelType.entries) {
+                val modelFile = File(currentDirModelsDir, type.modelFileName)
+                if (modelFile.exists()) {
+                    modelFile.delete()
+                    nluLogInfo(TAG, "Deleted ${type.displayName} model file")
+                }
             }
             if (vocabFile.exists()) {
                 vocabFile.delete()
-                println("[ModelManager] Deleted vocabulary file")
+                nluLogInfo(TAG, "Deleted vocabulary file")
             }
             activeModelFile = null
             Result.Success(Unit)
         } catch (e: Exception) {
-            println("[ModelManager] Failed to clear models: ${e.message}")
+            nluLogError(TAG, "Failed to clear models: ${e.message}", e)
             Result.Error(
                 exception = e,
                 message = "Failed to clear models: ${e.message}"
@@ -359,9 +375,11 @@ actual class ModelManager {
      */
     actual fun getModelsSize(): Long {
         var totalSize = 0L
-        val modelFile = File(currentDirModelsDir, "mobilebert_model.onnx")
-        if (modelFile.exists()) {
-            totalSize += modelFile.length()
+        for (type in ModelType.entries) {
+            val modelFile = File(currentDirModelsDir, type.modelFileName)
+            if (modelFile.exists()) {
+                totalSize += modelFile.length()
+            }
         }
         if (vocabFile.exists()) {
             totalSize += vocabFile.length()
@@ -379,6 +397,30 @@ actual class ModelManager {
     fun getActiveModelType(): ModelType {
         return ModelType.MOBILEBERT
     }
+
+    /**
+     * Get unwrapped ONNX model bytes with full AON verification.
+     *
+     * Reads the model file and passes through AONCodec.unwrap() which:
+     * - Verifies HMAC-SHA256 signature
+     * - Checks SHA-256 + CRC32 integrity
+     * - Validates package/identity authorization
+     * - Decrypts AES-256-GCM if encrypted
+     * - Returns raw ONNX bytes for non-AON files (backward compat)
+     *
+     * Use this instead of getModelPath() when loading into ONNX Runtime
+     * to ensure model integrity is verified before inference.
+     *
+     * @return Raw ONNX model bytes, verified and ready for inference
+     */
+    suspend fun getUnwrappedModelBytes(): ByteArray = withContext(Dispatchers.IO) {
+        val modelFile = activeModelFile ?: File(currentDirModelsDir, ModelType.MOBILEBERT.modelFileName)
+        if (!modelFile.exists()) {
+            throw IllegalStateException("Model file not found: ${modelFile.absolutePath}")
+        }
+        val rawBytes = modelFile.readBytes()
+        AONCodec.unwrap(rawBytes)
+    }
 }
 
 /**
@@ -390,19 +432,39 @@ actual class ModelManager {
  * Future support:
  * - MALBERT: 768-dim, multilingual (requires separate download)
  */
+/**
+ * Model type enumeration for Desktop platform
+ *
+ * Uses AVA proprietary naming convention: AVA-{DIM}-{Variant}-{Quant}.AON
+ * MobileBERT: 384-dim, fast, English-only
+ * mALBERT: 768-dim, multilingual (requires separate download)
+ */
 enum class ModelType(
     val modelFileName: String,
+    val vocabFileName: String,
     val displayName: String,
-    val embeddingDimension: Int
+    val embeddingDimension: Int,
+    val description: String
 ) {
-    MOBILEBERT("mobilebert_model.onnx", "MobileBERT Lite", 384),
-    MALBERT("malbert_model.onnx", "mALBERT Multilingual", 768);
+    MOBILEBERT(
+        modelFileName = "AVA-384-Base-INT8.AON",
+        vocabFileName = "AVA-384-Base-vocab.txt",
+        displayName = "MobileBERT Lite",
+        embeddingDimension = 384,
+        description = "Lightweight English model"
+    ),
+    MALBERT(
+        modelFileName = "AVA-768-Base-INT8.AON",
+        vocabFileName = "AVA-768-Base-vocab.txt",
+        displayName = "mALBERT Multilingual",
+        embeddingDimension = 768,
+        description = "Multilingual model (52+ languages)"
+    );
 
-    /**
-     * Get model version string for version tracking
-     */
+    fun isMultilingual(): Boolean = this == MALBERT
+
     fun getModelVersion(): String = when (this) {
         MOBILEBERT -> "MobileBERT-uncased-onnx-384"
-        MALBERT -> "mALBERT-multilingual-v2-768"
+        MALBERT -> "mALBERT-base-v2-onnx-768"
     }
 }

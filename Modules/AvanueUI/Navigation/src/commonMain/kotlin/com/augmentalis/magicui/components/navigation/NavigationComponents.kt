@@ -1,4 +1,4 @@
-package com.augmentalis.avamagic.components.navigation
+package com.augmentalis.avanueui.navigation
 
 import kotlinx.serialization.Serializable
 

@@ -2,7 +2,6 @@
  * SpeechRecognitionScreen.kt - Main UI screen for speech recognition
  * 
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2025-01-28
  * 
  * Purpose: Main UI screen with VoiceCursor-style glassmorphism and ARVision theming
@@ -26,6 +25,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -115,7 +116,8 @@ fun SpeechRecognitionScreen(
             )
             
             IconButton(
-                onClick = { showConfigScreen = true }
+                onClick = { showConfigScreen = true },
+                modifier = Modifier.semantics { contentDescription = "Voice: click Speech Settings" }
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
@@ -231,7 +233,9 @@ fun PermissionRequestCard(
                     containerColor = Color(0xFF007AFF)
                 ),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Voice: click Grant Microphone Permission" }
             ) {
                 Text("Grant Permission")
             }
@@ -303,27 +307,29 @@ fun EngineChip(
         Color(0xFF007AFF)
     }
     
+    val engineLabel = when (engine) {
+        SpeechEngine.ANDROID_STT -> "Android"
+        SpeechEngine.VOSK -> "VOSK"
+        SpeechEngine.VIVOKA -> "Vivoka"
+        SpeechEngine.GOOGLE_CLOUD -> "Cloud"
+        SpeechEngine.WHISPER -> "Whisper"
+        SpeechEngine.AZURE -> "Azure"
+        SpeechEngine.APPLE_SPEECH -> "Apple"
+        SpeechEngine.WEB_SPEECH -> "Web"
+    }
     Box(
         modifier = modifier
             .background(
                 color = backgroundColor,
                 shape = RoundedCornerShape(8.dp)
             )
+            .semantics { contentDescription = "Voice: select $engineLabel Speech Engine" }
             .clickable { onClick() }
             .padding(vertical = 8.dp, horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = when (engine) {
-                SpeechEngine.ANDROID_STT -> "Android"
-                SpeechEngine.VOSK -> "VOSK"
-                SpeechEngine.VIVOKA -> "Vivoka"
-                SpeechEngine.GOOGLE_CLOUD -> "Cloud"
-                SpeechEngine.WHISPER -> "Whisper"
-                SpeechEngine.AZURE -> "Azure"
-                SpeechEngine.APPLE_SPEECH -> "Apple"
-                SpeechEngine.WEB_SPEECH -> "Web"
-            },
+            text = engineLabel,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = textColor
@@ -428,7 +434,10 @@ fun RecordingControlPanel(
             containerColor = if (isListening) Color(0xFFFF3B30) else Color(0xFF007AFF),
             modifier = Modifier
                 .size(80.dp)
-                .scale(if (isListening) scale else 1f),
+                .scale(if (isListening) scale else 1f)
+                .semantics {
+                    contentDescription = if (isListening) "Voice: click Stop Listening" else "Voice: click Start Listening"
+                },
             shape = CircleShape,
             elevation = FloatingActionButtonDefaults.elevation(
                 defaultElevation = 8.dp,
@@ -498,7 +507,10 @@ fun TranscriptPanel(
             )
             
             if (fullTranscript.isNotEmpty() || currentTranscript.isNotEmpty()) {
-                IconButton(onClick = onClearTranscript) {
+                IconButton(
+                    onClick = onClearTranscript,
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Clear Transcript" }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Clear",

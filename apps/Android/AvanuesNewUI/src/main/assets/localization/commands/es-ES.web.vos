@@ -1,0 +1,66 @@
+# VOS v3.0 — es-ES web commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:es-ES:en-US:web
+
+browser_retrain|reentrenar página|reescanear página,reescanear,volver a escanear|Reescanear la página web y regenerar comandos de voz
+browser_back|página anterior|atrás en navegador,retroceder|Ir a la página anterior en el historial
+browser_forward|página siguiente|adelante en navegador,avanzar|Ir a la página siguiente en el historial
+browser_refresh|actualizar página|recargar página,refrescar|Recargar la página web actual
+browser_top|ir arriba|principio de página,subir al principio|Ir al principio de la página
+browser_bottom|ir abajo|final de página,bajar al final|Ir al final de la página
+browser_tab_next|siguiente campo|tab adelante,campo siguiente|Ir al siguiente campo de formulario
+browser_tab_prev|campo anterior|tab atrás,campo previo|Ir al campo de formulario anterior
+browser_submit|enviar formulario|enviar,submit|Enviar el formulario actual
+browser_swipe_left|deslizar izquierda|swipe izquierda|Deslizar a la izquierda en la página
+browser_swipe_right|deslizar derecha|swipe derecha|Deslizar a la derecha en la página
+browser_swipe_up|deslizar arriba|swipe arriba|Deslizar hacia arriba en la página
+browser_swipe_down|deslizar abajo|swipe abajo|Deslizar hacia abajo en la página
+browser_grab|agarrar|agarrar esto,agarrar elemento,sujetar,enganchar,mantener,fijar|Agarrar o empezar a arrastrar un elemento
+browser_release|soltar|dejar,soltar elemento|Soltar un elemento agarrado
+browser_rotate_left|rotar izquierda|girar a la izquierda|Rotar el elemento a la izquierda
+browser_rotate_right|rotar derecha|girar a la derecha|Rotar el elemento a la derecha
+browser_double_tap|doble toque|doble clic,doble pulsación|Hacer doble clic en un elemento
+gesture_pan|pan|mover vista,desplazar vista,panoramizar|Desplazar la vista
+gesture_pan_left|pan izquierda|mover vista izquierda,deslizar vista izquierda,panoramizar izquierda|Desplazar la vista a la izquierda
+gesture_pan_right|pan derecha|mover vista derecha,deslizar vista derecha,panoramizar derecha|Desplazar la vista a la derecha
+gesture_pan_up|pan arriba|mover vista arriba,deslizar vista arriba|Desplazar la vista hacia arriba
+gesture_pan_down|pan abajo|mover vista abajo,deslizar vista abajo|Desplazar la vista hacia abajo
+gesture_tilt|tilt|inclinar,inclinar vista,angular|Inclinar la vista
+gesture_tilt_up|tilt arriba|inclinar arriba,angular arriba|Inclinar la vista hacia arriba
+gesture_tilt_down|tilt abajo|inclinar abajo,angular abajo|Inclinar la vista hacia abajo
+gesture_orbit|orbit|orbitar,girar alrededor|Orbitar alrededor del elemento
+gesture_orbit_left|orbit izquierda|orbitar izquierda,girar alrededor izquierda|Orbitar a la izquierda del elemento
+gesture_orbit_right|orbit derecha|orbitar derecha,girar alrededor derecha|Orbitar a la derecha del elemento
+gesture_rotate_x|rotar eje x|rotar x,voltear vertical|Rotar el elemento en el eje X
+gesture_rotate_y|rotar eje y|rotar y,voltear horizontal|Rotar el elemento en el eje Y
+gesture_rotate_z|rotar eje z|rotar z,girar,spin|Rotar el elemento en el eje Z
+gesture_pinch_in|pinch in|pellizcar,cerrar dedos,reducir zoom|Pellizcar para alejar
+gesture_pinch_out|pinch out|expandir,abrir dedos,aumentar zoom|Pellizcar para acercar
+gesture_fling_up|fling arriba|lanzar arriba,flick arriba|Lanzar hacia arriba con velocidad
+gesture_fling_down|fling abajo|lanzar abajo,flick abajo|Lanzar hacia abajo con velocidad
+gesture_fling_left|fling izquierda|lanzar izquierda,flick izquierda|Lanzar a la izquierda con velocidad
+gesture_fling_right|fling derecha|lanzar derecha,flick derecha|Lanzar a la derecha con velocidad
+gesture_throw|lanzar|tirar,lanzar elemento,tirar elemento|Lanzar el elemento con velocidad
+gesture_scale_up|escalar arriba|agrandar,hacer más grande,aumentar tamaño|Aumentar el tamaño del elemento
+gesture_scale_down|escalar abajo|encoger,hacer más pequeño,reducir tamaño|Reducir el tamaño del elemento
+gesture_reset_zoom|restablecer zoom|zoom normal,zoom por defecto,reiniciar zoom|Restablecer el zoom al nivel predeterminado
+gesture_select_word|seleccionar palabra|elegir palabra,marcar palabra|Seleccionar la palabra en la posición del cursor
+gesture_clear_sel|quitar selección|deseleccionar,limpiar selección,quitar marcado|Quitar la selección de texto
+gesture_hover_out|dejar de apuntar|salir del elemento,quitar cursor,mouse leave|Dejar de apuntar sobre el elemento
+browser_zoom_in|acercar zoom|ampliar,zoom más cerca|Acercar el zoom de la página
+browser_zoom_out|alejar zoom|reducir zoom|Alejar el zoom de la página
+browser_scroll_up|desplazar arriba|página arriba|Desplazar la página hacia arriba
+browser_scroll_down|desplazar abajo|página abajo|Desplazar la página hacia abajo
+browser_scroll_left|desplazar izquierda||Desplazar la página a la izquierda
+browser_scroll_right|desplazar derecha||Desplazar la página a la derecha
+browser_long_press|pulsación larga|clic largo,mantener pulsado|Pulsación larga en un elemento
+browser_tap|tocar|tocar aquí,pulsar|Tocar un elemento
+browser_focus|enfocar|enfocar en|Enfocar un elemento
+gesture_hover|apuntar|apuntar sobre,pasar el ratón|Apuntar sobre un elemento
+gesture_drag_left|arrastrar izquierda||Arrastrar el elemento a la izquierda
+gesture_drag_right|arrastrar derecha||Arrastrar el elemento a la derecha
+gesture_drag_up|arrastrar arriba||Arrastrar el elemento hacia arriba
+gesture_drag_down|arrastrar abajo||Arrastrar el elemento hacia abajo
+gesture_stroke_start|empezar a dibujar|dibujar,iniciar trazo|Iniciar un trazo de dibujo
+gesture_stroke_end|dejar de dibujar|terminar dibujo,fin de trazo|Terminar el trazo de dibujo actual
+gesture_erase|borrador|modo borrador,activar borrador|Activar el modo borrador para dibujar

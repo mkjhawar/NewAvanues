@@ -2,7 +2,6 @@
  * CommandWordDetector.kt - Convert continuous speech to command detection
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
- * Author: VOS4 Development Team
  * Created: 2026-01-07
  *
  * Bridges the gap between continuous speech recognition engines (Vosk, Google, Azure)

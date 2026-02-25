@@ -21,7 +21,7 @@ enum class ThemeType {
     APP_BRANDING,
 
     /**
-     * AvaMagic - Avanues system-wide theme (replaces app branding)
+     * Avanue - Avanues system-wide theme (replaces app branding)
      * Used when app is running inside Avanues ecosystem
      *
      * Features:
@@ -30,14 +30,14 @@ enum class ThemeType {
      * - Voice-first design language
      * - System decides colors (not app developer)
      */
-    AVAMAGIC,
+    AVANUE,
 
     /**
      * Auto-detect - Automatically choose theme based on environment
      * Default behavior
      *
      * Logic:
-     * - If Avanues ecosystem detected → AVAMAGIC
+     * - If Avanues ecosystem detected → AVANUE
      * - If standalone → APP_BRANDING
      */
     AUTO
@@ -89,7 +89,7 @@ expect object ThemeDetector {
 
     /**
      * Get detected theme based on environment
-     * @return ThemeType.AVAMAGIC if in Avanues, ThemeType.APP_BRANDING otherwise
+     * @return ThemeType.AVANUE if in Avanues, ThemeType.APP_BRANDING otherwise
      */
     fun detectTheme(): ThemeType
 }
@@ -108,7 +108,7 @@ expect object ThemeDetector {
 fun resolveTheme(preference: ThemeType? = null): ThemeType {
     return when (preference) {
         ThemeType.APP_BRANDING -> ThemeType.APP_BRANDING
-        ThemeType.AVAMAGIC -> ThemeType.AVAMAGIC
+        ThemeType.AVANUE -> ThemeType.AVANUE
         ThemeType.AUTO, null -> ThemeDetector.detectTheme()
     }
 }

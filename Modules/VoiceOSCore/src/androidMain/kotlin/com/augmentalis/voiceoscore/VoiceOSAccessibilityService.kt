@@ -44,8 +44,11 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
         private const val TAG = "VoiceOSAccessibility"
     }
 
-    // Coroutine scope for async operations
-    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    // Coroutine scope for async operations — Default dispatcher to avoid
+    // blocking the Main thread with grammar compilation, command matching,
+    // and flow collection. Use withContext(Dispatchers.Main) for the rare
+    // operations that truly require Main (e.g., AccessibilityEvent.obtain()).
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     // Core components
     private lateinit var screenExtractor: AndroidScreenExtractor
@@ -53,13 +56,13 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
 
     // Fingerprinter for screen deduplication
     private val screenFingerprinter = ScreenFingerprinter()
-    private var lastScreenHash: String = ""
+    @Volatile private var lastScreenHash: String = ""
 
-    // Service state
-    private var isServiceReady = false
+    // Service state — volatile for thread safety (Main callbacks + Default coroutines)
+    @Volatile private var isServiceReady = false
 
     // NAV-500 Fix #1: Event debouncing to prevent excessive processing
-    private var lastEventProcessTime = 0L
+    @Volatile private var lastEventProcessTime = 0L
     private var pendingScreenChangeJob: Job? = null
     private var currentPackageName: String? = null
 
@@ -336,33 +339,40 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
                 val root = rootInActiveWindow ?: return@launch
                 val packageName = event.packageName?.toString() ?: root.packageName?.toString() ?: return@launch
 
-                // Extract elements
-                val elements = screenExtractor.extract(root)
+                try {
+                    // Extract elements
+                    val elements = screenExtractor.extract(root)
 
-                if (elements.isEmpty()) {
-                    Log.d(TAG, "No elements extracted for $packageName")
-                    return@launch
+                    if (elements.isEmpty()) {
+                        Log.d(TAG, "No elements extracted for $packageName")
+                        return@launch
+                    }
+
+                    // Check if screen changed using fingerprint
+                    val screenHash = screenFingerprinter.calculateFingerprint(elements)
+                    if (screenHash == lastScreenHash) {
+                        Log.v(TAG, "Screen unchanged, skipping command update")
+                        return@launch
+                    }
+                    lastScreenHash = screenHash
+
+                    // Generate commands from elements
+                    val commands = generateCommands(elements, packageName)
+
+                    Log.d(TAG, "Generated ${commands.size} commands for $packageName")
+
+                    // Update ActionCoordinator — source-tagged to preserve web commands
+                    val coordinator = getActionCoordinator()
+                    coordinator.updateDynamicCommandsBySource("accessibility", commands)
+
+                    // Notify app-level service
+                    onCommandsUpdated(commands)
+                } finally {
+                    @Suppress("DEPRECATION")
+                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        root.recycle()
+                    }
                 }
-
-                // Check if screen changed using fingerprint
-                val screenHash = screenFingerprinter.calculateFingerprint(elements)
-                if (screenHash == lastScreenHash) {
-                    Log.v(TAG, "Screen unchanged, skipping command update")
-                    return@launch
-                }
-                lastScreenHash = screenHash
-
-                // Generate commands from elements
-                val commands = generateCommands(elements, packageName)
-
-                Log.d(TAG, "Generated ${commands.size} commands for $packageName")
-
-                // Update ActionCoordinator — source-tagged to preserve web commands
-                val coordinator = getActionCoordinator()
-                coordinator.updateDynamicCommandsBySource("accessibility", commands)
-
-                // Notify app-level service
-                onCommandsUpdated(commands)
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling screen change: ${e.message}", e)
@@ -480,11 +490,24 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      */
     fun refreshScreen() {
         lastScreenHash = "" // Clear cache to force update
-        rootInActiveWindow?.let { root ->
-            handleScreenChange(AccessibilityEvent.obtain().apply {
-                eventType = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-                packageName = root.packageName
-            })
+        val root = rootInActiveWindow ?: return
+        try {
+            val event = AccessibilityEvent.obtain()
+            try {
+                event.eventType = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                event.packageName = root.packageName
+                handleScreenChange(event)
+            } finally {
+                @Suppress("DEPRECATION")
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    event.recycle()
+                }
+            }
+        } finally {
+            @Suppress("DEPRECATION")
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                root.recycle()
+            }
         }
     }
 
@@ -496,8 +519,13 @@ abstract class VoiceOSAccessibilityService : AccessibilityService() {
      * @param confidence Speech recognition confidence (0.0-1.0)
      */
     fun processVoiceCommand(utterance: String, confidence: Float = 1.0f) {
-        if (confidence < 0.5f) {
-            Log.d(TAG, "Command rejected: confidence too low ($confidence)")
+        val floor = AdaptiveTimingManager.getConfidenceFloor()
+        if (confidence < floor) {
+            Log.d(TAG, "Command rejected: confidence $confidence < floor $floor")
+            // Track near-misses (within 0.05 of floor) for metrics
+            if (confidence >= floor - 0.05f) {
+                AdaptiveTimingManager.recordConfidenceNearMiss(confidence)
+            }
             return
         }
 

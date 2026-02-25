@@ -13,6 +13,7 @@ import com.augmentalis.magiccode.plugins.universal.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.datetime.Clock
 
 /**
  * Test harness for UniversalPlugin implementations.
@@ -449,7 +450,7 @@ class PluginTestHarness<T : UniversalPlugin>(
             payload: Map<String, String> = emptyMap()
         ): PluginEvent {
             return PluginEvent(
-                eventId = "test-${System.currentTimeMillis()}",
+                eventId = "test-${Clock.System.now().toEpochMilliseconds()}",
                 sourcePluginId = sourcePluginId,
                 eventType = eventType,
                 payload = payload

@@ -3,6 +3,7 @@ package com.augmentalis.magiccode.plugins.assets
 import com.augmentalis.magiccode.plugins.core.PluginLog
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.Clock
 
 /**
  * Persistent asset access logger for security auditing (FR-016).
@@ -24,10 +25,10 @@ class AssetAccessLogger(
      * Asset access log entry.
      */
     data class AssetAccessLog(
-        val id: Long = System.currentTimeMillis(),
+        val id: Long = Clock.System.now().toEpochMilliseconds(),
         val uri: String,
         val status: AccessStatus,
-        val timestamp: Long = System.currentTimeMillis(),
+        val timestamp: Long = Clock.System.now().toEpochMilliseconds(),
         val details: String? = null
     )
 

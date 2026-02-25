@@ -12,18 +12,12 @@ plugins {
     alias(libs.plugins.dokka)
 }
 
-// Dokka Configuration
-tasks.withType<org.jetbrains.dokka.gradle.DokkaTask>().configureEach {
+// Dokka v2 Configuration
+dokka {
     moduleName.set("WebAvanue")
     moduleVersion.set("4.0.0-alpha")
-
-    dokkaSourceSets {
-        configureEach {
-            includeNonPublic.set(false)
-            skipEmptyPackages.set(true)
-            skipDeprecated.set(false)
-            reportUndocumented.set(true)
-        }
+    dokkaSourceSets.configureEach {
+        suppressGeneratedFiles.set(true)
     }
 }
 
@@ -34,10 +28,8 @@ kotlin {
 
     // Android Target
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 
@@ -160,6 +152,7 @@ kotlin {
                 implementation(libs.junit)
                 implementation(libs.robolectric)
                 implementation(libs.sqldelight.sqlite.driver)
+                implementation("androidx.test:core:1.5.0")
             }
         }
 
@@ -219,13 +212,20 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 29  // Raised from 26 to match VoiceOSCore dependency (API 29+ features)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
     }
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
