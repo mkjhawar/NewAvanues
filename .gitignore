@@ -57,17 +57,24 @@ ios/build/
 # External native dependencies (cloned on demand, not committed)
 Modules/Whisper/
 
-# VLM model files (VoiceOS Language Models — large binary, downloaded on demand)
-VLMFiles/
+# VLM model files — tracking policy: <100MB per file tracked in git (GitLab blob limit)
+# VLM Tiny (~74MB) → TRACKED in git
+# VLM Base (~141MB), Small (~465MB), Medium (~1.4GB) → downloaded via setup-sdk.sh
+VLMFiles/EN/VoiceOS-Bas-*
+VLMFiles/EN/VoiceOS-Sml-*
+VLMFiles/EN/VoiceOS-Med-*
+VLMFiles/MUL/VoiceOS-Bas-*
+VLMFiles/MUL/VoiceOS-Sml-*
+VLMFiles/MUL/VoiceOS-Med-*
 
 # Binary SDKs — git-tracked (small enough at ~307MB, eliminates GitLab token dependency)
 # vivoka/*.aar, vivoka/Android/libs/*.jar, vivoka/Android/src/main/jniLibs/ → TRACKED
 # sherpa-onnx/*.aar, sherpa-onnx/*.jar → TRACKED
 
-# VSDK ASR data — all files <75MB, tracked in git
-# Large binaries (>75MB) go to Maven/GitLab Package Registry via setup-sdk.sh
+# VSDK ASR data — all files <100MB, tracked in git
+# Large binaries (>100MB) go to Maven/GitLab Package Registry via setup-sdk.sh
 
-# TVM native runtime (>75MB — publish to Maven/GitLab Package Registry)
+# TVM native runtime (>100MB — publish to Maven/GitLab Package Registry)
 # Note: tvm4j_core.jar (<100KB) is tracked normally — only large binaries go to Maven
 
 # AVA Migration - Exclude large model files (>100MB)
