@@ -298,23 +298,32 @@
             width: 1px; height: 24px; background: var(--glass-border); flex-shrink: 0;
         }
 
-        /* ── AvanueViews card preview ── */
+        /* ── MapViews card preview ── */
         .card-preview {
             height: 80px; overflow: hidden; border-radius: 6px; margin: 8px 0;
             background: rgba(0,0,0,0.2); padding: 8px; font-size: 11px;
             display: flex; flex-direction: column; gap: 4px;
         }
 
-        /* ── Spatial island preview ── */
+        /* ── SpaceAvanue island preview ── */
         .island-preview {
             margin-top: 6px; font-size: 9px; overflow: hidden; max-height: 70px;
             opacity: 0.8;
         }
-        .island.depth-near { min-width: 150px; }
         .island.depth-mid .island-preview { max-height: 50px; }
         .island.depth-far .island-preview { display: none; }
 
-        /* ── Lens result preview ── */
+        /* Usage-based island sizing */
+        .island.size-lg { min-width: 180px; padding: 18px 22px; }
+        .island.size-lg .i-icon { font-size: 2.2em; }
+        .island.size-lg .i-label { font-size: 14px; }
+        .island.size-lg .island-preview { max-height: 90px; }
+        .island.size-md { min-width: 145px; padding: 14px 18px; }
+        .island.size-sm { min-width: 110px; padding: 10px 14px; }
+        .island.size-sm .i-icon { font-size: 1.3em; }
+        .island.size-sm .i-label { font-size: 11px; }
+
+        /* ── SearchAvanue result preview ── */
         .lens-result-item { position: relative; }
         .result-preview {
             display: none; position: absolute; right: -220px; top: 0;
@@ -352,7 +361,7 @@
         }
         .layout-freeform .tile:active { cursor: grabbing; }
 
-        /* ========== MAPVIEWS SHELL ========== */
+        /* ========== AVANUEVIEWS SHELL ========== */
         .card-stream { display: flex; flex-direction: column; gap: 12px; padding: 16px; flex: 1; }
         .card-stream.layout-compact { gap: 4px; }
         .card-stream.layout-compact .stream-card { padding: 10px 14px; }
@@ -421,7 +430,7 @@
         .lens-result-item .r-label { flex: 1; }
         .lens-result-item .r-type { font-size: 11px; color: var(--on-surface-dim); }
 
-        /* ========== SPACEAVANUE SHELL ========== */
+        /* ========== SPATIAL SHELL ========== */
         .spatial-space {
             flex: 1; position: relative; overflow: hidden;
             perspective: 1200px;
@@ -473,13 +482,6 @@
         }
         .island.depth-far .i-icon { font-size: 1.4em; }
         .island.depth-far .i-label { color: rgba(176,176,176,0.7); font-size: 11px; }
-        /* Size classes for usage-based islands */
-        .island.size-lg { min-width: 160px; min-height: 140px; padding: 14px; }
-        .island.size-md { min-width: 120px; min-height: 100px; }
-        .island.size-sm { min-width: 80px; min-height: 70px; padding: 8px; }
-        .island.size-sm .island-preview { display: none; }
-        .island.size-sm .i-icon { font-size: 1.2em; margin-bottom: 2px; }
-        .island.size-sm .i-label { font-size: 10px; }
         @keyframes float-depth {
             0%, 100% { transform: translateZ(-60px) scale(0.88) translateY(0); }
             50% { transform: translateZ(-60px) scale(0.88) translateY(-6px); }
@@ -664,7 +666,7 @@
             <div class="layout-grid" id="classicContainer"></div>
         </div>
 
-        <!-- ============ MAPVIEWS SHELL ============ -->
+        <!-- ============ AVANUEVIEWS SHELL ============ -->
         <div class="screen" id="screen-avanue-views">
             <span class="layout-indicator" id="avLayoutLabel">📋 Stream</span>
             <div class="card-stream" id="avContainer">
@@ -727,11 +729,11 @@
             </div>
         </div>
 
-        <!-- ============ SPACEAVANUE SHELL ============ -->
+        <!-- ============ SPATIAL SHELL ============ -->
         <div class="screen" id="screen-spatial">
             <div class="spatial-space" id="spatialSpace">
                 <div class="grid-bg"></div>
-                <!-- Islands generated dynamically by buildSpatialIslands() based on usage data -->
+                <!-- Islands generated dynamically by buildSpatialIslands() -->
             </div>
             <span class="spatial-zoom-label" id="spatialZoomLabel">Zoom: 100%</span>
         </div>
@@ -1054,56 +1056,54 @@ function toggleMaximize() {
     buildClassicLayout('cockpit');
 }
 
-// ========== VOICE NAVIGATION COMMANDS ==========
-// These match VoiceOS app vocabulary for cockpit panel navigation
+// ── Voice Navigation Commands (same vocab as VoiceOS) ──
 function nextScreen() {
-    const positions = ['left', 'center', 'right'];
-    const idx = positions.indexOf(cockpitState.focusedPanel);
-    const next = positions[(idx + 1) % positions.length];
+    const order = ['left', 'center', 'right'];
+    const idx = order.indexOf(cockpitState.focusedPanel);
+    const next = order[Math.min(idx + 1, order.length - 1)];
     focusCockpitPanel(next);
 }
 
 function previousScreen() {
-    const positions = ['left', 'center', 'right'];
-    const idx = positions.indexOf(cockpitState.focusedPanel);
-    const prev = positions[(idx - 1 + positions.length) % positions.length];
+    const order = ['left', 'center', 'right'];
+    const idx = order.indexOf(cockpitState.focusedPanel);
+    const prev = order[Math.max(idx - 1, 0)];
     focusCockpitPanel(prev);
 }
 
 function openNewScreen() {
-    // Cycle through available modules to find one not currently in any panel
-    const inUse = Object.values(cockpitState.panels);
-    const available = Object.keys(MODULES).filter(m => !inUse.includes(m));
-    if (available.length === 0) return; // All modules assigned
-    const newMod = available[0];
-    // Assign to focused panel
-    cockpitState.panels[cockpitState.focusedPanel] = newMod;
-    buildClassicLayout('cockpit');
-}
-
-function closeScreen() {
-    // "Close" focused panel by swapping it to settings (placeholder)
-    cockpitState.panels[cockpitState.focusedPanel] = 'settings';
-    buildClassicLayout('cockpit');
+    // Open picker on focused panel to let user choose a module
+    togglePanelPicker(cockpitState.focusedPanel);
 }
 
 function openApp(appName) {
-    // Match app name to a module by title or id
+    // Match appName to a module ID — fuzzy match on title or id
+    const query = (appName || '').toLowerCase().trim();
     const match = Object.entries(MODULES).find(([id, mod]) =>
-        mod.title.toLowerCase().includes(appName.toLowerCase()) ||
-        id.toLowerCase().includes(appName.toLowerCase())
+        id === query || mod.title.toLowerCase().includes(query)
     );
     if (match) {
-        cockpitState.panels[cockpitState.focusedPanel] = match[0];
-        buildClassicLayout('cockpit');
+        assignModuleToPanel(cockpitState.focusedPanel, match[0]);
+    } else {
+        // Show picker if no match
+        openNewScreen();
     }
+}
+
+function closeScreen() {
+    // Reset focused panel to a blank/default state by cycling to next available module
+    // In 3-panel mode, "close" reassigns the focused panel to settings (neutral)
+    const current = cockpitState.panels[cockpitState.focusedPanel];
+    const inUse = Object.values(cockpitState.panels);
+    const available = Object.keys(MODULES).find(id => !inUse.includes(id)) || 'settings';
+    assignModuleToPanel(cockpitState.focusedPanel, available);
 }
 
 function updateCockpitActions() {
     const focusedModId = cockpitState.panels[cockpitState.focusedPanel];
     const focusedMod = MODULES[focusedModId];
 
-    // Voice navigation chips (matches VoiceOS vocabulary)
+    // Voice navigation chips (same vocabulary as VoiceOS apps)
     const navItems = [
         { label: '◀ Prev Screen', active: false, action: previousScreen },
         { label: '▶ Next Screen', active: false, action: nextScreen },
@@ -1117,11 +1117,11 @@ function updateCockpitActions() {
         { label: cockpitState.maximized ? '🗗 Restore' : '🗖 Maximize', active: cockpitState.maximized, action: toggleMaximize },
     ];
 
-    // Build custom action bar with dividers
+    // Build custom action bar with divider
     const bar = document.getElementById('actionBar');
     bar.innerHTML = '';
 
-    // Voice navigation section
+    // Voice navigation section (same as app nav commands)
     navItems.forEach(item => {
         const btn = document.createElement('button');
         btn.className = 'action-chip' + (item.active ? ' active' : '');
@@ -1130,10 +1130,10 @@ function updateCockpitActions() {
         bar.appendChild(btn);
     });
 
-    // Divider between nav and panel management
-    const divider1 = document.createElement('div');
-    divider1.className = 'action-divider';
-    bar.appendChild(divider1);
+    // Divider
+    const div1 = document.createElement('div');
+    div1.className = 'action-divider';
+    bar.appendChild(div1);
 
     // Panel management section
     panelItems.forEach(item => {
@@ -1144,10 +1144,10 @@ function updateCockpitActions() {
         bar.appendChild(btn);
     });
 
-    // Divider between panel management and module actions
-    const divider2 = document.createElement('div');
-    divider2.className = 'action-divider';
-    bar.appendChild(divider2);
+    // Divider
+    const div2 = document.createElement('div');
+    div2.className = 'action-divider';
+    bar.appendChild(div2);
 
     // Focused module actions
     if (focusedMod) {
@@ -1322,7 +1322,7 @@ function updateAVActions() {
     );
 }
 
-// ========== LENS LAYOUTS ==========
+// ========== SEARCHAVANUE LAYOUTS ==========
 function setLensLayout(layout) {
     lensLayout = layout;
     const grid = document.getElementById('quickGrid');
@@ -1344,68 +1344,74 @@ function updateLensActions() {
     );
 }
 
-// ========== SPACEAVANUE USAGE DATA + ISLAND BUILDER ==========
-// Usage scores drive island depth (near/mid/far) and size (lg/md/sm)
-const SPATIAL_USAGE = [
-    { id:'web',        usage: 94 },
-    { id:'note',       usage: 87 },
-    { id:'photo',      usage: 72 },
-    { id:'pdf',        usage: 65 },
-    { id:'video',      usage: 58 },
-    { id:'whiteboard', usage: 41 },
-    { id:'files',      usage: 35 },
-    { id:'cast',       usage: 22 },
-    { id:'image',      usage: 18 },
-    { id:'settings',   usage: 10 },
-    { id:'annotation', usage: 5 },
-];
+// ========== SPATIAL — USAGE-BASED ISLANDS ==========
+// Simulated usage stats (0-100): higher = more recently/frequently used
+const SPATIAL_USAGE = {
+    web: 95, note: 82, photo: 70, pdf: 60, video: 55,
+    whiteboard: 40, files: 35, image: 28, cast: 15, settings: 10,
+};
 
 function buildSpatialIslands() {
     const space = document.getElementById('spatialSpace');
-    // Keep grid-bg, remove old islands
+    // Keep the grid background, remove old islands
     space.querySelectorAll('.island').forEach(el => el.remove());
 
-    // Sort by usage descending
-    const sorted = [...SPATIAL_USAGE].sort((a, b) => b.usage - a.usage);
+    // Sort by usage (highest first)
+    const sorted = Object.entries(SPATIAL_USAGE).sort((a, b) => b[1] - a[1]);
 
-    // Tier assignment: top 3 = near/lg, next 4 = mid/md, rest = far/sm
-    sorted.forEach((item, i) => {
-        const mod = MODULES[item.id];
-        if (!mod) return;
-
+    // Map usage to depth + size: top 3 = near/lg, next 4 = mid/md, rest = far/sm
+    const layout = sorted.map(([modId, usage], i) => {
         let depth, size;
-        if (i < 3)      { depth = 'depth-near'; size = 'size-lg'; }
-        else if (i < 7)  { depth = 'depth-mid';  size = 'size-md'; }
-        else             { depth = 'depth-far';  size = 'size-sm'; }
+        if (i < 3) { depth = 'depth-near'; size = 'size-lg'; }
+        else if (i < 7) { depth = 'depth-mid'; size = 'size-md'; }
+        else { depth = 'depth-far'; size = 'size-sm'; }
+        return { modId, usage, depth, size };
+    });
 
-        // 3-column staggered layout with deterministic jitter
-        const col = i % 3;
-        const row = Math.floor(i / 3);
-        const jitterX = ((i * 37) % 60) - 30;  // -30 to +30px
-        const jitterY = ((i * 53) % 40) - 20;  // -20 to +20px
-        const baseX = col * 350 + 60;
-        const baseY = row * 160 + 40;
-        const x = Math.max(10, baseX + jitterX);
-        const y = Math.max(10, baseY + jitterY);
+    // Smart staggered placement: 3 columns, cascade within each column
+    // High-usage items cluster center-top, low-usage items drift to edges
+    const cols = 3;
+    const colWidth = 320;
+    const startX = 50;
+    const colOffsets = [0, 0, 0]; // track Y offset per column
+
+    layout.forEach((item, i) => {
+        const mod = MODULES[item.modId];
+        if (!mod) return;
+        const col = i % cols;
+        const baseX = startX + col * colWidth;
+        // Stagger: offset odd items right, add slight randomness
+        const jitterX = (i % 2 === 1) ? 60 : 0;
+        const jitterY = (i * 17) % 30; // deterministic pseudo-random
+        const top = colOffsets[col] + 30 + jitterY;
+        const left = baseX + jitterX;
+        colOffsets[col] = top + (item.depth === 'depth-near' ? 170 : item.depth === 'depth-mid' ? 140 : 110);
 
         const island = document.createElement('div');
-        island.className = `island ${depth} ${size}`;
-        island.dataset.mod = item.id;
-        island.style.top = y + 'px';
-        island.style.left = x + 'px';
-        island.innerHTML = `
-            <div class="i-icon">${mod.icon}</div>
-            <div class="i-label">${mod.title}</div>
-            <div class="island-preview">${renderMiniModule(item.id)}</div>
-        `;
+        island.className = `island ${item.depth} ${item.size}`;
+        island.style.top = top + 'px';
+        island.style.left = left + 'px';
+        island.dataset.mod = item.modId;
 
-        // Click to open, drag to move
-        let dragged = false;
+        // Usage indicator bar
+        const usageBar = `<div style="height:2px;background:rgba(21,101,192,0.3);border-radius:1px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${item.usage}%;background:var(--primary);border-radius:1px"></div></div>`;
+
+        island.innerHTML = `<div class="i-icon">${mod.icon}</div><div class="i-label">${mod.title}</div>${usageBar}`;
+
+        // Add mini module preview for near and mid depth
+        if (item.depth !== 'depth-far') {
+            const preview = document.createElement('div');
+            preview.className = 'island-preview';
+            preview.innerHTML = renderMiniModule(item.modId);
+            island.appendChild(preview);
+        }
+
+        // Draggable + click to open
         island.addEventListener('mousedown', function(e) {
             const rect = this.getBoundingClientRect();
             const container = this.parentElement.getBoundingClientRect();
             const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
-            dragged = false;
+            let dragged = false;
             const onMove = (me) => {
                 dragged = true;
                 this.style.left = Math.max(0, (me.clientX - container.left - ox) / spatialZoom) + 'px';
@@ -1414,7 +1420,7 @@ function buildSpatialIslands() {
             const onUp = () => {
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('mouseup', onUp);
-                if (!dragged) openModule(item.id);
+                if (!dragged) openModule(this.dataset.mod);
             };
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
@@ -1425,7 +1431,6 @@ function buildSpatialIslands() {
     });
 }
 
-// ========== SPACEAVANUE ZOOM ==========
 function setSpatialZoom(zoom) {
     spatialZoom = zoom;
     document.getElementById('spatialSpace').style.transform = `scale(${zoom})`;
@@ -1493,7 +1498,7 @@ function switchShell(shell) {
     document.getElementById('shellTabs').classList.remove('hidden');
     document.getElementById('backBtn').classList.remove('visible');
     document.getElementById('navTitle').textContent = 'Voice-First UI Shells';
-    const names = { classic:'Classic', 'avanue-views':'Avanue Views', lens:'Lens', spatial:'Spatial' };
+    const names = { classic:'CockpitAvanue', 'avanue-views':'MapViews', lens:'SearchAvanue', spatial:'SpaceAvanue' };
     document.getElementById('shellBadge').textContent = names[shell] || shell;
 
     if (shell === 'classic') updateClassicActions();
@@ -1554,6 +1559,13 @@ function onLensInput(query) {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && classicLayout === 'cockpit' && cockpitState.maximized) { toggleMaximize(); return; }
     if (e.key === 'Escape' && currentModule) goBack();
+    // Cockpit panel navigation (arrow keys = next/previous screen)
+    if (currentShell === 'classic' && classicLayout === 'cockpit' && !currentModule) {
+        if (e.key === 'ArrowRight') { e.preventDefault(); nextScreen(); return; }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); previousScreen(); return; }
+        if (e.key === 'n' && !e.metaKey && !e.ctrlKey) { openNewScreen(); return; }
+        if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); closeScreen(); return; }
+    }
     const shells = ['classic','avanue-views','lens','spatial'];
     if (e.key >= '1' && e.key <= '4' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault(); switchShell(shells[parseInt(e.key)-1]);
@@ -1573,7 +1585,7 @@ buildClassicLayout('grid');
     if (el) el.innerHTML = renderMiniModule(modId);
 });
 
-// Build usage-based SpaceAvanue islands dynamically
+// Build usage-based spatial islands dynamically
 buildSpatialIslands();
 </script>
 </body>
