@@ -64,13 +64,9 @@ VLMFiles/
 # vivoka/*.aar, vivoka/Android/libs/*.jar, vivoka/Android/src/main/jniLibs/ → TRACKED
 # sherpa-onnx/*.aar, sherpa-onnx/*.jar → TRACKED
 
-# VSDK ASR data — large speech models (downloaded from GitLab Package Registry)
-# NOTE: asreng-US.fcf (1.3K config) stays tracked; only large model files are ignored
-Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/acmod/
-Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/asr/
-Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/clc/
-Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/lm/
-Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/ctx/ctx-primary*
+# VSDK ASR data — files <50MB tracked in git, files >50MB fetched via setup-sdk.sh --asr-only
+Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/ctx/ctx-primary_eng-USA_vocon_car_202403201810.fcf
+Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/lm/lm-assistantmessaging_eng-USA_vocon_car_restricted_202312151610.dat
 
 # TVM native runtime (>50MB — publish to Maven/GitLab Package Registry)
 # Note: tvm4j_core.jar (<100KB) is tracked normally — only large binaries go to Maven
