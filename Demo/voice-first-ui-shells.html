@@ -352,7 +352,7 @@
         }
         .layout-freeform .tile:active { cursor: grabbing; }
 
-        /* ========== AVANUEVIEWS SHELL ========== */
+        /* ========== MAPVIEWS SHELL ========== */
         .card-stream { display: flex; flex-direction: column; gap: 12px; padding: 16px; flex: 1; }
         .card-stream.layout-compact { gap: 4px; }
         .card-stream.layout-compact .stream-card { padding: 10px 14px; }
@@ -421,7 +421,7 @@
         .lens-result-item .r-label { flex: 1; }
         .lens-result-item .r-type { font-size: 11px; color: var(--on-surface-dim); }
 
-        /* ========== SPATIAL SHELL ========== */
+        /* ========== SPACEAVANUE SHELL ========== */
         .spatial-space {
             flex: 1; position: relative; overflow: hidden;
             perspective: 1200px;
@@ -473,6 +473,13 @@
         }
         .island.depth-far .i-icon { font-size: 1.4em; }
         .island.depth-far .i-label { color: rgba(176,176,176,0.7); font-size: 11px; }
+        /* Size classes for usage-based islands */
+        .island.size-lg { min-width: 160px; min-height: 140px; padding: 14px; }
+        .island.size-md { min-width: 120px; min-height: 100px; }
+        .island.size-sm { min-width: 80px; min-height: 70px; padding: 8px; }
+        .island.size-sm .island-preview { display: none; }
+        .island.size-sm .i-icon { font-size: 1.2em; margin-bottom: 2px; }
+        .island.size-sm .i-label { font-size: 10px; }
         @keyframes float-depth {
             0%, 100% { transform: translateZ(-60px) scale(0.88) translateY(0); }
             50% { transform: translateZ(-60px) scale(0.88) translateY(-6px); }
@@ -639,14 +646,14 @@
     <div class="top-nav">
         <button class="back-btn" id="backBtn" onclick="goBack()">← Back</button>
         <div class="nav-title" id="navTitle">Voice-First UI Shells</div>
-        <div class="shell-badge" id="shellBadge">Cockpit v1.0</div>
+        <div class="shell-badge" id="shellBadge">CockpitAvanue</div>
     </div>
 
     <div class="shell-tabs" id="shellTabs">
-        <button class="tab-btn active" data-shell="classic">📊 Classic</button>
-        <button class="tab-btn" data-shell="avanue-views">🌊 AvanueViews</button>
-        <button class="tab-btn" data-shell="lens">🔍 Lens</button>
-        <button class="tab-btn" data-shell="spatial">🌌 Spatial</button>
+        <button class="tab-btn active" data-shell="classic">✈️ CockpitAvanue</button>
+        <button class="tab-btn" data-shell="avanue-views">🗺️ MapViews</button>
+        <button class="tab-btn" data-shell="lens">🔍 SearchAvanue</button>
+        <button class="tab-btn" data-shell="spatial">🌌 SpaceAvanue</button>
     </div>
 
     <div class="viewport">
@@ -657,7 +664,7 @@
             <div class="layout-grid" id="classicContainer"></div>
         </div>
 
-        <!-- ============ AVANUEVIEWS SHELL ============ -->
+        <!-- ============ MAPVIEWS SHELL ============ -->
         <div class="screen" id="screen-avanue-views">
             <span class="layout-indicator" id="avLayoutLabel">📋 Stream</span>
             <div class="card-stream" id="avContainer">
@@ -720,20 +727,11 @@
             </div>
         </div>
 
-        <!-- ============ SPATIAL SHELL ============ -->
+        <!-- ============ SPACEAVANUE SHELL ============ -->
         <div class="screen" id="screen-spatial">
             <div class="spatial-space" id="spatialSpace">
                 <div class="grid-bg"></div>
-                <div class="island depth-near" style="top:50px;left:70px" data-mod="web"><div class="i-icon">🌐</div><div class="i-label">WebAvanue</div></div>
-                <div class="island depth-mid"  style="top:180px;left:140px" data-mod="note"><div class="i-icon">📝</div><div class="i-label">NoteAvanue</div></div>
-                <div class="island depth-near" style="top:40px;left:420px" data-mod="photo"><div class="i-icon">📷</div><div class="i-label">PhotoAvanue</div></div>
-                <div class="island depth-far"  style="top:230px;left:310px" data-mod="pdf"><div class="i-icon">📄</div><div class="i-label">PDFAvanue</div></div>
-                <div class="island depth-mid"  style="top:110px;left:650px" data-mod="video"><div class="i-icon">🎬</div><div class="i-label">VideoAvanue</div></div>
-                <div class="island depth-far"  style="top:330px;left:520px" data-mod="whiteboard"><div class="i-icon">✏️</div><div class="i-label">Whiteboard</div></div>
-                <div class="island depth-near" style="top:70px;left:900px" data-mod="files"><div class="i-icon">📂</div><div class="i-label">Files</div></div>
-                <div class="island depth-far"  style="top:290px;left:840px" data-mod="settings"><div class="i-icon">⚙️</div><div class="i-label">Settings</div></div>
-                <div class="island depth-mid"  style="top:370px;left:160px" data-mod="cast"><div class="i-icon">📡</div><div class="i-label">Cast</div></div>
-                <div class="island depth-mid"  style="top:400px;left:700px" data-mod="image"><div class="i-icon">🖼️</div><div class="i-label">Images</div></div>
+                <!-- Islands generated dynamically by buildSpatialIslands() based on usage data -->
             </div>
             <span class="spatial-zoom-label" id="spatialZoomLabel">Zoom: 100%</span>
         </div>
@@ -766,7 +764,7 @@
                             <p><b>Sprint Retrospective — Feb 25, 2026</b></p>
                             <p>What went well: KMP migration completed ahead of schedule. Voice command coverage hit 94% across all modules.</p>
                             <p>Action items:</p>
-                            <p>☑ Merge AvanueViews branch into main<br>☐ Glass optimization for MICRO display profile<br>☐ iOS CockpitScreen wrapper</p>
+                            <p>☑ Merge MapViews branch into main<br>☐ Glass optimization for MICRO display profile<br>☐ iOS CockpitScreen wrapper</p>
                         </div>
                     </div>
                 </div>
@@ -887,7 +885,7 @@
                 <div class="module-body">
                     <div class="settings-mock">
                         <div class="settings-section">Cockpit</div>
-                        <div class="settings-row"><span class="s-label">Shell Mode</span><span class="s-value">Lens ▾</span></div>
+                        <div class="settings-row"><span class="s-label">Shell Mode</span><span class="s-value">SearchAvanue ▾</span></div>
                         <div class="settings-row"><span class="s-label">Default Arrangement</span><span class="s-value">Focus ▾</span></div>
                         <div class="settings-row"><span class="s-label">Max Frames</span><span class="s-value">6</span></div>
                         <div class="settings-row"><span class="s-label">Head Tracking</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
@@ -1056,21 +1054,86 @@ function toggleMaximize() {
     buildClassicLayout('cockpit');
 }
 
+// ========== VOICE NAVIGATION COMMANDS ==========
+// These match VoiceOS app vocabulary for cockpit panel navigation
+function nextScreen() {
+    const positions = ['left', 'center', 'right'];
+    const idx = positions.indexOf(cockpitState.focusedPanel);
+    const next = positions[(idx + 1) % positions.length];
+    focusCockpitPanel(next);
+}
+
+function previousScreen() {
+    const positions = ['left', 'center', 'right'];
+    const idx = positions.indexOf(cockpitState.focusedPanel);
+    const prev = positions[(idx - 1 + positions.length) % positions.length];
+    focusCockpitPanel(prev);
+}
+
+function openNewScreen() {
+    // Cycle through available modules to find one not currently in any panel
+    const inUse = Object.values(cockpitState.panels);
+    const available = Object.keys(MODULES).filter(m => !inUse.includes(m));
+    if (available.length === 0) return; // All modules assigned
+    const newMod = available[0];
+    // Assign to focused panel
+    cockpitState.panels[cockpitState.focusedPanel] = newMod;
+    buildClassicLayout('cockpit');
+}
+
+function closeScreen() {
+    // "Close" focused panel by swapping it to settings (placeholder)
+    cockpitState.panels[cockpitState.focusedPanel] = 'settings';
+    buildClassicLayout('cockpit');
+}
+
+function openApp(appName) {
+    // Match app name to a module by title or id
+    const match = Object.entries(MODULES).find(([id, mod]) =>
+        mod.title.toLowerCase().includes(appName.toLowerCase()) ||
+        id.toLowerCase().includes(appName.toLowerCase())
+    );
+    if (match) {
+        cockpitState.panels[cockpitState.focusedPanel] = match[0];
+        buildClassicLayout('cockpit');
+    }
+}
+
 function updateCockpitActions() {
     const focusedModId = cockpitState.panels[cockpitState.focusedPanel];
     const focusedMod = MODULES[focusedModId];
 
+    // Voice navigation chips (matches VoiceOS vocabulary)
+    const navItems = [
+        { label: '◀ Prev Screen', active: false, action: previousScreen },
+        { label: '▶ Next Screen', active: false, action: nextScreen },
+        { label: '➕ Open Screen', active: false, action: openNewScreen },
+        { label: '✕ Close Screen', active: false, action: closeScreen },
+    ];
+
     // Panel management chips
     const panelItems = [
         { label: '🔄 Rotate', active: false, action: rotatePanels },
-        { label: '↔️ Swap L↔C', active: false, action: () => swapPanels('left', 'center') },
-        { label: '↔️ Swap C↔R', active: false, action: () => swapPanels('center', 'right') },
         { label: cockpitState.maximized ? '🗗 Restore' : '🗖 Maximize', active: cockpitState.maximized, action: toggleMaximize },
     ];
 
-    // Build custom action bar with divider
+    // Build custom action bar with dividers
     const bar = document.getElementById('actionBar');
     bar.innerHTML = '';
+
+    // Voice navigation section
+    navItems.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'action-chip' + (item.active ? ' active' : '');
+        btn.textContent = item.label;
+        btn.onclick = () => { if (item.action) item.action(); };
+        bar.appendChild(btn);
+    });
+
+    // Divider between nav and panel management
+    const divider1 = document.createElement('div');
+    divider1.className = 'action-divider';
+    bar.appendChild(divider1);
 
     // Panel management section
     panelItems.forEach(item => {
@@ -1081,10 +1144,10 @@ function updateCockpitActions() {
         bar.appendChild(btn);
     });
 
-    // Divider
-    const divider = document.createElement('div');
-    divider.className = 'action-divider';
-    bar.appendChild(divider);
+    // Divider between panel management and module actions
+    const divider2 = document.createElement('div');
+    divider2.className = 'action-divider';
+    bar.appendChild(divider2);
 
     // Focused module actions
     if (focusedMod) {
@@ -1214,7 +1277,7 @@ function updateClassicActions() {
     );
 }
 
-// ========== AVANUEVIEWS LAYOUTS ==========
+// ========== MAPVIEWS LAYOUTS ==========
 function setAVLayout(layout) {
     avLayout = layout;
     const container = document.getElementById('avContainer');
@@ -1281,7 +1344,88 @@ function updateLensActions() {
     );
 }
 
-// ========== SPATIAL ZOOM ==========
+// ========== SPACEAVANUE USAGE DATA + ISLAND BUILDER ==========
+// Usage scores drive island depth (near/mid/far) and size (lg/md/sm)
+const SPATIAL_USAGE = [
+    { id:'web',        usage: 94 },
+    { id:'note',       usage: 87 },
+    { id:'photo',      usage: 72 },
+    { id:'pdf',        usage: 65 },
+    { id:'video',      usage: 58 },
+    { id:'whiteboard', usage: 41 },
+    { id:'files',      usage: 35 },
+    { id:'cast',       usage: 22 },
+    { id:'image',      usage: 18 },
+    { id:'settings',   usage: 10 },
+    { id:'annotation', usage: 5 },
+];
+
+function buildSpatialIslands() {
+    const space = document.getElementById('spatialSpace');
+    // Keep grid-bg, remove old islands
+    space.querySelectorAll('.island').forEach(el => el.remove());
+
+    // Sort by usage descending
+    const sorted = [...SPATIAL_USAGE].sort((a, b) => b.usage - a.usage);
+
+    // Tier assignment: top 3 = near/lg, next 4 = mid/md, rest = far/sm
+    sorted.forEach((item, i) => {
+        const mod = MODULES[item.id];
+        if (!mod) return;
+
+        let depth, size;
+        if (i < 3)      { depth = 'depth-near'; size = 'size-lg'; }
+        else if (i < 7)  { depth = 'depth-mid';  size = 'size-md'; }
+        else             { depth = 'depth-far';  size = 'size-sm'; }
+
+        // 3-column staggered layout with deterministic jitter
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const jitterX = ((i * 37) % 60) - 30;  // -30 to +30px
+        const jitterY = ((i * 53) % 40) - 20;  // -20 to +20px
+        const baseX = col * 350 + 60;
+        const baseY = row * 160 + 40;
+        const x = Math.max(10, baseX + jitterX);
+        const y = Math.max(10, baseY + jitterY);
+
+        const island = document.createElement('div');
+        island.className = `island ${depth} ${size}`;
+        island.dataset.mod = item.id;
+        island.style.top = y + 'px';
+        island.style.left = x + 'px';
+        island.innerHTML = `
+            <div class="i-icon">${mod.icon}</div>
+            <div class="i-label">${mod.title}</div>
+            <div class="island-preview">${renderMiniModule(item.id)}</div>
+        `;
+
+        // Click to open, drag to move
+        let dragged = false;
+        island.addEventListener('mousedown', function(e) {
+            const rect = this.getBoundingClientRect();
+            const container = this.parentElement.getBoundingClientRect();
+            const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
+            dragged = false;
+            const onMove = (me) => {
+                dragged = true;
+                this.style.left = Math.max(0, (me.clientX - container.left - ox) / spatialZoom) + 'px';
+                this.style.top = Math.max(0, (me.clientY - container.top - oy) / spatialZoom) + 'px';
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                if (!dragged) openModule(item.id);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            e.preventDefault();
+        });
+
+        space.appendChild(island);
+    });
+}
+
+// ========== SPACEAVANUE ZOOM ==========
 function setSpatialZoom(zoom) {
     spatialZoom = zoom;
     document.getElementById('spatialSpace').style.transform = `scale(${zoom})`;
@@ -1290,15 +1434,7 @@ function setSpatialZoom(zoom) {
 }
 
 function resetSpatialPositions() {
-    const islands = document.querySelectorAll('.island');
-    const positions = [
-        {top:50,left:70},{top:180,left:140},{top:40,left:420},{top:230,left:310},
-        {top:110,left:650},{top:330,left:520},{top:70,left:900},{top:290,left:840},
-        {top:370,left:160},{top:400,left:700},
-    ];
-    islands.forEach((isl, i) => {
-        if (positions[i]) { isl.style.top = positions[i].top + 'px'; isl.style.left = positions[i].left + 'px'; }
-    });
+    buildSpatialIslands();
     setSpatialZoom(1.0);
 }
 
@@ -1311,7 +1447,7 @@ function updateSpatialActions() {
     ];
     const items = zooms.map(z => ({ label: z.label, active: spatialZoom === z.z, action: () => setSpatialZoom(z.z) }));
     items.push({ label:'↩️ Reset', active: false, action: resetSpatialPositions });
-    updateActionBar(items, 'Spatial Settings');
+    updateActionBar(items, 'SpaceAvanue Settings');
 }
 
 // ========== GENERIC ACTION BAR ==========
@@ -1414,29 +1550,6 @@ function onLensInput(query) {
     results.classList.add('visible');
 }
 
-// ========== SPATIAL DRAGGING ==========
-document.querySelectorAll('.island').forEach(island => {
-    island.addEventListener('mousedown', function(e) {
-        const rect = this.getBoundingClientRect();
-        const container = this.parentElement.getBoundingClientRect();
-        const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
-        let dragged = false;
-        const onMove = (me) => {
-            dragged = true;
-            this.style.left = Math.max(0, (me.clientX - container.left - ox) / spatialZoom) + 'px';
-            this.style.top = Math.max(0, (me.clientY - container.top - oy) / spatialZoom) + 'px';
-        };
-        const onUp = () => {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-            if (!dragged) openModule(this.dataset.mod);
-        };
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-        e.preventDefault();
-    });
-});
-
 // ========== KEYBOARD SHORTCUTS ==========
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && classicLayout === 'cockpit' && cockpitState.maximized) { toggleMaximize(); return; }
@@ -1454,22 +1567,14 @@ document.addEventListener('keydown', (e) => {
 // ========== INIT ==========
 buildClassicLayout('grid');
 
-// Inject AvanueViews mini module previews
+// Inject MapViews mini module previews
 ['note','pdf','photo','web','whiteboard','video'].forEach(modId => {
     const el = document.getElementById('av-preview-' + modId);
     if (el) el.innerHTML = renderMiniModule(modId);
 });
 
-// Inject Spatial island mini module previews
-document.querySelectorAll('.island').forEach(island => {
-    const modId = island.dataset.mod;
-    if (modId && MODULES[modId] && !island.querySelector('.island-preview')) {
-        const preview = document.createElement('div');
-        preview.className = 'island-preview';
-        preview.innerHTML = renderMiniModule(modId);
-        island.appendChild(preview);
-    }
-});
+// Build usage-based SpaceAvanue islands dynamically
+buildSpatialIslands();
 </script>
 </body>
 </html>
