@@ -126,22 +126,54 @@
         .tile .icon { font-size: 2em; }
         .tile .label { font-size: 12px; font-weight: 600; color: var(--on-surface-dim); }
 
-        /* Cockpit layout — hero center + flanking */
+        /* Cockpit layout — windshield perspective (3 angled panels) */
         .layout-cockpit {
-            display: grid; gap: 14px; padding: 20px; flex: 1; align-content: start;
-            grid-template-columns: 1fr 1.8fr 1fr;
-            grid-template-rows: auto auto auto;
+            display: flex; flex: 1; padding: 12px 8px; gap: 0;
+            perspective: 1000px;
+            align-items: stretch; position: relative;
         }
-        .layout-cockpit .tile { aspect-ratio: auto; min-height: 80px; }
-        .layout-cockpit .tile.hero {
-            grid-column: 2; grid-row: 1 / 3;
-            min-height: 200px; font-size: 1.2em;
-            background: linear-gradient(135deg, rgba(21,101,192,0.3), rgba(66,165,245,0.15));
-            border-color: var(--primary);
-            box-shadow: 0 4px 30px rgba(21,101,192,0.2);
+        .cockpit-panel {
+            display: flex; flex-direction: column; gap: 8px; padding: 10px;
+            background: linear-gradient(180deg, rgba(21,101,192,0.10), rgba(66,165,245,0.04));
+            border: 1px solid var(--glass-border);
+            transition: all 300ms ease;
         }
-        .layout-cockpit .tile.hero .icon { font-size: 3.5em; }
-        .layout-cockpit .tile.hero .label { font-size: 16px; color: var(--secondary); }
+        .cockpit-panel .tile { aspect-ratio: auto; min-height: 70px; font-size: 0.9em; }
+        .cockpit-panel.left {
+            transform: rotateY(16deg);
+            transform-origin: right center;
+            border-radius: 16px 0 0 16px;
+            flex: 0.65;
+            border-right: none;
+        }
+        .cockpit-panel.center {
+            flex: 1.7; z-index: 1;
+            background: linear-gradient(180deg, rgba(21,101,192,0.20), rgba(66,165,245,0.08));
+            border-color: rgba(21,101,192,0.4);
+            box-shadow: 0 0 50px rgba(21,101,192,0.12), inset 0 1px 0 rgba(66,165,245,0.15);
+        }
+        .cockpit-panel.center .tile {
+            min-height: 85px; font-size: 1em;
+            background: linear-gradient(135deg, rgba(21,101,192,0.25), rgba(66,165,245,0.10));
+            border-color: rgba(21,101,192,0.3);
+        }
+        .cockpit-panel.center .tile .icon { font-size: 2.4em; }
+        .cockpit-panel.center .tile .label { font-size: 13px; color: var(--secondary); }
+        .cockpit-panel.right {
+            transform: rotateY(-16deg);
+            transform-origin: left center;
+            border-radius: 0 16px 16px 0;
+            flex: 0.65;
+            border-left: none;
+        }
+        /* Windshield frame accent lines */
+        .layout-cockpit::before, .layout-cockpit::after {
+            content: ''; position: absolute; top: 0; bottom: 0; width: 1px;
+            background: linear-gradient(180deg, rgba(21,101,192,0.3), transparent 30%, transparent 70%, rgba(21,101,192,0.3));
+            z-index: 2; pointer-events: none;
+        }
+        .layout-cockpit::before { left: calc(35% - 4px); }
+        .layout-cockpit::after { right: calc(35% - 4px); }
 
         /* Carousel layout — horizontal scroll */
         .layout-carousel {
@@ -240,34 +272,66 @@
         .lens-result-item .r-label { flex: 1; }
         .lens-result-item .r-type { font-size: 11px; color: var(--on-surface-dim); }
 
-        /* ========== CANVAS SHELL ========== */
-        .canvas-space {
+        /* ========== SPATIAL SHELL ========== */
+        .spatial-space {
             flex: 1; position: relative; overflow: hidden;
-            background: radial-gradient(circle at 50% 50%, rgba(21,101,192,0.04), transparent);
+            perspective: 1200px;
+            transform-style: preserve-3d;
+            background: radial-gradient(ellipse at 50% 40%, rgba(21,101,192,0.06), transparent 70%);
             transition: transform 300ms ease;
             transform-origin: center center;
         }
-        .canvas-space .grid-bg {
+        .spatial-space .grid-bg {
             position: absolute; inset: 0;
             background-image:
-                linear-gradient(rgba(21,101,192,0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(21,101,192,0.04) 1px, transparent 1px);
-            background-size: 40px 40px;
+                linear-gradient(rgba(21,101,192,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(21,101,192,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
         }
         .island {
-            position: absolute; background: linear-gradient(135deg, rgba(21,101,192,0.22), rgba(66,165,245,0.12));
-            border: 1px solid var(--glass-border); border-radius: var(--radius);
-            padding: 16px 20px; cursor: grab; transition: box-shadow 200ms, border-color 200ms;
+            position: absolute; border-radius: var(--radius);
+            padding: 16px 20px; cursor: grab;
+            transition: box-shadow 300ms, border-color 300ms, transform 300ms;
             text-align: center; min-width: 130px; user-select: none;
         }
-        .island:hover { border-color: var(--primary); box-shadow: 0 8px 28px rgba(21,101,192,0.3); }
+        .island:hover { border-color: var(--primary); box-shadow: 0 12px 40px rgba(21,101,192,0.4); }
         .island:active { cursor: grabbing; }
         .island .i-icon { font-size: 1.6em; margin-bottom: 6px; }
-        .island .i-label { font-size: 12px; font-weight: 600; color: var(--on-surface-dim); }
-        .canvas-zoom-label {
+        .island .i-label { font-size: 12px; font-weight: 600; }
+        /* Depth layers */
+        .island.depth-near {
+            background: linear-gradient(135deg, rgba(21,101,192,0.30), rgba(66,165,245,0.18));
+            border: 1px solid rgba(66,165,245,0.25);
+            z-index: 3; transform: translateZ(50px);
+            box-shadow: 0 8px 32px rgba(21,101,192,0.3);
+            min-width: 145px;
+        }
+        .island.depth-near .i-icon { font-size: 1.9em; }
+        .island.depth-near .i-label { color: var(--on-surface); font-size: 13px; }
+        .island.depth-mid {
+            background: linear-gradient(135deg, rgba(21,101,192,0.18), rgba(66,165,245,0.08));
+            border: 1px solid var(--glass-border);
+            z-index: 2; transform: translateZ(0px);
+            opacity: 0.92;
+        }
+        .island.depth-mid .i-label { color: var(--on-surface-dim); }
+        .island.depth-far {
+            background: linear-gradient(135deg, rgba(21,101,192,0.10), rgba(66,165,245,0.04));
+            border: 1px solid rgba(255,255,255,0.06);
+            z-index: 1; transform: translateZ(-60px) scale(0.88);
+            opacity: 0.65;
+            animation: float-depth 8s ease-in-out infinite;
+        }
+        .island.depth-far .i-icon { font-size: 1.4em; }
+        .island.depth-far .i-label { color: rgba(176,176,176,0.7); font-size: 11px; }
+        @keyframes float-depth {
+            0%, 100% { transform: translateZ(-60px) scale(0.88) translateY(0); }
+            50% { transform: translateZ(-60px) scale(0.88) translateY(-6px); }
+        }
+        .spatial-zoom-label {
             position: absolute; bottom: 12px; right: 16px; font-size: 11px;
             color: var(--on-surface-dim); background: rgba(0,0,0,0.5); padding: 3px 10px;
-            border-radius: 8px;
+            border-radius: 8px; z-index: 10;
         }
 
         /* ========== MODULE SCREENS ========== */
@@ -433,7 +497,7 @@
         <button class="tab-btn active" data-shell="classic">📊 Classic</button>
         <button class="tab-btn" data-shell="avanue-views">🌊 AvanueViews</button>
         <button class="tab-btn" data-shell="lens">🔍 Lens</button>
-        <button class="tab-btn" data-shell="canvas">🎨 Canvas</button>
+        <button class="tab-btn" data-shell="spatial">🌌 Spatial</button>
     </div>
 
     <div class="viewport">
@@ -507,22 +571,22 @@
             </div>
         </div>
 
-        <!-- ============ CANVAS SHELL ============ -->
-        <div class="screen" id="screen-canvas">
-            <div class="canvas-space" id="canvasSpace">
+        <!-- ============ SPATIAL SHELL ============ -->
+        <div class="screen" id="screen-spatial">
+            <div class="spatial-space" id="spatialSpace">
                 <div class="grid-bg"></div>
-                <div class="island" style="top:40px;left:60px" data-mod="web"><div class="i-icon">🌐</div><div class="i-label">WebAvanue</div></div>
-                <div class="island" style="top:200px;left:80px" data-mod="note"><div class="i-icon">📝</div><div class="i-label">NoteAvanue</div></div>
-                <div class="island" style="top:80px;left:360px" data-mod="photo"><div class="i-icon">📷</div><div class="i-label">PhotoAvanue</div></div>
-                <div class="island" style="top:260px;left:320px" data-mod="pdf"><div class="i-icon">📄</div><div class="i-label">PDFAvanue</div></div>
-                <div class="island" style="top:140px;left:600px" data-mod="video"><div class="i-icon">🎬</div><div class="i-label">VideoAvanue</div></div>
-                <div class="island" style="top:350px;left:550px" data-mod="whiteboard"><div class="i-icon">✏️</div><div class="i-label">Whiteboard</div></div>
-                <div class="island" style="top:60px;left:850px" data-mod="files"><div class="i-icon">📂</div><div class="i-label">Files</div></div>
-                <div class="island" style="top:300px;left:820px" data-mod="settings"><div class="i-icon">⚙️</div><div class="i-label">Settings</div></div>
-                <div class="island" style="top:400px;left:180px" data-mod="cast"><div class="i-icon">📡</div><div class="i-label">Cast</div></div>
-                <div class="island" style="top:420px;left:680px" data-mod="image"><div class="i-icon">🖼️</div><div class="i-label">Images</div></div>
+                <div class="island depth-near" style="top:50px;left:70px" data-mod="web"><div class="i-icon">🌐</div><div class="i-label">WebAvanue</div></div>
+                <div class="island depth-mid"  style="top:180px;left:140px" data-mod="note"><div class="i-icon">📝</div><div class="i-label">NoteAvanue</div></div>
+                <div class="island depth-near" style="top:40px;left:420px" data-mod="photo"><div class="i-icon">📷</div><div class="i-label">PhotoAvanue</div></div>
+                <div class="island depth-far"  style="top:230px;left:310px" data-mod="pdf"><div class="i-icon">📄</div><div class="i-label">PDFAvanue</div></div>
+                <div class="island depth-mid"  style="top:110px;left:650px" data-mod="video"><div class="i-icon">🎬</div><div class="i-label">VideoAvanue</div></div>
+                <div class="island depth-far"  style="top:330px;left:520px" data-mod="whiteboard"><div class="i-icon">✏️</div><div class="i-label">Whiteboard</div></div>
+                <div class="island depth-near" style="top:70px;left:900px" data-mod="files"><div class="i-icon">📂</div><div class="i-label">Files</div></div>
+                <div class="island depth-far"  style="top:290px;left:840px" data-mod="settings"><div class="i-icon">⚙️</div><div class="i-label">Settings</div></div>
+                <div class="island depth-mid"  style="top:370px;left:160px" data-mod="cast"><div class="i-icon">📡</div><div class="i-label">Cast</div></div>
+                <div class="island depth-mid"  style="top:400px;left:700px" data-mod="image"><div class="i-icon">🖼️</div><div class="i-label">Images</div></div>
             </div>
-            <span class="canvas-zoom-label" id="canvasZoomLabel">Zoom: 100%</span>
+            <span class="spatial-zoom-label" id="spatialZoomLabel">Zoom: 100%</span>
         </div>
 
         <!-- ============ MODULE SCREENS ============ -->
@@ -737,7 +801,7 @@ let currentModule = null;
 let classicLayout = 'grid';
 let avLayout = 'stream';
 let lensLayout = 'grid';
-let canvasZoom = 1.0;
+let spatialZoom = 1.0;
 
 // ========== CLASSIC SHELL LAYOUTS ==========
 function buildClassicLayout(layout) {
@@ -759,10 +823,23 @@ function buildClassicLayout(layout) {
     else if (layout === 'cockpit') {
         label.textContent = '✈️ Cockpit';
         container.className = 'layout-cockpit';
-        TILE_DATA.forEach((t, i) => {
-            const hero = i === 0 ? ' hero' : '';
-            container.innerHTML += `<div class="tile${hero}" onclick="openModule('${t.id}')"><div class="icon">${t.icon}</div><div class="label">${t.label}</div></div>`;
-        });
+        // Left panel: tiles 3-5 (PDF, Whiteboard, Video)
+        const leftTiles = TILE_DATA.slice(3, 6);
+        // Center panel: tiles 0-2 + settings (Web, Photo, Note, Settings)
+        const centerTiles = [TILE_DATA[0], TILE_DATA[1], TILE_DATA[2], TILE_DATA[9]];
+        // Right panel: tiles 6-8 (Files, Image, Cast)
+        const rightTiles = TILE_DATA.slice(6, 9);
+        const makePanel = (tiles, cls) => {
+            const panel = document.createElement('div');
+            panel.className = `cockpit-panel ${cls}`;
+            tiles.forEach(t => {
+                panel.innerHTML += `<div class="tile" onclick="openModule('${t.id}')"><div class="icon">${t.icon}</div><div class="label">${t.label}</div></div>`;
+            });
+            return panel;
+        };
+        container.appendChild(makePanel(leftTiles, 'left'));
+        container.appendChild(makePanel(centerTiles, 'center'));
+        container.appendChild(makePanel(rightTiles, 'right'));
     }
     else if (layout === 'carousel') {
         label.textContent = '🎠 Carousel';
@@ -881,37 +958,37 @@ function updateLensActions() {
     );
 }
 
-// ========== CANVAS ZOOM ==========
-function setCanvasZoom(zoom) {
-    canvasZoom = zoom;
-    document.getElementById('canvasSpace').style.transform = `scale(${zoom})`;
-    document.getElementById('canvasZoomLabel').textContent = `Zoom: ${Math.round(zoom * 100)}%`;
-    updateCanvasActions();
+// ========== SPATIAL ZOOM ==========
+function setSpatialZoom(zoom) {
+    spatialZoom = zoom;
+    document.getElementById('spatialSpace').style.transform = `scale(${zoom})`;
+    document.getElementById('spatialZoomLabel').textContent = `Zoom: ${Math.round(zoom * 100)}%`;
+    updateSpatialActions();
 }
 
-function resetCanvasPositions() {
+function resetSpatialPositions() {
     const islands = document.querySelectorAll('.island');
     const positions = [
-        {top:40,left:60},{top:200,left:80},{top:80,left:360},{top:260,left:320},
-        {top:140,left:600},{top:350,left:550},{top:60,left:850},{top:300,left:820},
-        {top:400,left:180},{top:420,left:680},
+        {top:50,left:70},{top:180,left:140},{top:40,left:420},{top:230,left:310},
+        {top:110,left:650},{top:330,left:520},{top:70,left:900},{top:290,left:840},
+        {top:370,left:160},{top:400,left:700},
     ];
     islands.forEach((isl, i) => {
         if (positions[i]) { isl.style.top = positions[i].top + 'px'; isl.style.left = positions[i].left + 'px'; }
     });
-    setCanvasZoom(1.0);
+    setSpatialZoom(1.0);
 }
 
-function updateCanvasActions() {
+function updateSpatialActions() {
     const zooms = [
         { z: 1.0, label:'🔍 1.0x' },
         { z: 0.75, label:'🔍 0.75x' },
         { z: 0.5, label:'🔍 0.5x' },
         { z: 1.25, label:'🔍 1.25x' },
     ];
-    const items = zooms.map(z => ({ label: z.label, active: canvasZoom === z.z, action: () => setCanvasZoom(z.z) }));
-    items.push({ label:'↩️ Reset', active: false, action: resetCanvasPositions });
-    updateActionBar(items, 'Canvas Settings');
+    const items = zooms.map(z => ({ label: z.label, active: spatialZoom === z.z, action: () => setSpatialZoom(z.z) }));
+    items.push({ label:'↩️ Reset', active: false, action: resetSpatialPositions });
+    updateActionBar(items, 'Spatial Settings');
 }
 
 // ========== GENERIC ACTION BAR ==========
@@ -957,13 +1034,13 @@ function switchShell(shell) {
     document.getElementById('shellTabs').classList.remove('hidden');
     document.getElementById('backBtn').classList.remove('visible');
     document.getElementById('navTitle').textContent = 'Voice-First UI Shells';
-    const names = { classic:'Classic', 'avanue-views':'Avanue Views', lens:'Lens', canvas:'Canvas' };
+    const names = { classic:'Classic', 'avanue-views':'Avanue Views', lens:'Lens', spatial:'Spatial' };
     document.getElementById('shellBadge').textContent = names[shell] || shell;
 
     if (shell === 'classic') updateClassicActions();
     else if (shell === 'avanue-views') updateAVActions();
     else if (shell === 'lens') updateLensActions();
-    else if (shell === 'canvas') updateCanvasActions();
+    else if (shell === 'spatial') updateSpatialActions();
 }
 
 function openModule(mod) {
@@ -1011,7 +1088,7 @@ function onLensInput(query) {
     results.classList.add('visible');
 }
 
-// ========== CANVAS DRAGGING ==========
+// ========== SPATIAL DRAGGING ==========
 document.querySelectorAll('.island').forEach(island => {
     island.addEventListener('mousedown', function(e) {
         const rect = this.getBoundingClientRect();
@@ -1020,8 +1097,8 @@ document.querySelectorAll('.island').forEach(island => {
         let dragged = false;
         const onMove = (me) => {
             dragged = true;
-            this.style.left = Math.max(0, (me.clientX - container.left - ox) / canvasZoom) + 'px';
-            this.style.top = Math.max(0, (me.clientY - container.top - oy) / canvasZoom) + 'px';
+            this.style.left = Math.max(0, (me.clientX - container.left - ox) / spatialZoom) + 'px';
+            this.style.top = Math.max(0, (me.clientY - container.top - oy) / spatialZoom) + 'px';
         };
         const onUp = () => {
             document.removeEventListener('mousemove', onMove);
@@ -1037,7 +1114,7 @@ document.querySelectorAll('.island').forEach(island => {
 // ========== KEYBOARD SHORTCUTS ==========
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && currentModule) goBack();
-    const shells = ['classic','avanue-views','lens','canvas'];
+    const shells = ['classic','avanue-views','lens','spatial'];
     if (e.key >= '1' && e.key <= '4' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault(); switchShell(shells[parseInt(e.key)-1]);
     }
