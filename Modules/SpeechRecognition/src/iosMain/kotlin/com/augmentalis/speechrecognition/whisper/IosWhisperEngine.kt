@@ -82,7 +82,7 @@ class IosWhisperEngine {
 
     // State — guarded by stateLock since K/N has no AtomicReference
     private val stateLock = SynchronizedObject()
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var _engineState: WhisperEngineState = WhisperEngineState.UNINITIALIZED
     val state: WhisperEngineState get() = _engineState
 
@@ -95,7 +95,7 @@ class IosWhisperEngine {
     private var speechMode: SpeechMode = SpeechMode.DYNAMIC_COMMAND
 
     // Native context pointer (0 = not loaded)
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var contextPtr: Long = 0L
 
     // Components

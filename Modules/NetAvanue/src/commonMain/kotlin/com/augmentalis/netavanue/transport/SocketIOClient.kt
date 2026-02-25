@@ -48,7 +48,7 @@ class SocketIOClient(
     private var ackCounter = 0
     private val ackMutex = Mutex()
     private val pendingAcks = mutableMapOf<Int, CompletableDeferred<JsonElement?>>()
-    @Volatile private var connected = false
+    @kotlin.concurrent.Volatile private var connected = false
 
     /**
      * Connect to the Socket.IO server. The URL should be the base server URL

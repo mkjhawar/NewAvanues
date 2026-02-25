@@ -44,9 +44,9 @@ class WhisperPerformance : SynchronizedObject() {
     }
 
     // Initialization metrics
-    @Volatile var initTimeMs: Long = 0L; private set
-    @Volatile var modelSize: WhisperModelSize? = null; private set
-    @Volatile var initAttempts: Int = 0; private set
+    @kotlin.concurrent.Volatile var initTimeMs: Long = 0L; private set
+    @kotlin.concurrent.Volatile var modelSize: WhisperModelSize? = null; private set
+    @kotlin.concurrent.Volatile var initAttempts: Int = 0; private set
 
     // Transcription metrics (rolling window)
     private val latencySamples = ArrayDeque<Long>(MAX_SAMPLES)
@@ -54,20 +54,20 @@ class WhisperPerformance : SynchronizedObject() {
     private val confidenceSamples = ArrayDeque<Float>(MAX_SAMPLES)
 
     // Counters
-    @Volatile var totalTranscriptions: Int = 0; private set
-    @Volatile var emptyTranscriptions: Int = 0; private set
-    @Volatile var totalAudioProcessedMs: Long = 0; private set
-    @Volatile var totalProcessingTimeMs: Long = 0; private set
-    @Volatile var totalCharactersTranscribed: Long = 0; private set
-    @Volatile var totalSegments: Long = 0; private set
+    @kotlin.concurrent.Volatile var totalTranscriptions: Int = 0; private set
+    @kotlin.concurrent.Volatile var emptyTranscriptions: Int = 0; private set
+    @kotlin.concurrent.Volatile var totalAudioProcessedMs: Long = 0; private set
+    @kotlin.concurrent.Volatile var totalProcessingTimeMs: Long = 0; private set
+    @kotlin.concurrent.Volatile var totalCharactersTranscribed: Long = 0; private set
+    @kotlin.concurrent.Volatile var totalSegments: Long = 0; private set
 
     // Peaks
-    @Volatile var peakLatencyMs: Long = 0; private set
-    @Volatile var peakRTF: Float = 0f; private set
+    @kotlin.concurrent.Volatile var peakLatencyMs: Long = 0; private set
+    @kotlin.concurrent.Volatile var peakRTF: Float = 0f; private set
 
     // Language detection
-    @Volatile var detectedLanguage: String? = null; private set
-    @Volatile var languageDetectionCount: Int = 0; private set
+    @kotlin.concurrent.Volatile var detectedLanguage: String? = null; private set
+    @kotlin.concurrent.Volatile var languageDetectionCount: Int = 0; private set
 
     /**
      * Record engine initialization timing.

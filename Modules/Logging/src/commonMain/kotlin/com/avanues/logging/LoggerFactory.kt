@@ -48,7 +48,7 @@ var globalMinLevel: LogLevel
  * Internal configuration holder for thread-safe access
  */
 internal object LoggerFactoryConfig {
-    @Volatile
+    @kotlin.concurrent.Volatile
     var minLevel: LogLevel = LogLevel.VERBOSE
 }
 

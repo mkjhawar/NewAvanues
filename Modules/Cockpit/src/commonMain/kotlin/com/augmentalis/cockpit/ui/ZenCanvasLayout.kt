@@ -291,7 +291,7 @@ private fun computeIslandPositions(
     // Ring 1: 6 positions around center (hexagonal)
     val ring1Angles = listOf(0f, 60f, 120f, 180f, 240f, 300f)
     ring1Angles.forEach { angleDeg ->
-        val rad = angleDeg * (Math.PI.toFloat() / 180f)
+        val rad = angleDeg * (kotlin.math.PI.toFloat() / 180f)
         positions.add(
             IslandPosition(
                 xDp = kotlin.math.cos(rad) * spacing,
@@ -303,7 +303,7 @@ private fun computeIslandPositions(
     // Ring 2: 6 positions at 2x distance, offset by 30 degrees
     val ring2Angles = listOf(30f, 90f, 150f, 210f, 270f, 330f)
     ring2Angles.forEach { angleDeg ->
-        val rad = angleDeg * (Math.PI.toFloat() / 180f)
+        val rad = angleDeg * (kotlin.math.PI.toFloat() / 180f)
         positions.add(
             IslandPosition(
                 xDp = kotlin.math.cos(rad) * spacing * 2f,

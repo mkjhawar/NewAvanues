@@ -69,11 +69,11 @@ class VoiceOSCore private constructor(
     private val stateManager = ServiceStateManager()
 
     // Current speech engine
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var speechEngine: ISpeechEngine? = null
 
     // Synonym provider for fuzzy matching
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var activeSynonymProvider: ISynonymProvider? = synonymProvider
 
     /**
@@ -100,7 +100,7 @@ class VoiceOSCore private constructor(
      * Current speech mode — tracks the active recognition mode (COMBINED_COMMAND, DICTATION, MUTED, etc.)
      * Used by the accessibility service to gate command execution (e.g., suppress commands in MUTED mode).
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var currentSpeechMode: SpeechMode = SpeechMode.COMBINED_COMMAND
 
     /**
@@ -113,7 +113,7 @@ class VoiceOSCore private constructor(
      * Current speech configuration (set during init, updated during mode switch).
      * Used by setSpeechMode() to build new config without losing existing settings.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var currentSpeechConfig: SpeechConfig = SpeechConfig(
         language = configuration.voiceLanguage,
         confidenceThreshold = configuration.confidenceThreshold
@@ -135,7 +135,7 @@ class VoiceOSCore private constructor(
      * Included in the speech grammar alongside static + dynamic + app phrases.
      * Cleared when the foreground app switches away from the browser.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var webCommandPhrases: List<String> = emptyList()
 
     /**

@@ -29,7 +29,7 @@ object IosNoteControllerHolder {
      * Callback to execute a note command by its CommandActionType.
      * Returns true if the command was handled successfully.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     var onNoteCommand: ((CommandActionType) -> Boolean)? = null
 }
 

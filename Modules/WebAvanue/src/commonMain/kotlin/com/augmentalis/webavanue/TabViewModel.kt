@@ -31,7 +31,7 @@ class TabViewModel(
     // Thread safety
     private val stateMutex = Mutex()
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var isObservingTabs = false
 
     // State: Tabs

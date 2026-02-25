@@ -1,5 +1,8 @@
 package com.augmentalis.webavanue
 
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+
 /**
  * Tracker Blocker for WebAvanue
  *
@@ -8,7 +11,7 @@ package com.augmentalis.webavanue
  *
  * PHASE 2: Privacy & Security
  */
-class TrackerBlocker {
+class TrackerBlocker : SynchronizedObject() {
 
     private val trackerPatterns = listOf(
         // Social media trackers
@@ -64,13 +67,11 @@ class TrackerBlocker {
 
     fun getBlockedCount(): Int = blockedCount
 
-    @Synchronized
-    fun incrementBlocked() {
+    fun incrementBlocked() = synchronized(this) {
         blockedCount++
     }
 
-    @Synchronized
-    fun resetStats() {
+    fun resetStats() = synchronized(this) {
         blockedCount = 0
     }
 }

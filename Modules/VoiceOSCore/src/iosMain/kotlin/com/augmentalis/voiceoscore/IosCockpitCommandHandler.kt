@@ -30,7 +30,7 @@ object IosCockpitControllerHolder {
      * Callback to execute a cockpit command by its CommandActionType.
      * Returns true if the command was handled successfully.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     var onCockpitCommand: ((CommandActionType) -> Boolean)? = null
 }
 

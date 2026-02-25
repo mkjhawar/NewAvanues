@@ -162,7 +162,7 @@ class FrameworkHandlerRegistryImpl(
  * Global registry instance (for backward compatibility).
  */
 object FrameworkHandlerRegistryGlobal {
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var instance: FrameworkHandlerRegistryImpl? = null
     private val lock = SynchronizedObject()
 

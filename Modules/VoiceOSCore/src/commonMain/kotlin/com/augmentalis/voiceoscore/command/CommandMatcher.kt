@@ -44,11 +44,11 @@ object CommandMatcher {
     private val matchCache = linkedMapOf<String, MatchResult>()
 
     /** Generation counter — incremented on registry changes to invalidate cache */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var cacheGeneration: Long = 0
 
     /** Last known registry generation when cache was valid */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastRegistryGeneration: Long = -1
 
     /**

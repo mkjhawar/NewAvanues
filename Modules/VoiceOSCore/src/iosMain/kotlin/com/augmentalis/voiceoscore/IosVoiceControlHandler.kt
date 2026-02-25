@@ -23,13 +23,13 @@ private const val TAG = "IosVoiceControlHandler"
  * to wire voice commands to actual speech engine state changes.
  */
 object IosVoiceControlCallbacks {
-    @Volatile var onMuteVoice: (() -> Boolean)? = null
-    @Volatile var onWakeVoice: (() -> Boolean)? = null
-    @Volatile var onStartDictation: (() -> Boolean)? = null
-    @Volatile var onStopDictation: (() -> Boolean)? = null
-    @Volatile var onShowCommands: (() -> Boolean)? = null
-    @Volatile var onVoiceHelp: (() -> Boolean)? = null
-    @Volatile var onVoiceStatus: (() -> Boolean)? = null
+    @kotlin.concurrent.Volatile var onMuteVoice: (() -> Boolean)? = null
+    @kotlin.concurrent.Volatile var onWakeVoice: (() -> Boolean)? = null
+    @kotlin.concurrent.Volatile var onStartDictation: (() -> Boolean)? = null
+    @kotlin.concurrent.Volatile var onStopDictation: (() -> Boolean)? = null
+    @kotlin.concurrent.Volatile var onShowCommands: (() -> Boolean)? = null
+    @kotlin.concurrent.Volatile var onVoiceHelp: (() -> Boolean)? = null
+    @kotlin.concurrent.Volatile var onVoiceStatus: (() -> Boolean)? = null
 
     fun clear() {
         onMuteVoice = null

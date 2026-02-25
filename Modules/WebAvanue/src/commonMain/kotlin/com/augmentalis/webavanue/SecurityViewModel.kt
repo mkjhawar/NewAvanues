@@ -5,6 +5,8 @@ import com.augmentalis.webavanue.Logger
 import com.augmentalis.webavanue.BrowserRepository
 import com.augmentalis.foundation.viewmodel.BaseViewModel
 import com.augmentalis.foundation.state.NullableState
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.Clock
 
@@ -46,7 +48,8 @@ class SecurityViewModel(
     val httpAuthState: StateFlow<HttpAuthDialogState?> = _httpAuthState.flow
 
     // ========== Dialog Spam Prevention ==========
-    private val dialogTimestamps = java.util.Collections.synchronizedList(mutableListOf<Long>())
+    private val dialogLock = SynchronizedObject()
+    private val dialogTimestamps = mutableListOf<Long>()
     private val maxDialogsPerWindow = 3
     private val timeWindowMs = 10_000L
 
@@ -210,15 +213,13 @@ class SecurityViewModel(
 
     // ========== Dialog Spam Prevention ==========
 
-    @Synchronized
-    private fun isDialogSpamDetected(): Boolean {
+    private fun isDialogSpamDetected(): Boolean = synchronized(dialogLock) {
         val now = Clock.System.now().toEpochMilliseconds()
         dialogTimestamps.removeAll { (now - it) > timeWindowMs }
-        return dialogTimestamps.size >= maxDialogsPerWindow
+        dialogTimestamps.size >= maxDialogsPerWindow
     }
 
-    @Synchronized
-    private fun recordDialogShown() {
+    private fun recordDialogShown() = synchronized(dialogLock) {
         val now = Clock.System.now().toEpochMilliseconds()
         dialogTimestamps.add(now)
         if (dialogTimestamps.size >= maxDialogsPerWindow - 1) {

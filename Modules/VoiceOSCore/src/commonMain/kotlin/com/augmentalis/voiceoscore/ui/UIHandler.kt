@@ -67,7 +67,7 @@ class UIHandler(
      * Current disambiguation state.
      * When non-null, the system is waiting for user to say a number.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var activeDisambiguation: ActiveDisambiguation? = null
 
     /**

@@ -133,15 +133,15 @@ class SpeechEngineManager(
     private val _errors = MutableSharedFlow<SpeechError>(replay = 0)
     val errors: SharedFlow<SpeechError> = _errors.asSharedFlow()
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var activeEngine: ISpeechEngine? = null
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var activeEngineType: SpeechEngine? = null
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var isMuted = false
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var currentCommands: List<String> = emptyList()
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var currentConfig: SpeechConfig = SpeechConfig()
 
     // Track engine result collection job

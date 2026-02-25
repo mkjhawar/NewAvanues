@@ -83,6 +83,9 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
 
+                // Atomic operations for KMP thread safety
+                implementation(libs.kotlinx.atomicfu)
+
                 // Logging - Napier (KMP structured logging)
                 implementation(libs.napier)
 

@@ -90,13 +90,13 @@ class CachedAccessibilityData(
     /**
      * Cache for screen commands.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var screenCommandsCache: CacheEntry<List<QuantizedCommand>>? = null
 
     /**
      * Cache for command history.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var commandHistoryCache: CacheEntry<List<CommandHistoryEntry>>? = null
 
     /**
@@ -112,7 +112,7 @@ class CachedAccessibilityData(
     /**
      * Last known screen context for cache invalidation.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastScreenContext: ScreenContext? = null
 
     // =========================================================================
@@ -122,13 +122,13 @@ class CachedAccessibilityData(
     /**
      * Cache hit counter for monitoring.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var cacheHits: Long = 0L
 
     /**
      * Cache miss counter for monitoring.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var cacheMisses: Long = 0L
 
     // =========================================================================

@@ -88,11 +88,11 @@ data class JitProcessingResult(
  */
 class JitProcessor {
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var processingMode: ProcessingMode = ProcessingMode.IMMEDIATE
     private val queue = mutableListOf<ElementInfo>()
     private val queueLock = SynchronizedObject()
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var processedCount = 0
 
     /**
