@@ -163,14 +163,24 @@ kotlin {
                 implementation(project(":Modules:VoiceIsolation"))
 
                 // Vivoka VSDK - compileOnly
-                compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
-                compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
-                compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
+                // Resolved from GitLab Maven Package Registry; falls back to local files
+                if (file("${rootDir}/vivoka/vsdk-6.0.0.aar").exists()) {
+                    compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
+                    compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
+                    compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
+                } else {
+                    compileOnly("com.augmentalis.sdk:vsdk:6.0.0")
+                    compileOnly("com.augmentalis.sdk:vsdk-csdk-asr:2.0.0")
+                    compileOnly("com.augmentalis.sdk:vsdk-csdk-core:1.0.1")
+                }
 
                 // Sherpa-ONNX - AVX command engine (streaming transducer ASR + hot words)
-                // compileOnly until AAR is downloaded to sherpa-onnx/ directory
-                // Switch to implementation() when bundling in release builds
-                compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx.aar"))
+                // Resolved from GitLab Maven Package Registry; falls back to local files
+                if (file("${rootDir}/sherpa-onnx/sherpa-onnx.aar").exists()) {
+                    compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx.aar"))
+                } else {
+                    compileOnly("com.augmentalis.sdk:sherpa-onnx-android:1.5.5")
+                }
 
                 // OkHttp & Gson
                 implementation(libs.okhttp)
@@ -232,12 +242,13 @@ kotlin {
                 implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
 
                 // Sherpa-ONNX - AVX command engine (Desktop JVM)
-                // Requires sherpa-onnx-classes.jar extracted from the Android AAR:
-                //   unzip sherpa-onnx.aar classes.jar -d sherpa-onnx/
-                //   mv sherpa-onnx/classes.jar sherpa-onnx/sherpa-onnx-classes.jar
                 // Native libraries (.dylib/.so/.dll) must be on java.library.path at runtime.
-                // See sherpa-onnx/README.md for setup instructions.
-                compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx-classes.jar"))
+                // Resolved from GitLab Maven; falls back to local files.
+                if (file("${rootDir}/sherpa-onnx/sherpa-onnx-classes.jar").exists()) {
+                    compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx-classes.jar"))
+                } else {
+                    compileOnly("com.augmentalis.sdk:sherpa-onnx-classes:1.5.5")
+                }
             }
         }
 

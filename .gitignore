@@ -60,6 +60,13 @@ Modules/Whisper/
 # VLM model files (VoiceOS Language Models — large binary, downloaded on demand)
 VLMFiles/
 
+# Binary SDKs (resolved from GitLab Package Registry via scripts/setup-sdk.sh)
+vivoka/*.aar
+vivoka/Android/libs/*.jar
+vivoka/Android/src/main/jniLibs/
+sherpa-onnx/*.aar
+sherpa-onnx/*.jar
+
 # AVA Migration - Exclude large model files (>100MB)
 android/apps/AVA/external-models/**/*.bin
 android/apps/AVA/external-models/**/*.gguf
