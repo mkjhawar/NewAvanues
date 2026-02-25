@@ -13,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.remember
@@ -23,6 +22,7 @@ import com.augmentalis.cockpit.ui.ContentAction
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.handlers.ModuleCommandCallbacks
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 import com.augmentalis.annotationavanue.AnnotationCanvas
 import com.augmentalis.annotationavanue.SignatureCapture
 import com.augmentalis.annotationavanue.controller.AnnotationSerializer
@@ -36,6 +36,12 @@ import com.augmentalis.cockpit.ui.ExternalAppContent
 import com.augmentalis.cockpit.ui.FormContent
 import com.augmentalis.cockpit.ui.TerminalContent
 import com.augmentalis.cockpit.ui.WidgetContent
+import com.augmentalis.fileavanue.FileBrowserController
+import com.augmentalis.fileavanue.FileBrowserScreen
+import com.augmentalis.fileavanue.FileDetailSheet
+import com.augmentalis.fileavanue.FileManagerDashboard
+import com.augmentalis.fileavanue.createLocalStorageProvider
+import com.augmentalis.fileavanue.model.FileViewMode
 import com.augmentalis.imageavanue.ImageViewer
 import com.augmentalis.noteavanue.NoteEditor
 import com.augmentalis.pdfavanue.PdfViewer
@@ -43,6 +49,20 @@ import com.augmentalis.remotecast.CastOverlay
 import com.augmentalis.remotecast.model.CastState
 import com.augmentalis.videoavanue.VideoGalleryScreen
 import com.augmentalis.videoavanue.VideoPlayer
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.augmentalis.imageavanue.ImageGalleryScreen
 
 /**
  * Master content renderer that dispatches to the appropriate Avanue module
@@ -83,67 +103,94 @@ fun ContentRenderer(
             )
 
             is FrameContent.Pdf -> {
-                // Track current page for content action dispatch (prev/next page)
-                val pdfPage = remember { mutableStateOf(content.currentPage) }
+                if (content.uri.isBlank()) {
+                    val pdfLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.OpenDocument()
+                    ) { uri ->
+                        if (uri != null) {
+                            onContentStateChanged(frame.id, content.copy(uri = uri.toString()))
+                        }
+                    }
+                    ContentEmptyState(
+                        icon = Icons.Default.Description,
+                        title = "No PDF loaded",
+                        subtitle = "Tap below to open a file",
+                        buttonText = "Open PDF File",
+                        onAction = { pdfLauncher.launch(arrayOf("application/pdf")) },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    // Track current page for content action dispatch (prev/next page)
+                    val pdfPage = remember { mutableStateOf(content.currentPage) }
 
-                if (contentActionFlow != null) {
-                    LaunchedEffect(contentActionFlow) {
-                        contentActionFlow.collect { action ->
-                            when (action) {
-                                ContentAction.PDF_PREV_PAGE -> {
-                                    val newPage = (pdfPage.value - 1).coerceAtLeast(0)
-                                    pdfPage.value = newPage
-                                    onContentStateChanged(frame.id, content.copy(currentPage = newPage))
+                    if (contentActionFlow != null) {
+                        LaunchedEffect(contentActionFlow) {
+                            contentActionFlow.collect { action ->
+                                when (action) {
+                                    ContentAction.PDF_PREV_PAGE -> {
+                                        val newPage = (pdfPage.value - 1).coerceAtLeast(0)
+                                        pdfPage.value = newPage
+                                        onContentStateChanged(frame.id, content.copy(currentPage = newPage))
+                                    }
+                                    ContentAction.PDF_NEXT_PAGE -> {
+                                        val newPage = pdfPage.value + 1
+                                        pdfPage.value = newPage
+                                        onContentStateChanged(frame.id, content.copy(currentPage = newPage))
+                                    }
+                                    else -> { /* Not a PDF action */ }
                                 }
-                                ContentAction.PDF_NEXT_PAGE -> {
-                                    val newPage = pdfPage.value + 1
-                                    pdfPage.value = newPage
-                                    onContentStateChanged(frame.id, content.copy(currentPage = newPage))
-                                }
-                                else -> { /* Not a PDF action */ }
                             }
                         }
                     }
-                }
 
-                PdfViewer(
-                    uri = content.uri,
-                    initialPage = pdfPage.value,
-                    onPageChanged = { page ->
-                        pdfPage.value = page
-                        onContentStateChanged(frame.id, content.copy(currentPage = page))
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
+                    PdfViewer(
+                        uri = content.uri,
+                        initialPage = pdfPage.value,
+                        onPageChanged = { page ->
+                            pdfPage.value = page
+                            onContentStateChanged(frame.id, content.copy(currentPage = page))
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
 
             is FrameContent.Image -> {
-                val zoom = remember { mutableFloatStateOf(1f) }
-                val rotation = remember { mutableFloatStateOf(0f) }
+                if (content.uri.isBlank()) {
+                    ImageGalleryScreen(
+                        onImageSelected = { image ->
+                            onContentStateChanged(frame.id, content.copy(uri = image.uri))
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    val zoom = remember { mutableFloatStateOf(1f) }
+                    val rotation = remember { mutableFloatStateOf(0f) }
 
-                if (contentActionFlow != null) {
-                    LaunchedEffect(contentActionFlow) {
-                        contentActionFlow.collect { action ->
-                            when (action) {
-                                ContentAction.IMAGE_ZOOM_IN -> zoom.floatValue = (zoom.floatValue * 1.25f).coerceAtMost(5f)
-                                ContentAction.IMAGE_ZOOM_OUT -> zoom.floatValue = (zoom.floatValue / 1.25f).coerceAtLeast(0.2f)
-                                ContentAction.IMAGE_ROTATE -> rotation.floatValue = (rotation.floatValue + 90f) % 360f
-                                else -> { /* Not an image action */ }
+                    if (contentActionFlow != null) {
+                        LaunchedEffect(contentActionFlow) {
+                            contentActionFlow.collect { action ->
+                                when (action) {
+                                    ContentAction.IMAGE_ZOOM_IN -> zoom.floatValue = (zoom.floatValue * 1.25f).coerceAtMost(5f)
+                                    ContentAction.IMAGE_ZOOM_OUT -> zoom.floatValue = (zoom.floatValue / 1.25f).coerceAtLeast(0.2f)
+                                    ContentAction.IMAGE_ROTATE -> rotation.floatValue = (rotation.floatValue + 90f) % 360f
+                                    else -> { /* Not an image action */ }
+                                }
                             }
                         }
                     }
-                }
 
-                ImageViewer(
-                    uri = content.uri,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = zoom.floatValue
-                            scaleY = zoom.floatValue
-                            rotationZ = rotation.floatValue
-                        }
-                )
+                    ImageViewer(
+                        uri = content.uri,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = zoom.floatValue
+                                scaleY = zoom.floatValue
+                                rotationZ = rotation.floatValue
+                            }
+                    )
+                }
             }
 
             is FrameContent.Video -> {
@@ -337,6 +384,107 @@ fun ContentRenderer(
                 content = content,
                 modifier = Modifier.fillMaxSize()
             )
+
+            is FrameContent.File -> {
+                val provider = remember { createLocalStorageProvider() }
+                val controller = remember { FileBrowserController(listOf(provider)) }
+                val detailFile = remember { mutableStateOf<com.augmentalis.fileavanue.model.FileItem?>(null) }
+                val fileScope = androidx.compose.runtime.rememberCoroutineScope()
+
+                // Handle file content actions from CommandBar
+                if (contentActionFlow != null) {
+                    LaunchedEffect(contentActionFlow) {
+                        contentActionFlow.collect { action ->
+                            when (action) {
+                                ContentAction.FILE_UP -> controller.navigateToParent()
+                                ContentAction.FILE_SORT -> {
+                                    val modes = com.augmentalis.fileavanue.model.FileSortMode.entries
+                                    val current = controller.state.value.sortMode
+                                    val nextIndex = (modes.indexOf(current) + 1) % modes.size
+                                    controller.setSortMode(modes[nextIndex])
+                                }
+                                ContentAction.FILE_VIEW_MODE -> {
+                                    val current = controller.state.value.viewMode
+                                    controller.setViewMode(
+                                        if (current == FileViewMode.LIST) FileViewMode.GRID
+                                        else FileViewMode.LIST
+                                    )
+                                }
+                                ContentAction.FILE_SELECT_ALL -> controller.toggleSelectAll()
+                                ContentAction.FILE_SEARCH -> {
+                                    // Search is handled inline in FileBrowserScreen
+                                }
+                                else -> { /* Not a file action */ }
+                            }
+                        }
+                    }
+                }
+
+                // Load initial path
+                LaunchedEffect(content.path) {
+                    if (content.path.isNotBlank()) {
+                        controller.loadDirectory(content.path)
+                    }
+                }
+
+                if (content.path.isBlank()) {
+                    FileManagerDashboard(
+                        controller = controller,
+                        onCategorySelected = { category ->
+                            fileScope.launch {
+                                controller.loadCategory(category)
+                                onContentStateChanged(frame.id, content.copy(
+                                    path = "category:${category.name}"
+                                ))
+                            }
+                        },
+                        onPathSelected = { path ->
+                            fileScope.launch {
+                                controller.loadDirectory(path)
+                                onContentStateChanged(frame.id, content.copy(path = path))
+                            }
+                        },
+                        onFileSelected = { file ->
+                            if (file.isDirectory) {
+                                fileScope.launch {
+                                    controller.loadDirectory(file.uri)
+                                    onContentStateChanged(frame.id, content.copy(path = file.uri))
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    FileBrowserScreen(
+                        controller = controller,
+                        onFileOpened = { file ->
+                            // Could open in a new Cockpit frame based on MIME type
+                            detailFile.value = file
+                        },
+                        onFileDetail = { file ->
+                            detailFile.value = file
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // File detail bottom sheet
+                detailFile.value?.let { file ->
+                    FileDetailSheet(
+                        file = file,
+                        onDismiss = { detailFile.value = null },
+                        onDelete = { f ->
+                            fileScope.launch {
+                                controller.state.value.let { /* trigger delete via selection */ }
+                            }
+                            detailFile.value = null
+                        },
+                        onOpen = { f ->
+                            detailFile.value = null
+                        }
+                    )
+                }
+            }
 
             is FrameContent.ExternalApp -> {
                 val context = LocalContext.current
@@ -545,4 +693,53 @@ private fun calculateBoundingBox(lat: Double, lon: Double, zoom: Int): MapBBox {
         east = lon + span,
         north = lat + span / 2
     )
+}
+
+/**
+ * Reusable empty-state composable for file-based content types.
+ * Displays an icon, title, subtitle, and an action button (e.g., "Open PDF File").
+ * Follows the EmptySessionView pattern from CockpitScreenContent.
+ */
+@Composable
+private fun ContentEmptyState(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    buttonText: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = AvanueTheme.colors
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                icon,
+                contentDescription = title,
+                tint = colors.textPrimary.copy(alpha = 0.4f),
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = title,
+                color = colors.textPrimary.copy(alpha = 0.7f),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = subtitle,
+                color = colors.textPrimary.copy(alpha = 0.4f),
+                fontSize = 13.sp
+            )
+            Spacer(Modifier.height(20.dp))
+            Button(
+                onClick = onAction,
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                modifier = Modifier.semantics { contentDescription = "Voice: click $buttonText" }
+            ) {
+                Text(buttonText)
+            }
+        }
+    }
 }

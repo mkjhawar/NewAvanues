@@ -50,6 +50,10 @@ private val logger = LoggerFactory.getLogger("CockpitScreen")
  * @param deepLinkUri Optional deep link URI to process on first composition.
  *   Supports: cockpit://session/{id}, cockpit://module/{id},
  *   cockpit://layout/{mode}, cockpit://template/{id}, cockpit://dashboard
+ * @param userShellMode User's preferred shell mode from AvanuesSettings DataStore.
+ *   Empty string or null = use ViewModel default (LENS).
+ * @param devForceShellMode Developer override for shell mode.
+ *   Non-empty = overrides user preference. Empty or null = no override.
  */
 @Composable
 fun CockpitScreen(
@@ -58,6 +62,8 @@ fun CockpitScreen(
     onNavigateToSettings: () -> Unit = {},
     onSpecialModuleLaunch: (String) -> Unit = {},
     deepLinkUri: String? = null,
+    userShellMode: String? = null,
+    devForceShellMode: String? = null,
     modifier: Modifier = Modifier
 ) {
     val session by viewModel.activeSession.collectAsState()
@@ -90,6 +96,24 @@ fun CockpitScreen(
     val spatialSource = remember { AndroidSpatialOrientationSource(context) }
     val spatialController = remember(screenWidthPx, screenHeightPx) {
         SpatialViewportController(screenWidthPx, screenHeightPx)
+    }
+
+    // ── Shell Mode from DataStore ──
+    // Developer override takes priority over user preference.
+    // Only apply when value changes to avoid resetting on recomposition.
+    LaunchedEffect(userShellMode, devForceShellMode) {
+        val effectiveMode = when {
+            !devForceShellMode.isNullOrEmpty() -> devForceShellMode
+            !userShellMode.isNullOrEmpty() -> userShellMode
+            else -> null
+        }
+        if (effectiveMode != null) {
+            val parsed = SimplifiedShellMode.fromString(effectiveMode)
+            if (parsed != viewModel.shellMode.value) {
+                logger.d { "Shell mode from DataStore: $effectiveMode → $parsed" }
+                viewModel.setShellMode(parsed)
+            }
+        }
     }
 
     // Connect/disconnect spatial pipeline with composition lifecycle
