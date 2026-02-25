@@ -563,6 +563,7 @@ class CockpitViewModel(
         FrameContent.TYPE_AI_SUMMARY, "ai_summary" -> FrameContent.AiSummary()
         FrameContent.TYPE_SCREEN_CAST, "screencast", "screen_cast" -> FrameContent.ScreenCast()
         FrameContent.TYPE_WIDGET, "widget" -> FrameContent.Widget()
+        FrameContent.TYPE_FILE, "file" -> FrameContent.File()
         FrameContent.TYPE_EXTERNAL_APP, "external_app" -> FrameContent.ExternalApp()
         "cursor" -> null // Cursor control is handled via VoiceOSCore, not a frame content
         else -> null

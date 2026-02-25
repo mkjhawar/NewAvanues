@@ -49,8 +49,8 @@ class FrameContentTest {
     // ── ALL_TYPES Completeness ────────────────────────────────────
 
     @Test
-    fun `ALL_TYPES contains exactly 17 entries`() {
-        assertEquals(17, FrameContent.ALL_TYPES.size)
+    fun `ALL_TYPES contains exactly 18 entries`() {
+        assertEquals(18, FrameContent.ALL_TYPES.size)
     }
 
     @Test
@@ -59,7 +59,8 @@ class FrameContentTest {
             "web", "pdf", "image", "video", "note", "camera",
             "voice_note", "form", "signature", "voice",
             "map", "whiteboard", "terminal",
-            "ai_summary", "screen_cast", "widget", "external_app"
+            "ai_summary", "screen_cast", "widget",
+            "file", "external_app"
         )
         expected.forEach { typeId ->
             assertTrue(

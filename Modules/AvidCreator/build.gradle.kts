@@ -132,6 +132,10 @@ kotlin {
             iosX64Main.dependsOn(this)
             iosArm64Main.dependsOn(this)
             iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                // Compose runtime needed for kotlin.compose plugin on iOS targets
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+            }
         }
     }
 }
