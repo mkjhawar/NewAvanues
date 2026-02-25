@@ -683,33 +683,34 @@ enum class CommandActionType {
     LAYOUT_PRESENT,
 
     // ── Shell Mode Commands ──────────────────────────────────────
-    // Switches between the 4 Cockpit home screen variations.
+    // Switches between the 4 Cockpit home screen shells.
+    // Names follow Avanues brand convention (Chapter 99).
 
-    /** Switch to Classic dashboard shell (original tile grid) */
-    SHELL_CLASSIC,
+    /** Switch to CockpitAvanue dashboard + workspace shell */
+    SHELL_COCKPIT_AVANUE,
 
-    /** Switch to AvanueViews ambient stream shell */
-    SHELL_AVANUE_VIEWS,
+    /** Switch to MapViews ambient card stream shell */
+    SHELL_MAP_VIEWS,
 
-    /** Switch to Lens command palette shell */
-    SHELL_LENS,
+    /** Switch to SearchAvanue command palette shell */
+    SHELL_SEARCH_AVANUE,
 
-    /** Switch to Canvas spatial zen shell */
-    SHELL_CANVAS,
+    /** Switch to SpaceAvanue spatial zen canvas shell */
+    SHELL_SPACE_AVANUE,
 
     // ── Shell-Specific Navigation ────────────────────────────────
 
-    /** AvanueViews: next card in stream */
-    STREAM_NEXT_CARD,
+    /** MapViews: next card in stream */
+    MAP_NEXT_CARD,
 
-    /** AvanueViews: previous card in stream */
-    STREAM_PREVIOUS_CARD,
+    /** MapViews: previous card in stream */
+    MAP_PREVIOUS_CARD,
 
-    /** Canvas: zoom in on canvas */
-    CANVAS_ZOOM_IN,
+    /** SpaceAvanue: zoom in on canvas */
+    SPACE_ZOOM_IN,
 
-    /** Canvas: zoom out on canvas */
-    CANVAS_ZOOM_OUT,
+    /** SpaceAvanue: zoom out on canvas */
+    SPACE_ZOOM_OUT,
 
     // ═══════════════════════════════════════════════════════════════
     // PDF Viewing Actions
