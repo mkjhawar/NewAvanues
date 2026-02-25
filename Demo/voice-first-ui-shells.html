@@ -5,713 +5,1050 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voice-First UI Shells — Avanues Cockpit</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --hydra-primary: #1565C0;
-            --hydra-secondary: #42A5F5;
-            --hydra-surface: #121212;
-            --hydra-on-surface: #FFFFFF;
-            --hydra-on-surface-variant: #E0E0E0;
-            --hydra-scrim: rgba(0, 0, 0, 0.4);
-            --glass-effect: rgba(255, 255, 255, 0.08);
+            --primary: #1565C0;
+            --secondary: #42A5F5;
+            --surface: #121212;
+            --surface2: #1e1e2e;
+            --on-surface: #FFFFFF;
+            --on-surface-dim: #B0B0B0;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --accent-green: #4CAF50;
+            --accent-orange: #FF9800;
+            --accent-red: #F44336;
+            --accent-purple: #9C27B0;
+            --radius: 12px;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
-            color: var(--hydra-on-surface);
+            color: var(--on-surface);
             min-height: 100vh;
-            padding: 20px;
+            overflow: hidden;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        .app-frame { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+
+        /* === STATUS BAR === */
+        .status-bar {
+            height: 28px; background: rgba(0,0,0,0.6); display: flex;
+            align-items: center; justify-content: space-between;
+            padding: 0 16px; font-size: 11px; color: var(--on-surface-dim); flex-shrink: 0;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 30px 20px;
-            border-bottom: 1px solid rgba(21, 101, 192, 0.2);
+        /* === TOP NAV === */
+        .top-nav {
+            height: 52px; background: rgba(18, 18, 18, 0.9); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(21, 101, 192, 0.15);
+            display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0;
+        }
+        .back-btn {
+            background: none; border: none; color: var(--secondary);
+            font-size: 18px; cursor: pointer; padding: 4px 8px;
+            border-radius: 8px; transition: background 150ms; display: none;
+        }
+        .back-btn:hover { background: var(--glass); }
+        .back-btn.visible { display: flex; }
+        .nav-title {
+            font-size: 16px; font-weight: 700;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; flex: 1;
+        }
+        .shell-badge {
+            font-size: 11px; padding: 4px 10px;
+            background: rgba(21,101,192,0.2); border: 1px solid var(--glass-border);
+            border-radius: 12px; color: var(--secondary);
         }
 
-        h1 {
-            font-size: 2.5em;
-            font-weight: 700;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, var(--hydra-secondary), var(--hydra-primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        /* === SHELL TABS === */
+        .shell-tabs {
+            height: 44px; background: rgba(18, 18, 18, 0.6);
+            display: flex; align-items: center; gap: 4px; padding: 0 16px;
+            border-bottom: 1px solid rgba(21, 101, 192, 0.08); flex-shrink: 0;
         }
-
-        .subtitle {
-            font-size: 1.1em;
-            color: var(--hydra-on-surface-variant);
-            margin-bottom: 20px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 30px;
-            border-bottom: 1px solid rgba(21, 101, 192, 0.1);
-            overflow-x: auto;
-            padding-bottom: 12px;
-        }
-
+        .shell-tabs.hidden { display: none; }
         .tab-btn {
-            padding: 12px 24px;
-            background: transparent;
-            border: none;
-            color: var(--hydra-on-surface-variant);
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 200ms ease;
-            white-space: nowrap;
+            padding: 8px 18px; background: transparent; border: none;
+            color: var(--on-surface-dim); font-size: 13px; font-weight: 600;
+            cursor: pointer; border-bottom: 2px solid transparent;
+            transition: all 150ms; white-space: nowrap;
         }
+        .tab-btn:hover { color: var(--on-surface); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-        .tab-btn:hover {
-            color: var(--hydra-on-surface);
-            border-bottom-color: rgba(21, 101, 192, 0.3);
-        }
+        /* === VIEWPORT === */
+        .viewport { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; }
+        .screen { display: none; height: 100%; }
+        .screen.active { display: flex; flex-direction: column; animation: fadeIn 250ms ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-        .tab-btn.active {
-            color: var(--hydra-primary);
-            border-bottom-color: var(--hydra-primary);
-        }
-
-        .shell-content {
-            display: none;
-        }
-
-        .shell-content.active {
-            display: block;
-            animation: fadeIn 300ms ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Shared shell styling */
-        .shell-container {
-            background: var(--hydra-surface);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-effect);
-        }
-
-        .shell-viewport {
-            min-height: 600px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        /* Top bar */
-        .top-bar {
-            background: rgba(18, 18, 18, 0.8);
-            border-bottom: 1px solid rgba(21, 101, 192, 0.1);
-            padding: 16px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .top-bar-title {
-            font-size: 1.1em;
-            font-weight: 600;
-            color: var(--hydra-primary);
-        }
-
-        /* CLASSIC Shell */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 16px;
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .module-tile {
-            aspect-ratio: 1;
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.2), rgba(66, 165, 245, 0.1));
-            border: 1px solid var(--glass-effect);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 200ms ease;
-            gap: 8px;
-        }
-
-        .module-tile:hover {
-            transform: translateY(-4px);
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.3), rgba(66, 165, 245, 0.2));
-            border-color: var(--hydra-primary);
-        }
-
-        .module-icon {
-            font-size: 2em;
-        }
-
-        .module-name {
-            font-size: 0.85em;
-            font-weight: 600;
-            text-align: center;
-            color: var(--hydra-on-surface-variant);
-        }
-
-        /* AVANUE_VIEWS Shell */
-        .card-stream {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .ambient-card {
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.15), rgba(66, 165, 245, 0.05));
-            border: 1px solid var(--glass-effect);
-            border-radius: 12px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 200ms ease;
-        }
-
-        .ambient-card:hover {
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.25), rgba(66, 165, 245, 0.15));
-            border-color: var(--hydra-primary);
-        }
-
-        .card-title {
-            font-size: 1.1em;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--hydra-on-surface);
-        }
-
-        .card-preview {
-            font-size: 0.9em;
-            color: var(--hydra-on-surface-variant);
-            line-height: 1.5;
-            margin-bottom: 12px;
-        }
-
-        .card-action {
-            display: inline-block;
-            background: rgba(21, 101, 192, 0.2);
-            color: var(--hydra-primary);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.85em;
-            font-weight: 600;
-            border: 1px solid var(--hydra-primary);
-        }
-
-        /* LENS Shell */
-        .lens-viewport {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            padding: 40px 20px;
-            text-align: center;
-        }
-
-        .search-bar {
-            width: 100%;
-            max-width: 500px;
-            height: 56px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid var(--hydra-primary);
-            border-radius: 28px;
-            padding: 0 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 30px;
-            font-size: 1em;
-            color: var(--hydra-on-surface);
-        }
-
-        .search-icon {
-            font-size: 1.3em;
-            opacity: 0.6;
-        }
-
-        .search-placeholder {
-            color: var(--hydra-on-surface-variant);
-            flex: 1;
-            text-align: left;
-        }
-
-        .quick-results {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
-            width: 100%;
-            max-width: 500px;
-            margin-top: 20px;
-        }
-
-        .result-chip {
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.2), rgba(66, 165, 245, 0.1));
-            border: 1px solid var(--glass-effect);
-            border-radius: 24px;
-            padding: 12px 16px;
-            cursor: pointer;
-            transition: all 150ms ease;
-            text-align: center;
-            font-size: 0.9em;
-            font-weight: 600;
-        }
-
-        .result-chip:hover {
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.3), rgba(66, 165, 245, 0.2));
-            border-color: var(--hydra-primary);
-            transform: scale(1.05);
-        }
-
-        /* CANVAS Shell */
-        .canvas-viewport {
-            position: relative;
-            flex: 1;
-            background: radial-gradient(circle at 50% 50%, rgba(21, 101, 192, 0.05), transparent);
-            overflow: hidden;
-        }
-
-        .canvas-grid {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-image:
-                linear-gradient(rgba(21, 101, 192, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(21, 101, 192, 0.05) 1px, transparent 1px);
-            background-size: 50px 50px;
-        }
-
-        .canvas-island {
-            position: absolute;
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.25), rgba(66, 165, 245, 0.15));
-            border: 1px solid var(--glass-effect);
-            border-radius: 12px;
-            padding: 20px;
-            cursor: grab;
-            transition: all 200ms ease;
-            min-width: 140px;
-            text-align: center;
-        }
-
-        .canvas-island:hover {
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.35), rgba(66, 165, 245, 0.25));
-            border-color: var(--hydra-primary);
-            box-shadow: 0 10px 30px rgba(21, 101, 192, 0.3);
-        }
-
-        .canvas-island:active {
-            cursor: grabbing;
-        }
-
-        .island-icon {
-            font-size: 1.8em;
-            margin-bottom: 8px;
-        }
-
-        .island-label {
-            font-size: 0.85em;
-            font-weight: 600;
-            color: var(--hydra-on-surface-variant);
-        }
-
-        /* Action Bar (Bottom) */
+        /* === ACTION BAR === */
         .action-bar {
-            background: rgba(18, 18, 18, 0.9);
+            height: 52px; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(20px);
             border-top: 1px solid rgba(21, 101, 192, 0.1);
-            padding: 16px 20px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            overflow-x: auto;
+            display: flex; align-items: center; gap: 8px; padding: 0 16px; flex-shrink: 0; overflow-x: auto;
         }
-
         .action-chip {
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.2), rgba(66, 165, 245, 0.1));
-            border: 1px solid var(--glass-effect);
-            color: var(--hydra-on-surface);
-            padding: 10px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 150ms ease;
-            white-space: nowrap;
-            font-size: 0.9em;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            background: rgba(21,101,192,0.15); border: 1px solid var(--glass-border);
+            color: var(--on-surface); padding: 7px 14px; border-radius: 18px;
+            cursor: pointer; transition: all 150ms; white-space: nowrap;
+            font-size: 12px; font-weight: 600;
+        }
+        .action-chip:hover { background: rgba(21,101,192,0.3); border-color: var(--primary); color: var(--primary); }
+        .action-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .action-spacer { flex: 1; }
+        .action-more {
+            background: var(--primary); color: #fff; border: none;
+            padding: 7px 16px; border-radius: 18px; cursor: pointer;
+            font-weight: 600; font-size: 12px; transition: all 150ms;
+        }
+        .action-more:hover { background: var(--secondary); }
+
+        /* ========== CLASSIC SHELL — ALL 4 LAYOUTS ========== */
+
+        /* Grid layout (default) */
+        .layout-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 14px; padding: 20px; flex: 1; align-content: start;
+        }
+        .tile {
+            aspect-ratio: 1; background: linear-gradient(135deg, rgba(21,101,192,0.18), rgba(66,165,245,0.08));
+            border: 1px solid var(--glass-border); border-radius: var(--radius);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 200ms; gap: 8px;
+        }
+        .tile:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 8px 24px rgba(21,101,192,0.25); }
+        .tile .icon { font-size: 2em; }
+        .tile .label { font-size: 12px; font-weight: 600; color: var(--on-surface-dim); }
+
+        /* Cockpit layout — hero center + flanking */
+        .layout-cockpit {
+            display: grid; gap: 14px; padding: 20px; flex: 1; align-content: start;
+            grid-template-columns: 1fr 1.8fr 1fr;
+            grid-template-rows: auto auto auto;
+        }
+        .layout-cockpit .tile { aspect-ratio: auto; min-height: 80px; }
+        .layout-cockpit .tile.hero {
+            grid-column: 2; grid-row: 1 / 3;
+            min-height: 200px; font-size: 1.2em;
+            background: linear-gradient(135deg, rgba(21,101,192,0.3), rgba(66,165,245,0.15));
+            border-color: var(--primary);
+            box-shadow: 0 4px 30px rgba(21,101,192,0.2);
+        }
+        .layout-cockpit .tile.hero .icon { font-size: 3.5em; }
+        .layout-cockpit .tile.hero .label { font-size: 16px; color: var(--secondary); }
+
+        /* Carousel layout — horizontal scroll */
+        .layout-carousel {
+            display: flex; gap: 16px; padding: 20px; flex: 1; align-items: stretch;
+            overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+        }
+        .layout-carousel .tile {
+            flex: 0 0 220px; aspect-ratio: auto; min-height: 260px;
+            scroll-snap-align: start;
+        }
+        .layout-carousel .tile .icon { font-size: 3em; }
+        .layout-carousel .tile .label { font-size: 14px; }
+
+        /* Freeform layout — scattered absolute */
+        .layout-freeform {
+            position: relative; flex: 1; overflow: hidden;
+            background: radial-gradient(circle at 50% 50%, rgba(21,101,192,0.03), transparent);
+        }
+        .layout-freeform .grid-dots {
+            position: absolute; inset: 0;
+            background-image: radial-gradient(rgba(21,101,192,0.08) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .layout-freeform .tile {
+            position: absolute; aspect-ratio: auto;
+            width: 130px; min-height: 100px; cursor: grab;
+        }
+        .layout-freeform .tile:active { cursor: grabbing; }
+
+        /* ========== AVANUEVIEWS SHELL ========== */
+        .card-stream { display: flex; flex-direction: column; gap: 12px; padding: 16px; flex: 1; }
+        .card-stream.layout-compact { gap: 4px; }
+        .card-stream.layout-compact .stream-card { padding: 10px 14px; }
+        .card-stream.layout-compact .card-body { display: none; }
+        .card-stream.layout-grid-view { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .card-stream.layout-timeline { border-left: 2px solid var(--glass-border); margin-left: 32px; padding-left: 20px; }
+        .card-stream.layout-timeline .stream-card { position: relative; }
+        .card-stream.layout-timeline .stream-card::before {
+            content: ''; position: absolute; left: -27px; top: 18px;
+            width: 10px; height: 10px; border-radius: 50%; background: var(--primary);
+        }
+        .stream-card {
+            background: linear-gradient(135deg, rgba(21,101,192,0.12), rgba(66,165,245,0.04));
+            border: 1px solid var(--glass-border); border-radius: var(--radius);
+            padding: 16px; cursor: pointer; transition: all 200ms;
+        }
+        .stream-card:hover { border-color: var(--primary); box-shadow: 0 4px 16px rgba(21,101,192,0.2); }
+        .stream-card .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .stream-card .card-icon { font-size: 1.3em; }
+        .stream-card .card-title { font-weight: 700; font-size: 14px; }
+        .stream-card .card-meta { font-size: 11px; color: var(--on-surface-dim); margin-left: auto; }
+        .stream-card .card-body { font-size: 13px; color: var(--on-surface-dim); line-height: 1.5; margin-bottom: 10px; }
+        .stream-card .card-cta {
+            display: inline-block; background: rgba(21,101,192,0.2); color: var(--primary);
+            padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+            border: 1px solid rgba(21,101,192,0.3);
+        }
+        .stream-card.hidden-card { display: none; }
+
+        /* ========== LENS SHELL ========== */
+        .lens-center { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 40px 20px; }
+        .search-bar {
+            width: 100%; max-width: 520px; height: 52px;
+            background: rgba(255,255,255,0.06); border: 1px solid var(--primary);
+            border-radius: 26px; padding: 0 20px; display: flex; align-items: center; gap: 10px;
+            margin-bottom: 28px;
+        }
+        .search-bar input { flex: 1; background: none; border: none; color: var(--on-surface); font-size: 14px; outline: none; }
+        .search-bar input::placeholder { color: var(--on-surface-dim); }
+        .search-bar .mic { font-size: 18px; cursor: pointer; opacity: 0.7; transition: opacity 150ms; }
+        .search-bar .mic:hover { opacity: 1; }
+        .quick-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 10px; width: 100%; max-width: 520px;
+        }
+        .quick-grid.layout-list { grid-template-columns: 1fr; max-width: 400px; }
+        .quick-grid.layout-compact { grid-template-columns: repeat(6, 1fr); gap: 6px; }
+        .quick-chip {
+            background: rgba(21,101,192,0.15); border: 1px solid var(--glass-border);
+            border-radius: 20px; padding: 10px 14px; cursor: pointer;
+            transition: all 150ms; text-align: center; font-size: 13px; font-weight: 600;
+        }
+        .quick-chip:hover { background: rgba(21,101,192,0.3); border-color: var(--primary); transform: scale(1.04); }
+        .lens-results {
+            width: 100%; max-width: 520px; margin-top: 20px;
+            display: none; flex-direction: column; gap: 6px;
+        }
+        .lens-results.visible { display: flex; }
+        .lens-result-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; background: var(--glass); border-radius: 8px;
+            cursor: pointer; transition: background 150ms; font-size: 13px;
+        }
+        .lens-result-item:hover { background: rgba(21,101,192,0.2); }
+        .lens-result-item .r-icon { font-size: 16px; }
+        .lens-result-item .r-label { flex: 1; }
+        .lens-result-item .r-type { font-size: 11px; color: var(--on-surface-dim); }
+
+        /* ========== CANVAS SHELL ========== */
+        .canvas-space {
+            flex: 1; position: relative; overflow: hidden;
+            background: radial-gradient(circle at 50% 50%, rgba(21,101,192,0.04), transparent);
+            transition: transform 300ms ease;
+            transform-origin: center center;
+        }
+        .canvas-space .grid-bg {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(21,101,192,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(21,101,192,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .island {
+            position: absolute; background: linear-gradient(135deg, rgba(21,101,192,0.22), rgba(66,165,245,0.12));
+            border: 1px solid var(--glass-border); border-radius: var(--radius);
+            padding: 16px 20px; cursor: grab; transition: box-shadow 200ms, border-color 200ms;
+            text-align: center; min-width: 130px; user-select: none;
+        }
+        .island:hover { border-color: var(--primary); box-shadow: 0 8px 28px rgba(21,101,192,0.3); }
+        .island:active { cursor: grabbing; }
+        .island .i-icon { font-size: 1.6em; margin-bottom: 6px; }
+        .island .i-label { font-size: 12px; font-weight: 600; color: var(--on-surface-dim); }
+        .canvas-zoom-label {
+            position: absolute; bottom: 12px; right: 16px; font-size: 11px;
+            color: var(--on-surface-dim); background: rgba(0,0,0,0.5); padding: 3px 10px;
+            border-radius: 8px;
         }
 
-        .action-chip:hover {
-            background: linear-gradient(135deg, rgba(21, 101, 192, 0.3), rgba(66, 165, 245, 0.2));
-            border-color: var(--hydra-primary);
-            color: var(--hydra-primary);
+        /* ========== MODULE SCREENS ========== */
+        .module-screen { flex: 1; display: flex; flex-direction: column; }
+        .module-header {
+            padding: 16px 20px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid rgba(21,101,192,0.08);
+        }
+        .module-header .m-icon { font-size: 1.6em; }
+        .module-header .m-info { flex: 1; }
+        .module-header .m-title { font-size: 15px; font-weight: 700; }
+        .module-header .m-sub { font-size: 11px; color: var(--on-surface-dim); }
+        .module-body { flex: 1; padding: 20px; overflow-y: auto; }
+
+        /* Browser mock */
+        .browser-mock { background: var(--surface2); border-radius: 8px; overflow: hidden; }
+        .browser-url {
+            display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+            background: rgba(0,0,0,0.3); font-size: 12px;
+        }
+        .browser-url .url-pill {
+            flex: 1; background: rgba(255,255,255,0.06); padding: 6px 12px;
+            border-radius: 16px; color: var(--on-surface-dim); font-size: 12px;
+        }
+        .browser-content { height: 360px; background: #1a1a2e; display: flex; align-items: center; justify-content: center; color: var(--on-surface-dim); font-size: 14px; flex-direction: column; gap: 8px; }
+
+        /* Editor mock */
+        .editor-mock { background: var(--surface2); border-radius: 8px; padding: 16px; min-height: 300px; }
+        .editor-toolbar {
+            display: flex; gap: 6px; padding-bottom: 12px; margin-bottom: 12px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .editor-toolbar button {
+            background: var(--glass); border: 1px solid var(--glass-border); color: var(--on-surface);
+            padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
+        }
+        .editor-body { font-size: 14px; line-height: 1.8; color: var(--on-surface-dim); }
+        .editor-body p { margin-bottom: 12px; }
+
+        /* PDF mock */
+        .pdf-mock { background: var(--surface2); border-radius: 8px; display: flex; flex-direction: column; align-items: center; padding: 20px; gap: 16px; }
+        .pdf-page {
+            width: 100%; max-width: 500px; aspect-ratio: 8.5/11; background: #2a2a3e;
+            border-radius: 4px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid var(--glass-border);
+        }
+        .pdf-page-num { font-size: 12px; color: var(--on-surface-dim); }
+
+        /* Camera mock */
+        .camera-mock {
+            background: #000; border-radius: 8px; aspect-ratio: 4/3; display: flex;
+            align-items: center; justify-content: center; position: relative; overflow: hidden;
+        }
+        .camera-mock .viewfinder { font-size: 60px; opacity: 0.3; }
+        .cam-controls {
+            position: absolute; bottom: 16px; left: 0; right: 0;
+            display: flex; justify-content: center; gap: 20px;
+        }
+        .cam-btn {
+            width: 56px; height: 56px; border-radius: 50%; border: 3px solid #fff;
+            background: rgba(255,255,255,0.1); cursor: pointer; transition: all 150ms;
+        }
+        .cam-btn:hover { background: rgba(255,255,255,0.3); }
+        .cam-btn.shutter { width: 64px; height: 64px; background: rgba(244,67,54,0.4); border-color: #F44336; }
+
+        /* Video mock */
+        .video-mock {
+            background: #000; border-radius: 8px; aspect-ratio: 16/9; display: flex;
+            align-items: center; justify-content: center; position: relative;
+        }
+        .video-mock .play-btn { font-size: 48px; opacity: 0.7; cursor: pointer; }
+        .time-bar {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 36px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            display: flex; align-items: center; padding: 0 12px; gap: 8px; font-size: 11px;
+        }
+        .progress { flex: 1; height: 3px; background: rgba(255,255,255,0.2); border-radius: 2px; }
+        .progress-fill { height: 100%; width: 35%; background: var(--primary); border-radius: 2px; }
+
+        /* Whiteboard mock */
+        .whiteboard-mock {
+            background: #1a1a2e; border-radius: 8px; aspect-ratio: 16/10;
+            position: relative; border: 1px solid var(--glass-border); overflow: hidden;
+        }
+        .wb-toolbar {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        .wb-tool {
+            width: 36px; height: 36px; border-radius: 8px; background: var(--glass);
+            border: 1px solid var(--glass-border); display: flex; align-items: center;
+            justify-content: center; cursor: pointer; font-size: 14px;
+        }
+        .wb-tool.selected { background: rgba(21,101,192,0.3); border-color: var(--primary); }
+        .whiteboard-mock svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+        /* Files mock */
+        .files-mock { display: flex; flex-direction: column; gap: 4px; }
+        .file-row {
+            display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+            background: var(--glass); border-radius: 8px; cursor: pointer; transition: background 150ms;
+        }
+        .file-row:hover { background: rgba(21,101,192,0.15); }
+        .f-icon { font-size: 1.3em; } .f-name { flex: 1; font-size: 13px; font-weight: 600; }
+        .f-size { font-size: 11px; color: var(--on-surface-dim); } .f-date { font-size: 11px; color: var(--on-surface-dim); }
+
+        /* Settings mock */
+        .settings-mock { display: flex; flex-direction: column; gap: 2px; }
+        .settings-section { font-size: 11px; font-weight: 700; color: var(--primary); padding: 12px 14px 4px; text-transform: uppercase; letter-spacing: 1px; }
+        .settings-row {
+            display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+            background: var(--glass); border-radius: 8px; cursor: pointer; transition: background 150ms;
+        }
+        .settings-row:hover { background: rgba(21,101,192,0.12); }
+        .s-label { flex: 1; font-size: 13px; } .s-value { font-size: 12px; color: var(--on-surface-dim); }
+        .toggle { width: 40px; height: 22px; border-radius: 11px; background: rgba(255,255,255,0.15); position: relative; cursor: pointer; }
+        .toggle.on { background: var(--primary); }
+        .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: left 150ms; }
+        .toggle.on::after { left: 20px; }
+
+        /* Image gallery */
+        .image-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .gallery-thumb {
+            aspect-ratio: 1; background: linear-gradient(135deg, rgba(21,101,192,0.2), rgba(66,165,245,0.1));
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-size: 2em; cursor: pointer; transition: all 150ms; border: 1px solid var(--glass-border);
+        }
+        .gallery-thumb:hover { border-color: var(--primary); transform: scale(1.03); }
+
+        /* Cast mock */
+        .cast-mock { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 30px; }
+        .cast-status { font-size: 48px; }
+        .cast-label { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .cast-sub { font-size: 12px; color: var(--on-surface-dim); }
+        .cast-btn {
+            background: var(--accent-green); color: #fff; border: none;
+            padding: 12px 32px; border-radius: 24px; font-size: 14px; font-weight: 700; cursor: pointer;
         }
 
-        .action-icon {
-            font-size: 1.1em;
-        }
-
-        .action-spacer {
-            flex: 1;
-        }
-
-        .more-button {
-            background: var(--hydra-primary);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 150ms ease;
-        }
-
-        .more-button:hover {
-            background: var(--hydra-secondary);
-            transform: translateY(-2px);
-        }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 40px 20px 20px;
-            color: var(--hydra-on-surface-variant);
-            font-size: 0.9em;
-            border-top: 1px solid rgba(21, 101, 192, 0.1);
-            margin-top: 40px;
-        }
-
-        .credit {
-            margin-bottom: 8px;
-        }
-
-        .version {
-            font-size: 0.85em;
-            opacity: 0.7;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8em;
-            }
-
-            .shell-viewport {
-                min-height: 500px;
-            }
-
-            .tabs {
-                flex-wrap: wrap;
-            }
-
-            .tab-btn {
-                padding: 10px 16px;
-                font-size: 0.9em;
-            }
+        /* Layout indicator */
+        .layout-indicator {
+            position: absolute; top: 8px; right: 16px; font-size: 10px;
+            color: var(--on-surface-dim); background: rgba(0,0,0,0.4); padding: 3px 8px;
+            border-radius: 6px; z-index: 2; pointer-events: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Voice-First UI Shells</h1>
-            <p class="subtitle">Avanues Cockpit v1.0</p>
-            <p class="subtitle" style="font-size: 0.95em; margin-top: 15px;">Four interaction paradigms optimized for different user profiles and devices</p>
-        </header>
+<div class="app-frame">
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('classic')">
-                📊 Classic
-            </button>
-            <button class="tab-btn" onclick="switchTab('avanue-views')">
-                🌊 AvanueViews
-            </button>
-            <button class="tab-btn" onclick="switchTab('lens')">
-                🔍 Lens
-            </button>
-            <button class="tab-btn" onclick="switchTab('canvas')">
-                🎨 Canvas
-            </button>
-        </div>
-
-        <!-- CLASSIC Shell -->
-        <div id="classic" class="shell-content active">
-            <div class="shell-container">
-                <div class="top-bar">
-                    <div class="top-bar-title">Cockpit Dashboard</div>
-                    <div style="font-size: 0.9em; color: var(--hydra-on-surface-variant);">15 layouts available</div>
-                </div>
-                <div class="shell-viewport">
-                    <div class="dashboard-grid">
-                        <div class="module-tile" onclick="alert('Opened: WebAvanue')">
-                            <div class="module-icon">🌐</div>
-                            <div class="module-name">WebAvanue</div>
-                        </div>
-                        <div class="module-tile" onclick="alert('Opened: PhotoAvanue')">
-                            <div class="module-icon">📷</div>
-                            <div class="module-name">PhotoAvanue</div>
-                        </div>
-                        <div class="module-tile" onclick="alert('Opened: NoteAvanue')">
-                            <div class="module-icon">📝</div>
-                            <div class="module-name">NoteAvanue</div>
-                        </div>
-                        <div class="module-tile" onclick="alert('Opened: PDFAvanue')">
-                            <div class="module-icon">📄</div>
-                            <div class="module-name">PDFAvanue</div>
-                        </div>
-                        <div class="module-tile" onclick="alert('Opened: WhiteboardAvanue')">
-                            <div class="module-icon">✏️</div>
-                            <div class="module-name">Whiteboard</div>
-                        </div>
-                        <div class="module-tile" onclick="alert('Opened: VideoAvanue')">
-                            <div class="module-icon">🎬</div>
-                            <div class="module-name">VideoAvanue</div>
-                        </div>
-                        <div class="module-tile" onclick="alert('Opened: MapAvanue')">
-                            <div class="module-icon">🗺️</div>
-                            <div class="module-name">MapAvanue</div>
-                        </div>
-                        <div class="module-tile" onclick="alert('Opened: Settings')">
-                            <div class="module-icon">⚙️</div>
-                            <div class="module-name">Settings</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="action-bar">
-                    <span style="color: var(--hydra-on-surface-variant); font-size: 0.9em;">Layout:</span>
-                    <button class="action-chip" onclick="alert('Switched to: Grid')">📐 Grid</button>
-                    <button class="action-chip" onclick="alert('Switched to: Cockpit')">✈️ Cockpit</button>
-                    <button class="action-chip" onclick="alert('Switched to: Carousel')">🎠 Carousel</button>
-                    <button class="action-chip" onclick="alert('Switched to: Freeform')">🎨 Freeform</button>
-                    <div class="action-spacer"></div>
-                    <button class="more-button" onclick="alert('Opening full layout selector...')">More Layouts</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- AVANUE_VIEWS Shell -->
-        <div id="avanue-views" class="shell-content">
-            <div class="shell-container">
-                <div class="top-bar">
-                    <div class="top-bar-title">AvanueViews — Ambient Card Stream</div>
-                    <div style="font-size: 0.9em; color: var(--hydra-on-surface-variant);">Context-aware, priority-sorted</div>
-                </div>
-                <div class="shell-viewport">
-                    <div class="card-stream">
-                        <div class="ambient-card" onclick="alert('Opened: Active Meeting Notes')">
-                            <div class="card-title">📝 Active Session: Meeting Notes</div>
-                            <div class="card-preview">You were editing your meeting notes 5 minutes ago. 847 words, last edit at 14:32.</div>
-                            <span class="card-action">Resume Editing</span>
-                        </div>
-                        <div class="ambient-card" onclick="alert('Opened: Research Paper')">
-                            <div class="card-title">📄 Research: Quantum Computing Trends</div>
-                            <div class="card-preview">3 open PDFs related to your current research. Latest update from arXiv this morning.</div>
-                            <span class="card-action">View Papers</span>
-                        </div>
-                        <div class="ambient-card" onclick="alert('Opened: Recent Photo')">
-                            <div class="card-title">📸 Suggested: Morning Sketches</div>
-                            <div class="card-preview">You captured 12 whiteboard sketches this morning. Ready to convert to digital notes?</div>
-                            <span class="card-action">Convert Now</span>
-                        </div>
-                        <div class="ambient-card" onclick="alert('Opened: Web Article')">
-                            <div class="card-title">🌐 Reading: AI in Healthcare</div>
-                            <div class="card-preview">Article from TechCrunch about recent developments. 8-minute read, saved to your library.</div>
-                            <span class="card-action">Continue Reading</span>
-                        </div>
-                        <div class="ambient-card" onclick="alert('Opened: Suggested Action')">
-                            <div class="card-title">✨ Smart Suggestion: Export Whiteboard</div>
-                            <div class="card-preview">You sketched 3 diagrams. Export as SVG for your presentation?</div>
-                            <span class="card-action">Export</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="action-bar">
-                    <button class="action-chip" onclick="alert('Filter: Active')">⭐ Active</button>
-                    <button class="action-chip" onclick="alert('Filter: Suggested')">💡 Suggested</button>
-                    <button class="action-chip" onclick="alert('Filter: Recent')">🕐 Recent</button>
-                    <div class="action-spacer"></div>
-                    <button class="more-button" onclick="alert('Opening card preferences...')">Preferences</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- LENS Shell -->
-        <div id="lens" class="shell-content">
-            <div class="shell-container">
-                <div class="top-bar">
-                    <div class="top-bar-title">Lens — Universal Command Palette</div>
-                    <div style="font-size: 0.9em; color: var(--hydra-on-surface-variant);">One search bar for everything</div>
-                </div>
-                <div class="shell-viewport lens-viewport">
-                    <div class="search-bar">
-                        <span class="search-icon">🔍</span>
-                        <span class="search-placeholder">Search modules, commands, settings, files... (or say it aloud)</span>
-                    </div>
-                    <div class="quick-results">
-                        <div class="result-chip" onclick="alert('Command: Open WebAvanue')">🌐 Web</div>
-                        <div class="result-chip" onclick="alert('Command: New Note')">📝 Note</div>
-                        <div class="result-chip" onclick="alert('Command: Take Photo')">📷 Camera</div>
-                        <div class="result-chip" onclick="alert('Command: Open PDF')">📄 PDF</div>
-                        <div class="result-chip" onclick="alert('Command: Draw')">✏️ Whiteboard</div>
-                        <div class="result-chip" onclick="alert('Command: Settings')">⚙️ Settings</div>
-                        <div class="result-chip" onclick="alert('Command: Search Files')">📂 Files</div>
-                        <div class="result-chip" onclick="alert('Command: Voice Commands')">🎤 Help</div>
-                    </div>
-                </div>
-                <div class="action-bar">
-                    <button class="action-chip" onclick="alert('Recent: WebAvanue')">🌐 Recent</button>
-                    <button class="action-chip" onclick="alert('Starred: NoteAvanue')">⭐ Starred</button>
-                    <button class="action-chip" onclick="alert('Focus Mode')">🎯 Focus</button>
-                    <div class="action-spacer"></div>
-                    <button class="more-button" onclick="alert('Opening voice help...')">🎤 Voice</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- CANVAS Shell -->
-        <div id="canvas" class="shell-content">
-            <div class="shell-container">
-                <div class="top-bar">
-                    <div class="top-bar-title">Canvas — Spatial Zen</div>
-                    <div style="font-size: 0.9em; color: var(--hydra-on-surface-variant);">Zoom to navigate, organic layout</div>
-                </div>
-                <div class="shell-viewport canvas-viewport">
-                    <div class="canvas-grid"></div>
-                    <div class="canvas-island" style="top: 50px; left: 80px; width: 160px;" onclick="alert('Opened: WebAvanue')">
-                        <div class="island-icon">🌐</div>
-                        <div class="island-label">WebAvanue</div>
-                    </div>
-                    <div class="canvas-island" style="top: 250px; left: 100px; width: 160px;" onclick="alert('Opened: NoteAvanue')">
-                        <div class="island-icon">📝</div>
-                        <div class="island-label">NoteAvanue</div>
-                    </div>
-                    <div class="canvas-island" style="top: 120px; right: 100px; width: 160px;" onclick="alert('Opened: PhotoAvanue')">
-                        <div class="island-icon">📷</div>
-                        <div class="island-label">PhotoAvanue</div>
-                    </div>
-                    <div class="canvas-island" style="top: 300px; right: 80px; width: 160px;" onclick="alert('Opened: PDFAvanue')">
-                        <div class="island-icon">📄</div>
-                        <div class="island-label">PDFAvanue</div>
-                    </div>
-                    <div class="canvas-island" style="bottom: 150px; left: 50%; transform: translateX(-50%); width: 160px;" onclick="alert('Opened: Whiteboard')">
-                        <div class="island-icon">✏️</div>
-                        <div class="island-label">Whiteboard</div>
-                    </div>
-                </div>
-                <div class="action-bar">
-                    <button class="action-chip" onclick="alert('Zoom: 100%')">🔍 1.0x</button>
-                    <button class="action-chip" onclick="alert('Zoom: 75%')">🔍 0.75x</button>
-                    <button class="action-chip" onclick="alert('Zoom: 50%')">🔍 0.5x</button>
-                    <button class="action-chip" onclick="alert('Reset Layout')">↩️ Reset</button>
-                    <div class="action-spacer"></div>
-                    <button class="more-button" onclick="alert('Opening canvas settings...')">Canvas Settings</button>
-                </div>
-            </div>
-        </div>
+    <div class="status-bar">
+        <span>VoiceOS® Avanues</span>
+        <span>🔋 87% &nbsp; 📶 &nbsp; 14:32</span>
     </div>
 
-    <footer>
-        <div class="credit">
-            Designed by Manoj Jhawar / Aman Jhawar, Intelligent Devices LLC
+    <div class="top-nav">
+        <button class="back-btn" id="backBtn" onclick="goBack()">← Back</button>
+        <div class="nav-title" id="navTitle">Voice-First UI Shells</div>
+        <div class="shell-badge" id="shellBadge">Cockpit v1.0</div>
+    </div>
+
+    <div class="shell-tabs" id="shellTabs">
+        <button class="tab-btn active" data-shell="classic">📊 Classic</button>
+        <button class="tab-btn" data-shell="avanue-views">🌊 AvanueViews</button>
+        <button class="tab-btn" data-shell="lens">🔍 Lens</button>
+        <button class="tab-btn" data-shell="canvas">🎨 Canvas</button>
+    </div>
+
+    <div class="viewport">
+
+        <!-- ============ CLASSIC SHELL ============ -->
+        <div class="screen active" id="screen-classic">
+            <span class="layout-indicator" id="classicLayoutLabel">📐 Grid</span>
+            <div class="layout-grid" id="classicContainer"></div>
         </div>
-        <div class="version">
-            Voice-First UI Shells • Avanues Cockpit v1.0 • February 2026
+
+        <!-- ============ AVANUEVIEWS SHELL ============ -->
+        <div class="screen" id="screen-avanue-views">
+            <span class="layout-indicator" id="avLayoutLabel">📋 Stream</span>
+            <div class="card-stream" id="avContainer">
+                <div class="stream-card" data-mod="note" data-cat="active" onclick="openModule('note')">
+                    <div class="card-head"><span class="card-icon">📝</span><span class="card-title">Active: Meeting Notes</span><span class="card-meta">5 min ago</span></div>
+                    <div class="card-body">847 words, last edit at 14:32. Sprint retrospective action items pending review.</div>
+                    <span class="card-cta">Resume Editing</span>
+                </div>
+                <div class="stream-card" data-mod="pdf" data-cat="active" onclick="openModule('pdf')">
+                    <div class="card-head"><span class="card-icon">📄</span><span class="card-title">Research: Quantum Computing</span><span class="card-meta">3 PDFs</span></div>
+                    <div class="card-body">Latest update from arXiv this morning. 2 papers highlighted, 1 with annotations.</div>
+                    <span class="card-cta">View Papers</span>
+                </div>
+                <div class="stream-card" data-mod="photo" data-cat="suggested" onclick="openModule('photo')">
+                    <div class="card-head"><span class="card-icon">📷</span><span class="card-title">Suggested: Morning Sketches</span><span class="card-meta">12 photos</span></div>
+                    <div class="card-body">Whiteboard sketches captured this morning. Ready to convert to digital notes?</div>
+                    <span class="card-cta">Convert Now</span>
+                </div>
+                <div class="stream-card" data-mod="web" data-cat="recent" onclick="openModule('web')">
+                    <div class="card-head"><span class="card-icon">🌐</span><span class="card-title">Reading: AI in Healthcare</span><span class="card-meta">8 min read</span></div>
+                    <div class="card-body">TechCrunch article saved to your library. Highlights FDA approval of diagnostic AI.</div>
+                    <span class="card-cta">Continue Reading</span>
+                </div>
+                <div class="stream-card" data-mod="whiteboard" data-cat="suggested" onclick="openModule('whiteboard')">
+                    <div class="card-head"><span class="card-icon">✏️</span><span class="card-title">Export Whiteboard Diagrams</span><span class="card-meta">3 diagrams</span></div>
+                    <div class="card-body">You sketched architecture diagrams. Export as SVG for the quarterly presentation?</div>
+                    <span class="card-cta">Export SVG</span>
+                </div>
+                <div class="stream-card" data-mod="video" data-cat="recent" onclick="openModule('video')">
+                    <div class="card-head"><span class="card-icon">🎬</span><span class="card-title">Continue: Tutorial Video</span><span class="card-meta">35% watched</span></div>
+                    <div class="card-body">KMP Compose Multiplatform walkthrough. Bookmarked at chapter 4: Navigation.</div>
+                    <span class="card-cta">Resume</span>
+                </div>
+            </div>
         </div>
-    </footer>
 
-    <script>
-        function switchTab(tabName) {
-            // Hide all shells
-            document.querySelectorAll('.shell-content').forEach(shell => {
-                shell.classList.remove('active');
-            });
+        <!-- ============ LENS SHELL ============ -->
+        <div class="screen" id="screen-lens">
+            <div class="lens-center">
+                <div class="search-bar">
+                    <span>🔍</span>
+                    <input type="text" placeholder="Search modules, commands, settings, files..." id="lensInput" oninput="onLensInput(this.value)">
+                    <span class="mic">🎤</span>
+                </div>
+                <div class="lens-results" id="lensResults"></div>
+                <div class="quick-grid" id="quickGrid">
+                    <div class="quick-chip" onclick="openModule('web')">🌐 Web</div>
+                    <div class="quick-chip" onclick="openModule('note')">📝 Note</div>
+                    <div class="quick-chip" onclick="openModule('photo')">📷 Camera</div>
+                    <div class="quick-chip" onclick="openModule('pdf')">📄 PDF</div>
+                    <div class="quick-chip" onclick="openModule('whiteboard')">✏️ Whiteboard</div>
+                    <div class="quick-chip" onclick="openModule('video')">🎬 Video</div>
+                    <div class="quick-chip" onclick="openModule('files')">📂 Files</div>
+                    <div class="quick-chip" onclick="openModule('settings')">⚙️ Settings</div>
+                    <div class="quick-chip" onclick="openModule('image')">🖼️ Images</div>
+                    <div class="quick-chip" onclick="openModule('cast')">📡 Cast</div>
+                    <div class="quick-chip" onclick="openModule('annotation')">🎤 Help</div>
+                    <div class="quick-chip" onclick="openModule('annotation')">🎨 Annotate</div>
+                </div>
+            </div>
+        </div>
 
-            // Remove active state from all tabs
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+        <!-- ============ CANVAS SHELL ============ -->
+        <div class="screen" id="screen-canvas">
+            <div class="canvas-space" id="canvasSpace">
+                <div class="grid-bg"></div>
+                <div class="island" style="top:40px;left:60px" data-mod="web"><div class="i-icon">🌐</div><div class="i-label">WebAvanue</div></div>
+                <div class="island" style="top:200px;left:80px" data-mod="note"><div class="i-icon">📝</div><div class="i-label">NoteAvanue</div></div>
+                <div class="island" style="top:80px;left:360px" data-mod="photo"><div class="i-icon">📷</div><div class="i-label">PhotoAvanue</div></div>
+                <div class="island" style="top:260px;left:320px" data-mod="pdf"><div class="i-icon">📄</div><div class="i-label">PDFAvanue</div></div>
+                <div class="island" style="top:140px;left:600px" data-mod="video"><div class="i-icon">🎬</div><div class="i-label">VideoAvanue</div></div>
+                <div class="island" style="top:350px;left:550px" data-mod="whiteboard"><div class="i-icon">✏️</div><div class="i-label">Whiteboard</div></div>
+                <div class="island" style="top:60px;left:850px" data-mod="files"><div class="i-icon">📂</div><div class="i-label">Files</div></div>
+                <div class="island" style="top:300px;left:820px" data-mod="settings"><div class="i-icon">⚙️</div><div class="i-label">Settings</div></div>
+                <div class="island" style="top:400px;left:180px" data-mod="cast"><div class="i-icon">📡</div><div class="i-label">Cast</div></div>
+                <div class="island" style="top:420px;left:680px" data-mod="image"><div class="i-icon">🖼️</div><div class="i-label">Images</div></div>
+            </div>
+            <span class="canvas-zoom-label" id="canvasZoomLabel">Zoom: 100%</span>
+        </div>
 
-            // Show selected shell
-            document.getElementById(tabName).classList.add('active');
+        <!-- ============ MODULE SCREENS ============ -->
+        <!-- WebAvanue -->
+        <div class="screen" id="screen-mod-web">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">🌐</span><div class="m-info"><div class="m-title">WebAvanue</div><div class="m-sub">Voice-First Browser</div></div></div>
+                <div class="module-body">
+                    <div class="browser-mock">
+                        <div class="browser-url"><span>←</span><span>→</span><span>🔄</span><div class="url-pill">https://techcrunch.com/ai-healthcare-2026</div><span>⭐</span></div>
+                        <div class="browser-content">🌐 Web page content renders here<br><span style="font-size:12px;opacity:0.5">Say "scroll down" or "click first link"</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- NoteAvanue -->
+        <div class="screen" id="screen-mod-note">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">📝</span><div class="m-info"><div class="m-title">NoteAvanue</div><div class="m-sub">Voice-First Rich Editor</div></div></div>
+                <div class="module-body">
+                    <div class="editor-mock">
+                        <div class="editor-toolbar">
+                            <button><b>B</b></button><button><i>I</i></button><button><u>U</u></button>
+                            <button>H1</button><button>H2</button><button>• List</button>
+                            <button>☑ Check</button><button>↩ Undo</button><button>↪ Redo</button>
+                        </div>
+                        <div class="editor-body">
+                            <p><b>Sprint Retrospective — Feb 25, 2026</b></p>
+                            <p>What went well: KMP migration completed ahead of schedule. Voice command coverage hit 94% across all modules.</p>
+                            <p>Action items:</p>
+                            <p>☑ Merge AvanueViews branch into main<br>☐ Glass optimization for MICRO display profile<br>☐ iOS CockpitScreen wrapper</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- PDFAvanue -->
+        <div class="screen" id="screen-mod-pdf">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">📄</span><div class="m-info"><div class="m-title">PDFAvanue</div><div class="m-sub">Document Viewer</div></div></div>
+                <div class="module-body">
+                    <div class="pdf-mock">
+                        <div class="pdf-page"><div style="text-align:center;color:var(--on-surface-dim)">📄<br>Quantum Computing Trends 2026<br><span style="font-size:11px;opacity:0.6">Page 1 of 24</span></div></div>
+                        <div class="pdf-page-num">Page 1 / 24 — Continuous View — Fit Width</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- PhotoAvanue -->
+        <div class="screen" id="screen-mod-photo">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">📷</span><div class="m-info"><div class="m-title">PhotoAvanue</div><div class="m-sub">KMP Camera</div></div></div>
+                <div class="module-body">
+                    <div class="camera-mock">
+                        <div class="viewfinder">📷</div>
+                        <div class="cam-controls"><div class="cam-btn"></div><div class="cam-btn shutter"></div><div class="cam-btn"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- VideoAvanue -->
+        <div class="screen" id="screen-mod-video">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">🎬</span><div class="m-info"><div class="m-title">VideoAvanue</div><div class="m-sub">Media Player</div></div></div>
+                <div class="module-body">
+                    <div class="video-mock">
+                        <div class="play-btn">▶️</div>
+                        <div class="time-bar"><span>12:34</span><div class="progress"><div class="progress-fill"></div></div><span>35:20</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Whiteboard -->
+        <div class="screen" id="screen-mod-whiteboard">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">✏️</span><div class="m-info"><div class="m-title">AnnotationAvanue</div><div class="m-sub">Whiteboard + Drawing</div></div></div>
+                <div class="module-body">
+                    <div class="whiteboard-mock">
+                        <div class="wb-toolbar"><div class="wb-tool selected">🖊</div><div class="wb-tool">🖍</div><div class="wb-tool">⬜</div><div class="wb-tool">⭕</div><div class="wb-tool">🧹</div></div>
+                        <svg viewBox="0 0 800 500">
+                            <path d="M120,100 Q200,50 280,120 T440,100" stroke="#42A5F5" stroke-width="3" fill="none" opacity="0.8"/>
+                            <path d="M150,200 Q250,180 350,220 T500,200" stroke="#4CAF50" stroke-width="3" fill="none" opacity="0.8"/>
+                            <rect x="300" y="280" width="180" height="120" rx="8" stroke="#FF9800" stroke-width="2" fill="none" opacity="0.6"/>
+                            <circle cx="600" cy="200" r="60" stroke="#9C27B0" stroke-width="2" fill="none" opacity="0.6"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Files -->
+        <div class="screen" id="screen-mod-files">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">📂</span><div class="m-info"><div class="m-title">FileAvanue</div><div class="m-sub">File Manager</div></div></div>
+                <div class="module-body">
+                    <div class="files-mock">
+                        <div class="file-row"><span class="f-icon">📁</span><span class="f-name">Documents</span><span class="f-size">24 items</span><span class="f-date">Today</span></div>
+                        <div class="file-row"><span class="f-icon">📁</span><span class="f-name">Downloads</span><span class="f-size">18 items</span><span class="f-date">Today</span></div>
+                        <div class="file-row"><span class="f-icon">📁</span><span class="f-name">Photos</span><span class="f-size">847 items</span><span class="f-date">Yesterday</span></div>
+                        <div class="file-row"><span class="f-icon">📄</span><span class="f-name">Sprint-Notes.md</span><span class="f-size">12 KB</span><span class="f-date">5 min ago</span></div>
+                        <div class="file-row"><span class="f-icon">📄</span><span class="f-name">Architecture-Diagram.svg</span><span class="f-size">48 KB</span><span class="f-date">1 hour ago</span></div>
+                        <div class="file-row"><span class="f-icon">📄</span><span class="f-name">quantum-computing-2026.pdf</span><span class="f-size">2.4 MB</span><span class="f-date">Today</span></div>
+                        <div class="file-row"><span class="f-icon">🎬</span><span class="f-name">KMP-Tutorial-Ch4.mp4</span><span class="f-size">320 MB</span><span class="f-date">Feb 24</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ImageAvanue -->
+        <div class="screen" id="screen-mod-image">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">🖼️</span><div class="m-info"><div class="m-title">ImageAvanue</div><div class="m-sub">Gallery + Filters</div></div></div>
+                <div class="module-body">
+                    <div class="image-gallery">
+                        <div class="gallery-thumb">🏔️</div><div class="gallery-thumb">🌅</div><div class="gallery-thumb">🏙️</div>
+                        <div class="gallery-thumb">🌿</div><div class="gallery-thumb">🎨</div><div class="gallery-thumb">📐</div>
+                        <div class="gallery-thumb">🏖️</div><div class="gallery-thumb">🌸</div><div class="gallery-thumb">🌊</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- RemoteCast -->
+        <div class="screen" id="screen-mod-cast">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">📡</span><div class="m-info"><div class="m-title">RemoteCast</div><div class="m-sub">Screen Casting + Glass</div></div></div>
+                <div class="module-body">
+                    <div class="cast-mock">
+                        <div class="cast-status">📡</div>
+                        <div style="text-align:center"><div class="cast-label">Ready to Cast</div><div class="cast-sub">No devices connected • Port 54321 • JPEG 60% • 15 FPS</div></div>
+                        <button class="cast-btn" onclick="this.textContent='🔴 Casting...';this.style.background='#F44336'">Start Casting</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Annotation -->
+        <div class="screen" id="screen-mod-annotation">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">🎨</span><div class="m-info"><div class="m-title">AnnotationAvanue</div><div class="m-sub">Drawing Tools</div></div></div>
+                <div class="module-body">
+                    <div class="whiteboard-mock">
+                        <div class="wb-toolbar"><div class="wb-tool selected">🖊</div><div class="wb-tool">🖍</div><div class="wb-tool">🧹</div></div>
+                        <svg viewBox="0 0 800 500"><path d="M100,250 C200,100 400,400 600,200 S750,300 780,250" stroke="var(--primary)" stroke-width="4" fill="none"/></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Settings -->
+        <div class="screen" id="screen-mod-settings">
+            <div class="module-screen">
+                <div class="module-header"><span class="m-icon">⚙️</span><div class="m-info"><div class="m-title">Settings</div><div class="m-sub">Unified Adaptive Settings</div></div></div>
+                <div class="module-body">
+                    <div class="settings-mock">
+                        <div class="settings-section">Cockpit</div>
+                        <div class="settings-row"><span class="s-label">Shell Mode</span><span class="s-value">Lens ▾</span></div>
+                        <div class="settings-row"><span class="s-label">Default Arrangement</span><span class="s-value">Focus ▾</span></div>
+                        <div class="settings-row"><span class="s-label">Max Frames</span><span class="s-value">6</span></div>
+                        <div class="settings-row"><span class="s-label">Head Tracking</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+                        <div class="settings-section">Appearance</div>
+                        <div class="settings-row"><span class="s-label">Color Palette</span><span class="s-value">HYDRA ▾</span></div>
+                        <div class="settings-row"><span class="s-label">Material Style</span><span class="s-value">Water ▾</span></div>
+                        <div class="settings-row"><span class="s-label">Dark Mode</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+                        <div class="settings-section">Voice</div>
+                        <div class="settings-row"><span class="s-label">Wake Word</span><span class="s-value">Hey AVA ▾</span></div>
+                        <div class="settings-row"><span class="s-label">Sensitivity</span><span class="s-value">50%</span></div>
+                        <div class="settings-row"><span class="s-label">Voice Isolation</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            // Mark tab as active
-            event.target.classList.add('active');
-        }
+    </div>
 
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            const tabs = ['classic', 'avanue-views', 'lens', 'canvas'];
-            const active = document.querySelector('.shell-content.active');
-            const currentIndex = tabs.indexOf(active.id);
+    <div class="action-bar" id="actionBar"></div>
 
-            if (e.key === 'ArrowRight' && currentIndex < tabs.length - 1) {
-                switchTab(tabs[currentIndex + 1]);
-                document.querySelectorAll('.tab-btn')[currentIndex + 1].click();
-            } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
-                switchTab(tabs[currentIndex - 1]);
-                document.querySelectorAll('.tab-btn')[currentIndex - 1].click();
-            }
+</div>
+
+<script>
+// ========== DATA ==========
+const TILE_DATA = [
+    { id:'web', icon:'🌐', label:'WebAvanue' },
+    { id:'photo', icon:'📷', label:'PhotoAvanue' },
+    { id:'note', icon:'📝', label:'NoteAvanue' },
+    { id:'pdf', icon:'📄', label:'PDFAvanue' },
+    { id:'whiteboard', icon:'✏️', label:'Whiteboard' },
+    { id:'video', icon:'🎬', label:'VideoAvanue' },
+    { id:'files', icon:'📂', label:'Files' },
+    { id:'image', icon:'🖼️', label:'ImageAvanue' },
+    { id:'cast', icon:'📡', label:'RemoteCast' },
+    { id:'settings', icon:'⚙️', label:'Settings' },
+];
+
+const FREEFORM_POS = [
+    {top:30,left:40},{top:30,left:200},{top:30,left:380},{top:30,left:560},{top:30,left:740},
+    {top:190,left:100},{top:190,left:300},{top:190,left:500},{top:350,left:40},{top:350,left:240},
+];
+
+const MODULES = {
+    web:        { title:'WebAvanue', icon:'🌐', actions:['← Back','→ Fwd','🔄 Reload','⭐ Bookmark','📋 Read Mode'], more:'All Actions' },
+    note:       { title:'NoteAvanue', icon:'📝', actions:['B Bold','I Italic','U Under','↩ Undo','💾 Save'], more:'Format' },
+    pdf:        { title:'PDFAvanue', icon:'📄', actions:['🔍 Search','📑 Bookmarks','🌙 Night','📐 Fit Width'], more:'View' },
+    photo:      { title:'PhotoAvanue', icon:'📷', actions:['🔄 Flip','⚡ Flash','🎯 Focus','📏 Grid'], more:'Pro Mode' },
+    video:      { title:'VideoAvanue', icon:'🎬', actions:['⏯ Play','⏪ -10s','⏩ +10s','🔊 Volume','🔁 Loop'], more:'Speed' },
+    whiteboard: { title:'Whiteboard', icon:'✏️', actions:['🖊 Pen','🖍 Highlight','🧹 Eraser','↩ Undo','🗑 Clear'], more:'Tools' },
+    files:      { title:'FileAvanue', icon:'📂', actions:['📊 Sort','📋 List','📁 New Folder','🔍 Search'], more:'Actions' },
+    image:      { title:'ImageAvanue', icon:'🖼️', actions:['🔍 Zoom','🔄 Rotate','✂️ Crop','🎨 Filter'], more:'Edit' },
+    cast:       { title:'RemoteCast', icon:'📡', actions:['▶️ Start','⏸ Pause','📊 Quality','🔗 Devices'], more:'Settings' },
+    annotation: { title:'AnnotationAvanue', icon:'🎨', actions:['🖊 Pen','🖍 Highlight','⬜ Shape','⭕ Circle','🧹 Eraser'], more:'Tools' },
+    settings:   { title:'Settings', icon:'⚙️', actions:['🏠 Cockpit','🎨 Theme','🎤 Voice','📱 Display','👤 Profile'], more:'All' },
+};
+
+// ========== STATE ==========
+let currentShell = 'classic';
+let currentModule = null;
+let classicLayout = 'grid';
+let avLayout = 'stream';
+let lensLayout = 'grid';
+let canvasZoom = 1.0;
+
+// ========== CLASSIC SHELL LAYOUTS ==========
+function buildClassicLayout(layout) {
+    classicLayout = layout;
+    const container = document.getElementById('classicContainer');
+    const label = document.getElementById('classicLayoutLabel');
+
+    // Clear existing
+    container.className = '';
+    container.innerHTML = '';
+
+    if (layout === 'grid') {
+        label.textContent = '📐 Grid';
+        container.className = 'layout-grid';
+        TILE_DATA.forEach(t => {
+            container.innerHTML += `<div class="tile" onclick="openModule('${t.id}')"><div class="icon">${t.icon}</div><div class="label">${t.label}</div></div>`;
         });
-
-        // Canvas island dragging simulation (visual feedback)
-        document.querySelectorAll('.canvas-island').forEach(island => {
-            island.addEventListener('mousedown', function(e) {
+    }
+    else if (layout === 'cockpit') {
+        label.textContent = '✈️ Cockpit';
+        container.className = 'layout-cockpit';
+        TILE_DATA.forEach((t, i) => {
+            const hero = i === 0 ? ' hero' : '';
+            container.innerHTML += `<div class="tile${hero}" onclick="openModule('${t.id}')"><div class="icon">${t.icon}</div><div class="label">${t.label}</div></div>`;
+        });
+    }
+    else if (layout === 'carousel') {
+        label.textContent = '🎠 Carousel';
+        container.className = 'layout-carousel';
+        TILE_DATA.forEach(t => {
+            container.innerHTML += `<div class="tile" onclick="openModule('${t.id}')"><div class="icon">${t.icon}</div><div class="label">${t.label}</div></div>`;
+        });
+    }
+    else if (layout === 'freeform') {
+        label.textContent = '🎨 Freeform';
+        container.className = 'layout-freeform';
+        container.innerHTML = '<div class="grid-dots"></div>';
+        TILE_DATA.forEach((t, i) => {
+            const pos = FREEFORM_POS[i];
+            const div = document.createElement('div');
+            div.className = 'tile';
+            div.style.top = pos.top + 'px';
+            div.style.left = pos.left + 'px';
+            div.innerHTML = `<div class="icon">${t.icon}</div><div class="label">${t.label}</div>`;
+            // Draggable
+            div.addEventListener('mousedown', function(e) {
                 const rect = this.getBoundingClientRect();
-                const offsetX = e.clientX - rect.left;
-                const offsetY = e.clientY - rect.top;
-                const container = this.parentElement;
-                const containerRect = container.getBoundingClientRect();
-
-                const onMouseMove = (moveEvent) => {
-                    const newX = moveEvent.clientX - containerRect.left - offsetX;
-                    const newY = moveEvent.clientY - containerRect.top - offsetY;
-                    this.style.left = Math.max(0, Math.min(newX, containerRect.width - rect.width)) + 'px';
-                    this.style.top = Math.max(0, Math.min(newY, containerRect.height - rect.height)) + 'px';
-                };
-
-                const onMouseUp = () => {
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.removeEventListener('mouseup', onMouseUp);
-                };
-
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
+                const cRect = container.getBoundingClientRect();
+                const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
+                let dragged = false;
+                const onMove = (me) => { dragged = true; this.style.left = Math.max(0, me.clientX - cRect.left - ox) + 'px'; this.style.top = Math.max(0, me.clientY - cRect.top - oy) + 'px'; };
+                const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); if (!dragged) openModule(t.id); };
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+                e.preventDefault();
             });
+            container.appendChild(div);
         });
-    </script>
+    }
+
+    updateClassicActions();
+}
+
+function updateClassicActions() {
+    const layouts = [
+        { id:'grid', icon:'📐', label:'Grid' },
+        { id:'cockpit', icon:'✈️', label:'Cockpit' },
+        { id:'carousel', icon:'🎠', label:'Carousel' },
+        { id:'freeform', icon:'🎨', label:'Freeform' },
+    ];
+    updateActionBar(
+        layouts.map(l => ({ label: `${l.icon} ${l.label}`, active: l.id === classicLayout, action: () => buildClassicLayout(l.id) })),
+        'More Layouts'
+    );
+}
+
+// ========== AVANUEVIEWS LAYOUTS ==========
+function setAVLayout(layout) {
+    avLayout = layout;
+    const container = document.getElementById('avContainer');
+    const label = document.getElementById('avLayoutLabel');
+
+    container.className = 'card-stream';
+    container.querySelectorAll('.stream-card').forEach(c => c.classList.remove('hidden-card'));
+
+    if (layout === 'stream') {
+        label.textContent = '📋 Stream';
+    } else if (layout === 'compact') {
+        label.textContent = '📑 Compact';
+        container.classList.add('layout-compact');
+    } else if (layout === 'grid') {
+        label.textContent = '📐 Grid View';
+        container.classList.add('layout-grid-view');
+    } else if (layout === 'timeline') {
+        label.textContent = '📅 Timeline';
+        container.classList.add('layout-timeline');
+    }
+    updateAVActions();
+}
+
+function filterAVCards(cat) {
+    const container = document.getElementById('avContainer');
+    container.querySelectorAll('.stream-card').forEach(c => {
+        if (cat === 'all') { c.classList.remove('hidden-card'); }
+        else { c.classList.toggle('hidden-card', c.dataset.cat !== cat); }
+    });
+}
+
+function updateAVActions() {
+    const layouts = [
+        { id:'stream', icon:'📋', label:'Stream' },
+        { id:'compact', icon:'📑', label:'Compact' },
+        { id:'grid', icon:'📐', label:'Grid' },
+        { id:'timeline', icon:'📅', label:'Timeline' },
+    ];
+    updateActionBar(
+        layouts.map(l => ({ label: `${l.icon} ${l.label}`, active: l.id === avLayout, action: () => setAVLayout(l.id) })),
+        'Filter'
+    );
+}
+
+// ========== LENS LAYOUTS ==========
+function setLensLayout(layout) {
+    lensLayout = layout;
+    const grid = document.getElementById('quickGrid');
+    grid.className = 'quick-grid';
+    if (layout === 'list') grid.classList.add('layout-list');
+    else if (layout === 'compact') grid.classList.add('layout-compact');
+    updateLensActions();
+}
+
+function updateLensActions() {
+    const layouts = [
+        { id:'grid', icon:'📐', label:'Grid' },
+        { id:'list', icon:'📋', label:'List' },
+        { id:'compact', icon:'📑', label:'Compact' },
+    ];
+    updateActionBar(
+        layouts.map(l => ({ label: `${l.icon} ${l.label}`, active: l.id === lensLayout, action: () => setLensLayout(l.id) })),
+        '🎤 Voice'
+    );
+}
+
+// ========== CANVAS ZOOM ==========
+function setCanvasZoom(zoom) {
+    canvasZoom = zoom;
+    document.getElementById('canvasSpace').style.transform = `scale(${zoom})`;
+    document.getElementById('canvasZoomLabel').textContent = `Zoom: ${Math.round(zoom * 100)}%`;
+    updateCanvasActions();
+}
+
+function resetCanvasPositions() {
+    const islands = document.querySelectorAll('.island');
+    const positions = [
+        {top:40,left:60},{top:200,left:80},{top:80,left:360},{top:260,left:320},
+        {top:140,left:600},{top:350,left:550},{top:60,left:850},{top:300,left:820},
+        {top:400,left:180},{top:420,left:680},
+    ];
+    islands.forEach((isl, i) => {
+        if (positions[i]) { isl.style.top = positions[i].top + 'px'; isl.style.left = positions[i].left + 'px'; }
+    });
+    setCanvasZoom(1.0);
+}
+
+function updateCanvasActions() {
+    const zooms = [
+        { z: 1.0, label:'🔍 1.0x' },
+        { z: 0.75, label:'🔍 0.75x' },
+        { z: 0.5, label:'🔍 0.5x' },
+        { z: 1.25, label:'🔍 1.25x' },
+    ];
+    const items = zooms.map(z => ({ label: z.label, active: canvasZoom === z.z, action: () => setCanvasZoom(z.z) }));
+    items.push({ label:'↩️ Reset', active: false, action: resetCanvasPositions });
+    updateActionBar(items, 'Canvas Settings');
+}
+
+// ========== GENERIC ACTION BAR ==========
+function updateActionBar(items, moreLabel) {
+    const bar = document.getElementById('actionBar');
+    bar.innerHTML = '';
+    items.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'action-chip' + (item.active ? ' active' : '');
+        btn.textContent = item.label;
+        btn.onclick = () => { if (item.action) item.action(); };
+        bar.appendChild(btn);
+    });
+    const spacer = document.createElement('div');
+    spacer.className = 'action-spacer';
+    bar.appendChild(spacer);
+    const more = document.createElement('button');
+    more.className = 'action-more';
+    more.textContent = moreLabel;
+    bar.appendChild(more);
+}
+
+function updateModuleActionBar(mod) {
+    const info = MODULES[mod];
+    if (!info) return;
+    updateActionBar(
+        info.actions.map(a => ({ label: a, active: false, action: () => {} })),
+        info.more
+    );
+}
+
+// ========== NAVIGATION ==========
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchShell(btn.dataset.shell));
+});
+
+function switchShell(shell) {
+    currentShell = shell;
+    currentModule = null;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-shell="${shell}"]`).classList.add('active');
+    showScreen('screen-' + shell);
+    document.getElementById('shellTabs').classList.remove('hidden');
+    document.getElementById('backBtn').classList.remove('visible');
+    document.getElementById('navTitle').textContent = 'Voice-First UI Shells';
+    const names = { classic:'Classic', 'avanue-views':'Avanue Views', lens:'Lens', canvas:'Canvas' };
+    document.getElementById('shellBadge').textContent = names[shell] || shell;
+
+    if (shell === 'classic') updateClassicActions();
+    else if (shell === 'avanue-views') updateAVActions();
+    else if (shell === 'lens') updateLensActions();
+    else if (shell === 'canvas') updateCanvasActions();
+}
+
+function openModule(mod) {
+    const info = MODULES[mod];
+    if (!info) return;
+    currentModule = mod;
+    showScreen('screen-mod-' + mod);
+    document.getElementById('shellTabs').classList.add('hidden');
+    document.getElementById('backBtn').classList.add('visible');
+    document.getElementById('navTitle').textContent = info.title;
+    document.getElementById('shellBadge').textContent = info.icon + ' Module';
+    updateModuleActionBar(mod);
+}
+
+function goBack() { currentModule = null; switchShell(currentShell); }
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+}
+
+// ========== LENS SEARCH ==========
+const SEARCHABLE = Object.entries(MODULES).map(([k,v]) => ({id:k, title:v.title, icon:v.icon, type:'Module'}));
+SEARCHABLE.push(
+    {id:'_cmd', title:'Take Screenshot', icon:'📸', type:'Command'},
+    {id:'_cmd', title:'Start Dictation', icon:'🎤', type:'Command'},
+    {id:'_cmd', title:'Toggle Dark Mode', icon:'🌙', type:'Setting'},
+    {id:'_cmd', title:'Change Shell Mode', icon:'🔄', type:'Setting'},
+    {id:'_cmd', title:'Export as PDF', icon:'📤', type:'Command'},
+    {id:'_cmd', title:'Voice Commands Help', icon:'❓', type:'Help'},
+);
+
+function onLensInput(query) {
+    const results = document.getElementById('lensResults');
+    const grid = document.getElementById('quickGrid');
+    if (!query.trim()) { results.classList.remove('visible'); grid.style.display=''; return; }
+    grid.style.display='none';
+    const matches = SEARCHABLE.filter(s => s.title.toLowerCase().includes(query.toLowerCase()));
+    results.innerHTML = matches.slice(0,8).map(m =>
+        `<div class="lens-result-item" onclick="${m.id!=='_cmd' ? `openModule('${m.id}')` : ''}">
+            <span class="r-icon">${m.icon}</span><span class="r-label">${m.title}</span><span class="r-type">${m.type}</span>
+        </div>`
+    ).join('');
+    results.classList.add('visible');
+}
+
+// ========== CANVAS DRAGGING ==========
+document.querySelectorAll('.island').forEach(island => {
+    island.addEventListener('mousedown', function(e) {
+        const rect = this.getBoundingClientRect();
+        const container = this.parentElement.getBoundingClientRect();
+        const ox = e.clientX - rect.left, oy = e.clientY - rect.top;
+        let dragged = false;
+        const onMove = (me) => {
+            dragged = true;
+            this.style.left = Math.max(0, (me.clientX - container.left - ox) / canvasZoom) + 'px';
+            this.style.top = Math.max(0, (me.clientY - container.top - oy) / canvasZoom) + 'px';
+        };
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            if (!dragged) openModule(this.dataset.mod);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        e.preventDefault();
+    });
+});
+
+// ========== KEYBOARD SHORTCUTS ==========
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && currentModule) goBack();
+    const shells = ['classic','avanue-views','lens','canvas'];
+    if (e.key >= '1' && e.key <= '4' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault(); switchShell(shells[parseInt(e.key)-1]);
+    }
+    if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault(); switchShell('lens');
+        setTimeout(() => document.getElementById('lensInput')?.focus(), 100);
+    }
+});
+
+// ========== INIT ==========
+buildClassicLayout('grid');
+</script>
 </body>
 </html>
