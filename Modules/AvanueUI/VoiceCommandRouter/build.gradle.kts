@@ -4,7 +4,7 @@ plugins {
     id("com.android.library")
 }
 
-group = "com.augmentalis.avanues.avamagic.components"
+group = "com.augmentalis.avanueui"
 version = "1.0.0"
 
 kotlin {
@@ -51,7 +51,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.avanues.avamagic.components.voicerouter"
+    namespace = "com.augmentalis.avanueui.voicerouter"
     compileSdk = 35
 
     defaultConfig {

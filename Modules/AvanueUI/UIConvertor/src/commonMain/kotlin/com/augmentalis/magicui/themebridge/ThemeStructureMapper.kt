@@ -1,7 +1,7 @@
-package com.augmentalis.avamagic.themebridge
+package com.augmentalis.avanueui.themebridge
 
 import com.augmentalis.avanue.core.models.ThemeComponent as LegacyComponent
-import com.augmentalis.avamagic.theme.ThemeConfig
+import com.augmentalis.avanueui.theme.ThemeConfig
 
 /**
  * Maps individual theme component updates between legacy Avanue4 and modern AvaUI systems.

@@ -8,7 +8,7 @@
 #
 # Usage:
 #   ./scripts/gradle-run.sh [gradle-task] [gradle-args...]
-#   ./scripts/gradle-run.sh :Modules:AvaMagic:AVACode:build
+#   ./scripts/gradle-run.sh :Modules:AVACode:build
 #   ./scripts/gradle-run.sh :Modules:VoiceOSCoreNG:compileDebugKotlinAndroid --info
 #
 # Options (must come before gradle task):
@@ -19,7 +19,7 @@
 #
 # Examples:
 #   ./scripts/gradle-run.sh --tail 50 :Modules:VoiceOSCoreNG:build
-#   ./scripts/gradle-run.sh --quiet :Modules:AvaMagic:AVACode:assembleDebug
+#   ./scripts/gradle-run.sh --quiet :Modules:AVACode:assembleDebug
 
 set -e
 
@@ -63,7 +63,7 @@ if [[ ${#GRADLE_ARGS[@]} -eq 0 ]]; then
     echo "  --quiet     Suppress info messages"
     echo ""
     echo "Examples:"
-    echo "  $0 :Modules:AvaMagic:AVACode:build"
+    echo "  $0 :Modules:AVACode:build"
     echo "  $0 --tail 50 :Modules:VoiceOSCoreNG:compileDebugKotlinAndroid"
     exit 1
 fi

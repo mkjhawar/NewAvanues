@@ -13,7 +13,7 @@ kotlin {
     // iOS targets
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach {
         it.binaries.framework {
-            baseName = "AvaMagicIPC"
+            baseName = "AvanueIPC"
             isStatic = true
         }
     }
@@ -53,7 +53,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.avamagic.ipc"
+    namespace = "com.augmentalis.avanueui.ipc"
     compileSdk = 35
 
     defaultConfig {

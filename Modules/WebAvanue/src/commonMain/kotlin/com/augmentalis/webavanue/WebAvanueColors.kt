@@ -9,7 +9,7 @@ import com.augmentalis.webavanue.AppColors
  * This is WebAvanue's custom branding, used when running in standalone mode
  * (outside Avanues ecosystem).
  *
- * When running inside Avanues ecosystem, AvaMagic theme takes over to provide
+ * When running inside Avanues ecosystem, Avanue theme takes over to provide
  * system-wide visual consistency.
  *
  * Brand Identity - Ocean Blue Glassmorphism Theme:

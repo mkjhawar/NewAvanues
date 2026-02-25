@@ -12,7 +12,7 @@ import com.augmentalis.webavanue.AppTypography
  * This is WebAvanue's custom typography, used when running in standalone mode
  * (outside Avanues ecosystem).
  *
- * When running inside Avanues ecosystem, AvaMagic typography takes over.
+ * When running inside Avanues ecosystem, Avanue typography takes over.
  *
  * Features:
  * - System font stack (Roboto on Android, SF Pro on iOS, etc.)

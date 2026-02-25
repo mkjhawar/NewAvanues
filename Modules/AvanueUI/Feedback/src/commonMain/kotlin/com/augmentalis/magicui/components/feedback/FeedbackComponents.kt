@@ -1,4 +1,4 @@
-package com.augmentalis.avamagic.components.feedback
+package com.augmentalis.avanueui.feedback
 
 import kotlinx.serialization.Serializable
 
