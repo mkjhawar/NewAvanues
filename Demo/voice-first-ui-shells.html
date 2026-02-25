@@ -175,6 +175,155 @@
         .layout-cockpit::before { left: calc(35% - 4px); }
         .layout-cockpit::after { right: calc(35% - 4px); }
 
+        /* ── Cockpit Workspace (live module panels) ── */
+        .layout-cockpit.cockpit-workspace .cockpit-panel {
+            display: flex; flex-direction: column; overflow: hidden;
+            cursor: pointer; position: relative; gap: 0;
+        }
+        .cockpit-mini-header {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 8px; font-size: 11px; font-weight: 700;
+            background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--glass-border);
+            flex-shrink: 0;
+        }
+        .cockpit-mini-header .mini-icon { font-size: 14px; }
+        .cockpit-mini-header .mini-title { flex: 1; color: var(--on-surface-dim); }
+        .cockpit-mini-header .mini-expand-btn,
+        .cockpit-mini-header .mini-picker-btn {
+            background: none; border: none; color: var(--on-surface-dim);
+            cursor: pointer; font-size: 12px; padding: 2px 5px; border-radius: 4px;
+            transition: all 150ms;
+        }
+        .cockpit-mini-header .mini-expand-btn:hover,
+        .cockpit-mini-header .mini-picker-btn:hover {
+            background: var(--glass); color: var(--on-surface);
+        }
+        .mini-module-body {
+            flex: 1; overflow: hidden; padding: 8px; font-size: 11px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        /* Focus glow */
+        .cockpit-panel.focused {
+            border-color: rgba(21,101,192,0.6) !important;
+            box-shadow: 0 0 30px rgba(21,101,192,0.2), inset 0 1px 0 rgba(66,165,245,0.2);
+            z-index: 2;
+        }
+        .cockpit-panel:not(.focused) { opacity: 0.85; }
+        .cockpit-panel:not(.focused):hover { opacity: 1; }
+
+        /* Mini module type-specific styles */
+        .mini-browser-url {
+            background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 10px;
+            font-size: 10px; color: var(--on-surface-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .mini-browser-viewport {
+            flex: 1; background: rgba(0,0,0,0.2); border-radius: 4px; min-height: 40px;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; opacity: 0.3;
+        }
+        .mini-editor-line {
+            height: 6px; background: rgba(255,255,255,0.12); border-radius: 3px; width: 100%;
+        }
+        .mini-editor-line.heading {
+            height: auto; background: none; font-size: 11px; font-weight: 700;
+            color: var(--on-surface); margin-bottom: 4px; padding: 0;
+        }
+        .mini-pdf-page {
+            flex: 1; background: rgba(42,42,62,0.8); border: 1px solid var(--glass-border);
+            border-radius: 3px; display: flex; align-items: center; justify-content: center;
+            text-align: center; font-size: 10px; color: var(--on-surface-dim); min-height: 60px;
+        }
+        .mini-video {
+            flex: 1; background: #000; border-radius: 4px; min-height: 40px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mini-video .mini-play { font-size: 20px; opacity: 0.6; }
+        .mini-progress { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; margin-top: 4px; }
+        .mini-progress .mini-progress-fill { height: 100%; background: var(--primary); border-radius: 2px; }
+        .mini-camera {
+            flex: 1; background: #000; border-radius: 4px; min-height: 50px;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; opacity: 0.4;
+        }
+        .mini-file-row {
+            padding: 3px 6px; background: rgba(255,255,255,0.04); border-radius: 3px;
+            font-size: 10px; color: var(--on-surface-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .mini-gallery {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 3px; flex: 1;
+        }
+        .mini-gallery-thumb {
+            background: rgba(21,101,192,0.15); border-radius: 3px;
+            display: flex; align-items: center; justify-content: center; font-size: 14px; min-height: 28px;
+        }
+        .mini-cast {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; font-size: 10px; color: var(--on-surface-dim); gap: 2px;
+        }
+        .mini-cast span { font-size: 24px; }
+        .mini-settings-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 3px 6px; font-size: 10px; color: var(--on-surface-dim);
+        }
+        .mini-toggle {
+            width: 20px; height: 11px; border-radius: 6px; background: rgba(255,255,255,0.15);
+            display: inline-block; position: relative;
+        }
+        .mini-toggle.on { background: var(--primary); }
+
+        /* Maximize mode */
+        .layout-cockpit.cockpit-workspace.maximized .cockpit-panel { display: none; }
+        .layout-cockpit.cockpit-workspace.maximized .cockpit-panel.focused {
+            display: flex; flex: 1; transform: none !important; border-radius: var(--radius);
+        }
+        .layout-cockpit.cockpit-workspace.maximized::before,
+        .layout-cockpit.cockpit-workspace.maximized::after { display: none; }
+
+        /* Module picker dropdown */
+        .panel-picker-dropdown {
+            position: absolute; top: 28px; right: 4px; z-index: 10;
+            background: var(--surface2); border: 1px solid var(--glass-border);
+            border-radius: 8px; padding: 4px; display: none;
+            min-width: 140px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        .panel-picker-dropdown.visible { display: flex; flex-direction: column; }
+        .panel-picker-option {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 11px; color: var(--on-surface-dim); transition: background 100ms;
+        }
+        .panel-picker-option:hover { background: rgba(21,101,192,0.2); color: var(--on-surface); }
+        .panel-picker-option.current { color: var(--primary); font-weight: 700; }
+
+        /* Cockpit action bar divider */
+        .action-divider {
+            width: 1px; height: 24px; background: var(--glass-border); flex-shrink: 0;
+        }
+
+        /* ── AvanueViews card preview ── */
+        .card-preview {
+            height: 80px; overflow: hidden; border-radius: 6px; margin: 8px 0;
+            background: rgba(0,0,0,0.2); padding: 8px; font-size: 11px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+
+        /* ── Spatial island preview ── */
+        .island-preview {
+            margin-top: 6px; font-size: 9px; overflow: hidden; max-height: 70px;
+            opacity: 0.8;
+        }
+        .island.depth-near { min-width: 150px; }
+        .island.depth-mid .island-preview { max-height: 50px; }
+        .island.depth-far .island-preview { display: none; }
+
+        /* ── Lens result preview ── */
+        .lens-result-item { position: relative; }
+        .result-preview {
+            display: none; position: absolute; right: -220px; top: 0;
+            width: 200px; background: var(--surface2); border: 1px solid var(--glass-border);
+            border-radius: 8px; padding: 8px; font-size: 10px; z-index: 5;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        }
+        .lens-result-item:hover .result-preview { display: flex; flex-direction: column; gap: 4px; }
+
         /* Carousel layout — horizontal scroll */
         .layout-carousel {
             display: flex; gap: 16px; padding: 20px; flex: 1; align-items: stretch;
@@ -514,32 +663,32 @@
             <div class="card-stream" id="avContainer">
                 <div class="stream-card" data-mod="note" data-cat="active" onclick="openModule('note')">
                     <div class="card-head"><span class="card-icon">📝</span><span class="card-title">Active: Meeting Notes</span><span class="card-meta">5 min ago</span></div>
-                    <div class="card-body">847 words, last edit at 14:32. Sprint retrospective action items pending review.</div>
+                    <div class="card-preview" id="av-preview-note"></div>
                     <span class="card-cta">Resume Editing</span>
                 </div>
                 <div class="stream-card" data-mod="pdf" data-cat="active" onclick="openModule('pdf')">
                     <div class="card-head"><span class="card-icon">📄</span><span class="card-title">Research: Quantum Computing</span><span class="card-meta">3 PDFs</span></div>
-                    <div class="card-body">Latest update from arXiv this morning. 2 papers highlighted, 1 with annotations.</div>
+                    <div class="card-preview" id="av-preview-pdf"></div>
                     <span class="card-cta">View Papers</span>
                 </div>
                 <div class="stream-card" data-mod="photo" data-cat="suggested" onclick="openModule('photo')">
                     <div class="card-head"><span class="card-icon">📷</span><span class="card-title">Suggested: Morning Sketches</span><span class="card-meta">12 photos</span></div>
-                    <div class="card-body">Whiteboard sketches captured this morning. Ready to convert to digital notes?</div>
+                    <div class="card-preview" id="av-preview-photo"></div>
                     <span class="card-cta">Convert Now</span>
                 </div>
                 <div class="stream-card" data-mod="web" data-cat="recent" onclick="openModule('web')">
                     <div class="card-head"><span class="card-icon">🌐</span><span class="card-title">Reading: AI in Healthcare</span><span class="card-meta">8 min read</span></div>
-                    <div class="card-body">TechCrunch article saved to your library. Highlights FDA approval of diagnostic AI.</div>
+                    <div class="card-preview" id="av-preview-web"></div>
                     <span class="card-cta">Continue Reading</span>
                 </div>
                 <div class="stream-card" data-mod="whiteboard" data-cat="suggested" onclick="openModule('whiteboard')">
                     <div class="card-head"><span class="card-icon">✏️</span><span class="card-title">Export Whiteboard Diagrams</span><span class="card-meta">3 diagrams</span></div>
-                    <div class="card-body">You sketched architecture diagrams. Export as SVG for the quarterly presentation?</div>
+                    <div class="card-preview" id="av-preview-whiteboard"></div>
                     <span class="card-cta">Export SVG</span>
                 </div>
                 <div class="stream-card" data-mod="video" data-cat="recent" onclick="openModule('video')">
                     <div class="card-head"><span class="card-icon">🎬</span><span class="card-title">Continue: Tutorial Video</span><span class="card-meta">35% watched</span></div>
-                    <div class="card-body">KMP Compose Multiplatform walkthrough. Bookmarked at chapter 4: Navigation.</div>
+                    <div class="card-preview" id="av-preview-video"></div>
                     <span class="card-cta">Resume</span>
                 </div>
             </div>
@@ -803,6 +952,169 @@ let avLayout = 'stream';
 let lensLayout = 'grid';
 let spatialZoom = 1.0;
 
+// ========== COCKPIT WORKSPACE STATE ==========
+const cockpitState = {
+    panels: { left: 'pdf', center: 'web', right: 'video' },
+    focusedPanel: 'center',
+    maximized: false
+};
+
+function renderMiniModule(moduleId) {
+    const mod = MODULES[moduleId];
+    if (!mod) return '<div style="opacity:0.3;text-align:center;padding:16px">Empty</div>';
+    switch (moduleId) {
+        case 'web':
+            return `<div class="mini-browser-url">🔒 techcrunch.com/ai-healthcare</div>
+                    <div class="mini-browser-viewport">🌐</div>`;
+        case 'note':
+            return `<div class="mini-editor-line heading">Sprint Retrospective</div>
+                    <div class="mini-editor-line"></div>
+                    <div class="mini-editor-line" style="width:80%"></div>
+                    <div class="mini-editor-line" style="width:60%"></div>`;
+        case 'pdf':
+            return `<div class="mini-pdf-page"><span>📄</span><br>Page 1 / 24</div>`;
+        case 'video':
+            return `<div class="mini-video"><span class="mini-play">▶</span></div>
+                    <div class="mini-progress"><div class="mini-progress-fill" style="width:35%"></div></div>`;
+        case 'photo':
+            return `<div class="mini-camera">📷</div>`;
+        case 'whiteboard':
+            return `<svg viewBox="0 0 200 120" style="width:100%;height:60px">
+                        <path d="M20,30 Q60,10 100,40 T180,30" stroke="var(--secondary)" stroke-width="2" fill="none"/>
+                        <path d="M30,70 Q80,50 140,80" stroke="var(--accent-green)" stroke-width="2" fill="none"/>
+                    </svg>`;
+        case 'files':
+            return `<div class="mini-file-row">📁 Documents</div>
+                    <div class="mini-file-row">📄 Sprint-Notes.md</div>
+                    <div class="mini-file-row">📄 quantum-2026.pdf</div>`;
+        case 'image':
+            return `<div class="mini-gallery">
+                        <div class="mini-gallery-thumb">🏔️</div><div class="mini-gallery-thumb">🌅</div>
+                        <div class="mini-gallery-thumb">🏙️</div><div class="mini-gallery-thumb">🌿</div>
+                    </div>`;
+        case 'cast':
+            return `<div class="mini-cast"><span>📡</span>Ready</div>`;
+        case 'annotation':
+            return `<svg viewBox="0 0 200 120" style="width:100%;height:60px">
+                        <path d="M20,60 C60,20 120,100 180,50" stroke="var(--primary)" stroke-width="3" fill="none"/>
+                    </svg>`;
+        case 'settings':
+            return `<div class="mini-settings-row"><span>Shell Mode</span><span class="mini-toggle on"></span></div>
+                    <div class="mini-settings-row"><span>Dark Mode</span><span class="mini-toggle on"></span></div>
+                    <div class="mini-settings-row"><span>Voice</span><span class="mini-toggle"></span></div>`;
+        default:
+            return `<div style="text-align:center;opacity:0.5;padding:20px">${mod.icon}</div>`;
+    }
+}
+
+function buildPickerOptions(pos) {
+    return Object.entries(MODULES).map(([id, mod]) => {
+        const isCurrent = cockpitState.panels[pos] === id;
+        return `<div class="panel-picker-option${isCurrent ? ' current' : ''}" onclick="event.stopPropagation(); assignModuleToPanel('${pos}','${id}')">${mod.icon} ${mod.title}${isCurrent ? ' ✓' : ''}</div>`;
+    }).join('');
+}
+
+function togglePanelPicker(pos) {
+    document.querySelectorAll('.panel-picker-dropdown').forEach(d => {
+        if (d.id !== 'picker-' + pos) d.classList.remove('visible');
+    });
+    const picker = document.getElementById('picker-' + pos);
+    if (picker) picker.classList.toggle('visible');
+}
+
+function assignModuleToPanel(pos, moduleId) {
+    cockpitState.panels[pos] = moduleId;
+    document.querySelectorAll('.panel-picker-dropdown').forEach(d => d.classList.remove('visible'));
+    buildClassicLayout('cockpit');
+}
+
+function focusCockpitPanel(pos) {
+    cockpitState.focusedPanel = pos;
+    document.querySelectorAll('.cockpit-panel').forEach(p => {
+        p.classList.toggle('focused', p.dataset.position === pos);
+    });
+    updateCockpitActions();
+}
+
+function swapPanels(posA, posB) {
+    const tmp = cockpitState.panels[posA];
+    cockpitState.panels[posA] = cockpitState.panels[posB];
+    cockpitState.panels[posB] = tmp;
+    buildClassicLayout('cockpit');
+}
+
+function rotatePanels() {
+    const { left, center, right } = cockpitState.panels;
+    cockpitState.panels.left = right;
+    cockpitState.panels.center = left;
+    cockpitState.panels.right = center;
+    buildClassicLayout('cockpit');
+}
+
+function toggleMaximize() {
+    cockpitState.maximized = !cockpitState.maximized;
+    buildClassicLayout('cockpit');
+}
+
+function updateCockpitActions() {
+    const focusedModId = cockpitState.panels[cockpitState.focusedPanel];
+    const focusedMod = MODULES[focusedModId];
+
+    // Panel management chips
+    const panelItems = [
+        { label: '🔄 Rotate', active: false, action: rotatePanels },
+        { label: '↔️ Swap L↔C', active: false, action: () => swapPanels('left', 'center') },
+        { label: '↔️ Swap C↔R', active: false, action: () => swapPanels('center', 'right') },
+        { label: cockpitState.maximized ? '🗗 Restore' : '🗖 Maximize', active: cockpitState.maximized, action: toggleMaximize },
+    ];
+
+    // Build custom action bar with divider
+    const bar = document.getElementById('actionBar');
+    bar.innerHTML = '';
+
+    // Panel management section
+    panelItems.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'action-chip' + (item.active ? ' active' : '');
+        btn.textContent = item.label;
+        btn.onclick = () => { if (item.action) item.action(); };
+        bar.appendChild(btn);
+    });
+
+    // Divider
+    const divider = document.createElement('div');
+    divider.className = 'action-divider';
+    bar.appendChild(divider);
+
+    // Focused module actions
+    if (focusedMod) {
+        focusedMod.actions.forEach(a => {
+            const btn = document.createElement('button');
+            btn.className = 'action-chip';
+            btn.textContent = a;
+            bar.appendChild(btn);
+        });
+    }
+
+    // Spacer + Layouts button
+    const spacer = document.createElement('div');
+    spacer.className = 'action-spacer';
+    bar.appendChild(spacer);
+    const more = document.createElement('button');
+    more.className = 'action-more';
+    more.textContent = 'Layouts';
+    more.onclick = () => {
+        // Temporarily show layout picker
+        updateClassicActions();
+    };
+    bar.appendChild(more);
+}
+
+// Close pickers on outside click
+document.addEventListener('click', () => {
+    document.querySelectorAll('.panel-picker-dropdown').forEach(d => d.classList.remove('visible'));
+});
+
 // ========== CLASSIC SHELL LAYOUTS ==========
 function buildClassicLayout(layout) {
     classicLayout = layout;
@@ -822,24 +1134,34 @@ function buildClassicLayout(layout) {
     }
     else if (layout === 'cockpit') {
         label.textContent = '✈️ Cockpit';
-        container.className = 'layout-cockpit';
-        // Left panel: tiles 3-5 (PDF, Whiteboard, Video)
-        const leftTiles = TILE_DATA.slice(3, 6);
-        // Center panel: tiles 0-2 + settings (Web, Photo, Note, Settings)
-        const centerTiles = [TILE_DATA[0], TILE_DATA[1], TILE_DATA[2], TILE_DATA[9]];
-        // Right panel: tiles 6-8 (Files, Image, Cast)
-        const rightTiles = TILE_DATA.slice(6, 9);
-        const makePanel = (tiles, cls) => {
+        container.className = 'layout-cockpit cockpit-workspace';
+        if (cockpitState.maximized) container.classList.add('maximized');
+
+        ['left', 'center', 'right'].forEach(pos => {
+            const modId = cockpitState.panels[pos];
+            const mod = MODULES[modId];
+            if (!mod) return;
             const panel = document.createElement('div');
-            panel.className = `cockpit-panel ${cls}`;
-            tiles.forEach(t => {
-                panel.innerHTML += `<div class="tile" onclick="openModule('${t.id}')"><div class="icon">${t.icon}</div><div class="label">${t.label}</div></div>`;
-            });
-            return panel;
-        };
-        container.appendChild(makePanel(leftTiles, 'left'));
-        container.appendChild(makePanel(centerTiles, 'center'));
-        container.appendChild(makePanel(rightTiles, 'right'));
+            panel.className = `cockpit-panel ${pos}`;
+            panel.dataset.position = pos;
+            if (pos === cockpitState.focusedPanel) panel.classList.add('focused');
+
+            panel.innerHTML = `
+                <div class="cockpit-mini-header">
+                    <span class="mini-icon">${mod.icon}</span>
+                    <span class="mini-title">${mod.title}</span>
+                    <button class="mini-expand-btn" onclick="event.stopPropagation(); openModule('${modId}')" title="Full screen">⛶</button>
+                    <button class="mini-picker-btn" onclick="event.stopPropagation(); togglePanelPicker('${pos}')" title="Change module">▾</button>
+                </div>
+                <div class="mini-module-body">${renderMiniModule(modId)}</div>
+                <div class="panel-picker-dropdown" id="picker-${pos}">${buildPickerOptions(pos)}</div>
+            `;
+            panel.addEventListener('click', () => focusCockpitPanel(pos));
+            panel.addEventListener('dblclick', (e) => { e.preventDefault(); toggleMaximize(); });
+            container.appendChild(panel);
+        });
+        updateCockpitActions();
+        return; // Skip updateClassicActions — cockpit manages its own action bar
     }
     else if (layout === 'carousel') {
         label.textContent = '🎠 Carousel';
@@ -879,6 +1201,7 @@ function buildClassicLayout(layout) {
 }
 
 function updateClassicActions() {
+    if (classicLayout === 'cockpit') { updateCockpitActions(); return; }
     const layouts = [
         { id:'grid', icon:'📐', label:'Grid' },
         { id:'cockpit', icon:'✈️', label:'Cockpit' },
@@ -1080,11 +1403,14 @@ function onLensInput(query) {
     if (!query.trim()) { results.classList.remove('visible'); grid.style.display=''; return; }
     grid.style.display='none';
     const matches = SEARCHABLE.filter(s => s.title.toLowerCase().includes(query.toLowerCase()));
-    results.innerHTML = matches.slice(0,8).map(m =>
-        `<div class="lens-result-item" onclick="${m.id!=='_cmd' ? `openModule('${m.id}')` : ''}">
+    results.innerHTML = matches.slice(0,8).map(m => {
+        const previewHtml = (m.type === 'Module' && m.id !== '_cmd')
+            ? `<div class="result-preview">${renderMiniModule(m.id)}</div>` : '';
+        return `<div class="lens-result-item" onclick="${m.id!=='_cmd' ? `openModule('${m.id}')` : ''}">
             <span class="r-icon">${m.icon}</span><span class="r-label">${m.title}</span><span class="r-type">${m.type}</span>
-        </div>`
-    ).join('');
+            ${previewHtml}
+        </div>`;
+    }).join('');
     results.classList.add('visible');
 }
 
@@ -1113,6 +1439,7 @@ document.querySelectorAll('.island').forEach(island => {
 
 // ========== KEYBOARD SHORTCUTS ==========
 document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && classicLayout === 'cockpit' && cockpitState.maximized) { toggleMaximize(); return; }
     if (e.key === 'Escape' && currentModule) goBack();
     const shells = ['classic','avanue-views','lens','spatial'];
     if (e.key >= '1' && e.key <= '4' && (e.metaKey || e.ctrlKey)) {
@@ -1126,6 +1453,23 @@ document.addEventListener('keydown', (e) => {
 
 // ========== INIT ==========
 buildClassicLayout('grid');
+
+// Inject AvanueViews mini module previews
+['note','pdf','photo','web','whiteboard','video'].forEach(modId => {
+    const el = document.getElementById('av-preview-' + modId);
+    if (el) el.innerHTML = renderMiniModule(modId);
+});
+
+// Inject Spatial island mini module previews
+document.querySelectorAll('.island').forEach(island => {
+    const modId = island.dataset.mod;
+    if (modId && MODULES[modId] && !island.querySelector('.island-preview')) {
+        const preview = document.createElement('div');
+        preview.className = 'island-preview';
+        preview.innerHTML = renderMiniModule(modId);
+        island.appendChild(preview);
+    }
+});
 </script>
 </body>
 </html>
