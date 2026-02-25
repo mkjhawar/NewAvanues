@@ -69,7 +69,7 @@ enum class PreFilterMode {
  */
 class AvxPreFilterEngine(
     private val context: Context
-) {
+) : ISpeechPreFilter {
     companion object {
         private const val TAG = "AvxPreFilter"
 
@@ -94,6 +94,10 @@ class AvxPreFilterEngine(
     val isAvxReady: Boolean
         get() = avxEngine?.isReady() == true
 
+    // ISpeechPreFilter.isReady
+    override val isReady: Boolean
+        get() = isAvxReady
+
     /** Whether pre-filter accepted the last result (for metrics) */
     @Volatile
     var lastResultFromAvx: Boolean = false
@@ -110,6 +114,15 @@ class AvxPreFilterEngine(
 
     /** Callback for results that AVX handles with high confidence */
     var onAvxResult: ((RecognitionResult) -> Unit)? = null
+
+    // ISpeechPreFilter.onResult — wired by VoiceOSCore for command dispatch
+    override var onResult: ((text: String, confidence: Float) -> Unit)? = null
+
+    /** Last accepted result text and timestamp for duplicate suppression */
+    @Volatile
+    private var lastAcceptedText: String = ""
+    @Volatile
+    private var lastAcceptedTimestamp: Long = 0L
 
     /**
      * Enable pre-filtering with the given mode and language.
@@ -185,7 +198,7 @@ class AvxPreFilterEngine(
     /**
      * Check if pre-filtering should be active for the given speech mode.
      */
-    fun isActiveFor(speechMode: SpeechMode): Boolean {
+    override fun isActiveFor(speechMode: SpeechMode): Boolean {
         if (mode == PreFilterMode.DISABLED) return false
         if (avxEngine?.isReady() != true) return false
 
@@ -203,7 +216,7 @@ class AvxPreFilterEngine(
     /**
      * Start AVX listening (call when Vivoka starts, if pre-filter is active).
      */
-    fun startListening(speechMode: SpeechMode) {
+    override fun startListening(speechMode: SpeechMode) {
         if (!isActiveFor(speechMode)) return
         avxEngine?.startListening(
             when (speechMode) {
@@ -217,14 +230,14 @@ class AvxPreFilterEngine(
     /**
      * Stop AVX listening.
      */
-    fun stopListening() {
+    override fun stopListening() {
         avxEngine?.stopListening()
     }
 
     /**
      * Update AVX hot words from the current command list.
      */
-    fun updateCommands(commands: List<String>) {
+    override fun updateCommands(commands: List<String>) {
         avxEngine?.updateCommands(commands)
     }
 
@@ -242,8 +255,12 @@ class AvxPreFilterEngine(
             // AVX is confident — accept this result
             lastResultFromAvx = true
             avxAcceptCount++
+            lastAcceptedText = result.text.lowercase().trim()
+            lastAcceptedTimestamp = System.currentTimeMillis()
             Log.d(TAG, "AVX ACCEPT: '${result.text}' conf=${result.confidence} (threshold=$confidenceThreshold)")
             onAvxResult?.invoke(result)
+            // Fire ISpeechPreFilter.onResult for VoiceOSCore dispatch
+            onResult?.invoke(result.text, result.confidence)
         } else {
             // Low confidence — let Vivoka's result pass through
             lastResultFromAvx = false
@@ -267,11 +284,28 @@ class AvxPreFilterEngine(
     )
 
     /**
+     * Check if pre-filter recently accepted a result matching [text].
+     * Used to suppress duplicate results from the primary engine (Vivoka).
+     */
+    override fun wasRecentlyAccepted(text: String, windowMs: Long): Boolean {
+        if (lastAcceptedText.isEmpty()) return false
+        val elapsed = System.currentTimeMillis() - lastAcceptedTimestamp
+        if (elapsed > windowMs) return false
+        // Fuzzy match: check if normalized texts are similar
+        val normalizedInput = text.lowercase().trim()
+        return normalizedInput == lastAcceptedText ||
+            normalizedInput.contains(lastAcceptedText) ||
+            lastAcceptedText.contains(normalizedInput)
+    }
+
+    /**
      * Release all resources.
      */
-    fun destroy() {
+    override fun destroy() {
         avxEngine?.destroy()
         avxEngine = null
         mode = PreFilterMode.DISABLED
+        onResult = null
+        lastAcceptedText = ""
     }
 }

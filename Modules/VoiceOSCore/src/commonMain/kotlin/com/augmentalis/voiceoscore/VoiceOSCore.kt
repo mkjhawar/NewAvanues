@@ -20,6 +20,7 @@
 package com.augmentalis.voiceoscore
 
 import kotlin.concurrent.Volatile
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlin.collections.flatMap
 
@@ -49,8 +50,12 @@ class VoiceOSCore private constructor(
     private val configuration: ServiceConfiguration,
     private val commandRegistry: CommandRegistry = CommandRegistry(),
     private val synonymProvider: ISynonymProvider? = null,
-    private val staticCommandPersistence: IStaticCommandPersistence? = null
+    private val staticCommandPersistence: IStaticCommandPersistence? = null,
+    private val speechPreFilter: ISpeechPreFilter? = null
 ) {
+    // Coroutine scope for async operations (pre-filter callbacks, etc.)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     // Coordinator manages handler execution
     // Uses shared commandRegistry for direct synchronous access
     private val coordinator = ActionCoordinator(
@@ -233,6 +238,16 @@ class VoiceOSCore private constructor(
                         }
                     }
 
+                    // Wire pre-filter result callback → processCommand()
+                    speechPreFilter?.let { preFilter ->
+                        preFilter.onResult = { text, confidence ->
+                            scope.launch {
+                                LoggingUtils.d("Pre-filter accepted: '$text' (conf=$confidence)", TAG)
+                                processCommand(text, confidence)
+                            }
+                        }
+                    }
+
                     // Only auto-start listening if configured AND initialization succeeded
                     if (configuration.autoStartListening && initResult?.isSuccess == true) {
                         speechEngine?.startListening()
@@ -265,6 +280,16 @@ class VoiceOSCore private constructor(
      * @return HandlerResult from execution
      */
     suspend fun processCommand(text: String, confidence: Float = 1.0f): HandlerResult {
+        // Suppress duplicate results when pre-filter already handled this command.
+        // When AVX accepts a result, Vivoka may also produce a result for the same
+        // utterance. We suppress it to avoid executing the command twice.
+        speechPreFilter?.let { preFilter ->
+            if (preFilter.wasRecentlyAccepted(text)) {
+                LoggingUtils.d("Suppressed duplicate result from primary engine: '$text'", TAG)
+                return HandlerResult.success("Already handled by pre-filter")
+            }
+        }
+
         // System command intercepts (before handler chain)
         val normalizedInput = text.lowercase().trim()
         if (normalizedInput == "developer mode 5x" ||
@@ -335,6 +360,7 @@ class VoiceOSCore private constructor(
 
     /**
      * Start listening for voice commands.
+     * Also starts the pre-filter (if active) in parallel with the main engine.
      */
     suspend fun startListening(): Result<Unit> {
         val engine = speechEngine ?: return Result.failure(
@@ -343,6 +369,9 @@ class VoiceOSCore private constructor(
 
         val result = engine.startListening()
         if (result.isSuccess) {
+            // Start pre-filter alongside main engine
+            speechPreFilter?.startListening(currentSpeechMode)
+
             stateManager.transition(
                 ServiceState.Listening(
                     speechEngine = configuration.speechEngine,
@@ -356,8 +385,10 @@ class VoiceOSCore private constructor(
 
     /**
      * Stop listening for voice commands.
+     * Also stops the pre-filter.
      */
     suspend fun stopListening() {
+        speechPreFilter?.stopListening()
         speechEngine?.stopListening()
         stateManager.transition(
             ServiceState.Ready(
@@ -444,6 +475,18 @@ class VoiceOSCore private constructor(
 
         // Restart recognition with new configuration
         val result = engine.startListening()
+
+        // Sync pre-filter with speech mode change
+        if (result.isSuccess) {
+            speechPreFilter?.let { pf ->
+                if (pf.isActiveFor(mode)) {
+                    pf.startListening(mode)
+                } else {
+                    pf.stopListening()
+                }
+            }
+        }
+
         if (result.isSuccess) {
             if (mode == SpeechMode.MUTED) {
                 // Transition to Ready (not Listening) so UI shows muted state
@@ -502,6 +545,8 @@ class VoiceOSCore private constructor(
             .onSuccess {
                 allRegisteredCommands.clear()
                 allRegisteredCommands.addAll(newCommands)
+                // Sync hot words with pre-filter for AVX boosting
+                speechPreFilter?.updateCommands(newCommands.toList())
             }
     }
 
@@ -710,8 +755,10 @@ class VoiceOSCore private constructor(
     suspend fun dispose() {
         stateManager.transition(ServiceState.Stopping)
 
+        speechPreFilter?.destroy()
         speechEngine?.destroy()
         coordinator.dispose()
+        scope.cancel()
 
         stateManager.transition(ServiceState.Stopped)
     }
@@ -726,6 +773,7 @@ class VoiceOSCore private constructor(
         private var commandRegistry: CommandRegistry? = null
         private var synonymProvider: ISynonymProvider? = null
         private var staticCommandPersistence: IStaticCommandPersistence? = null
+        private var speechPreFilter: ISpeechPreFilter? = null
 
         fun withHandlerFactory(factory: HandlerFactory) = apply {
             this.handlerFactory = factory
@@ -826,6 +874,22 @@ class VoiceOSCore private constructor(
             this.staticCommandPersistence = persistence
         }
 
+        /**
+         * Set the speech pre-filter for command-mode acceleration.
+         *
+         * On Android, use [AvxPreFilterEngine] which runs AVX (Sherpa-ONNX) as a
+         * lightweight first-pass before Vivoka. High-confidence AVX results are
+         * accepted immediately; low-confidence results fall through to Vivoka.
+         *
+         * The pre-filter must be [enable]d separately after building VoiceOSCore,
+         * as enabling requires async model loading.
+         *
+         * @param preFilter The pre-filter implementation
+         */
+        fun withPreFilter(preFilter: ISpeechPreFilter) = apply {
+            this.speechPreFilter = preFilter
+        }
+
         fun build(): VoiceOSCore {
             return VoiceOSCore(
                 handlerFactory = handlerFactory ?: throw IllegalStateException("HandlerFactory required"),
@@ -833,7 +897,8 @@ class VoiceOSCore private constructor(
                 configuration = configuration,
                 commandRegistry = commandRegistry ?: CommandRegistry(),
                 synonymProvider = synonymProvider,
-                staticCommandPersistence = staticCommandPersistence
+                staticCommandPersistence = staticCommandPersistence,
+                speechPreFilter = speechPreFilter
             )
         }
     }
