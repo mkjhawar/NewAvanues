@@ -75,10 +75,8 @@ Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/clc/
 Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/lm/
 Modules/SpeechRecognition/src/main/assets/vsdk/data/csdk/asr/ctx/ctx-primary*
 
-# TVM JARs (downloaded from GitLab Package Registry)
-Modules/AI/ALC/libs/*.jar
-Modules/AI/LLM/libs/*.jar
-Modules/AI/LLM/libs/*.jar.old
+# TVM native runtime (>50MB — publish to Maven/GitLab Package Registry)
+# Note: tvm4j_core.jar (<100KB) is tracked normally — only large binaries go to Maven
 
 # AVA Migration - Exclude large model files (>100MB)
 android/apps/AVA/external-models/**/*.bin
