@@ -43,6 +43,7 @@ class FrameContentTest {
         assertEquals(FrameContent.TYPE_AI_SUMMARY, FrameContent.AiSummary().typeId)
         assertEquals(FrameContent.TYPE_SCREEN_CAST, FrameContent.ScreenCast().typeId)
         assertEquals(FrameContent.TYPE_WIDGET, FrameContent.Widget().typeId)
+        assertEquals(FrameContent.TYPE_FILE, FrameContent.File().typeId)
         assertEquals(FrameContent.TYPE_EXTERNAL_APP, FrameContent.ExternalApp().typeId)
     }
 
@@ -66,6 +67,12 @@ class FrameContentTest {
             assertTrue(
                 FrameContent.ALL_TYPES.contains(typeId),
                 "ALL_TYPES missing: $typeId"
+            )
+        }
+        FrameContent.ALL_TYPES.forEach { typeId ->
+            assertTrue(
+                expected.contains(typeId),
+                "Unexpected type in ALL_TYPES: $typeId"
             )
         }
     }
