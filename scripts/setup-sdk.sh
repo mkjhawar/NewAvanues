@@ -1,36 +1,35 @@
 #!/usr/bin/env bash
 #
-# setup-sdk.sh — Bootstrap binary dependencies for NewAvanues
+# setup-sdk.sh — Download large binaries (>75MB) from GitLab Package Registry
 #
-# Downloads large binary files from GitLab Package Registry that are not
-# tracked in git. Run this once after cloning, or after a clean checkout.
+# Policy: Files <75MB are tracked in git. Only files exceeding 75MB are
+# downloaded from the GitLab Package Registry. Run this after cloning.
 #
 # What gets downloaded:
-#   --sdk-only : Vivoka AARs/JARs/JNI + Sherpa-ONNX AAR/JARs (~310MB)
-#   --vlm-only : VLM Whisper model files (~8.4GB)
-#   --asr-only : VSDK ASR data files (~164MB)
-#   --tvm-only : TVM4J core JARs (~80K)
-#   (default)  : Everything
+#   VLM Whisper model files (~8.4GB) → VLMFiles/EN/ and VLMFiles/MUL/
+#
+# Already tracked in git (no download needed):
+#   Vivoka SDK AARs/JARs/JNI (~307MB)     — all files <75MB
+#   Sherpa-ONNX AAR/JARs (~40MB)           — all files <75MB
+#   VSDK ASR data (~164MB)                 — all files <75MB
+#   TVM4J core JARs (~80KB)                — all files <75MB
 #
 # Prerequisites:
 #   GITLAB_TOKEN      — Personal Access Token with 'read_api' scope
 #                       (or CI_JOB_TOKEN in GitLab CI/CD)
-#   GITLAB_PROJECT_ID — Numeric project ID
+#   GITLAB_PROJECT_ID — Numeric project ID (7692871)
 #
 # Usage:
-#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh
-#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh --vlm-only
-#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh --sdk-only
-#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh --asr-only
-#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=12345 ./scripts/setup-sdk.sh --tvm-only
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh --en-only
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh --mul-only
+#   GITLAB_TOKEN=glpat-XXX GITLAB_PROJECT_ID=7692871 ./scripts/setup-sdk.sh --tiny-only
 #
 set -euo pipefail
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
 GITLAB_API="${GITLAB_API:-https://gitlab.com/api/v4}"
-GROUP_ID="com.augmentalis.sdk"
-GROUP_PATH="com/augmentalis/sdk"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -51,7 +50,7 @@ fi
 
 if [[ -z "${GITLAB_PROJECT_ID:-}" ]]; then
     echo -e "${RED}ERROR: GITLAB_PROJECT_ID environment variable is required${NC}"
-    echo "  Find at: your-project → Settings → General → Project ID"
+    echo "  NewAvanues project ID: 7692871"
     exit 1
 fi
 
@@ -70,23 +69,26 @@ cd "$ROOT_DIR"
 
 # ── Parse Arguments ────────────────────────────────────────────────────────────
 
-DOWNLOAD_SDK=true
-DOWNLOAD_VLM=true
-DOWNLOAD_ASR=true
-DOWNLOAD_TVM=true
+DOWNLOAD_EN=true
+DOWNLOAD_MUL=true
+SIZES="all"  # all | tiny
 
 for arg in "$@"; do
     case "$arg" in
-        --vlm-only)  DOWNLOAD_SDK=false; DOWNLOAD_ASR=false; DOWNLOAD_TVM=false ;;
-        --sdk-only)  DOWNLOAD_VLM=false; DOWNLOAD_ASR=false; DOWNLOAD_TVM=false ;;
-        --asr-only)  DOWNLOAD_SDK=false; DOWNLOAD_VLM=false; DOWNLOAD_TVM=false ;;
-        --tvm-only)  DOWNLOAD_SDK=false; DOWNLOAD_VLM=false; DOWNLOAD_ASR=false ;;
+        --en-only)    DOWNLOAD_MUL=false ;;
+        --mul-only)   DOWNLOAD_EN=false ;;
+        --tiny-only)  SIZES="tiny" ;;
         --help|-h)
-            echo "Usage: $0 [--vlm-only|--sdk-only|--asr-only|--tvm-only]"
-            echo "  --vlm-only   Only download VLM model files (~8.4GB)"
-            echo "  --sdk-only   Only download SDK binaries (~310MB)"
-            echo "  --asr-only   Only download VSDK ASR data (~164MB)"
-            echo "  --tvm-only   Only download TVM4J core JARs (~80K)"
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Downloads VLM Whisper model files (~8.4GB) from GitLab Package Registry."
+            echo "All other dependencies (<75MB) are tracked in git — no download needed."
+            echo ""
+            echo "Options:"
+            echo "  --en-only     Only download English models (~4.2GB)"
+            echo "  --mul-only    Only download Multilingual models (~4.2GB)"
+            echo "  --tiny-only   Only download Tiny models (~200MB, fastest)"
+            echo "  --help        Show this help"
             exit 0
             ;;
         *) echo -e "${RED}Unknown argument: $arg${NC}"; exit 1 ;;
@@ -133,7 +135,6 @@ verify_checksum() {
 }
 
 # Check if a local file already exists and passes checksum.
-# Returns 0 if file is present and valid (skip download), 1 otherwise.
 check_existing() {
     local output="$1"
     if [[ ! -f "$output" ]]; then
@@ -145,62 +146,14 @@ check_existing() {
         local actual
         actual=$(shasum -a 256 "$output" 2>/dev/null | awk '{print $1}')
         if [[ "$actual" == "$expected" ]]; then
-            return 0  # file exists, checksum matches
+            return 0
         fi
-        return 1  # file exists but checksum mismatch → re-download
-    fi
-    return 0  # file exists, no checksum to check → assume OK
-}
-
-# Download from GitLab Maven Package Registry.
-# Usage: download_maven <artifactId> <version> <packaging> <output_path>
-download_maven() {
-    local artifact_id="$1"
-    local version="$2"
-    local packaging="$3"
-    local output="$4"
-
-    if check_existing "$output"; then
-        log_skip "$output"
-        ((SKIPPED++))
-        return 0
-    fi
-
-    local filename="${artifact_id}-${version}.${packaging}"
-    local url="${GITLAB_API}/projects/${GITLAB_PROJECT_ID}/packages/maven/${GROUP_PATH}/${artifact_id}/${version}/${filename}"
-
-    log_info "Downloading ${GROUP_ID}:${artifact_id}:${version} → ${output}..."
-    mkdir -p "$(dirname "$output")"
-
-    local http_code
-    http_code=$(curl -s -w "%{http_code}" \
-        --header "${AUTH_HEADER}" \
-        --output "$output" \
-        "$url")
-
-    if [[ "$http_code" != "200" ]]; then
-        log_err "HTTP ${http_code} for ${artifact_id}:${version}"
-        rm -f "$output"
-        ((ERRORS++))
         return 1
     fi
-
-    local expected
-    expected=$(get_expected_checksum "$output")
-    if [[ -n "$expected" ]] && ! verify_checksum "$output" "$expected"; then
-        rm -f "$output"
-        ((ERRORS++))
-        return 1
-    fi
-
-    local size
-    size=$(du -h "$output" | cut -f1 | xargs)
-    log_ok "$output (${size})"
-    ((DOWNLOADED++))
+    return 0  # file exists, no checksum → assume OK
 }
 
 # Download from GitLab Generic Package Registry.
-# Usage: download_generic <packageName> <version> <filename> <output_path>
 download_generic() {
     local package_name="$1"
     local version="$2"
@@ -248,120 +201,36 @@ download_generic() {
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 echo "═══════════════════════════════════════════════════════════════"
-echo "  NewAvanues SDK Bootstrap"
+echo "  NewAvanues — Download Large Binaries (>75MB)"
 echo "  Project: ${GITLAB_PROJECT_ID}"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# ── SDK Binaries ───────────────────────────────────────────────────────────────
-
-if [[ "$DOWNLOAD_SDK" == true ]]; then
-
-    echo "── Vivoka SDK AARs ──────────────────────────────────────────"
-    download_maven "vsdk"           "6.0.0" "aar" "vivoka/vsdk-6.0.0.aar"
-    download_maven "vsdk-csdk-asr"  "2.0.0" "aar" "vivoka/vsdk-csdk-asr-2.0.0.aar"
-    download_maven "vsdk-csdk-core" "1.0.1" "aar" "vivoka/vsdk-csdk-core-1.0.1.aar"
-    echo ""
-
-    echo "── Vivoka Android JARs ──────────────────────────────────────"
-    download_maven "vsdk-jar"           "6.0.0" "jar" "vivoka/Android/libs/vsdk-6.0.0.jar"
-    download_maven "vsdk-csdk-asr-jar"  "2.0.0" "jar" "vivoka/Android/libs/vsdk-csdk-asr-2.0.0.jar"
-    download_maven "vsdk-csdk-core-jar" "1.0.1" "jar" "vivoka/Android/libs/vsdk-csdk-core-1.0.1.jar"
-    echo ""
-
-    echo "── Vivoka JNI Native Libraries ──────────────────────────────"
-    if [[ ! -d "vivoka/Android/src/main/jniLibs/arm64-v8a" ]]; then
-        log_info "Downloading vivoka JNI native libraries..."
-        local_tar="/tmp/vivoka-jnilibs-$$.tar.gz"
-        url="${GITLAB_API}/projects/${GITLAB_PROJECT_ID}/packages/generic/vivoka-jnilibs/6.0.0/vivoka-jnilibs.tar.gz"
-
-        http_code=$(curl -s -w "%{http_code}" \
-            --header "${AUTH_HEADER}" \
-            --output "$local_tar" \
-            "$url")
-
-        if [[ "$http_code" == "200" ]]; then
-            mkdir -p "vivoka/Android/src/main"
-            tar -xzf "$local_tar" -C vivoka/Android/src/main
-            rm -f "$local_tar"
-            log_ok "vivoka/Android/src/main/jniLibs/ extracted"
-            ((DOWNLOADED++))
-        else
-            log_err "JNI libs download failed → HTTP ${http_code}"
-            rm -f "$local_tar"
-            ((ERRORS++))
-        fi
-    else
-        log_skip "vivoka/Android/src/main/jniLibs/"
-        ((SKIPPED++))
-    fi
-    echo ""
-
-    echo "── Sherpa-ONNX ──────────────────────────────────────────────"
-    download_maven "sherpa-onnx-android"  "1.5.5" "aar" "sherpa-onnx/sherpa-onnx.aar"
-    download_maven "sherpa-onnx-classes"  "1.5.5" "jar" "sherpa-onnx/sherpa-onnx-classes.jar"
-    download_maven "sherpa-onnx-desktop"  "1.5.5" "jar" "sherpa-onnx/sherpa-onnx-desktop.jar"
-    echo ""
+# Build model list based on size filter
+if [[ "$SIZES" == "tiny" ]]; then
+    EN_MODELS=("VoiceOS-Tin-EN")
+    MUL_MODELS=("VoiceOS-Tin-MUL")
+else
+    EN_MODELS=("VoiceOS-Tin-EN" "VoiceOS-Bas-EN" "VoiceOS-Sml-EN" "VoiceOS-Med-EN")
+    MUL_MODELS=("VoiceOS-Tin-MUL" "VoiceOS-Bas-MUL" "VoiceOS-Sml-MUL" "VoiceOS-Med-MUL")
 fi
 
-# ── VSDK ASR Data ─────────────────────────────────────────────────────────────
+# ── VLM English Models ────────────────────────────────────────────────────────
 
-if [[ "$DOWNLOAD_ASR" == true ]]; then
-
-    echo "── VSDK ASR Data ──────────────────────────────────────────"
-    ASR_TARGET="Modules/SpeechRecognition/src/main/assets/vsdk/data"
-    # Check if the large model files already exist (use the acoustic model as sentinel)
-    if [[ -f "${ASR_TARGET}/csdk/asr/acmod/am_enu_vocon_car_202312090302.dat" ]]; then
-        log_skip "${ASR_TARGET}/ (already present)"
-        ((SKIPPED++))
-    else
-        log_info "Downloading VSDK ASR data (~164MB compressed)..."
-        local_tar="/tmp/vsdk-asr-data-$$.tar.gz"
-        url="${GITLAB_API}/projects/${GITLAB_PROJECT_ID}/packages/generic/vsdk-asr-data/1.0.0/vsdk-asr-data.tar.gz"
-
-        http_code=$(curl -s -w "%{http_code}" \
-            --header "${AUTH_HEADER}" \
-            --output "$local_tar" \
-            "$url")
-
-        if [[ "$http_code" == "200" ]]; then
-            mkdir -p "Modules/SpeechRecognition/src/main/assets/vsdk"
-            tar -xzf "$local_tar" -C Modules/SpeechRecognition/src/main/assets/vsdk
-            rm -f "$local_tar"
-            log_ok "${ASR_TARGET}/ extracted"
-            ((DOWNLOADED++))
-        else
-            log_err "VSDK ASR data download failed → HTTP ${http_code}"
-            rm -f "$local_tar"
-            ((ERRORS++))
-        fi
-    fi
-    echo ""
-fi
-
-# ── TVM4J JARs ────────────────────────────────────────────────────────────────
-
-if [[ "$DOWNLOAD_TVM" == true ]]; then
-
-    echo "── TVM4J JARs ─────────────────────────────────────────────"
-    download_maven "tvm4j-core"      "1.0.0" "jar" "Modules/AI/ALC/libs/tvm4j_core.jar"
-    download_maven "tvm4j-core-llm"  "1.0.0" "jar" "Modules/AI/LLM/libs/tvm4j_core.jar"
-    echo ""
-fi
-
-# ── VLM Model Files ───────────────────────────────────────────────────────────
-
-if [[ "$DOWNLOAD_VLM" == true ]]; then
-
-    echo "── VLM Models (EN) ──────────────────────────────────────────"
-    for model in VoiceOS-Tin-EN VoiceOS-Bas-EN VoiceOS-Sml-EN VoiceOS-Med-EN; do
+if [[ "$DOWNLOAD_EN" == true ]]; then
+    echo "── VLM Models (English) ─────────────────────────────────────"
+    for model in "${EN_MODELS[@]}"; do
         download_generic "vlm-models-en" "1.0.0" "${model}.bin" "VLMFiles/EN/${model}.bin"
         download_generic "vlm-models-en" "1.0.0" "${model}.vlm" "VLMFiles/EN/${model}.vlm"
     done
     echo ""
+fi
 
-    echo "── VLM Models (MUL) ─────────────────────────────────────────"
-    for model in VoiceOS-Tin-MUL VoiceOS-Bas-MUL VoiceOS-Sml-MUL VoiceOS-Med-MUL; do
+# ── VLM Multilingual Models ──────────────────────────────────────────────────
+
+if [[ "$DOWNLOAD_MUL" == true ]]; then
+    echo "── VLM Models (Multilingual) ──────────────────────────────────"
+    for model in "${MUL_MODELS[@]}"; do
         download_generic "vlm-models-mul" "1.0.0" "${model}.bin" "VLMFiles/MUL/${model}.bin"
         download_generic "vlm-models-mul" "1.0.0" "${model}.vlm" "VLMFiles/MUL/${model}.vlm"
     done
@@ -374,11 +243,7 @@ echo "════════════════════════�
 echo -e "  Downloaded: ${GREEN}${DOWNLOADED}${NC}  Skipped: ${CYAN}${SKIPPED}${NC}  Errors: ${RED}${ERRORS}${NC}"
 
 if [[ $ERRORS -eq 0 ]]; then
-    echo -e "  ${GREEN}Bootstrap complete!${NC}"
-    if [[ "$DOWNLOAD_SDK" == true ]]; then
-        echo ""
-        echo "  Verify build:  ./gradlew :Modules:SpeechRecognition:compileKotlinAndroid"
-    fi
+    echo -e "  ${GREEN}Download complete!${NC}"
 else
     echo -e "  ${RED}Some downloads failed. Re-run to retry.${NC}"
 fi
