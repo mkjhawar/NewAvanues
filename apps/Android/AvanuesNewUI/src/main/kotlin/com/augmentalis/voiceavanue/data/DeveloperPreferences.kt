@@ -1,0 +1,136 @@
+/**
+ * DeveloperPreferences.kt - DataStore keys for developer/debug settings
+ *
+ * Read by VoiceAvanueAccessibilityService to construct ServiceConfiguration.
+ * Modified via DeveloperSettingsScreen (hidden behind 4-tap entry).
+ *
+ * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+ */
+
+package com.augmentalis.voiceavanue.data
+
+import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.augmentalis.foundation.settings.ISettingsStore
+import com.augmentalis.foundation.settings.models.DeveloperSettings
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+/**
+ * All developer-tunable preference keys.
+ * Stored in the single avanues_settings DataStore.
+ */
+object DeveloperPreferencesKeys {
+    // Voice Timings
+    val STT_TIMEOUT_MS = longPreferencesKey("dev_stt_timeout_ms")
+    val END_OF_SPEECH_DELAY_MS = longPreferencesKey("dev_end_of_speech_delay_ms")
+    val PARTIAL_RESULT_INTERVAL_MS = longPreferencesKey("dev_partial_result_interval_ms")
+    val CONFIDENCE_THRESHOLD = floatPreferencesKey("dev_confidence_threshold")
+
+    // Feature Flags
+    val DEBUG_MODE = booleanPreferencesKey("dev_debug_mode")
+    val VERBOSE_LOGGING = booleanPreferencesKey("dev_verbose_logging")
+    val DEBUG_OVERLAY = booleanPreferencesKey("dev_debug_overlay")
+    val SCANNER_VERBOSITY = intPreferencesKey("dev_scanner_verbosity")
+    val AUTO_START_LISTENING = booleanPreferencesKey("dev_auto_start_listening")
+    val SYNONYMS_ENABLED = booleanPreferencesKey("dev_synonyms_enabled")
+
+    // Engine Selection
+    val STT_ENGINE = stringPreferencesKey("dev_stt_engine")
+    val VOICE_LANGUAGE = stringPreferencesKey("dev_voice_language")
+
+    // Timing / Debounce
+    val CONTENT_CHANGE_DEBOUNCE_MS = longPreferencesKey("dev_content_change_debounce_ms")
+    val SCROLL_EVENT_DEBOUNCE_MS = longPreferencesKey("dev_scroll_event_debounce_ms")
+    val SCREEN_CHANGE_DELAY_MS = longPreferencesKey("dev_screen_change_delay_ms")
+
+    // Cockpit Debug
+    val FORCE_SHELL_MODE = stringPreferencesKey("dev_force_shell_mode")
+    val SHOW_SHELL_DEBUG_OVERLAY = booleanPreferencesKey("dev_show_shell_debug_overlay")
+
+    // Developer mode activation
+    val DEVELOPER_MODE_ACTIVATED = booleanPreferencesKey("dev_mode_activated")
+}
+
+// DeveloperSettings data class now in Foundation: com.augmentalis.foundation.settings.models.DeveloperSettings
+
+/**
+ * Repository for developer preferences.
+ */
+class DeveloperPreferencesRepository(
+    private val context: Context
+) : ISettingsStore<DeveloperSettings> {
+
+    override val settings: Flow<DeveloperSettings> = context.avanuesDataStore.data.map { prefs ->
+        readFromPreferences(prefs)
+    }
+
+    override suspend fun update(block: (DeveloperSettings) -> DeveloperSettings) {
+        context.avanuesDataStore.edit { prefs ->
+            val current = readFromPreferences(prefs)
+            val updated = block(current)
+            writeToPreferences(prefs, updated)
+        }
+    }
+
+    suspend fun <T> updateKey(key: Preferences.Key<T>, value: T) {
+        context.avanuesDataStore.edit { prefs ->
+            prefs[key] = value
+        }
+    }
+
+    suspend fun activateDeveloperMode() {
+        updateKey(DeveloperPreferencesKeys.DEVELOPER_MODE_ACTIVATED, true)
+    }
+
+    private fun readFromPreferences(prefs: Preferences): DeveloperSettings {
+        return DeveloperSettings(
+            sttTimeoutMs = prefs[DeveloperPreferencesKeys.STT_TIMEOUT_MS] ?: DeveloperSettings.DEFAULT_STT_TIMEOUT_MS,
+            endOfSpeechDelayMs = prefs[DeveloperPreferencesKeys.END_OF_SPEECH_DELAY_MS] ?: DeveloperSettings.DEFAULT_END_OF_SPEECH_DELAY_MS,
+            partialResultIntervalMs = prefs[DeveloperPreferencesKeys.PARTIAL_RESULT_INTERVAL_MS] ?: DeveloperSettings.DEFAULT_PARTIAL_RESULT_INTERVAL_MS,
+            confidenceThreshold = prefs[DeveloperPreferencesKeys.CONFIDENCE_THRESHOLD] ?: DeveloperSettings.DEFAULT_CONFIDENCE_THRESHOLD,
+            debugMode = prefs[DeveloperPreferencesKeys.DEBUG_MODE] ?: false,
+            verboseLogging = prefs[DeveloperPreferencesKeys.VERBOSE_LOGGING] ?: false,
+            debugOverlay = prefs[DeveloperPreferencesKeys.DEBUG_OVERLAY] ?: false,
+            scannerVerbosity = prefs[DeveloperPreferencesKeys.SCANNER_VERBOSITY] ?: 0,
+            autoStartListening = prefs[DeveloperPreferencesKeys.AUTO_START_LISTENING] ?: false,
+            synonymsEnabled = prefs[DeveloperPreferencesKeys.SYNONYMS_ENABLED] ?: true,
+            sttEngine = prefs[DeveloperPreferencesKeys.STT_ENGINE] ?: DeveloperSettings.DEFAULT_STT_ENGINE,
+            voiceLanguage = prefs[DeveloperPreferencesKeys.VOICE_LANGUAGE] ?: DeveloperSettings.DEFAULT_VOICE_LANGUAGE,
+            contentChangeDebounceMs = prefs[DeveloperPreferencesKeys.CONTENT_CHANGE_DEBOUNCE_MS] ?: DeveloperSettings.DEFAULT_CONTENT_CHANGE_DEBOUNCE_MS,
+            scrollEventDebounceMs = prefs[DeveloperPreferencesKeys.SCROLL_EVENT_DEBOUNCE_MS] ?: DeveloperSettings.DEFAULT_SCROLL_EVENT_DEBOUNCE_MS,
+            screenChangeDelayMs = prefs[DeveloperPreferencesKeys.SCREEN_CHANGE_DELAY_MS] ?: DeveloperSettings.DEFAULT_SCREEN_CHANGE_DELAY_MS,
+            forceShellMode = prefs[DeveloperPreferencesKeys.FORCE_SHELL_MODE] ?: "",
+            showShellDebugOverlay = prefs[DeveloperPreferencesKeys.SHOW_SHELL_DEBUG_OVERLAY] ?: false,
+            developerModeActivated = prefs[DeveloperPreferencesKeys.DEVELOPER_MODE_ACTIVATED] ?: false
+        )
+    }
+
+    private fun writeToPreferences(prefs: MutablePreferences, s: DeveloperSettings) {
+        prefs[DeveloperPreferencesKeys.STT_TIMEOUT_MS] = s.sttTimeoutMs
+        prefs[DeveloperPreferencesKeys.END_OF_SPEECH_DELAY_MS] = s.endOfSpeechDelayMs
+        prefs[DeveloperPreferencesKeys.PARTIAL_RESULT_INTERVAL_MS] = s.partialResultIntervalMs
+        prefs[DeveloperPreferencesKeys.CONFIDENCE_THRESHOLD] = s.confidenceThreshold
+        prefs[DeveloperPreferencesKeys.DEBUG_MODE] = s.debugMode
+        prefs[DeveloperPreferencesKeys.VERBOSE_LOGGING] = s.verboseLogging
+        prefs[DeveloperPreferencesKeys.DEBUG_OVERLAY] = s.debugOverlay
+        prefs[DeveloperPreferencesKeys.SCANNER_VERBOSITY] = s.scannerVerbosity
+        prefs[DeveloperPreferencesKeys.AUTO_START_LISTENING] = s.autoStartListening
+        prefs[DeveloperPreferencesKeys.SYNONYMS_ENABLED] = s.synonymsEnabled
+        prefs[DeveloperPreferencesKeys.STT_ENGINE] = s.sttEngine
+        prefs[DeveloperPreferencesKeys.VOICE_LANGUAGE] = s.voiceLanguage
+        prefs[DeveloperPreferencesKeys.CONTENT_CHANGE_DEBOUNCE_MS] = s.contentChangeDebounceMs
+        prefs[DeveloperPreferencesKeys.SCROLL_EVENT_DEBOUNCE_MS] = s.scrollEventDebounceMs
+        prefs[DeveloperPreferencesKeys.SCREEN_CHANGE_DELAY_MS] = s.screenChangeDelayMs
+        prefs[DeveloperPreferencesKeys.FORCE_SHELL_MODE] = s.forceShellMode
+        prefs[DeveloperPreferencesKeys.SHOW_SHELL_DEBUG_OVERLAY] = s.showShellDebugOverlay
+        prefs[DeveloperPreferencesKeys.DEVELOPER_MODE_ACTIVATED] = s.developerModeActivated
+    }
+}

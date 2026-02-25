@@ -1,0 +1,66 @@
+# VOS v3.0 — fr-FR web commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:fr-FR:en-US:web
+
+browser_retrain|re-analyser la page|rescanner la page,rescanner|Forcer le re-scan de la page web et regenerer les commandes vocales
+browser_back|page precedente|navigateur retour|Aller a la page precedente dans l'historique
+browser_forward|page suivante|navigateur avant,avancer|Aller a la page suivante dans l'historique
+browser_refresh|actualiser la page|recharger la page,rafraichir|Recharger la page web actuelle
+browser_top|aller en haut|haut de page,debut de page|Defiler jusqu'en haut de la page
+browser_bottom|aller en bas|bas de page,fin de page|Defiler jusqu'en bas de la page
+browser_tab_next|champ suivant|tab avant,prochain champ|Passer au prochain champ de saisie
+browser_tab_prev|champ precedent|tab arriere|Revenir au champ de saisie precedent
+browser_submit|envoyer le formulaire|soumettre,valider|Soumettre le formulaire actuel
+browser_swipe_left|balayer a gauche|glisser a gauche|Balayer vers la gauche sur la page
+browser_swipe_right|balayer a droite|glisser a droite|Balayer vers la droite sur la page
+browser_swipe_up|balayer vers le haut|glisser vers le haut|Balayer vers le haut sur la page
+browser_swipe_down|balayer vers le bas|glisser vers le bas|Balayer vers le bas sur la page
+browser_grab|attraper|saisir,agripper,verrouiller,maintenir,accrocher|Saisir et commencer a deplacer un element
+browser_release|relacher|lacher,deposer,liberer|Relacher un element saisi
+browser_rotate_left|tourner a gauche|pivoter a gauche,rotation gauche|Tourner l'element vers la gauche
+browser_rotate_right|tourner a droite|pivoter a droite,rotation droite|Tourner l'element vers la droite
+browser_double_tap|double tap|double clic,double appui|Double-clic sur un element
+gesture_pan|pan|deplacer la vue,glisser la vue,panoramique|Deplacer la vue
+gesture_pan_left|pan gauche|deplacer la vue a gauche,glisser a gauche,vue a gauche|Deplacer la vue vers la gauche
+gesture_pan_right|pan droite|deplacer la vue a droite,glisser a droite,vue a droite|Deplacer la vue vers la droite
+gesture_pan_up|pan haut|deplacer la vue en haut,vue vers le haut|Deplacer la vue vers le haut
+gesture_pan_down|pan bas|deplacer la vue en bas,vue vers le bas|Deplacer la vue vers le bas
+gesture_tilt|tilt|incliner,incliner la vue,basculer la vue|Incliner la vue
+gesture_tilt_up|tilt haut|incliner vers le haut,basculer vers le haut|Incliner la vue vers le haut
+gesture_tilt_down|tilt bas|incliner vers le bas,basculer vers le bas|Incliner la vue vers le bas
+gesture_orbit|orbit|orbiter,tourner autour|Orbiter autour de l'element
+gesture_orbit_left|orbit gauche|orbiter a gauche,tourner a gauche|Orbiter vers la gauche autour de l'element
+gesture_orbit_right|orbit droite|orbiter a droite,tourner a droite|Orbiter vers la droite autour de l'element
+gesture_rotate_x|rotation x|pivoter axe x,retourner vertical|Pivoter l'element autour de l'axe X
+gesture_rotate_y|rotation y|pivoter axe y,retourner horizontal|Pivoter l'element autour de l'axe Y
+gesture_rotate_z|rotation z|pivoter axe z,faire tourner|Pivoter l'element autour de l'axe Z
+gesture_pinch_in|pinch in|pincer,rapprocher les doigts,resserrer|Pincer pour dezoomer
+gesture_pinch_out|pinch out|ecarter,ecarter les doigts,etirer|Ecarter pour zoomer
+gesture_fling_up|fling haut|lancer vers le haut,projeter en haut|Lancer vers le haut avec vitesse
+gesture_fling_down|fling bas|lancer vers le bas,projeter en bas|Lancer vers le bas avec vitesse
+gesture_fling_left|fling gauche|lancer a gauche,projeter a gauche|Lancer vers la gauche avec vitesse
+gesture_fling_right|fling droite|lancer a droite,projeter a droite|Lancer vers la droite avec vitesse
+gesture_throw|lancer|jeter,lancer l'element,projeter|Projeter l'element avec vitesse
+gesture_scale_up|agrandir|augmenter la taille,grossir,rendre plus grand|Agrandir l'element
+gesture_scale_down|reduire|diminuer la taille,rapetisser,rendre plus petit|Reduire l'element
+gesture_reset_zoom|reinitialiser le zoom|zoom normal,zoom par defaut,reset zoom|Reinitialiser le zoom au niveau par defaut
+gesture_select_word|selectionner le mot|choisir le mot,surligner le mot|Selectionner le mot a la position du curseur
+gesture_clear_sel|effacer la selection|deselectionner,annuler la selection,enlever le surlignage|Effacer la selection de texte
+gesture_hover_out|quitter le survol|arreter le survol,sortir du survol,ne plus survoler|Arreter de survoler l'element
+browser_zoom_in|zoomer|zoom avant,agrandir|Zoomer sur la page
+browser_zoom_out|dezoomer|zoom arriere|Dezoomer la page
+browser_scroll_up|defiler vers le haut|page haut|Defiler la page vers le haut
+browser_scroll_down|defiler vers le bas|page bas|Defiler la page vers le bas
+browser_scroll_left|defiler a gauche||Defiler la page vers la gauche
+browser_scroll_right|defiler a droite||Defiler la page vers la droite
+browser_long_press|appui long|clic long,maintenir appuye|Appui long sur un element
+browser_tap|toucher|toucher ici,appuyer|Toucher un element
+browser_focus|focaliser|focaliser sur|Focaliser un element
+gesture_hover|survoler|passer au-dessus,survol|Survoler un element
+gesture_drag_left|glisser a gauche||Glisser l'element vers la gauche
+gesture_drag_right|glisser a droite||Glisser l'element vers la droite
+gesture_drag_up|glisser vers le haut||Glisser l'element vers le haut
+gesture_drag_down|glisser vers le bas||Glisser l'element vers le bas
+gesture_stroke_start|commencer a dessiner|dessiner,debut de trait|Commencer un trait de dessin
+gesture_stroke_end|arreter de dessiner|fin de dessin,fin de trait|Terminer le trait de dessin actuel
+gesture_erase|gomme|mode gomme,activer la gomme|Activer le mode gomme pour dessiner
