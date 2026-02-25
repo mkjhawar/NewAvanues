@@ -12,6 +12,7 @@ import com.augmentalis.cockpit.model.DashboardState
 import com.augmentalis.cockpit.model.FrameContent
 import com.augmentalis.cockpit.model.FrameState
 import com.augmentalis.cockpit.model.LayoutMode
+import com.augmentalis.cockpit.model.ModuleUsageTracker
 import com.augmentalis.cockpit.repository.ICockpitRepository
 import com.augmentalis.speechrecognition.SpeechMetricsSnapshot
 import kotlinx.coroutines.CoroutineDispatcher
@@ -80,6 +81,11 @@ class CockpitViewModel(
 
     private val _dashboardState = MutableStateFlow(DashboardState())
     val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
+
+    // Module usage tracking — drives SpaceAvanue island sizing
+    private val usageTracker = ModuleUsageTracker()
+    private val _moduleUsageScores = MutableStateFlow(usageTracker.getScoresSnapshot())
+    val moduleUsageScores: StateFlow<Map<String, Float>> = _moduleUsageScores.asStateFlow()
 
     // Speech engine metrics — pushed by platform bridge collecting from engine StateFlow
     private val _speechMetrics = MutableStateFlow<SpeechMetricsSnapshot?>(null)
@@ -314,7 +320,7 @@ class CockpitViewModel(
     }
 
     /**
-     * Switch the home screen shell variation (Classic, AvanueViews, Lens, Canvas).
+     * Switch the home screen shell variation (CockpitAvanue, MapViews, SearchAvanue, SpaceAvanue).
      * Also returns to DASHBOARD layout mode to show the home screen.
      */
     fun setShellMode(mode: SimplifiedShellMode) {
@@ -322,6 +328,66 @@ class CockpitViewModel(
         // Return to dashboard to show the home screen with the new shell
         if (_layoutMode.value != LayoutMode.DASHBOARD) {
             _layoutMode.value = LayoutMode.DASHBOARD
+        }
+    }
+
+    // ── Workspace Voice Navigation ──────────────────────────────────
+
+    /**
+     * Navigate to the next frame in the current workspace.
+     * Cycles forward through frames, wrapping from last to first.
+     */
+    fun nextScreen() {
+        val currentFrames = _frames.value
+        if (currentFrames.size <= 1) return
+        val currentId = _selectedFrameId.value
+        val currentIndex = currentFrames.indexOfFirst { it.id == currentId }
+        val nextIndex = if (currentIndex < 0 || currentIndex >= currentFrames.lastIndex) 0
+                        else currentIndex + 1
+        selectFrame(currentFrames[nextIndex].id)
+    }
+
+    /**
+     * Navigate to the previous frame in the current workspace.
+     * Cycles backward through frames, wrapping from first to last.
+     */
+    fun previousScreen() {
+        val currentFrames = _frames.value
+        if (currentFrames.size <= 1) return
+        val currentId = _selectedFrameId.value
+        val currentIndex = currentFrames.indexOfFirst { it.id == currentId }
+        val prevIndex = if (currentIndex <= 0) currentFrames.lastIndex
+                        else currentIndex - 1
+        selectFrame(currentFrames[prevIndex].id)
+    }
+
+    /**
+     * Open a new screen with default content (Web).
+     * Creates a new frame in the current session or starts a new session
+     * if on the dashboard.
+     */
+    fun openNewScreen() {
+        if (_activeSession.value == null) {
+            // On dashboard — launch a new session with a web frame
+            launchModule("webavanue")
+        } else {
+            addFrame(FrameContent.Web(), "New Frame")
+        }
+    }
+
+    /**
+     * Close the current screen (selected frame).
+     * If it's the last frame, returns to dashboard instead of leaving
+     * an empty session.
+     */
+    fun closeScreen() {
+        val selected = _selectedFrameId.value ?: return
+        val currentFrames = _frames.value
+        if (currentFrames.size <= 1) {
+            // Last frame — return to dashboard
+            returnToDashboard()
+        } else {
+            removeFrame(selected)
         }
     }
 
@@ -410,6 +476,11 @@ class CockpitViewModel(
      */
     fun launchModule(moduleId: String) {
         val module = DashboardModuleRegistry.findById(moduleId) ?: return
+
+        // Record usage for spatial island ranking (SpaceAvanue shell)
+        usageTracker.recordLaunch(moduleId)
+        _moduleUsageScores.value = usageTracker.getScoresSnapshot()
+
         val content = contentForType(module.contentType)
         if (content == null) {
             // Non-frame module (e.g. CursorAvanue) — don't create a session,

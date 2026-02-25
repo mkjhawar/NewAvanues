@@ -25,7 +25,8 @@ import com.augmentalis.cockpit.ui.BackgroundScene
  * @param currentMaterial Active material rendering mode
  * @param currentAppearance Active appearance (Light/Dark/Auto)
  * @param currentPresetId ID of the active theme preset, or null for manual overrides
- * @param shellMode Which simplified UI shell is active (Classic, AvanueViews, Lens, Canvas)
+ * @param shellMode Which simplified UI shell is active (CockpitAvanue, MapViews, SearchAvanue, SpaceAvanue)
+ * @param moduleUsageScores Usage scores per module ID, driving SpaceAvanue island sizing
  */
 data class CockpitScreenState(
     val sessionName: String = "Cockpit",
@@ -41,4 +42,5 @@ data class CockpitScreenState(
     val currentAppearance: AppearanceMode = AppearanceMode.DEFAULT,
     val currentPresetId: String? = null,
     val shellMode: SimplifiedShellMode = SimplifiedShellMode.DEFAULT,
+    val moduleUsageScores: Map<String, Float> = emptyMap(),
 )

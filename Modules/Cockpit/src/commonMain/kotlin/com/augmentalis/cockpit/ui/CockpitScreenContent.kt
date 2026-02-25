@@ -181,6 +181,7 @@ fun CockpitScreenContent(
 
                 SimplifiedShellMode.SPACE_AVANUE -> ZenCanvasLayout(
                     dashboardState = state.dashboardState,
+                    moduleUsageScores = state.moduleUsageScores,
                     onModuleClick = onModuleClick,
                     onVoiceActivate = onVoiceActivate,
                     onSearchClick = { commandBarState = CommandBarState.ADD_FRAME },

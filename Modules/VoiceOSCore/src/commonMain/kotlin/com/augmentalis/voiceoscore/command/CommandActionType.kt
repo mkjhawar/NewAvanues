@@ -712,6 +712,25 @@ enum class CommandActionType {
     /** SpaceAvanue: zoom out on canvas */
     SPACE_ZOOM_OUT,
 
+    // ── Workspace Navigation ──────────────────────────────────────
+    // Cross-shell navigation commands that work in all shells.
+    // Cycle through frames/screens, open new ones, or close current.
+
+    /** Navigate to next frame/screen in current workspace */
+    WORKSPACE_NEXT_SCREEN,
+
+    /** Navigate to previous frame/screen in current workspace */
+    WORKSPACE_PREVIOUS_SCREEN,
+
+    /** Open a new screen/frame (triggers picker or default content) */
+    WORKSPACE_OPEN_NEW,
+
+    /** Close current screen and return to previous or dashboard */
+    WORKSPACE_CLOSE_SCREEN,
+
+    /** Open a specific app/module by name (metadata carries module ID) */
+    WORKSPACE_OPEN_APP,
+
     // ═══════════════════════════════════════════════════════════════
     // PDF Viewing Actions
     // ═══════════════════════════════════════════════════════════════

@@ -54,6 +54,11 @@ class IosCockpitCommandHandler : BaseHandler() {
         // Shell-specific navigation
         "next card", "previous card",          // MapViews
         "space zoom in", "space zoom out",     // SpaceAvanue
+        // Workspace voice navigation (cross-shell)
+        "next screen", "previous screen",
+        "open new screen", "new screen",
+        "close screen",
+        "open app",
         // Content insertion
         "add web", "add camera", "add note", "add pdf",
         "add image", "add video", "add whiteboard", "add terminal",
@@ -105,6 +110,12 @@ class IosCockpitCommandHandler : BaseHandler() {
             CommandActionType.MAP_PREVIOUS_CARD,
             CommandActionType.SPACE_ZOOM_IN,
             CommandActionType.SPACE_ZOOM_OUT,
+            // Workspace voice navigation
+            CommandActionType.WORKSPACE_NEXT_SCREEN,
+            CommandActionType.WORKSPACE_PREVIOUS_SCREEN,
+            CommandActionType.WORKSPACE_OPEN_NEW,
+            CommandActionType.WORKSPACE_CLOSE_SCREEN,
+            CommandActionType.WORKSPACE_OPEN_APP,
             // Content insertion
             CommandActionType.ADD_WEB,
             CommandActionType.ADD_CAMERA,

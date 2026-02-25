@@ -46,6 +46,11 @@ class CockpitCommandHandler(
         // Shell-specific navigation
         "next card", "previous card",          // MapViews
         "space zoom in", "space zoom out",     // SpaceAvanue
+        // Workspace voice navigation (cross-shell)
+        "next screen", "previous screen",
+        "open new screen", "new screen",
+        "close screen",
+        "open app",
         // Content insertion
         "add web", "add camera", "add note", "add pdf",
         "add image", "add video", "add whiteboard", "add terminal",

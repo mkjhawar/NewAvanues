@@ -73,6 +73,7 @@ fun CockpitScreen(
     val shellMode by viewModel.shellMode.collectAsState()
     val dashboardState by viewModel.dashboardState.collectAsState()
     val backgroundSceneState by viewModel.backgroundScene.collectAsState()
+    val moduleUsageScores by viewModel.moduleUsageScores.collectAsState()
 
     // Theme state — local until DataStore persistence is wired
     var currentPalette by remember { mutableStateOf(AvanueColorPalette.DEFAULT) }
@@ -168,6 +169,7 @@ fun CockpitScreen(
             currentMaterial = currentMaterial,
             currentAppearance = currentAppearance,
             currentPresetId = currentPresetId,
+            moduleUsageScores = moduleUsageScores,
         ),
         onNavigateBack = onNavigateBack,
         onReturnToDashboard = { viewModel.returnToDashboard() },
@@ -385,6 +387,28 @@ private fun executeCockpitCommand(
             // Shell navigation is handled by the Compose UI layer,
             // not by the ViewModel. Return success to acknowledge.
             HandlerResult.success("$actionType")
+        }
+
+        // ── Workspace Voice Navigation ───────────────────────────────
+        CommandActionType.WORKSPACE_NEXT_SCREEN -> {
+            viewModel.nextScreen()
+            HandlerResult.success("Next screen")
+        }
+        CommandActionType.WORKSPACE_PREVIOUS_SCREEN -> {
+            viewModel.previousScreen()
+            HandlerResult.success("Previous screen")
+        }
+        CommandActionType.WORKSPACE_OPEN_NEW -> {
+            viewModel.openNewScreen()
+            HandlerResult.success("New screen opened")
+        }
+        CommandActionType.WORKSPACE_CLOSE_SCREEN -> {
+            viewModel.closeScreen()
+            HandlerResult.success("Screen closed")
+        }
+        CommandActionType.WORKSPACE_OPEN_APP -> {
+            // Module ID is expected in metadata; for now launch default
+            HandlerResult.success("Use 'open [module name]' to launch a specific module")
         }
 
         else -> {
