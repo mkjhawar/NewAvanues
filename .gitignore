@@ -60,12 +60,9 @@ Modules/Whisper/
 # VLM model files (VoiceOS Language Models — large binary, downloaded on demand)
 VLMFiles/
 
-# Binary SDKs (resolved from GitLab Package Registry via scripts/setup-sdk.sh)
-vivoka/*.aar
-vivoka/Android/libs/*.jar
-vivoka/Android/src/main/jniLibs/
-sherpa-onnx/*.aar
-sherpa-onnx/*.jar
+# Binary SDKs — git-tracked (small enough at ~307MB, eliminates GitLab token dependency)
+# vivoka/*.aar, vivoka/Android/libs/*.jar, vivoka/Android/src/main/jniLibs/ → TRACKED
+# sherpa-onnx/*.aar, sherpa-onnx/*.jar → TRACKED
 
 # VSDK ASR data — large speech models (downloaded from GitLab Package Registry)
 # NOTE: asreng-US.fcf (1.3K config) stays tracked; only large model files are ignored

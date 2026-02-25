@@ -162,25 +162,13 @@ kotlin {
                 // VoiceIsolation - Audio preprocessing (noise suppression, echo cancellation, AGC)
                 implementation(project(":Modules:VoiceIsolation"))
 
-                // Vivoka VSDK - compileOnly
-                // Resolved from GitLab Maven Package Registry; falls back to local files
-                if (file("${rootDir}/vivoka/vsdk-6.0.0.aar").exists()) {
-                    compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
-                    compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
-                    compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
-                } else {
-                    compileOnly("com.augmentalis.sdk:vsdk:6.0.0")
-                    compileOnly("com.augmentalis.sdk:vsdk-csdk-asr:2.0.0")
-                    compileOnly("com.augmentalis.sdk:vsdk-csdk-core:1.0.1")
-                }
+                // Vivoka VSDK — git-tracked local AARs (compileOnly, runtime provided by vivoka:Android)
+                compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
+                compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
+                compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
 
-                // Sherpa-ONNX - AVX command engine (streaming transducer ASR + hot words)
-                // Resolved from GitLab Maven Package Registry; falls back to local files
-                if (file("${rootDir}/sherpa-onnx/sherpa-onnx.aar").exists()) {
-                    compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx.aar"))
-                } else {
-                    compileOnly("com.augmentalis.sdk:sherpa-onnx-android:1.5.5")
-                }
+                // Sherpa-ONNX — git-tracked local AAR (AVX streaming transducer ASR + hot words)
+                compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx.aar"))
 
                 // OkHttp & Gson
                 implementation(libs.okhttp)
@@ -241,14 +229,9 @@ kotlin {
                 // (same as iosMain/macosMain — compiler plugin applied to all targets)
                 implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
 
-                // Sherpa-ONNX - AVX command engine (Desktop JVM)
+                // Sherpa-ONNX — git-tracked local JAR (Desktop JVM)
                 // Native libraries (.dylib/.so/.dll) must be on java.library.path at runtime.
-                // Resolved from GitLab Maven; falls back to local files.
-                if (file("${rootDir}/sherpa-onnx/sherpa-onnx-classes.jar").exists()) {
-                    compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx-classes.jar"))
-                } else {
-                    compileOnly("com.augmentalis.sdk:sherpa-onnx-classes:1.5.5")
-                }
+                compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx-classes.jar"))
             }
         }
 

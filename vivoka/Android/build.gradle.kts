@@ -56,20 +56,11 @@ android {
 }
 
 dependencies {
-    // Vivoka VSDK
-    // Primary: Maven AARs from GitLab Package Registry (includes JNI native libs)
-    // Fallback: Local JARs + jniLibs/ (for offline builds, run scripts/setup-sdk.sh)
-    if (file("libs/vsdk-6.0.0.jar").exists()) {
-        api(files("libs/vsdk-6.0.0.jar"))
-        api(files("libs/vsdk-csdk-asr-2.0.0.jar"))
-        api(files("libs/vsdk-csdk-core-1.0.1.jar"))
-        // Native libraries from src/main/jniLibs/ (automatically included)
-    } else {
-        api("com.augmentalis.sdk:vsdk:6.0.0")
-        api("com.augmentalis.sdk:vsdk-csdk-asr:2.0.0")
-        api("com.augmentalis.sdk:vsdk-csdk-core:1.0.1")
-        // Native libraries are inside the AARs — no separate jniLibs needed
-    }
+    // Vivoka VSDK — git-tracked local JARs + jniLibs
+    api(files("libs/vsdk-6.0.0.jar"))
+    api(files("libs/vsdk-csdk-asr-2.0.0.jar"))
+    api(files("libs/vsdk-csdk-core-1.0.1.jar"))
+    // Native libraries from src/main/jniLibs/ (automatically included by AGP)
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
