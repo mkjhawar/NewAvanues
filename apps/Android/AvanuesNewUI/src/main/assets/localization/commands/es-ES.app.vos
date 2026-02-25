@@ -113,6 +113,27 @@ cockpit_scroll_up|cockpit subir|panel arriba|Desplazar el panel activo hacia arr
 cockpit_scroll_down|cockpit bajar|panel abajo|Desplazar el panel activo hacia abajo
 cockpit_zoom_in|cockpit acercar|ampliar panel|Acercar en el panel activo
 cockpit_zoom_out|cockpit alejar|reducir panel|Alejar del panel activo
+# Shell mode switching
+cockpit_shell_cockpit|modo cockpit|modo clasico,modo tablero|Cambiar al shell CockpitAvanue
+cockpit_shell_map|modo mapa|modo flujo,vistas mapa|Cambiar al shell MapViews
+cockpit_shell_search|modo busqueda|modo lente,buscar avanue|Cambiar al shell SearchAvanue
+cockpit_shell_space|modo espacio|modo lienzo,espacio avanue|Cambiar al shell SpaceAvanue
+# Shell-specific navigation
+cockpit_map_next|siguiente tarjeta|siguiente,deslizar derecha|MapViews: siguiente tarjeta
+cockpit_map_prev|tarjeta anterior|atras,deslizar izquierda|MapViews: tarjeta anterior
+cockpit_space_zoom_in|espacio acercar|acercar lienzo|SpaceAvanue: acercar el lienzo
+cockpit_space_zoom_out|espacio alejar|alejar lienzo|SpaceAvanue: alejar el lienzo
+# Arrangement intents
+cockpit_focus|enfocar|modo enfoque,concentrar|Enfocar en el marco actual
+cockpit_compare|comparar|modo comparar,lado a lado|Comparar marcos lado a lado
+cockpit_overview|vision general|modo general,mostrar todo|Mostrar vista general
+cockpit_present|presentar|modo presentacion,presentacion|Modo presentacion
+# Workspace voice navigation
+cockpit_next_screen|siguiente pantalla|siguiente espacio,ir siguiente|Navegar a la siguiente pantalla
+cockpit_prev_screen|pantalla anterior|volver pantalla,pantalla previa|Navegar a la pantalla anterior
+cockpit_new_screen|nueva pantalla|abrir pantalla,nuevo espacio|Abrir una nueva pantalla
+cockpit_close_screen|cerrar pantalla|cerrar espacio,salir pantalla|Cerrar pantalla actual
+cockpit_open_app|abrir aplicacion|lanzar app,iniciar app|Abrir una aplicacion especifica
 # ── NoteAvanue ──
 note_open|abrir note avanue|abrir notas,app de notas|Abrir NoteAvanue
 note_new|nueva nota|crear nota,nota en blanco|Crear una nueva nota

@@ -129,6 +129,27 @@ cockpit_scroll_up|cockpit scroll up|panel up|Scroll the active frame up
 cockpit_scroll_down|cockpit scroll down|panel down|Scroll the active frame down
 cockpit_zoom_in|cockpit zoom in|panel zoom in|Zoom into the active frame
 cockpit_zoom_out|cockpit zoom out|panel zoom out|Zoom out of the active frame
+# Shell mode switching
+cockpit_shell_cockpit|cockpit mode|classic mode,dashboard mode|Switch to CockpitAvanue dashboard shell
+cockpit_shell_map|map mode|stream mode,map views|Switch to MapViews ambient card shell
+cockpit_shell_search|search mode|lens mode,search avanue|Switch to SearchAvanue command palette shell
+cockpit_shell_space|space mode|canvas mode,space avanue|Switch to SpaceAvanue spatial canvas shell
+# Shell-specific navigation
+cockpit_map_next|next card|next,swipe right|MapViews: next card in stream
+cockpit_map_prev|previous card|back,swipe left|MapViews: previous card in stream
+cockpit_space_zoom_in|space zoom in|zoom in canvas|SpaceAvanue: zoom in on canvas
+cockpit_space_zoom_out|space zoom out|zoom out canvas|SpaceAvanue: zoom out on canvas
+# Arrangement intents
+cockpit_focus|focus|focus mode,concentrate|Focus on the current frame
+cockpit_compare|compare|compare mode,side by side compare|Compare frames side by side
+cockpit_overview|overview|overview mode,show all|Show all frames overview
+cockpit_present|present|present mode,presentation|Switch to presentation mode
+# Workspace voice navigation
+cockpit_next_screen|next screen|next workspace,go next|Navigate to next screen
+cockpit_prev_screen|previous screen|go back screen,prev screen|Navigate to previous screen
+cockpit_new_screen|open new screen|new screen,new workspace|Open a new screen
+cockpit_close_screen|close screen|close workspace,exit screen|Close current screen
+cockpit_open_app|open app|launch app,start app|Open a specific app by name
 # ── NoteAvanue ──
 note_open|open note avanue|open notes,notes app,note avanue|Launch NoteAvanue
 note_new|new note|create note,blank note|Create a new note

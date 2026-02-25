@@ -113,6 +113,27 @@ cockpit_scroll_up|Cockpit hoch scrollen|Panel hoch|Im aktiven Rahmen nach oben s
 cockpit_scroll_down|Cockpit runter scrollen|Panel runter|Im aktiven Rahmen nach unten scrollen
 cockpit_zoom_in|Cockpit reinzoomen|Panel vergroessern|In den aktiven Rahmen hineinzoomen
 cockpit_zoom_out|Cockpit rauszoomen|Panel verkleinern|Aus dem aktiven Rahmen herauszoomen
+# Shell mode switching
+cockpit_shell_cockpit|Cockpit Modus|klassischer Modus,Dashboard Modus|Zum CockpitAvanue Shell wechseln
+cockpit_shell_map|Karten Modus|Stream Modus,Kartenansichten|Zum MapViews Shell wechseln
+cockpit_shell_search|Such Modus|Linsen Modus,Suche Avanue|Zum SearchAvanue Shell wechseln
+cockpit_shell_space|Raum Modus|Leinwand Modus,Raum Avanue|Zum SpaceAvanue Shell wechseln
+# Shell-specific navigation
+cockpit_map_next|naechste Karte|weiter,nach rechts wischen|MapViews: naechste Karte
+cockpit_map_prev|vorherige Karte|zurueck,nach links wischen|MapViews: vorherige Karte
+cockpit_space_zoom_in|Raum reinzoomen|Leinwand reinzoomen|SpaceAvanue: Leinwand reinzoomen
+cockpit_space_zoom_out|Raum rauszoomen|Leinwand rauszoomen|SpaceAvanue: Leinwand rauszoomen
+# Arrangement intents
+cockpit_focus|Fokus|Fokus Modus,konzentrieren|Auf den aktuellen Rahmen fokussieren
+cockpit_compare|Vergleichen|Vergleichs Modus,nebeneinander|Rahmen nebeneinander vergleichen
+cockpit_overview|Uebersicht|Uebersichts Modus,alles zeigen|Alle Rahmen anzeigen
+cockpit_present|Praesentieren|Praesentations Modus,Praesentation|Praesentationsmodus
+# Workspace voice navigation
+cockpit_next_screen|naechster Bildschirm|naechster Bereich,weiter gehen|Zum naechsten Bildschirm navigieren
+cockpit_prev_screen|vorheriger Bildschirm|Bildschirm zurueck,vorheriger|Zum vorherigen Bildschirm navigieren
+cockpit_new_screen|neuer Bildschirm|Bildschirm oeffnen,neuer Bereich|Einen neuen Bildschirm oeffnen
+cockpit_close_screen|Bildschirm schliessen|Bereich schliessen,Bildschirm verlassen|Aktuellen Bildschirm schliessen
+cockpit_open_app|App oeffnen|App starten,Anwendung starten|Eine bestimmte App oeffnen
 # ── NoteAvanue ──
 note_open|Note Avanue oeffnen|Notizen oeffnen,Notiz-App|NoteAvanue starten
 note_new|neue Notiz|Notiz erstellen,leere Notiz|Neue Notiz erstellen

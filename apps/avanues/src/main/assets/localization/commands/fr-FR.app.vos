@@ -113,6 +113,27 @@ cockpit_scroll_up|cockpit defiler haut|panneau haut|Defiler le cadre actif vers 
 cockpit_scroll_down|cockpit defiler bas|panneau bas|Defiler le cadre actif vers le bas
 cockpit_zoom_in|cockpit zoom avant|agrandir panneau|Zoomer dans le cadre actif
 cockpit_zoom_out|cockpit zoom arriere|reduire panneau|Dezoomer le cadre actif
+# Shell mode switching
+cockpit_shell_cockpit|mode cockpit|mode classique,mode tableau|Passer au shell CockpitAvanue
+cockpit_shell_map|mode carte|mode flux,vues carte|Passer au shell MapViews
+cockpit_shell_search|mode recherche|mode loupe,recherche avanue|Passer au shell SearchAvanue
+cockpit_shell_space|mode espace|mode canevas,espace avanue|Passer au shell SpaceAvanue
+# Shell-specific navigation
+cockpit_map_next|carte suivante|suivant,glisser droite|MapViews: carte suivante
+cockpit_map_prev|carte precedente|retour,glisser gauche|MapViews: carte precedente
+cockpit_space_zoom_in|espace zoom avant|zoomer canevas|SpaceAvanue: zoomer le canevas
+cockpit_space_zoom_out|espace zoom arriere|dezoomer canevas|SpaceAvanue: dezoomer le canevas
+# Arrangement intents
+cockpit_focus|focus|mode focus,concentrer|Focus sur le cadre actuel
+cockpit_compare|comparer|mode comparer,cote a cote|Comparer les cadres cote a cote
+cockpit_overview|vue ensemble|mode general,tout afficher|Afficher la vue d'ensemble
+cockpit_present|presenter|mode presentation,presentation|Mode presentation
+# Workspace voice navigation
+cockpit_next_screen|ecran suivant|espace suivant,aller suivant|Naviguer vers l'ecran suivant
+cockpit_prev_screen|ecran precedent|retour ecran,ecran avant|Naviguer vers l'ecran precedent
+cockpit_new_screen|nouvel ecran|ouvrir ecran,nouveau espace|Ouvrir un nouvel ecran
+cockpit_close_screen|fermer ecran|fermer espace,quitter ecran|Fermer l'ecran actuel
+cockpit_open_app|ouvrir application|lancer app,demarrer app|Ouvrir une application specifique
 # ── NoteAvanue ──
 note_open|ouvrir note avanue|ouvrir notes,app de notes|Ouvrir NoteAvanue
 note_new|nouvelle note|creer note,note vide|Creer une nouvelle note

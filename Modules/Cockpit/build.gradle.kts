@@ -35,8 +35,10 @@ kotlin {
         }
     }
 
-    // iOS deferred to future phase
-    // iosX64(); iosArm64(); iosSimulatorArm64()
+    // iOS targets
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
     sourceSets {
         val commonMain by getting {
@@ -140,6 +142,20 @@ kotlin {
 
         val desktopTest by getting {
             dependsOn(commonTest)
+        }
+
+        // iOS source sets — shared across all iOS architectures
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(commonMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                implementation(libs.sqldelight.native.driver)
+            }
         }
     }
 }
