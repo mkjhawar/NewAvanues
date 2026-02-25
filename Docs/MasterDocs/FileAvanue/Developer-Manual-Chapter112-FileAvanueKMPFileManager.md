@@ -275,6 +275,8 @@ darwinMain
 
 Uses `NSFileManager.defaultManager.contentsOfDirectoryAtPath()` for listing, `attributesOfItemAtPath()` for metadata (`NSFileSize`, `NSFileModificationDate`, `NSFileCreationDate`), and `NSSearchPathForDirectoriesInDomains(NSDocumentDirectory)` for root path.
 
+**Kotlin/Native opt-in**: The file requires `@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)` because all `NSFileManager` methods that interact with ObjC types are annotated with `ExperimentalForeignApi` in Kotlin 2.x. Error pointer parameters should be passed as `null` directly (not typed as `ObjCObjectVar` variables, which causes `CPointer` type mismatch).
+
 ### 6.4 WebStorageProvider
 
 **File**: `jsMain/.../WebStorageProvider.kt`
@@ -453,6 +455,8 @@ FileAvanue introduced an `expect/actual` pattern for `String.format()` since it'
 | JS | Regex-based `%s`/`%d`/`%.Nf` replacement with `toFixed()` |
 | Darwin | Manual precision formatting with `kotlin.math` helpers |
 
+**Critical**: Call sites MUST use `String.format("pattern", args)` (companion method), NOT `"pattern".format(args)` (JVM-only instance extension). The instance method `String.format()` only exists in `kotlin.text` on JVM targets and will cause "Unresolved reference" errors on Kotlin/Native (iOS, macOS) and JS.
+
 ---
 
 ## 11. File Inventory
@@ -555,11 +559,28 @@ Every interactive element in FileAvanue UI has AVID voice identifiers:
 
 ---
 
-## 14. Verification Checklist
+## 14. Build Configuration Notes
+
+### 14.1 Compose Runtime for Non-Android Targets
+
+The `kotlin.compose` plugin applies the Compose compiler to ALL Kotlin targets. Since FileAvanue only uses Compose UI on Android (where the BOM provides the runtime), non-Android targets need the JetBrains Compose runtime explicitly:
+
+```kotlin
+// darwinMain, desktopMain, jsMain each need:
+dependencies {
+    implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+}
+```
+
+Without this, native/JS compilation fails with: "The Compose Compiler requires the Compose Runtime to be on the class path."
+
+### 14.2 Verification Checklist
 
 | Check | Command / Action |
 |-------|-----------------|
-| Build | `./gradlew :Modules:FileAvanue:assembleDebug` |
+| Android build | `./gradlew :Modules:FileAvanue:assembleDebug` |
+| macOS build | `./gradlew :Modules:FileAvanue:compileKotlinMacosArm64` |
+| Logging macOS | `./gradlew :Modules:Logging:compileKotlinMacosArm64` |
 | Cockpit launch | Dashboard > FileAvanue tile > FileManagerDashboard shows |
 | Category browse | Tap "Images" > image grid from MediaStore |
 | Directory browse | "Browse Device" > Downloads > file list with breadcrumbs |
