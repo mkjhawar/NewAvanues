@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
 package com.augmentalis.fileavanue
 
 import com.augmentalis.fileavanue.model.FileCategory
@@ -65,8 +67,7 @@ class DarwinLocalStorageProvider : IStorageProvider {
     }
 
     override suspend fun listFiles(path: String, showHidden: Boolean): List<FileItem> {
-        val error: kotlinx.cinterop.ObjCObjectVar<platform.Foundation.NSError?>? = null
-        val contents = fileManager.contentsOfDirectoryAtPath(path, error) ?: return emptyList()
+        val contents = fileManager.contentsOfDirectoryAtPath(path, null) ?: return emptyList()
         @Suppress("UNCHECKED_CAST")
         val names = contents as? List<String> ?: return emptyList()
 

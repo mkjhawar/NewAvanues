@@ -85,6 +85,10 @@ kotlin {
         // Darwin shared source set (iOS + macOS)
         val darwinMain by creating {
             dependsOn(commonMain)
+            dependencies {
+                // Compose runtime needed for kotlin.compose plugin on native targets
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+            }
         }
 
         val iosX64Main by getting
@@ -105,10 +109,22 @@ kotlin {
             macosArm64Main.dependsOn(this)
         }
 
-        val desktopMain by getting { dependsOn(commonMain) }
+        val desktopMain by getting {
+            dependsOn(commonMain)
+            dependencies {
+                // Compose runtime needed for kotlin.compose plugin on JVM target
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+            }
+        }
         val desktopTest by getting { dependsOn(commonTest) }
 
-        val jsMain by getting { dependsOn(commonMain) }
+        val jsMain by getting {
+            dependsOn(commonMain)
+            dependencies {
+                // Compose runtime needed for kotlin.compose plugin on JS target
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+            }
+        }
     }
 }
 
