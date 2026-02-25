@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.augmentalis.avamagic.avacode"
+    namespace = "com.augmentalis.avacode"
     compileSdk = 35
     defaultConfig {
         minSdk = 28

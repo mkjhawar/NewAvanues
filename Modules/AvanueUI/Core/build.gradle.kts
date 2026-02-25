@@ -4,7 +4,7 @@ plugins {
     id("com.android.library")
 }
 
-group = "com.augmentalis.avanues.avamagic.ui"
+group = "com.augmentalis.avanueui"
 version = "1.0.0"
 
 kotlin {

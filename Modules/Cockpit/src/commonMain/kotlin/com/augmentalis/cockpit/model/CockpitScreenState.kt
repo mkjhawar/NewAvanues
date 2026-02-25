@@ -25,6 +25,7 @@ import com.augmentalis.cockpit.ui.BackgroundScene
  * @param currentMaterial Active material rendering mode
  * @param currentAppearance Active appearance (Light/Dark/Auto)
  * @param currentPresetId ID of the active theme preset, or null for manual overrides
+ * @param shellMode Which simplified UI shell is active (Classic, AvanueViews, Lens, Canvas)
  */
 data class CockpitScreenState(
     val sessionName: String = "Cockpit",
@@ -39,4 +40,5 @@ data class CockpitScreenState(
     val currentMaterial: MaterialMode = MaterialMode.DEFAULT,
     val currentAppearance: AppearanceMode = AppearanceMode.DEFAULT,
     val currentPresetId: String? = null,
+    val shellMode: SimplifiedShellMode = SimplifiedShellMode.DEFAULT,
 )

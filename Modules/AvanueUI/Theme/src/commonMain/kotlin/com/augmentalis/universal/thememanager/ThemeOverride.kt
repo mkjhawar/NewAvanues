@@ -1,6 +1,6 @@
 package com.augmentalis.universal.thememanager
 
-import com.augmentalis.avamagic.components.core.Theme
+import com.augmentalis.avanueui.core.Theme
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 

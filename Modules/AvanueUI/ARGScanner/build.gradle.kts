@@ -4,7 +4,7 @@ plugins {
     id("com.android.library")
 }
 
-group = "com.augmentalis.avanues.avamagic.components"
+group = "com.augmentalis.avanueui"
 version = "1.0.0"
 
 kotlin {
@@ -49,7 +49,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.avanues.avamagic.components.argscanner"
+    namespace = "com.augmentalis.avanueui.argscanner"
     compileSdk = 35
 
     defaultConfig {

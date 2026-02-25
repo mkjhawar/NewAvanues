@@ -1,0 +1,224 @@
+# VOS v3.0 — fr-FR app commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:fr-FR:en-US:app
+
+nav_back|retour|revenir,en arriere,page precedente|Revenir a l'ecran precedent
+nav_home|accueil|aller a l'accueil,ecran d'accueil,bureau|Aller a l'ecran d'accueil
+nav_recent|applis recentes|applications recentes,recents,basculer appli|Afficher les applications recentes
+nav_drawer|tiroir d'applis|toutes les applis,liste des applis|Ouvrir le tiroir d'applications
+nav_scroll_down|defiler vers le bas|descendre|Defiler vers le bas
+nav_scroll_up|defiler vers le haut|monter|Defiler vers le haut
+nav_scroll_left|defiler a gauche||Defiler vers la gauche
+nav_scroll_right|defiler a droite||Defiler vers la droite
+media_play|lire la musique|lecture,reprendre,jouer|Lire ou reprendre le media
+media_pause|mettre en pause|pause,arreter la musique|Mettre le media en pause
+media_next|chanson suivante|morceau suivant,piste suivante,suivant|Piste suivante
+media_prev|chanson precedente|morceau precedent,piste precedente,precedent|Piste precedente
+media_vol_up|monter le volume|plus fort,volume plus|Augmenter le volume
+media_vol_down|baisser le volume|moins fort,volume moins,plus bas|Baisser le volume
+media_mute|couper le son|muet,silence,mode silencieux|Couper le son
+sys_settings|ouvrir les parametres|parametres,reglages,configuration|Ouvrir les parametres du systeme
+sys_notifications|afficher les notifications|notifications,panneau de notifications|Afficher les notifications
+sys_clear_notif|effacer les notifications|supprimer les notifications|Effacer toutes les notifications
+sys_screenshot|capture d'ecran|screenshot,capturer l'ecran|Prendre une capture d'ecran
+sys_flash_on|allumer la lampe|lampe torche,torche,lampe on|Allumer la lampe torche
+sys_flash_off|eteindre la lampe|lampe off,torche off|Eteindre la lampe torche
+sys_bright_up|plus de luminosite|augmenter la luminosite,plus lumineux,ecran plus clair|Augmenter la luminosite de l'ecran
+sys_bright_down|moins de luminosite|baisser la luminosite,plus sombre,ecran plus sombre|Baisser la luminosite de l'ecran
+sys_lock|verrouiller l'ecran|verrouiller le telephone,verrouiller|Verrouiller l'ecran
+sys_rotate|pivoter l'ecran|rotation,changer l'orientation|Basculer la rotation de l'ecran
+sys_wifi|basculer le wifi|wifi on,wifi off,activer le wifi,desactiver le wifi|Activer ou desactiver le WiFi
+sys_bluetooth|basculer le bluetooth|bluetooth on,bluetooth off,activer le bluetooth,desactiver le bluetooth|Activer ou desactiver le Bluetooth
+voice_mute|couper la voix|arreter l'ecoute,voix off|Desactiver la reconnaissance vocale
+voice_wake|activer la voix|ecouter,voix on,commencer l'ecoute|Activer la reconnaissance vocale
+voice_dict_start|commencer la dictee|dictee,mode saisie|Demarrer le mode dictee
+voice_dict_stop|arreter la dictee|fin de dictee,mode commande|Arreter le mode dictee
+voice_help|afficher les commandes|qu'est-ce que je peux dire,aide,commandes disponibles|Afficher les commandes disponibles
+voice_num_on|numeros actifs|afficher les numeros,numeros toujours|Toujours afficher les numeros sur les elements
+voice_num_off|numeros inactifs|masquer les numeros,pas de numeros|Ne jamais afficher les numeros
+voice_num_auto|numeros auto|numeros automatiques,auto numeros|Afficher les numeros uniquement pour les listes
+voice_cursor_show|afficher le curseur|curseur on,activer le curseur|Afficher le curseur vocal
+voice_cursor_hide|masquer le curseur|curseur off,desactiver le curseur|Masquer le curseur vocal
+voice_cursor_click|clic curseur|cliquer ici|Cliquer a la position du curseur
+voice_cursor_up|curseur haut|deplacer curseur haut|Deplacer le curseur vers le haut
+voice_cursor_down|curseur bas|deplacer curseur bas|Deplacer le curseur vers le bas
+voice_cursor_left|curseur gauche|deplacer curseur gauche|Deplacer le curseur vers la gauche
+voice_cursor_right|curseur droite|deplacer curseur droite|Deplacer le curseur vers la droite
+acc_click|cliquer|appuyer,toucher,taper|Cliquer sur un element nomme ou numerote
+acc_long_click|appui long|clic long,maintenir,rester appuye|Appui long sur un element
+acc_zoom_in|zoomer|agrandir,zoom avant,rapprocher|Zoomer
+acc_zoom_out|dezoomer|reduire,zoom arriere,eloigner|Dezoomer
+acc_read|lire l'ecran|lire a voix haute,lis-moi ca,lire la page|Lire le contenu de l'ecran a voix haute
+acc_stop_read|arreter la lecture|stop,tais-toi,silence|Arreter la lecture a voix haute
+text_select_all|tout selectionner|selectionner tout|Selectionner tout le texte
+text_copy|copier|copier ca,copier le texte|Copier la selection dans le presse-papiers
+text_paste|coller|coller le texte|Coller depuis le presse-papiers
+text_cut|couper|couper le texte|Couper la selection dans le presse-papiers
+text_undo|annuler|defaire,revenir en arriere|Annuler la derniere action
+text_redo|retablir|refaire|Retablir la derniere action annulee
+text_delete|supprimer|effacer,enlever|Supprimer le texte selectionne
+input_show_kb|afficher le clavier|ouvrir le clavier,clavier|Afficher le clavier virtuel
+input_hide_kb|masquer le clavier|fermer le clavier,cacher le clavier|Masquer le clavier virtuel
+appctl_close|fermer l'appli|fermer,quitter l'appli,quitter|Fermer l'application en cours
+acc_double_tap|double tap|double clic,double appui|Double-tap sur un element
+acc_swipe_left|balayer a gauche||Balayer vers la gauche sur l'ecran
+acc_swipe_right|balayer a droite||Balayer vers la droite sur l'ecran
+acc_swipe_up|balayer vers le haut||Balayer vers le haut sur l'ecran
+acc_swipe_down|balayer vers le bas||Balayer vers le bas sur l'ecran
+acc_stroke_start|commencer a dessiner|dessiner,debut de trait|Commencer un trait de dessin (annotation)
+acc_stroke_end|arreter de dessiner|fin de dessin,fin de trait|Terminer le trait de dessin (annotation)
+acc_erase|gomme|mode gomme,activer la gomme|Activer le mode gomme (annotation)
+# ── Camera (PhotoAvanue) ──
+cam_open|ouvrir photo avanue|ouvrir camera,vue camera,camera avanue,photo avanue|Lancer PhotoAvanue
+cam_capture|prendre une photo|capturer,photo,clicher,prendre un cliche|Prendre une photo
+cam_record_start|commencer l'enregistrement|enregistrer video,demarrer enregistrement,filmer|Demarrer l'enregistrement video
+cam_record_stop|arreter l'enregistrement|fin enregistrement,terminer enregistrement|Arreter l'enregistrement video
+cam_record_pause|mettre en pause l'enregistrement|pause video|Mettre l'enregistrement en pause
+cam_record_resume|reprendre l'enregistrement|continuer enregistrement|Reprendre l'enregistrement
+cam_flip|retourner la camera|changer camera,camera frontale,camera arriere,selfie|Basculer entre camera avant et arriere
+cam_flash_on|flash active|activer le flash,allumer le flash|Activer le flash
+cam_flash_off|flash desactive|desactiver le flash,eteindre le flash|Desactiver le flash
+cam_flash_auto|flash automatique|auto flash,flash auto|Mettre le flash en automatique
+cam_flash_torch|mode torche|lampe torche,garder le flash allume|Garder le flash allume en continu
+cam_zoom_in|zoom camera avant|camera plus pres,agrandir camera|Zoomer la camera
+cam_zoom_out|zoom camera arriere|camera plus loin,reduire camera|Dezoomer la camera
+cam_exposure_up|plus d'exposition|camera plus claire,eclaircir,augmenter exposition|Augmenter l'exposition de la camera
+cam_exposure_down|moins d'exposition|camera plus sombre,assombrir,reduire exposition|Reduire l'exposition de la camera
+cam_mode_photo|mode photo|mode image,mode camera|Passer en mode photo
+cam_mode_video|mode video|mode film,mode enregistrement|Passer en mode video
+# ── Cockpit ──
+cockpit_open|ouvrir cockpit|vue cockpit,lancer cockpit,mode cockpit|Lancer Cockpit
+cockpit_add_frame|ajouter un cadre|nouveau cadre,creer cadre,ajouter panneau|Ajouter un nouveau cadre de contenu
+cockpit_layout|changer la disposition|changer layout,mode disposition|Ouvrir le selecteur de disposition
+cockpit_layout_grid|disposition grille|grille,vue grille|Passer a la disposition en grille
+cockpit_layout_split|disposition divisee|vue divisee,cote a cote|Passer a la disposition divisee
+cockpit_layout_freeform|disposition libre|forme libre,disposition flexible|Passer a la disposition libre
+cockpit_layout_fullscreen|plein ecran|maximiser,ecran complet|Passer en plein ecran
+cockpit_layout_workflow|workflow|mode workflow,mode etapes|Passer a la disposition workflow
+cockpit_minimize|minimiser le cadre|minimiser,reduire cadre|Minimiser le cadre actif
+cockpit_maximize|maximiser le cadre|maximiser,agrandir cadre|Maximiser le cadre actif
+cockpit_close|fermer le cadre|fermer,supprimer cadre,enlever cadre|Fermer le cadre actif
+cockpit_add_web|ajouter web|nouveau web,ouvrir web,ajouter navigateur|Ajouter un cadre navigateur web
+cockpit_add_camera|ajouter camera|ouvrir camera,nouvelle camera|Ajouter un cadre camera
+cockpit_add_note|ajouter note|nouvelle note,ouvrir note|Ajouter un cadre note
+cockpit_add_pdf|ajouter pdf|ouvrir pdf,nouveau pdf|Ajouter un lecteur PDF
+cockpit_add_image|ajouter image|ouvrir image,nouvelle image,ajouter photo|Ajouter un afficheur d'images
+cockpit_add_video|ajouter video|ouvrir video,nouvelle video|Ajouter un lecteur video
+cockpit_add_whiteboard|ajouter tableau blanc|ouvrir tableau blanc,nouveau tableau blanc,dessiner|Ajouter un tableau blanc
+cockpit_add_terminal|ajouter terminal|ouvrir terminal,nouveau terminal,console|Ajouter un terminal
+cockpit_web_back|retour dans web|retour,naviguer en arriere|Cadre web: retour
+cockpit_web_forward|avancer dans web|avancer,naviguer en avant|Cadre web: avancer
+cockpit_web_refresh|actualiser web|recharger,rafraichir la page|Cadre web: actualiser
+cockpit_scroll_up|cockpit defiler haut|panneau haut|Defiler le cadre actif vers le haut
+cockpit_scroll_down|cockpit defiler bas|panneau bas|Defiler le cadre actif vers le bas
+cockpit_zoom_in|cockpit zoom avant|agrandir panneau|Zoomer dans le cadre actif
+cockpit_zoom_out|cockpit zoom arriere|reduire panneau|Dezoomer le cadre actif
+# ── NoteAvanue ──
+note_open|ouvrir note avanue|ouvrir notes,app de notes|Ouvrir NoteAvanue
+note_new|nouvelle note|creer note,note vide|Creer une nouvelle note
+note_save|sauvegarder note|sauvegarder,enregistrer|Sauvegarder la note actuelle
+note_close|fermer note|quitter notes,fermer notes|Fermer NoteAvanue
+note_bold|gras|mettre en gras,texte gras|Activer le gras
+note_italic|italique|mettre en italique,texte italique|Activer l'italique
+note_underline|souligner|mettre en souligne|Activer le soulignement
+note_strikethrough|barre|texte barre|Activer le texte barre
+note_heading1|titre un|h1,titre 1,titre|Appliquer titre niveau 1
+note_heading2|titre deux|h2,titre 2,sous-titre|Appliquer titre niveau 2
+note_heading3|titre trois|h3,titre 3,section|Appliquer titre niveau 3
+note_bullet|liste a puces|puces,liste non ordonnee|Activer liste a puces
+note_numbered|liste numerotee|numeros,liste ordonnee|Activer liste numerotee
+note_checklist|liste de taches|checklist,cases a cocher|Activer liste de taches
+note_code|bloc de code|code,police fixe|Activer bloc de code
+note_quote|citation|bloc de citation|Activer citation
+note_divider|inserer separateur|separateur,ligne horizontale|Inserer ligne de separation
+note_undo|annuler note|annuler|Annuler derniere modification
+note_redo|retablir note|retablir|Retablir derniere modification
+note_select_all|tout selectionner|selectionner tout|Selectionner tout le contenu
+note_delete_line|supprimer ligne|effacer ligne|Supprimer la ligne actuelle
+note_new_paragraph|nouveau paragraphe|paragraphe suivant|Inserer nouveau paragraphe
+note_go_top|aller en haut|debut de note|Aller au debut de la note
+note_go_bottom|aller en bas|fin de note|Aller a la fin de la note
+note_next_heading|titre suivant|section suivante|Sauter au titre suivant
+note_prev_heading|titre precedent|section precedente|Sauter au titre precedent
+note_dictate|mode dictee|commencer a dicter,saisie vocale|Passer en mode dictee
+note_command_mode|mode commande|arreter de dicter,commandes vocales|Passer en mode commande
+note_continuous|dictee continue|continuer a dicter|Passer en dictee continue
+note_copy|copier texte note|copier|Copier le texte selectionne
+note_paste|coller dans note|coller|Coller depuis le presse-papier
+note_cut|couper texte note|couper|Couper le texte selectionne
+note_pin|epingler note|epingler,desepingler|Basculer epinglage de note
+note_export|exporter note|exporter,partager note|Exporter note en Markdown
+note_search|rechercher notes|trouver note,chercher|Rechercher dans les notes
+note_scroll_up|note defiler haut|defiler haut|Defiler contenu vers le haut
+note_scroll_down|note defiler bas|defiler bas|Defiler contenu vers le bas
+note_attach_photo|joindre photo|ajouter photo,inserer photo|Joindre photo a la note
+note_attach_file|joindre fichier|ajouter fichier|Joindre fichier a la note
+note_attach_audio|joindre audio|ajouter enregistrement|Joindre enregistrement audio
+note_zoom_in|note zoom avant|texte plus grand|Augmenter zoom de note
+note_zoom_out|note zoom arriere|texte plus petit|Reduire zoom de note
+note_font_up|augmenter police|police plus grande|Augmenter taille de police
+note_font_down|reduire police|police plus petite|Reduire taille de police
+note_clear_format|effacer formatage|supprimer formatage,texte brut|Supprimer tout formatage
+note_word_count|compter mots|combien de mots|Afficher le nombre de mots
+note_read_aloud|lire note a voix haute|lire note|Lire contenu de note a voix haute
+note_stop_reading|arreter lecture note|arreter lecture|Arreter lecture de note
+# ── Annotation (AnnotationAvanue) ──
+ann_pen|outil stylo|stylo,dessiner,main levee|Selectionner outil stylo
+ann_highlight|surligneur|surligner,outil surligneur|Selectionner surligneur
+ann_shape_rect|dessiner rectangle|rectangle,boite|Dessiner rectangle
+ann_shape_circle|dessiner cercle|cercle,ovale,ellipse|Dessiner cercle
+ann_shape_arrow|dessiner fleche|fleche,pointeur|Dessiner fleche
+ann_shape_line|dessiner ligne|ligne,ligne droite|Dessiner ligne droite
+ann_color|selecteur couleur|choisir couleur,changer couleur|Ouvrir selecteur de couleur
+ann_undo|annuler annotation|annuler dessin|Annuler dernier trait
+ann_redo|retablir annotation|retablir dessin|Retablir dernier trait annule
+ann_clear|effacer annotations|tout effacer,tout supprimer|Effacer toutes les annotations
+ann_save|sauvegarder annotation|sauvegarder dessin|Sauvegarder annotation en image
+ann_share|partager annotation|envoyer dessin|Partager annotation
+ann_eraser|outil gomme|gomme,effacer|Passer a la gomme
+ann_pen_up|stylo plus epais|stylo plus gros|Augmenter epaisseur du stylo
+ann_pen_down|stylo plus fin|stylo plus petit|Reduire epaisseur du stylo
+# ── Image (ImageAvanue) ──
+img_open|ouvrir image|voir image,afficher image|Ouvrir visionneuse images
+img_gallery|ouvrir galerie|galerie,galerie photos,mes photos|Ouvrir galerie photos
+img_grayscale|niveaux de gris|noir et blanc,monochrome|Appliquer filtre niveaux de gris
+img_sepia|sepia|vintage,vieille photo|Appliquer filtre sepia
+img_blur|flouter image|adoucir,flou|Appliquer filtre flou
+img_sharpen|accentuer image|accentuer,ameliorer|Appliquer filtre accentuation
+img_brightness|ajuster luminosite|plus lumineux,plus sombre|Ajuster luminosite image
+img_contrast|ajuster contraste|plus contraste,moins contraste|Ajuster contraste image
+img_rotate_left|tourner gauche|pivoter gauche|Tourner image 90 degres gauche
+img_rotate_right|tourner droite|pivoter droite|Tourner image 90 degres droite
+img_flip_h|retourner horizontal|miroir,retourner|Retourner image horizontalement
+img_flip_v|retourner vertical|retourner haut bas|Retourner image verticalement
+img_crop|rogner image|rogner,decouper|Mode rognage
+img_share|partager image|envoyer image|Partager image
+img_delete|supprimer image|effacer image|Supprimer image
+img_info|infos image|details image,exif,metadonnees|Afficher metadonnees image
+img_next|image suivante|photo suivante|Voir image suivante
+img_prev|image precedente|photo precedente|Voir image precedente
+# ── Video (VideoAvanue) ──
+vid_play|lire video|lire,reprendre video|Lire ou reprendre video
+vid_pause|mettre en pause|pause|Mettre video en pause
+vid_stop|arreter video|arreter|Arreter lecture video
+vid_fwd|avancer|avance rapide,sauter avant|Avancer 10 secondes
+vid_back|reculer|rembobiner,sauter arriere|Reculer 10 secondes
+vid_faster|plus vite|vitesse rapide,accelerer|Augmenter vitesse
+vid_slower|plus lent|vitesse lente,ralentir|Reduire vitesse
+vid_normal|vitesse normale|reinitialiser vitesse|Retablir vitesse normale
+vid_fullscreen|plein ecran|maximiser video|Basculer plein ecran
+vid_mute|couper son video|video muet|Couper son video
+vid_unmute|activer son video|son video|Activer son video
+vid_loop|boucle video|repeter,boucle|Basculer lecture en boucle
+# ── Diffusion (RemoteCast) ──
+cast_start|commencer diffusion|diffuser ecran,partager ecran|Commencer diffusion ecran
+cast_stop|arreter diffusion|fin diffusion|Arreter diffusion
+cast_connect|connecter appareil|connecter,appairer|Connecter a appareil
+cast_disconnect|deconnecter appareil|deconnecter|Deconnecter appareil
+cast_quality|qualite diffusion|qualite streaming|Changer qualite diffusion
+# ── IA ──
+ai_summarize|resumer|resume ia,generer resume|Generer resume avec IA
+ai_chat|chat ia|parler a ia,demander ia|Ouvrir chat IA
+ai_search|recherche ia|chercher connaissance|Rechercher base de connaissances
+ai_teach|enseigner ia|entrainer ia,ajouter connaissance|Enseigner nouveau savoir a IA
+ai_clear|effacer contexte ia|reinitialiser ia,nouvelle conversation|Effacer contexte conversation

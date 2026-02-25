@@ -2,6 +2,7 @@ package com.augmentalis.cockpit.viewmodel
 
 import com.augmentalis.cockpit.CockpitConstants
 import com.augmentalis.cockpit.model.BuiltInTemplates
+import com.augmentalis.cockpit.model.SimplifiedShellMode
 import com.augmentalis.cockpit.ui.BackgroundScene
 import com.augmentalis.cockpit.ui.ContentAction
 import com.augmentalis.cockpit.model.CockpitFrame
@@ -62,6 +63,9 @@ class CockpitViewModel(
 
     private val _layoutMode = MutableStateFlow(LayoutMode.DEFAULT)
     val layoutMode: StateFlow<LayoutMode> = _layoutMode.asStateFlow()
+
+    private val _shellMode = MutableStateFlow(SimplifiedShellMode.DEFAULT)
+    val shellMode: StateFlow<SimplifiedShellMode> = _shellMode.asStateFlow()
 
     private val _sessions = MutableStateFlow<List<CockpitSession>>(emptyList())
     val sessions: StateFlow<List<CockpitSession>> = _sessions.asStateFlow()
@@ -307,6 +311,18 @@ class CockpitViewModel(
             if (s.id == updatedSession.id) updatedSession else s
         }
         scheduleAutoSave()
+    }
+
+    /**
+     * Switch the home screen shell variation (Classic, AvanueViews, Lens, Canvas).
+     * Also returns to DASHBOARD layout mode to show the home screen.
+     */
+    fun setShellMode(mode: SimplifiedShellMode) {
+        _shellMode.value = mode
+        // Return to dashboard to show the home screen with the new shell
+        if (_layoutMode.value != LayoutMode.DASHBOARD) {
+            _layoutMode.value = LayoutMode.DASHBOARD
+        }
     }
 
     /**

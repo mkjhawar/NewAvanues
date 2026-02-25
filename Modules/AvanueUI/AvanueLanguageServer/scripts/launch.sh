@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 
-JAR_FILE="$PROJECT_ROOT/Modules/AVAMagic/MagicTools/LanguageServer/build/libs/LanguageServer-1.0.0.jar"
+JAR_FILE="$PROJECT_ROOT/Modules/AvanueUI/AvanueLanguageServer/build/libs/LanguageServer-1.0.0.jar"
 
 if [ ! -f "$JAR_FILE" ]; then
     echo "❌ JAR file not found. Run ./scripts/package.sh first."

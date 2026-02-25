@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Avanues - Consolidated Modular Platform
+  10 launcher icons: Avanues (hub) + VoiceAvanue + WebAvanue + PDFAvanue + ImageAvanue
+    + VideoAvanue + NoteAvanue + PhotoAvanue + CastAvanue + DrawAvanue
+  Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Internet for web browsing and AI features -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Microphone for voice recognition -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- System overlay for cursor, HUD, and overlays -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Foreground service for voice recognition and cursor -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Notifications for service status (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Vibration for feedback -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Boot receiver for auto-start (optional) -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Camera for eye tracking and WebXR (optional) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Storage for downloads (scoped storage used) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"
+        tools:ignore="ScopedStorage" />
+
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+    <!-- System settings modification for brightness/rotation voice commands -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Bluetooth control for voice commands -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- WiFi control for voice commands (pre-Android 10 direct toggle) -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <!-- Optional hardware features -->
+    <uses-feature android:name="android.hardware.microphone" android:required="true" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <application
+        android:name=".VoiceAvanueApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="AvanuesNewUI"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VoiceAvanue"
+        android:hardwareAccelerated="true"
+        tools:targetApi="34">
+
+        <!-- Disable Sentry auto-init (transitive from WebAvanue).
+             Call SentryManager.init() manually when DSN is configured. -->
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
+
+        <!-- Main Activity — Cockpit (Lens shell) is the entry point -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_avanues"
+            android:label="AvanuesNewUI"
+            android:roundIcon="@mipmap/ic_launcher_avanues_round"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden"
+            android:theme="@style/Theme.VoiceAvanue.SplashScreen"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- Launcher icon -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Deep links for browser URLs -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <!-- VoiceAvanue launcher alias — voice-first entry point -->
+        <activity-alias
+            android:name=".VoiceAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="VoiceAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- WebAvanue launcher alias — browser entry point -->
+        <activity-alias
+            android:name=".WebAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="WebAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- PDFAvanue launcher alias — document viewer entry point -->
+        <activity-alias
+            android:name=".PDFAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="PDFAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- ImageAvanue launcher alias — gallery entry point -->
+        <activity-alias
+            android:name=".ImageAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="ImageAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- VideoAvanue launcher alias — media player entry point -->
+        <activity-alias
+            android:name=".VideoAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="VideoAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- NoteAvanue launcher alias — note editor entry point -->
+        <activity-alias
+            android:name=".NoteAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="NoteAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- PhotoAvanue launcher alias — camera entry point -->
+        <activity-alias
+            android:name=".PhotoAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="PhotoAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- CastAvanue launcher alias — remote cast entry point -->
+        <activity-alias
+            android:name=".CastAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="CastAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- DrawAvanue launcher alias — annotation/drawing entry point -->
+        <activity-alias
+            android:name=".DrawAvanueAlias"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="DrawAvanue"
+            android:icon="@mipmap/ic_launcher_avanues">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Accessibility Service for VoiceOS -->
+        <service
+            android:name=".service.VoiceAvanueAccessibilityService"
+            android:label="@string/accessibility_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false">
+
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Command Overlay Service (numbered badges for voice selection) -->
+        <service
+            android:name=".service.CommandOverlayService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="accessibility_overlay" />
+        </service>
+
+        <!-- Cursor Overlay Service -->
+        <service
+            android:name="com.augmentalis.voicecursor.overlay.CursorOverlayService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="accessibility_cursor" />
+        </service>
+
+        <!-- Voice Recognition Service -->
+        <service
+            android:name=".service.VoiceRecognitionService"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
+
+        <!-- RPC Server Service (dormant — started on demand via Settings) -->
+        <service
+            android:name=".service.RpcServerService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="ipc_server" />
+        </service>
+
+        <!-- Boot Receiver -->
+        <receiver
+            android:name=".service.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

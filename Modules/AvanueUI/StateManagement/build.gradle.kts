@@ -6,7 +6,7 @@ plugins {
     id("org.jetbrains.compose")
 }
 
-group = "com.augmentalis.avanues.avamagic"
+group = "com.augmentalis.avanueui"
 version = "1.0.0"
 
 kotlin {
@@ -65,7 +65,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.augmentalis.avanues.avamagic.state"
+    namespace = "com.augmentalis.avanueui.state"
     compileSdk = 35
 
     defaultConfig {

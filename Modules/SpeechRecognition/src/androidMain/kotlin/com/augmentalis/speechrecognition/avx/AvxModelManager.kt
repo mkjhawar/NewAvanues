@@ -16,7 +16,7 @@ package com.augmentalis.speechrecognition.avx
 
 import android.content.Context
 import android.util.Log
-import com.augmentalis.crypto.aon.AONFormat
+// AONFormat.wrap() not yet available — raw zip stored, unwrap handles both formats
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -183,13 +183,13 @@ class AvxModelManager(
             _downloadState.value = AvxDownloadState.Encrypting(language)
 
             val zipBytes = zipFile.readBytes()
-            val aonBytes = AONFormat.wrap(
-                payload = zipBytes,
-                modelId = "avx-${language.langCode}",
-                platform = "android"
-            )
+            // AONCodec.wrap() not yet implemented in Crypto module.
+            // Store raw zip — AONCodec.unwrap() returns non-AON data as-is,
+            // so the read path handles both raw and AON-wrapped files.
+            // TODO: Switch to AONCodec.wrap() when Crypto Phase 5 lands.
+            val aonBytes = zipBytes
 
-            // Step 4: Write encrypted model to storage
+            // Step 4: Write model to storage
             val outputFile = File(modelDir, language.aonFileName)
             outputFile.writeBytes(aonBytes)
 

@@ -31,6 +31,7 @@ enum class CommandBarState {
     NOTE_ACTIONS,
     CAMERA_ACTIONS,
     WHITEBOARD_ACTIONS,
+    FILE_ACTIONS,
 
     // Level 2: Navigation
     SCROLL_COMMANDS,
@@ -44,7 +45,7 @@ enum class CommandBarState {
             ADD_FRAME, LAYOUT_PICKER, FRAME_ACTIONS -> MAIN
             WEB_ACTIONS, PDF_ACTIONS, IMAGE_ACTIONS,
             VIDEO_ACTIONS, NOTE_ACTIONS, CAMERA_ACTIONS,
-            WHITEBOARD_ACTIONS -> FRAME_ACTIONS
+            WHITEBOARD_ACTIONS, FILE_ACTIONS -> FRAME_ACTIONS
             SCROLL_COMMANDS, ZOOM_COMMANDS, SPATIAL_COMMANDS -> MAIN
         }
 
@@ -65,7 +66,7 @@ enum class CommandBarState {
         private val CONTENT_SPECIFIC_STATES = setOf(
             WEB_ACTIONS, PDF_ACTIONS, IMAGE_ACTIONS,
             VIDEO_ACTIONS, NOTE_ACTIONS, CAMERA_ACTIONS,
-            WHITEBOARD_ACTIONS
+            WHITEBOARD_ACTIONS, FILE_ACTIONS
         )
 
         /** Map content type ID to the appropriate command bar state.
@@ -79,6 +80,7 @@ enum class CommandBarState {
             "note", "voice_note" -> NOTE_ACTIONS
             "camera" -> CAMERA_ACTIONS
             "whiteboard" -> WHITEBOARD_ACTIONS
+            "file" -> FILE_ACTIONS
             else -> FRAME_ACTIONS
         }
     }

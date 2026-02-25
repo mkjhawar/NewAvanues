@@ -24,7 +24,7 @@ TOTAL_AVU_SIZE=0
 
 # Directories to process
 DIRS=(
-    "Modules/AvaMagic/managers/CommandManager/src/main/assets/commands"
+    "Modules/VoiceOSCore/src/commonMain/resources/commands"
     "Modules/VoiceOS/managers/CommandManager/src/main/assets/commands"
 )
 

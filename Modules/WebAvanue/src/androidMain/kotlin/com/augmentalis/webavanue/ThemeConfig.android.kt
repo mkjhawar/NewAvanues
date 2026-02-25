@@ -80,7 +80,7 @@ actual object ThemeDetector {
 
     actual fun detectTheme(): ThemeType {
         return if (isAvanuesEcosystem()) {
-            ThemeType.AVAMAGIC
+            ThemeType.AVANUE
         } else {
             ThemeType.APP_BRANDING
         }

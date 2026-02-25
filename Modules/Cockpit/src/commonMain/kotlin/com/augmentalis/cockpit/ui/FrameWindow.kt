@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Draw
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Image
@@ -409,6 +410,7 @@ fun contentTypeIcon(content: FrameContent): ImageVector = when (content) {
     is FrameContent.AiSummary -> Icons.Default.AutoAwesome
     is FrameContent.ScreenCast -> Icons.Default.Cast
     is FrameContent.Widget -> Icons.Default.Widgets
+    is FrameContent.File -> Icons.Default.Folder
     is FrameContent.ExternalApp -> Icons.AutoMirrored.Filled.OpenInNew
 }
 

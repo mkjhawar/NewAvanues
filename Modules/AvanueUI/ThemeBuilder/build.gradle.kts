@@ -70,7 +70,7 @@ kotlin {
 // Configure Compose
 compose.desktop {
     application {
-        mainClass = "com.augmentalis.avanues.avamagic.components.themebuilder.MainKt"
+        mainClass = "com.augmentalis.avanueui.themebuilder.MainKt"
 
         nativeDistributions {
             targetFormats(

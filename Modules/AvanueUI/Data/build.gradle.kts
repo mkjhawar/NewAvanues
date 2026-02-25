@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.augmentalis.avamagic.magicui.data"
+    namespace = "com.augmentalis.avanueui.data"
     compileSdk = 35
     defaultConfig {
         minSdk = 28
