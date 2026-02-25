@@ -1,23 +1,27 @@
 /**
- * IosLogger.kt - iOS-specific logger implementation
+ * DarwinLogger.kt - Apple platform logger implementation (iOS + macOS)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  * Created: 2026-02-02 (consolidated from duplicate implementations)
+ * Updated: 2026-02-25 (renamed from IosLogger, moved to darwinMain for macOS support)
  */
 package com.avanues.logging
 
 import platform.Foundation.NSLog
 
 /**
- * iOS implementation of Logger using NSLog
+ * Apple/Darwin implementation of Logger using NSLog.
+ *
+ * Works on all Apple platforms (iOS, macOS, tvOS, watchOS) since NSLog
+ * is part of the Foundation framework available across all Darwin targets.
  *
  * Features:
  * - Lazy evaluation (message lambda only called if logging enabled)
- * - Uses NSLog for native iOS logging
+ * - Uses NSLog for native Apple platform logging
  * - Respects globalMinLevel setting
  * - Full exception stack traces
  */
-internal class IosLogger(private val tag: String) : Logger {
+internal class DarwinLogger(private val tag: String) : Logger {
 
     override fun v(message: () -> String) {
         if (isLoggable(LogLevel.VERBOSE)) {
@@ -62,7 +66,6 @@ internal class IosLogger(private val tag: String) : Logger {
     }
 
     override fun isLoggable(level: LogLevel): Boolean {
-        // iOS respects globalMinLevel (can be filtered in Console.app)
         return level.priority >= globalMinLevel.priority
     }
 }
