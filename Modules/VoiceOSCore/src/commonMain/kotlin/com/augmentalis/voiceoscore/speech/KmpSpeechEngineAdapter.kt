@@ -257,6 +257,7 @@ class KmpSpeechEngineAdapter(
             SpeechEngine.GOOGLE_CLOUD -> com.augmentalis.speechrecognition.SpeechEngine.GOOGLE_CLOUD
             SpeechEngine.AZURE -> com.augmentalis.speechrecognition.SpeechEngine.AZURE
             SpeechEngine.APPLE_SPEECH -> com.augmentalis.speechrecognition.SpeechEngine.APPLE_SPEECH
+            SpeechEngine.AVX -> com.augmentalis.speechrecognition.SpeechEngine.AVX
         }
     }
 

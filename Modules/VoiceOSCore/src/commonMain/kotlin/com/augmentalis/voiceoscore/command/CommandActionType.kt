@@ -666,6 +666,51 @@ enum class CommandActionType {
     /** Add terminal frame */
     ADD_TERMINAL,
 
+    // ── Arrangement Intent Commands ──────────────────────────────
+    // Maps to ArrangementIntent — auto-selects the best LayoutMode
+    // based on frame count, display profile, and spatial availability.
+
+    /** Focus arrangement — single frame fills the screen */
+    LAYOUT_FOCUS,
+
+    /** Compare arrangement — two frames side by side */
+    LAYOUT_COMPARE,
+
+    /** Overview arrangement — all frames in an auto-arranged grid */
+    LAYOUT_OVERVIEW,
+
+    /** Present arrangement — showcase/carousel mode */
+    LAYOUT_PRESENT,
+
+    // ── Shell Mode Commands ──────────────────────────────────────
+    // Switches between the 4 Cockpit home screen variations.
+
+    /** Switch to Classic dashboard shell (original tile grid) */
+    SHELL_CLASSIC,
+
+    /** Switch to AvanueViews ambient stream shell */
+    SHELL_AVANUE_VIEWS,
+
+    /** Switch to Lens command palette shell */
+    SHELL_LENS,
+
+    /** Switch to Canvas spatial zen shell */
+    SHELL_CANVAS,
+
+    // ── Shell-Specific Navigation ────────────────────────────────
+
+    /** AvanueViews: next card in stream */
+    STREAM_NEXT_CARD,
+
+    /** AvanueViews: previous card in stream */
+    STREAM_PREVIOUS_CARD,
+
+    /** Canvas: zoom in on canvas */
+    CANVAS_ZOOM_IN,
+
+    /** Canvas: zoom out on canvas */
+    CANVAS_ZOOM_OUT,
+
     // ═══════════════════════════════════════════════════════════════
     // PDF Viewing Actions
     // ═══════════════════════════════════════════════════════════════

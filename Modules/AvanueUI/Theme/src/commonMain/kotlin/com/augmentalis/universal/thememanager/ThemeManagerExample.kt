@@ -1,7 +1,7 @@
 package com.augmentalis.universal.thememanager
 
-import com.augmentalis.avamagic.components.core.Theme
-import com.augmentalis.avamagic.components.core.Themes
+import com.augmentalis.avanueui.core.Theme
+import com.augmentalis.avanueui.core.Themes
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.runBlocking
 
@@ -253,9 +253,9 @@ object ThemeManagerExample {
         val customTheme = baseTheme.copy(
             name = "AIAvanue Dark Mode",
             colorScheme = baseTheme.colorScheme.copy(
-                mode = com.augmentalis.avamagic.components.core.ColorScheme.ColorMode.Dark,
-                primary = com.augmentalis.avamagic.components.core.Color.hex("#BB86FC"),
-                background = com.augmentalis.avamagic.components.core.Color.hex("#121212")
+                mode = com.augmentalis.avanueui.core.ColorScheme.ColorMode.Dark,
+                primary = com.augmentalis.avanueui.core.Color.hex("#BB86FC"),
+                background = com.augmentalis.avanueui.core.Color.hex("#121212")
             )
         )
 

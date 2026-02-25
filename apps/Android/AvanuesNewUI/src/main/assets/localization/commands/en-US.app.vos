@@ -1,0 +1,240 @@
+# VOS v3.0 — en-US app commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:en-US:en-US:app
+
+nav_back|go back|navigate back,back,previous screen|Navigate to previous screen
+nav_home|go home|home,navigate home,open home|Go to home screen
+nav_recent|show recent apps|recent apps,open recents,app switcher|Show recent apps
+nav_drawer|open app drawer|app drawer,all apps|Open app drawer
+nav_scroll_down|scroll down|page down|Scroll down
+nav_scroll_up|scroll up|page up|Scroll up
+nav_scroll_left|scroll left||Scroll left
+nav_scroll_right|scroll right||Scroll right
+media_play|play music|play,resume|Play/resume media
+media_pause|pause music|pause,stop music|Pause media
+media_next|next song|next track,skip|Next track
+media_prev|previous song|previous track,go back|Previous track
+media_vol_up|increase volume|volume up,louder|Increase volume
+media_vol_down|decrease volume|volume down,lower volume,quieter|Decrease volume
+media_mute|mute volume|mute,silence|Mute audio
+sys_settings|open settings|settings,show settings,device settings|Open system settings
+sys_notifications|show notifications|notifications,notification panel|Show notifications
+sys_clear_notif|clear notifications|dismiss notifications|Clear all notifications
+sys_screenshot|take screenshot|screenshot,capture screen|Take a screenshot
+sys_flash_on|turn on flashlight|flashlight on,torch on|Turn on flashlight
+sys_flash_off|turn off flashlight|flashlight off,torch off|Turn off flashlight
+sys_bright_up|brightness up|increase brightness,brighter|Increase screen brightness
+sys_bright_down|brightness down|decrease brightness,dimmer|Decrease screen brightness
+sys_lock|lock screen|lock phone,lock|Lock the screen
+sys_rotate|rotate screen|rotate,change orientation|Toggle screen rotation
+sys_wifi|toggle wifi|wifi on,wifi off,turn on wifi,turn off wifi|Toggle WiFi
+sys_bluetooth|toggle bluetooth|bluetooth on,bluetooth off,turn on bluetooth,turn off bluetooth|Toggle Bluetooth
+voice_mute|mute voice|stop listening,voice off|Mute voice recognition
+voice_wake|wake up voice|start listening,voice on|Wake voice recognition
+voice_dict_start|start dictation|dictation,type mode|Start dictation mode
+voice_dict_stop|stop dictation|end dictation,command mode|Stop dictation mode
+voice_help|show voice commands|what can I say,help|Show available commands
+voice_num_on|numbers on|show numbers,numbers always|Always show numbered badges on screen elements
+voice_num_off|numbers off|hide numbers,no numbers|Never show numbered badges
+voice_num_auto|numbers auto|numbers automatic,auto numbers|Show numbers only for lists (emails, messages, etc.)
+voice_cursor_show|show cursor|cursor on,enable cursor|Show the voice cursor overlay
+voice_cursor_hide|hide cursor|cursor off,disable cursor|Hide the voice cursor overlay
+voice_cursor_click|cursor click|click here|Click at cursor position
+voice_cursor_up|cursor up|move cursor up|Move cursor up
+voice_cursor_down|cursor down|move cursor down|Move cursor down
+voice_cursor_left|cursor left|move cursor left|Move cursor left
+voice_cursor_right|cursor right|move cursor right|Move cursor right
+acc_click|click|tap,press|Click/tap on a named or numbered element
+acc_long_click|long press|long click,press and hold,hold|Long press on element
+acc_zoom_in|zoom in|magnify,enlarge|Zoom in
+acc_zoom_out|zoom out|shrink|Zoom out
+acc_read|read screen|read aloud,read this,read page|Read screen content aloud
+acc_stop_read|stop reading|stop,quiet,be quiet|Stop reading aloud
+text_select_all|select all|highlight all|Select all text
+text_copy|copy|copy that,copy text|Copy selection to clipboard
+text_paste|paste|paste text|Paste from clipboard
+text_cut|cut|cut text|Cut selection to clipboard
+text_undo|undo|undo that,take back|Undo last action
+text_redo|redo|redo that|Redo last undone action
+text_delete|delete|delete that,erase,remove|Delete selected text
+input_show_kb|show keyboard|open keyboard,keyboard|Show on-screen keyboard
+input_hide_kb|hide keyboard|close keyboard,dismiss keyboard|Hide on-screen keyboard
+appctl_close|close app|close this,exit app,quit|Close the current app
+acc_double_tap|double tap|double click|Double-tap on element
+acc_swipe_left|swipe left||Swipe left on screen
+acc_swipe_right|swipe right||Swipe right on screen
+acc_swipe_up|swipe up||Swipe up on screen
+acc_swipe_down|swipe down||Swipe down on screen
+acc_stroke_start|start drawing|draw,begin stroke|Begin a drawing stroke (annotation)
+acc_stroke_end|stop drawing|finish drawing,end stroke|End the current drawing stroke (annotation)
+acc_erase|eraser|erase mode,toggle eraser|Toggle eraser mode (annotation)
+# ── Camera (PhotoAvanue) ──
+cam_open|open photo avanue|open camera,camera view,camera avanue,photo avanue|Launch PhotoAvanue standalone
+cam_capture|take photo|capture,snap,shoot,take picture,cheese|Capture a photo
+cam_record_start|start recording|record video,begin recording,record|Start video recording
+cam_record_stop|stop recording|end recording,finish recording|Stop video recording
+cam_record_pause|pause recording|pause video|Pause video recording
+cam_record_resume|resume recording|continue recording|Resume paused recording
+cam_flip|flip camera|switch camera,front camera,back camera,selfie|Toggle front/back camera
+cam_flash_on|flash on|enable flash,turn on flash|Enable camera flash
+cam_flash_off|flash off|disable flash,turn off flash|Disable camera flash
+cam_flash_auto|flash auto|auto flash,automatic flash|Set flash to automatic
+cam_flash_torch|torch mode|flashlight,keep flash on|Keep flash on continuously
+cam_zoom_in|zoom in camera|camera closer,camera magnify|Zoom camera in
+cam_zoom_out|zoom out camera|camera wider|Zoom camera out
+cam_exposure_up|more exposure|brighter camera,lighten,increase exposure|Increase camera exposure
+cam_exposure_down|less exposure|darker camera,darken,decrease exposure|Decrease camera exposure
+cam_mode_photo|photo mode|picture mode,camera mode|Switch to photo capture mode
+cam_mode_video|video mode|movie mode,recording mode|Switch to video recording mode
+cam_bokeh|portrait mode|bokeh,bokeh mode,depth effect|Enable portrait/bokeh extension
+cam_hdr|hdr mode|high dynamic range,hdr on|Enable HDR extension
+cam_night|night mode|low light,night photo,dark mode camera|Enable night mode extension
+cam_retouch|face retouch|beauty mode,retouch mode,smoothing|Enable face retouch extension
+cam_ext_off|auto mode camera|normal mode,no extension,extension off|Disable all camera extensions
+cam_pro_on|pro mode|manual mode,pro controls,manual controls|Enable pro camera manual controls
+cam_pro_off|auto camera|disable pro,pro off,auto controls|Disable pro mode
+cam_iso_up|increase iso|higher iso,more sensitivity|Increase ISO sensitivity
+cam_iso_down|decrease iso|lower iso,less sensitivity|Decrease ISO sensitivity
+cam_focus_near|focus near|macro focus,close focus|Focus on nearby objects
+cam_focus_far|focus far|infinity focus,distant focus|Focus on distant objects
+cam_wb_auto|white balance auto|auto white balance|Set white balance to auto
+cam_wb_daylight|white balance daylight|sunny white balance,daylight|Set white balance to daylight
+cam_wb_cloudy|white balance cloudy|overcast white balance|Set white balance to cloudy
+cam_raw_on|raw capture on|enable raw,dng on,shoot raw|Enable RAW/DNG capture
+cam_raw_off|raw capture off|disable raw,dng off,jpeg only|Disable RAW capture
+# ── Cockpit ──
+cockpit_open|open cockpit|cockpit view,launch cockpit,cockpit mode|Launch Cockpit standalone
+cockpit_add_frame|add frame|new frame,create frame,add panel|Add a new content frame
+cockpit_layout|change layout|switch layout,layout mode|Open layout picker
+cockpit_layout_grid|grid layout|grid,grid view|Switch to grid layout
+cockpit_layout_split|split layout|split view,side by side|Switch to split layout
+cockpit_layout_freeform|freeform layout|freeform,free layout|Switch to freeform layout
+cockpit_layout_fullscreen|fullscreen|maximize,full screen|Switch to fullscreen layout
+cockpit_layout_workflow|workflow|workflow mode,step mode|Switch to workflow layout
+cockpit_minimize|minimize frame|minimize,shrink frame|Minimize the active frame
+cockpit_maximize|maximize frame|maximize,expand frame|Maximize the active frame
+cockpit_close|close frame|close,remove frame,delete frame|Close the active frame
+cockpit_add_web|add web|new web,open web,add browser|Add a web browser frame
+cockpit_add_camera|add camera|open camera,new camera|Add a camera frame
+cockpit_add_note|add note|new note,open note|Add a note frame
+cockpit_add_pdf|add pdf|open pdf,new pdf|Add a PDF viewer frame
+cockpit_add_image|add image|open image,new image,add photo|Add an image viewer frame
+cockpit_add_video|add video|open video,new video|Add a video player frame
+cockpit_add_whiteboard|add whiteboard|open whiteboard,new whiteboard,draw|Add a whiteboard frame
+cockpit_add_terminal|add terminal|open terminal,new terminal,console|Add a terminal frame
+cockpit_web_back|go back in web|back,navigate back|Web frame: go back
+cockpit_web_forward|go forward in web|forward,navigate forward|Web frame: go forward
+cockpit_web_refresh|refresh web|reload,refresh page|Web frame: refresh page
+cockpit_scroll_up|cockpit scroll up|panel up|Scroll the active frame up
+cockpit_scroll_down|cockpit scroll down|panel down|Scroll the active frame down
+cockpit_zoom_in|cockpit zoom in|panel zoom in|Zoom into the active frame
+cockpit_zoom_out|cockpit zoom out|panel zoom out|Zoom out of the active frame
+# ── NoteAvanue ──
+note_open|open note avanue|open notes,notes app,note avanue|Launch NoteAvanue
+note_new|new note|create note,blank note|Create a new note
+note_save|save note|save,save changes|Save the current note
+note_close|close note|exit note,close notes|Close NoteAvanue
+note_bold|bold|make bold,bold text|Toggle bold formatting
+note_italic|italic|make italic,italic text|Toggle italic formatting
+note_underline|underline|make underline,underline text|Toggle underline formatting
+note_strikethrough|strikethrough|strike through,cross out|Toggle strikethrough formatting
+note_heading1|heading one|h1,heading 1,title|Apply heading level 1
+note_heading2|heading two|h2,heading 2,subtitle|Apply heading level 2
+note_heading3|heading three|h3,heading 3,section|Apply heading level 3
+note_bullet|bullet list|bullets,unordered list|Toggle bullet list
+note_numbered|numbered list|numbers,ordered list|Toggle numbered list
+note_checklist|checklist|task list,checkbox,todo list|Toggle checklist
+note_code|code block|code,monospace|Toggle code block
+note_quote|blockquote|quote,quotation|Toggle blockquote
+note_divider|insert divider|divider,horizontal line,separator|Insert horizontal divider
+note_undo|undo note|undo,undo that|Undo last edit
+note_redo|redo note|redo,redo that|Redo last undone edit
+note_select_all|select all text|select all,highlight all|Select all note content
+note_delete_line|delete line|remove line,clear line|Delete current line
+note_new_paragraph|new paragraph|next paragraph,paragraph break|Insert new paragraph
+note_go_top|go to top|top of note,beginning|Move to start of note
+note_go_bottom|go to bottom|end of note,bottom|Move to end of note
+note_next_heading|next heading|next section,jump forward|Jump to next heading
+note_prev_heading|previous heading|prior section,jump back|Jump to previous heading
+note_dictate|dictation mode|start dictating,voice typing,dictate|Switch to dictation mode
+note_command_mode|command mode|stop dictating,voice commands|Switch to command mode
+note_continuous|continuous dictation|keep dictating,auto dictate|Switch to continuous dictation
+note_copy|copy note text|copy,copy selection|Copy selected text
+note_paste|paste in note|paste,paste text|Paste from clipboard
+note_cut|cut note text|cut,cut selection|Cut selected text
+note_pin|pin note|pin,unpin,toggle pin|Toggle note pin status
+note_export|export note|export,share note|Export note as Markdown
+note_search|search notes|find note,search|Search within notes
+note_scroll_up|note scroll up|scroll up note|Scroll note content up
+note_scroll_down|note scroll down|scroll down note|Scroll note content down
+note_attach_photo|attach photo|add photo,insert photo|Attach a photo to note
+note_attach_file|attach file|add file,insert file|Attach a file to note
+note_attach_audio|attach audio|add recording,insert audio|Attach audio recording
+note_zoom_in|note zoom in|bigger text,enlarge|Increase note zoom
+note_zoom_out|note zoom out|smaller text,reduce|Decrease note zoom
+note_font_up|increase font|bigger font,font up|Increase font size
+note_font_down|decrease font|smaller font,font down|Decrease font size
+note_clear_format|clear formatting|remove formatting,plain text|Remove all formatting
+note_word_count|word count|count words,how many words|Show word count
+note_read_aloud|read note aloud|read note,read this|Read note content aloud
+note_stop_reading|stop reading note|stop reading,be quiet|Stop reading note aloud
+# ── Annotation (AnnotationAvanue) ──
+ann_pen|pen tool|pen,draw,freehand|Select pen drawing tool
+ann_highlight|highlighter|highlight,highlight tool|Select highlighter tool
+ann_shape_rect|draw rectangle|rectangle,rect,box|Draw rectangle shape
+ann_shape_circle|draw circle|circle,oval,ellipse|Draw circle shape
+ann_shape_arrow|draw arrow|arrow,pointer|Draw arrow shape
+ann_shape_line|draw line|line,straight line|Draw straight line
+ann_color|color picker|pick color,change color|Open color picker
+ann_undo|undo annotation|undo drawing|Undo last annotation stroke
+ann_redo|redo annotation|redo drawing|Redo last undone stroke
+ann_clear|clear annotations|clear all,erase all|Clear all annotations
+ann_save|save annotation|save drawing,export drawing|Save annotation as image
+ann_share|share annotation|send drawing|Share annotation
+ann_eraser|eraser tool|eraser,erase|Switch to eraser tool
+ann_pen_up|thicker pen|bigger pen,pen size up|Increase pen thickness
+ann_pen_down|thinner pen|smaller pen,pen size down|Decrease pen thickness
+# ── Image (ImageAvanue) ──
+img_open|open image|view image,show image|Open image viewer
+img_gallery|open gallery|gallery,photo gallery,my photos|Open photo gallery
+img_grayscale|grayscale|black and white,monochrome|Apply grayscale filter
+img_sepia|sepia|vintage,old photo|Apply sepia filter
+img_blur|blur image|soften,blur|Apply blur filter
+img_sharpen|sharpen image|sharpen,enhance|Apply sharpen filter
+img_brightness|adjust brightness|brighten image,darken image|Adjust image brightness
+img_contrast|adjust contrast|more contrast,less contrast|Adjust image contrast
+img_rotate_left|rotate left|turn left,rotate counter clockwise|Rotate image 90 degrees left
+img_rotate_right|rotate right|turn right,rotate clockwise|Rotate image 90 degrees right
+img_flip_h|flip horizontal|mirror,flip|Flip image horizontally
+img_flip_v|flip vertical|flip upside down|Flip image vertically
+img_crop|crop image|crop,trim|Enter crop mode
+img_share|share image|send image|Share image
+img_delete|delete image|remove image,trash image|Delete image
+img_info|image info|image details,exif,metadata|Show image metadata
+img_next|next image|next photo|View next image in gallery
+img_prev|previous image|previous photo,prior image|View previous image
+# ── Video (VideoAvanue) ──
+vid_play|play video|play,resume video|Play or resume video
+vid_pause|pause video|pause|Pause video playback
+vid_stop|stop video|stop|Stop video playback
+vid_fwd|skip forward|fast forward,skip ahead,forward ten|Skip forward 10 seconds
+vid_back|skip backward|rewind,skip back,back ten|Skip backward 10 seconds
+vid_faster|speed up video|faster,increase speed|Increase playback speed
+vid_slower|slow down video|slower,decrease speed|Decrease playback speed
+vid_normal|normal speed|reset speed,one x|Reset playback to normal speed
+vid_fullscreen|fullscreen video|full screen,maximize video|Toggle fullscreen mode
+vid_mute|mute video|silent,video mute|Mute video audio
+vid_unmute|unmute video|video sound on|Unmute video audio
+vid_loop|loop video|repeat,loop|Toggle loop playback
+# ── Screen Casting (RemoteCast) ──
+cast_start|start casting|cast screen,share screen,begin cast|Start screen casting
+cast_stop|stop casting|end cast,stop sharing|Stop screen casting
+cast_connect|connect cast|connect device,pair device|Connect to cast device
+cast_disconnect|disconnect cast|disconnect device|Disconnect from cast device
+cast_quality|cast quality|streaming quality,change quality|Change cast quality
+# ── AI ──
+ai_summarize|summarize|ai summary,generate summary|Generate AI summary
+ai_chat|ai chat|talk to ai,ask ai,open ai|Open AI chat
+ai_search|ai search|search knowledge,rag search|Search knowledge base
+ai_teach|teach ai|train ai,add knowledge|Teach AI new knowledge
+ai_clear|clear ai context|reset ai,new conversation|Clear AI conversation context

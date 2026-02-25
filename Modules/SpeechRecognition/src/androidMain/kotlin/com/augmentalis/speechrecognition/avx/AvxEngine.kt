@@ -376,7 +376,7 @@ class AvxEngine(
      * The extracted files persist in cache until engine is destroyed,
      * since OnlineRecognizer needs file paths (not byte arrays).
      */
-    private fun decryptAndExtractModel(aonFile: File): AvxModelPaths {
+    private suspend fun decryptAndExtractModel(aonFile: File): AvxModelPaths {
         val aonBytes = aonFile.readBytes()
         val zipBytes = AONCodec.unwrap(aonBytes)
 

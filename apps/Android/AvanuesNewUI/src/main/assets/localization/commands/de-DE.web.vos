@@ -1,0 +1,66 @@
+# VOS v3.0 — de-DE web commands
+# Copyright (c) 2026 Manoj Jhawar, Aman Jhawar — Intelligent Devices LLC
+VOS:3.0:de-DE:en-US:web
+
+browser_retrain|Seite neu scannen|Seite erneut scannen,neu scannen|Aktuelle Webseite neu analysieren und Sprachbefehle generieren
+browser_back|Seite zurueck|Browser zurueck,zurueck im Browser|Zur vorherigen Seite im Browserverlauf navigieren
+browser_forward|Seite vor|Browser vor,vorwaerts im Browser|Zur naechsten Seite im Browserverlauf navigieren
+browser_refresh|Seite aktualisieren|Seite neu laden,neu laden|Aktuelle Webseite neu laden
+browser_top|nach ganz oben|Seitenanfang,zum Anfang|Zum Seitenanfang scrollen
+browser_bottom|nach ganz unten|Seitenende,zum Ende|Zum Seitenende scrollen
+browser_tab_next|naechstes Feld|Tab vorwaerts,naechstes Element|Naechstes fokussierbares Element anwaehlen
+browser_tab_prev|vorheriges Feld|Tab zurueck,vorheriges Element|Vorheriges fokussierbares Element anwaehlen
+browser_submit|Formular absenden|absenden,abschicken|Aktuelles Formular absenden
+browser_swipe_left|wischen links|nach links wischen|Auf der Seite nach links wischen
+browser_swipe_right|wischen rechts|nach rechts wischen|Auf der Seite nach rechts wischen
+browser_swipe_up|wischen hoch|nach oben wischen|Auf der Seite nach oben wischen
+browser_swipe_down|wischen runter|nach unten wischen|Auf der Seite nach unten wischen
+browser_grab|greifen|Element greifen,festhalten,anfassen,fixieren,einrasten|Element greifen und ziehen starten
+browser_release|loslassen|fallen lassen,ablegen|Gegriffenes Element loslassen
+browser_rotate_left|drehen links|links drehen,nach links rotieren|Element nach links drehen
+browser_rotate_right|drehen rechts|rechts drehen,nach rechts rotieren|Element nach rechts drehen
+browser_double_tap|doppelt tippen|Doppelklick,doppelt klicken|Doppelklick auf ein Element ausfuehren
+gesture_pan|pan|Ansicht verschieben,verschieben|Ansichtsfenster verschieben
+gesture_pan_left|pan links|Ansicht nach links,nach links verschieben,links verschieben|Ansichtsfenster nach links verschieben
+gesture_pan_right|pan rechts|Ansicht nach rechts,nach rechts verschieben,rechts verschieben|Ansichtsfenster nach rechts verschieben
+gesture_pan_up|pan hoch|Ansicht nach oben,nach oben verschieben|Ansichtsfenster nach oben verschieben
+gesture_pan_down|pan runter|Ansicht nach unten,nach unten verschieben|Ansichtsfenster nach unten verschieben
+gesture_tilt|tilt|kippen,Ansicht kippen|Ansichtsfenster kippen
+gesture_tilt_up|tilt hoch|nach oben kippen,hoch kippen|Ansichtsfenster nach oben kippen
+gesture_tilt_down|tilt runter|nach unten kippen,runter kippen|Ansichtsfenster nach unten kippen
+gesture_orbit|orbit|umkreisen,kreisen|Um Element kreisen
+gesture_orbit_left|orbit links|links umkreisen,links kreisen|Element nach links umkreisen
+gesture_orbit_right|orbit rechts|rechts umkreisen,rechts kreisen|Element nach rechts umkreisen
+gesture_rotate_x|rotate x|X-Achse drehen,vertikal kippen|Element um die X-Achse drehen
+gesture_rotate_y|rotate y|Y-Achse drehen,horizontal kippen|Element um die Y-Achse drehen
+gesture_rotate_z|rotate z|Z-Achse drehen,rotieren|Element um die Z-Achse drehen
+gesture_pinch_in|pinch rein|zusammenziehen,zusammendruecken,pinch in|Zusammenziehen (herauszoomen)
+gesture_pinch_out|pinch raus|auseinanderziehen,spreizen,pinch out|Auseinanderziehen (hineinzoomen)
+gesture_fling_up|fling hoch|schnipsen hoch,flick hoch|Mit Schwung nach oben schleudern
+gesture_fling_down|fling runter|schnipsen runter,flick runter|Mit Schwung nach unten schleudern
+gesture_fling_left|fling links|schnipsen links,flick links|Mit Schwung nach links schleudern
+gesture_fling_right|fling rechts|schnipsen rechts,flick rechts|Mit Schwung nach rechts schleudern
+gesture_throw|werfen|schleudern,Element werfen,wegwerfen|Element mit Schwung werfen
+gesture_scale_up|groesser machen|hochskalieren,vergroessern,Element vergroessern|Element hochskalieren
+gesture_scale_down|kleiner machen|runterskalieren,verkleinern,Element verkleinern|Element herunterskalieren
+gesture_reset_zoom|Zoom zuruecksetzen|Zoom normal,normaler Zoom,Zoom reset|Zoom auf Standardstufe zuruecksetzen
+gesture_select_word|Wort markieren|Wort auswaehlen,Wort hervorheben|Wort an Cursorposition auswaehlen
+gesture_clear_sel|Markierung aufheben|abwaehlen,Auswahl loeschen,Hervorhebung loeschen|Textauswahl aufheben
+gesture_hover_out|hover beenden|nicht mehr hovern,Maus weg,Zeiger weg|Hovern ueber Element beenden
+browser_zoom_in|hineinzoomen|vergrößern,zoom näher|In die Seite hineinzoomen
+browser_zoom_out|herauszoomen|verkleinern|Aus der Seite herauszoomen
+browser_scroll_up|nach oben scrollen|Seite hoch|Die Seite nach oben scrollen
+browser_scroll_down|nach unten scrollen|Seite runter|Die Seite nach unten scrollen
+browser_scroll_left|nach links scrollen||Die Seite nach links scrollen
+browser_scroll_right|nach rechts scrollen||Die Seite nach rechts scrollen
+browser_long_press|lang drücken|langer Klick,gedrückt halten|Lang auf ein Element drücken
+browser_tap|tippen|hier tippen,antippen|Auf ein Element tippen
+browser_focus|fokussieren|Fokus setzen|Ein Element fokussieren
+gesture_hover|schweben|darüber schweben,Maus darüber|Über ein Element schweben
+gesture_drag_left|nach links ziehen||Element nach links ziehen
+gesture_drag_right|nach rechts ziehen||Element nach rechts ziehen
+gesture_drag_up|nach oben ziehen||Element nach oben ziehen
+gesture_drag_down|nach unten ziehen||Element nach unten ziehen
+gesture_stroke_start|zeichnen starten|zeichnen,Strich beginnen|Einen Zeichenstrich beginnen
+gesture_stroke_end|zeichnen beenden|Zeichnung beenden,Strich beenden|Den aktuellen Zeichenstrich beenden
+gesture_erase|Radierer|Radiermodus,Radierer aktivieren|Den Radiermodus zum Zeichnen umschalten

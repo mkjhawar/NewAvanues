@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
  * 5. Sends ACC/ERR response back
  *
  * Protocol: Universal IPC Protocol v2.0.0 (VCM code #39 of 77)
- * IPC Action: com.augmentalis.avamagic.IPC.UNIVERSAL
+ * IPC Action: com.augmentalis.avanueui.IPC.UNIVERSAL
  * Message Format: VCM:commandId:action:params
  * Spec: /Volumes/M-Drive/Coding/AVA/docs/UNIVERSAL-IPC-SPEC.md
  *
@@ -62,7 +62,7 @@ class VoiceCommandIPCE2ETest {
         val ipcMessage = "VCM:$commandId:$action"
 
         // When: Send IPC broadcast (simulating VoiceOS)
-        val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+        val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
             putExtra("message", ipcMessage)
             putExtra("source_app", "com.augmentalis.voiceos.test")
             setPackage(context.packageName)
@@ -99,7 +99,7 @@ class VoiceCommandIPCE2ETest {
         val ipcMessage = "VCM:$commandId:$action"
 
         // When: Send IPC broadcast
-        val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+        val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
             putExtra("message", ipcMessage)
             putExtra("source_app", "com.augmentalis.voiceos.test")
             setPackage(context.packageName)
@@ -128,7 +128,7 @@ class VoiceCommandIPCE2ETest {
         val ipcMessage = "VCM:$commandId:$action"
 
         // When: Send IPC broadcast
-        val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+        val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
             putExtra("message", ipcMessage)
             putExtra("source_app", "com.augmentalis.voiceos.test")
             setPackage(context.packageName)
@@ -159,7 +159,7 @@ class VoiceCommandIPCE2ETest {
         val ipcMessage = "VCM:$commandId:$action:$params"
 
         // When: Send IPC broadcast
-        val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+        val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
             putExtra("message", ipcMessage)
             putExtra("source_app", "com.augmentalis.voiceos.test")
             setPackage(context.packageName)
@@ -187,7 +187,7 @@ class VoiceCommandIPCE2ETest {
         val ipcMessage = "VCM:invalid"
 
         // When: Send IPC broadcast
-        val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+        val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
             putExtra("message", ipcMessage)
             putExtra("source_app", "com.augmentalis.voiceos.test")
             setPackage(context.packageName)
@@ -217,7 +217,7 @@ class VoiceCommandIPCE2ETest {
         val ipcMessage = "VCM:$commandId:$action"
 
         // When: Send IPC broadcast
-        val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+        val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
             putExtra("message", ipcMessage)
             putExtra("source_app", "com.augmentalis.voiceos.test")
             setPackage(context.packageName)
@@ -250,7 +250,7 @@ class VoiceCommandIPCE2ETest {
         val ipcMessage = "VCM:$commandId:$action:$escapedUrl"
 
         // When: Send IPC broadcast
-        val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+        val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
             putExtra("message", ipcMessage)
             putExtra("source_app", "com.augmentalis.voiceos.test")
             setPackage(context.packageName)
@@ -286,7 +286,7 @@ class VoiceCommandIPCE2ETest {
 
         // When: Send multiple IPC broadcasts rapidly
         commands.forEach { ipcMessage ->
-            val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+            val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
                 putExtra("message", ipcMessage)
                 putExtra("source_app", "com.augmentalis.voiceos.test")
                 setPackage(context.packageName)
@@ -315,7 +315,7 @@ class VoiceCommandIPCE2ETest {
         val ipcMessage = "CHT:msg123:Hello from test"
 
         // When: Send IPC broadcast
-        val intent = Intent("com.augmentalis.avamagic.IPC.UNIVERSAL").apply {
+        val intent = Intent("com.augmentalis.avanueui.IPC.UNIVERSAL").apply {
             putExtra("message", ipcMessage)
             putExtra("source_app", "com.augmentalis.voiceos.test")
             setPackage(context.packageName)

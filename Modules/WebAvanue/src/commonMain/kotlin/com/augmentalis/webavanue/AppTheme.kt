@@ -5,8 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import com.augmentalis.webavanue.AppColors
 import com.augmentalis.webavanue.AppTypography
-import com.augmentalis.webavanue.AvaMagicColors
-import com.augmentalis.webavanue.AvaMagicTypography
+import com.augmentalis.webavanue.AvanueColors
+import com.augmentalis.webavanue.AvanueTypography
 import com.augmentalis.webavanue.WebAvanueColors
 import com.augmentalis.webavanue.WebAvanueTypography
 
@@ -15,11 +15,11 @@ import com.augmentalis.webavanue.WebAvanueTypography
  *
  * Automatically detects environment and applies appropriate theme:
  * - APP_BRANDING (WebAvanue's unique purple/blue branding) - Standalone mode
- * - AVAMAGIC (Avanues system theme) - Avanues ecosystem mode
+ * - AVANUE (Avanues system theme) - Avanues ecosystem mode
  *
  * Theme Selection Logic:
  * 1. If user preference set → use that
- * 2. If Avanues ecosystem detected → AVAMAGIC (system theme overrides app branding)
+ * 2. If Avanues ecosystem detected → AVANUE (system theme overrides app branding)
  * 3. If standalone → APP_BRANDING (WebAvanue's unique colors)
  *
  * Users can override auto-detection via Settings screen.
@@ -59,7 +59,7 @@ fun AppTheme(
     val colors: AppColors = remember(resolvedTheme, darkTheme) {
         when (resolvedTheme) {
             ThemeType.APP_BRANDING -> WebAvanueColors(isDark = darkTheme)
-            ThemeType.AVAMAGIC -> AvaMagicColors(isDark = darkTheme)
+            ThemeType.AVANUE -> AvanueColors(isDark = darkTheme)
             ThemeType.AUTO -> WebAvanueColors(isDark = darkTheme) // Fallback
         }
     }
@@ -67,7 +67,7 @@ fun AppTheme(
     val typography: AppTypography = remember(resolvedTheme) {
         when (resolvedTheme) {
             ThemeType.APP_BRANDING -> WebAvanueTypography()
-            ThemeType.AVAMAGIC -> AvaMagicTypography()
+            ThemeType.AVANUE -> AvanueTypography()
             ThemeType.AUTO -> WebAvanueTypography() // Fallback
         }
     }

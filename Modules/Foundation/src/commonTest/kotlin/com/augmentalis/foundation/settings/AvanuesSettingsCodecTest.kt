@@ -38,6 +38,13 @@ class AvanuesSettingsCodecTest {
             themePalette = "SOL",
             themeStyle = "Glass",
             themeAppearance = "Dark",
+            voiceIsolationEnabled = false,
+            voiceIsolationNoiseSuppression = false,
+            voiceIsolationEchoCancellation = true,
+            voiceIsolationAgc = false,
+            voiceIsolationNsLevel = 0.9f,
+            voiceIsolationGainLevel = 0.3f,
+            voiceIsolationMode = "HIGH_QUALITY",
             vosSyncEnabled = true,
             vosSftpHost = "sync.example.com",
             vosSftpPort = 2222,
@@ -77,6 +84,19 @@ class AvanuesSettingsCodecTest {
         val store = freshStore()
         val decoded = AvanuesSettingsCodec.decode(store)
         assertEquals(AvanuesSettings(), decoded)
+    }
+
+    @Test
+    fun decode_emptyStore_returnsVoiceIsolationDefaults() {
+        val store = freshStore()
+        val decoded = AvanuesSettingsCodec.decode(store)
+        assertEquals(true, decoded.voiceIsolationEnabled)
+        assertEquals(true, decoded.voiceIsolationNoiseSuppression)
+        assertEquals(false, decoded.voiceIsolationEchoCancellation)
+        assertEquals(true, decoded.voiceIsolationAgc)
+        assertEquals(0.7f, decoded.voiceIsolationNsLevel)
+        assertEquals(0.5f, decoded.voiceIsolationGainLevel)
+        assertEquals("BALANCED", decoded.voiceIsolationMode)
     }
 
     @Test

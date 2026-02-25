@@ -16,7 +16,7 @@ import kotlin.system.exitProcess
 // Configuration
 val PROJECT_ROOT = File(".").canonicalFile
 val COMMANDS_DIRS = listOf(
-    "Modules/AvaMagic/managers/CommandManager/src/main/assets/commands",
+    "Modules/VoiceOSCore/src/commonMain/resources/commands",
     "Modules/VoiceOS/managers/CommandManager/src/main/assets/commands"
 )
 val LOCALES = listOf("en-US", "es-ES", "de-DE", "fr-FR")

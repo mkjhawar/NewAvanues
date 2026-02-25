@@ -98,6 +98,7 @@ kotlin {
                 implementation(project(":Modules:PhotoAvanue"))
                 implementation(project(":Modules:RemoteCast"))
                 implementation(project(":Modules:AnnotationAvanue"))
+                implementation(project(":Modules:FileAvanue"))
 
                 // VoiceOSCore — Voice command integration
                 implementation(project(":Modules:VoiceOSCore"))

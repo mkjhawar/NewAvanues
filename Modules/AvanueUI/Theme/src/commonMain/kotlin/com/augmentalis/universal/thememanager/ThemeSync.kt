@@ -1,6 +1,6 @@
 package com.augmentalis.universal.thememanager
 
-import com.augmentalis.avamagic.components.core.Theme
+import com.augmentalis.avanueui.core.Theme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -19,9 +19,12 @@ import com.augmentalis.avanueui.theme.AvanueColorPalette
 import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.avanueui.theme.MaterialMode
 import com.augmentalis.cockpit.content.ContentRenderer
+import com.augmentalis.cockpit.model.ArrangementIntent
 import com.augmentalis.cockpit.model.CockpitScreenState
 import com.augmentalis.cockpit.model.FrameContent
+import com.augmentalis.cockpit.model.IntentResolver
 import com.augmentalis.cockpit.model.LayoutMode
+import com.augmentalis.cockpit.model.SimplifiedShellMode
 import com.augmentalis.cockpit.spatial.AndroidSpatialOrientationSource
 import com.augmentalis.cockpit.spatial.SpatialViewportController
 import com.augmentalis.cockpit.viewmodel.CockpitViewModel
@@ -47,6 +50,10 @@ private val logger = LoggerFactory.getLogger("CockpitScreen")
  * @param deepLinkUri Optional deep link URI to process on first composition.
  *   Supports: cockpit://session/{id}, cockpit://module/{id},
  *   cockpit://layout/{mode}, cockpit://template/{id}, cockpit://dashboard
+ * @param userShellMode User's preferred shell mode from AvanuesSettings DataStore.
+ *   Empty string or null = use ViewModel default (LENS).
+ * @param devForceShellMode Developer override for shell mode.
+ *   Non-empty = overrides user preference. Empty or null = no override.
  */
 @Composable
 fun CockpitScreen(
@@ -55,12 +62,15 @@ fun CockpitScreen(
     onNavigateToSettings: () -> Unit = {},
     onSpecialModuleLaunch: (String) -> Unit = {},
     deepLinkUri: String? = null,
+    userShellMode: String? = null,
+    devForceShellMode: String? = null,
     modifier: Modifier = Modifier
 ) {
     val session by viewModel.activeSession.collectAsState()
     val frames by viewModel.frames.collectAsState()
     val selectedFrameId by viewModel.selectedFrameId.collectAsState()
     val layoutMode by viewModel.layoutMode.collectAsState()
+    val shellMode by viewModel.shellMode.collectAsState()
     val dashboardState by viewModel.dashboardState.collectAsState()
     val backgroundSceneState by viewModel.backgroundScene.collectAsState()
 
@@ -86,6 +96,24 @@ fun CockpitScreen(
     val spatialSource = remember { AndroidSpatialOrientationSource(context) }
     val spatialController = remember(screenWidthPx, screenHeightPx) {
         SpatialViewportController(screenWidthPx, screenHeightPx)
+    }
+
+    // ── Shell Mode from DataStore ──
+    // Developer override takes priority over user preference.
+    // Only apply when value changes to avoid resetting on recomposition.
+    LaunchedEffect(userShellMode, devForceShellMode) {
+        val effectiveMode = when {
+            !devForceShellMode.isNullOrEmpty() -> devForceShellMode
+            !userShellMode.isNullOrEmpty() -> userShellMode
+            else -> null
+        }
+        if (effectiveMode != null) {
+            val parsed = SimplifiedShellMode.fromString(effectiveMode)
+            if (parsed != viewModel.shellMode.value) {
+                logger.d { "Shell mode from DataStore: $effectiveMode → $parsed" }
+                viewModel.setShellMode(parsed)
+            }
+        }
     }
 
     // Connect/disconnect spatial pipeline with composition lifecycle
@@ -132,6 +160,7 @@ fun CockpitScreen(
             frames = frames,
             selectedFrameId = selectedFrameId,
             layoutMode = layoutMode,
+            shellMode = shellMode,
             dashboardState = dashboardState,
             availableLayoutModes = availableModes,
             backgroundScene = backgroundSceneState,
@@ -291,6 +320,71 @@ private fun executeCockpitCommand(
         CommandActionType.ADD_TERMINAL -> {
             viewModel.addFrame(FrameContent.Terminal(), "Terminal")
             HandlerResult.success("Terminal frame added")
+        }
+
+        // ── Arrangement Intents ───────────────────────────────────────
+        // Auto-select the best LayoutMode from intent + frame count + display
+        CommandActionType.LAYOUT_FOCUS -> {
+            val mode = IntentResolver.resolve(
+                ArrangementIntent.FOCUS,
+                viewModel.frames.value.size,
+            )
+            viewModel.setLayoutMode(mode)
+            HandlerResult.success("Focus: ${mode.name.lowercase()}")
+        }
+        CommandActionType.LAYOUT_COMPARE -> {
+            val mode = IntentResolver.resolve(
+                ArrangementIntent.COMPARE,
+                viewModel.frames.value.size,
+            )
+            viewModel.setLayoutMode(mode)
+            HandlerResult.success("Compare: ${mode.name.lowercase()}")
+        }
+        CommandActionType.LAYOUT_OVERVIEW -> {
+            val mode = IntentResolver.resolve(
+                ArrangementIntent.OVERVIEW,
+                viewModel.frames.value.size,
+            )
+            viewModel.setLayoutMode(mode)
+            HandlerResult.success("Overview: ${mode.name.lowercase()}")
+        }
+        CommandActionType.LAYOUT_PRESENT -> {
+            val mode = IntentResolver.resolve(
+                ArrangementIntent.PRESENT,
+                viewModel.frames.value.size,
+            )
+            viewModel.setLayoutMode(mode)
+            HandlerResult.success("Present: ${mode.name.lowercase()}")
+        }
+
+        // ── Shell Mode Switching ──────────────────────────────────────
+        CommandActionType.SHELL_CLASSIC -> {
+            viewModel.setShellMode(SimplifiedShellMode.CLASSIC)
+            HandlerResult.success("Classic dashboard")
+        }
+        CommandActionType.SHELL_AVANUE_VIEWS -> {
+            viewModel.setShellMode(SimplifiedShellMode.AVANUE_VIEWS)
+            HandlerResult.success("AvanueViews stream")
+        }
+        CommandActionType.SHELL_LENS -> {
+            viewModel.setShellMode(SimplifiedShellMode.LENS)
+            HandlerResult.success("Lens palette")
+        }
+        CommandActionType.SHELL_CANVAS -> {
+            viewModel.setShellMode(SimplifiedShellMode.CANVAS)
+            HandlerResult.success("Canvas mode")
+        }
+
+        // ── Shell-Specific Navigation ─────────────────────────────────
+        // These are forwarded to the active shell composable via content actions.
+        // The shell-specific composables handle the actual navigation internally.
+        CommandActionType.STREAM_NEXT_CARD,
+        CommandActionType.STREAM_PREVIOUS_CARD,
+        CommandActionType.CANVAS_ZOOM_IN,
+        CommandActionType.CANVAS_ZOOM_OUT -> {
+            // Shell navigation is handled by the Compose UI layer,
+            // not by the ViewModel. Return success to acknowledge.
+            HandlerResult.success("$actionType")
         }
 
         else -> {

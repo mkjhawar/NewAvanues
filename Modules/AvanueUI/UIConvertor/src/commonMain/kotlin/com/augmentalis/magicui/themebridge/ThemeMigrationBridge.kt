@@ -1,10 +1,10 @@
-package com.augmentalis.avamagic.themebridge
+package com.augmentalis.avanueui.themebridge
 
 import com.augmentalis.avanue.core.managers.ThemeManager as LegacyThemeManager
 import com.augmentalis.avanue.core.managers.ThemeObserver as LegacyThemeObserver
 import com.augmentalis.avanue.core.models.Theme as LegacyTheme
 import com.augmentalis.avanue.core.models.ThemeComponent as LegacyComponent
-import com.augmentalis.avamagic.theme.ThemeConfig
+import com.augmentalis.avanueui.theme.ThemeConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

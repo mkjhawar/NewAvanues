@@ -31,6 +31,25 @@ dependencyResolutionManagement {
         maven("https://csspeechstorage.blob.core.windows.net/maven/")
         // Vosk (AlphaCephei) Speech Recognition
         maven("https://alphacephei.com/maven/")
+        // GitLab Package Registry — Vivoka SDK, Sherpa-ONNX, internal artifacts
+        maven {
+            name = "GitLab"
+            url = uri("https://gitlab.com/api/v4/groups/${
+                providers.gradleProperty("gitlabGroupId").getOrElse("augmentalis")
+            }/-/packages/maven")
+            credentials(HttpHeaderCredentials::class) {
+                name = "Private-Token"
+                value = providers.gradleProperty("gitlabToken").orElse(
+                    providers.environmentVariable("GITLAB_TOKEN")
+                ).getOrElse("")
+            }
+            authentication {
+                create<HttpHeaderAuthentication>("header")
+            }
+            content {
+                includeGroup("com.augmentalis.sdk")
+            }
+        }
         // Kotlin/JS toolchain distributions (Node.js + Yarn)
         ivy("https://nodejs.org/dist") {
             patternLayout { artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]") }
@@ -128,7 +147,7 @@ include(":android:apps:VoiceUI")
 include(":Modules:Localization")                             // KMP Localization module
 include(":Modules:VoiceDataManager")                             // KMP Localization module
 
-// Top-level Shared Modules (consolidated from VoiceOS/libraries and AvaMagic)
+// Top-level Shared Modules (consolidated from VoiceOS/libraries and AvanueUI)
 include(":Modules:DeviceManager")                       // Device info, sensors, audio, network
 include(":Modules:SpeechRecognition")                   // Speech recognition engines (Whisper, Vivoka, etc.)
 // include(":Modules:Translation")                      // Translation services (stub only - archived)
@@ -161,6 +180,7 @@ include(":Modules:RemoteCast")              // KMP screen casting/sharing (Media
 include(":Modules:HTTPAvanue")             // KMP HTTP/1.1 + HTTP/2 server, WebSocket, middleware (NanoHTTPD-inspired)
 include(":Modules:AnnotationAvanue")        // KMP whiteboard/signature/drawing canvas
 include(":Modules:NetAvanue")              // KMP P2P networking: signaling, capabilities, pairing (AvanueCentral client)
+include(":Modules:FileAvanue")             // KMP cross-platform file manager (local, cloud, network providers)
 
 // Crypto — Cross-platform AON codec, HMAC, AES-256-GCM (KMP)
 include(":Modules:Crypto")
@@ -168,7 +188,7 @@ include(":Modules:Crypto")
 // Rpc - Cross-platform RPC module
 include(":Modules:Rpc")                  // Root module with KMP + Wire
 
-// AvanueUI Core & Base Types (promoted from AvaMagic/AvaUI — 2026-02-07)
+// AvanueUI Core & Base Types (promoted from AvanueUI/AvaUI — 2026-02-07)
 include(":Modules:AvanueUI:Core")                       // Base types, interfaces
 include(":Modules:AvanueUI:CoreTypes")                  // Shared type definitions
 // include(":Modules:AvanueUI:Foundation")              // REMOVED - consolidated into AvanueUI root
@@ -197,11 +217,11 @@ include(":Modules:AvanueUI:AssetManager")               // Asset management
 // include(":Modules:AvanueUI:Renderers:Android")       // DISABLED (2026-02-07) — unresolved component types cause cascading overload ambiguity in Render extensions
 include(":Modules:AvanueUI:AvanueUIVoiceHandlers")      // Voice command handlers for AvanueUI components
 
-// Promoted from AvaMagic to top-level (2026-02-07)
+// Promoted from AvanueUI to top-level (2026-02-07)
 include(":Modules:AVACode")                             // Kotlin Builder Functions (DSL)
 include(":Modules:IPC")                                 // AVU IPC Protocol (standby — gRPC via :Modules:Rpc preferred)
 include(":Modules:AvanueUI:AvanueLanguageServer")        // AvanueUI Language Server (LSP for .magicui / .avp DSL files)
-// include(":Modules:AvaMagic:AVURuntime")              // ARCHIVED (2026-02-07) — empty stub, no source code
+// include(":Modules:AvanueUI:AVURuntime")              // ARCHIVED (2026-02-07) — empty stub, no source code
 
 // Cursor and Eye Tracking Modules (KMP)
 include(":Modules:VoiceCursor")                    // KMP cursor control, dwell click, filtering
@@ -209,6 +229,7 @@ include(":Modules:Gaze")                           // KMP gaze/eye tracking with
 
 // Top-level Apps
 include(":apps:avanues")                           // CONSOLIDATED app (VoiceAvanue + WebAvanue + Gaze + Cursor)
+include(":apps:Android:AvanuesNewUI")              // NEW UI app (defaults to Lens shell, same features)
 
 // Android Apps - Current
 include(":android:apps:VoiceRecognition")          // Speech recognition testing

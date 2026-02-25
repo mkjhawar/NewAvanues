@@ -118,6 +118,14 @@ object DashboardModuleRegistry {
             iconName = "draw",
             contentType = "whiteboard",
             accentColorHex = 0xFFEF5350L
+        ),
+        DashboardModule(
+            id = "fileavanue",
+            displayName = "FileAvanue",
+            subtitle = "File manager",
+            iconName = "folder",
+            contentType = "file",
+            accentColorHex = 0xFF78909CL
         )
     )
 

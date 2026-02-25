@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VoiceAvanue: Microphone with sound waves -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Microphone body -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M54,28 C49,28 45,32 45,37 L45,55 C45,60 49,64 54,64 C59,64 63,60 63,55 L63,37 C63,32 59,28 54,28 Z" />
+    <!-- Microphone stand arc -->
+    <path
+        android:pathData="M38,55 C38,64 45,71 54,71 C63,71 70,64 70,55"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="3"
+        android:fillColor="#00000000" />
+    <!-- Microphone stem -->
+    <path
+        android:pathData="M54,71 L54,80"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="3"
+        android:fillColor="#00000000" />
+    <!-- Microphone base -->
+    <path
+        android:pathData="M46,80 L62,80"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- Sound waves left -->
+    <path
+        android:pathData="M32,42 C30,47 30,52 32,57"
+        android:strokeColor="#7DD3FC"
+        android:strokeAlpha="0.7"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M26,38 C23,45 23,54 26,61"
+        android:strokeColor="#7DD3FC"
+        android:strokeAlpha="0.4"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- Sound waves right -->
+    <path
+        android:pathData="M76,42 C78,47 78,52 76,57"
+        android:strokeColor="#7DD3FC"
+        android:strokeAlpha="0.7"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M82,38 C85,45 85,54 82,61"
+        android:strokeColor="#7DD3FC"
+        android:strokeAlpha="0.4"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+</vector>

@@ -525,8 +525,8 @@ object MagicRadius {
  * Migration notes for IDEAMagic:
  *
  * When IDEAMagic is ready, replace @Composable functions with:
- * - MagicButton → AVAMagicButton
- * - MagicTextField → AVAMagicTextField
+ * - MagicButton → AvanueUIButton
+ * - MagicTextField → AvanueUITextField
  * - etc.
  *
  * Keep same function signatures and parameters.
@@ -541,8 +541,8 @@ object MagicRadius {
  * }
  *
  * // After (IDEAMagic)
- * fun MagicButton(...): AVAMagicComponent {
- *     return AVAMagicButton(...) // IDEAMagic implementation
+ * fun MagicButton(...): AvanueUIComponent {
+ *     return AvanueUIButton(...) // IDEAMagic implementation
  * }
  * ```
  */
