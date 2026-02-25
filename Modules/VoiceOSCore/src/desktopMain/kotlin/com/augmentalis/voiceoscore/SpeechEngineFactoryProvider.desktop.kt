@@ -61,6 +61,7 @@ internal class DesktopSpeechEngineFactory : ISpeechEngineFactory {
             SpeechEngine.ANDROID_STT -> false
             SpeechEngine.APPLE_SPEECH -> false
             SpeechEngine.VIVOKA -> false
+            SpeechEngine.AVX -> false // Sherpa-ONNX transducer — Android only for now
         }
     }
 

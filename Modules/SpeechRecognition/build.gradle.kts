@@ -162,14 +162,12 @@ kotlin {
                 // VoiceIsolation - Audio preprocessing (noise suppression, echo cancellation, AGC)
                 implementation(project(":Modules:VoiceIsolation"))
 
-                // Vivoka VSDK - compileOnly
+                // Vivoka VSDK — git-tracked local AARs (compileOnly, runtime provided by vivoka:Android)
                 compileOnly(files("${rootDir}/vivoka/vsdk-6.0.0.aar"))
                 compileOnly(files("${rootDir}/vivoka/vsdk-csdk-asr-2.0.0.aar"))
                 compileOnly(files("${rootDir}/vivoka/vsdk-csdk-core-1.0.1.aar"))
 
-                // Sherpa-ONNX - AVX command engine (streaming transducer ASR + hot words)
-                // compileOnly until AAR is downloaded to sherpa-onnx/ directory
-                // Switch to implementation() when bundling in release builds
+                // Sherpa-ONNX — git-tracked local AAR (AVX streaming transducer ASR + hot words)
                 compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx.aar"))
 
                 // OkHttp & Gson
@@ -231,12 +229,8 @@ kotlin {
                 // (same as iosMain/macosMain — compiler plugin applied to all targets)
                 implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
 
-                // Sherpa-ONNX - AVX command engine (Desktop JVM)
-                // Requires sherpa-onnx-classes.jar extracted from the Android AAR:
-                //   unzip sherpa-onnx.aar classes.jar -d sherpa-onnx/
-                //   mv sherpa-onnx/classes.jar sherpa-onnx/sherpa-onnx-classes.jar
+                // Sherpa-ONNX — git-tracked local JAR (Desktop JVM)
                 // Native libraries (.dylib/.so/.dll) must be on java.library.path at runtime.
-                // See sherpa-onnx/README.md for setup instructions.
                 compileOnly(files("${rootDir}/sherpa-onnx/sherpa-onnx-classes.jar"))
             }
         }

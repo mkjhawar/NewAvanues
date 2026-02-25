@@ -41,9 +41,9 @@ data class IMUOrientation(
      * Convert to radians
      */
     fun toRadians(): IMUOrientation = copy(
-        yaw = Math.toRadians(yaw.toDouble()).toFloat(),
-        pitch = Math.toRadians(pitch.toDouble()).toFloat(),
-        roll = Math.toRadians(roll.toDouble()).toFloat()
+        yaw = (yaw * kotlin.math.PI / 180.0).toFloat(),
+        pitch = (pitch * kotlin.math.PI / 180.0).toFloat(),
+        roll = (roll * kotlin.math.PI / 180.0).toFloat()
     )
 }
 

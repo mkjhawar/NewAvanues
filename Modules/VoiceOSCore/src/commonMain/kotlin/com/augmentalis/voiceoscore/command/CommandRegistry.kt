@@ -53,13 +53,13 @@ class CommandRegistry {
      * Key: phrase.lowercase() - allows multiple commands per targetAvid
      * Value: QuantizedCommand
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var snapshot: CommandSnapshot = CommandSnapshot(emptyMap(), emptyMap())
 
     private val mutex = Mutex() // Protects ALL concurrent writes
 
     /** Monotonically increasing counter — incremented on every write for cache invalidation */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var _generation: Long = 0
 
     /** Current generation (snapshot version). Used by CommandMatcher for cache invalidation. */

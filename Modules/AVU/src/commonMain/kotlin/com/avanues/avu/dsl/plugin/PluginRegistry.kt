@@ -3,6 +3,8 @@ package com.avanues.avu.dsl.plugin
 import com.avanues.avu.dsl.interpreter.AvuInterpreter
 import com.avanues.avu.dsl.interpreter.ExecutionResult
 import com.avanues.avu.dsl.interpreter.IAvuDispatcher
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 
 /**
  * Central registry for loaded AVU DSL plugins.
@@ -18,7 +20,7 @@ import com.avanues.avu.dsl.interpreter.IAvuDispatcher
  */
 class PluginRegistry(
     private val dispatcher: IAvuDispatcher
-) {
+) : SynchronizedObject() {
     private val plugins = mutableMapOf<String, LoadedPlugin>()
     private val triggerIndex = mutableMapOf<String, String>() // trigger pattern → pluginId
 
@@ -26,10 +28,9 @@ class PluginRegistry(
      * Register a validated plugin.
      * Plugin must be in [PluginState.VALIDATED] state.
      */
-    @Synchronized
-    fun register(plugin: LoadedPlugin): PluginRegistrationResult {
+    fun register(plugin: LoadedPlugin): PluginRegistrationResult = synchronized(this) {
         if (plugin.state != PluginState.VALIDATED) {
-            return PluginRegistrationResult.Error(
+            return@synchronized PluginRegistrationResult.Error(
                 "Plugin must be in VALIDATED state, got ${plugin.state}"
             )
         }
@@ -37,7 +38,7 @@ class PluginRegistry(
         // Check for ID conflicts
         val existing = plugins[plugin.pluginId]
         if (existing != null && existing.state.isRegistered) {
-            return PluginRegistrationResult.Error(
+            return@synchronized PluginRegistrationResult.Error(
                 "Plugin '${plugin.pluginId}' is already registered"
             )
         }
@@ -51,7 +52,7 @@ class PluginRegistry(
             }
         }
         if (conflicts.isNotEmpty()) {
-            return PluginRegistrationResult.Conflict(conflicts)
+            return@synchronized PluginRegistrationResult.Conflict(conflicts)
         }
 
         // Register triggers
@@ -62,40 +63,37 @@ class PluginRegistry(
         val registered = plugin.withState(PluginState.REGISTERED)
         plugins[plugin.pluginId] = registered
 
-        return PluginRegistrationResult.Success(registered)
+        PluginRegistrationResult.Success(registered)
     }
 
     /**
      * Activate a registered plugin so it can handle triggers.
      */
-    @Synchronized
-    fun activate(pluginId: String): Boolean {
-        val plugin = plugins[pluginId] ?: return false
-        if (plugin.state != PluginState.REGISTERED && plugin.state != PluginState.INACTIVE) return false
+    fun activate(pluginId: String): Boolean = synchronized(this) {
+        val plugin = plugins[pluginId] ?: return@synchronized false
+        if (plugin.state != PluginState.REGISTERED && plugin.state != PluginState.INACTIVE) return@synchronized false
         plugins[pluginId] = plugin.withState(PluginState.ACTIVE)
-        return true
+        true
     }
 
     /**
      * Deactivate a plugin (keeps registration but stops handling).
      */
-    @Synchronized
-    fun deactivate(pluginId: String): Boolean {
-        val plugin = plugins[pluginId] ?: return false
-        if (plugin.state != PluginState.ACTIVE) return false
+    fun deactivate(pluginId: String): Boolean = synchronized(this) {
+        val plugin = plugins[pluginId] ?: return@synchronized false
+        if (plugin.state != PluginState.ACTIVE) return@synchronized false
         plugins[pluginId] = plugin.withState(PluginState.INACTIVE)
-        return true
+        true
     }
 
     /**
      * Unregister a plugin completely, removing all trigger mappings.
      */
-    @Synchronized
-    fun unregister(pluginId: String): Boolean {
-        plugins.remove(pluginId) ?: return false
+    fun unregister(pluginId: String): Boolean = synchronized(this) {
+        plugins.remove(pluginId) ?: return@synchronized false
         val toRemove = triggerIndex.entries.filter { it.value == pluginId }.map { it.key }
         toRemove.forEach { triggerIndex.remove(it) }
-        return true
+        true
     }
 
     /**
@@ -143,36 +141,30 @@ class PluginRegistry(
     }
 
     /** Find which plugin owns a trigger pattern. */
-    @Synchronized
-    fun findPluginForTrigger(pattern: String): LoadedPlugin? {
-        val pluginId = triggerIndex[pattern] ?: return null
-        return plugins[pluginId]
+    fun findPluginForTrigger(pattern: String): LoadedPlugin? = synchronized(this) {
+        val pluginId = triggerIndex[pattern] ?: return@synchronized null
+        plugins[pluginId]
     }
 
     /** Get a plugin by ID. */
-    @Synchronized
-    fun getPlugin(pluginId: String): LoadedPlugin? = plugins[pluginId]
+    fun getPlugin(pluginId: String): LoadedPlugin? = synchronized(this) { plugins[pluginId] }
 
     /** Get all registered plugins. */
-    @Synchronized
-    fun getAllPlugins(): List<LoadedPlugin> = plugins.values.toList()
+    fun getAllPlugins(): List<LoadedPlugin> = synchronized(this) { plugins.values.toList() }
 
     /** Get active plugins only. */
-    @Synchronized
-    fun getActivePlugins(): List<LoadedPlugin> = plugins.values.filter { it.isActive }
+    fun getActivePlugins(): List<LoadedPlugin> = synchronized(this) { plugins.values.filter { it.isActive } }
 
     /** Get all registered trigger patterns with their owning plugin IDs. */
-    @Synchronized
-    fun getRegisteredTriggers(): Map<String, String> = triggerIndex.toMap()
+    fun getRegisteredTriggers(): Map<String, String> = synchronized(this) { triggerIndex.toMap() }
 
     /** Get plugin count by state. */
-    @Synchronized
-    fun getStatistics(): Map<PluginState, Int> =
+    fun getStatistics(): Map<PluginState, Int> = synchronized(this) {
         plugins.values.groupBy { it.state }.mapValues { it.value.size }
+    }
 
     /** Clear all plugins and triggers (for testing). */
-    @Synchronized
-    fun clear() {
+    fun clear() = synchronized(this) {
         plugins.clear()
         triggerIndex.clear()
     }

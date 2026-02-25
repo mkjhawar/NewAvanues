@@ -86,50 +86,50 @@ object AdaptiveTimingManager {
     // Adaptive values (hot path reads — @Volatile for visibility)
     // ═══════════════════════════════════════════════════════════════════
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var processingDelayMs: Long = PROCESSING_DELAY_START
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var confidenceFloor: Float = CONFIDENCE_FLOOR_DEFAULT
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var scrollDebounceMs: Long = SCROLL_DEBOUNCE_START
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var speechUpdateDebounceMs: Long = SPEECH_UPDATE_DEBOUNCE_START
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var commandWindowMs: Long = COMMAND_WINDOW_START
 
     // ═══════════════════════════════════════════════════════════════════
     // Signal tracking state
     // ═══════════════════════════════════════════════════════════════════
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var consecutiveSuccesses: Int = 0
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastCommandText: String = ""
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastCommandTimeMs: Long = 0
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastDuplicateTimeMs: Long = 0
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var totalCommands: Long = 0
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var totalDuplicates: Long = 0
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var totalNearMisses: Long = 0
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var totalWakeWordHits: Long = 0
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var totalWakeWordTimeouts: Long = 0
 
     // ═══════════════════════════════════════════════════════════════════

@@ -30,7 +30,7 @@ object IosCockpitControllerHolder {
      * Callback to execute a cockpit command by its CommandActionType.
      * Returns true if the command was handled successfully.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     var onCockpitCommand: ((CommandActionType) -> Boolean)? = null
 }
 
@@ -49,10 +49,16 @@ class IosCockpitCommandHandler : BaseHandler() {
         // Arrangement intents (simplified — auto-selects best LayoutMode)
         "focus", "compare", "overview", "present",
         // Shell mode switching
-        "classic mode", "stream mode", "lens mode", "canvas mode",
+        "cockpit mode", "map mode", "search mode", "space mode",
+        "classic mode", "stream mode", "lens mode", "canvas mode",  // backward compat
         // Shell-specific navigation
-        "next card", "previous card",          // AvanueViews
-        "canvas zoom in", "canvas zoom out",   // Canvas
+        "next card", "previous card",          // MapViews
+        "space zoom in", "space zoom out",     // SpaceAvanue
+        // Workspace voice navigation (cross-shell)
+        "next screen", "previous screen",
+        "open new screen", "new screen",
+        "close screen",
+        "open app",
         // Content insertion
         "add web", "add camera", "add note", "add pdf",
         "add image", "add video", "add whiteboard", "add terminal",
@@ -95,15 +101,21 @@ class IosCockpitCommandHandler : BaseHandler() {
             CommandActionType.LAYOUT_OVERVIEW,
             CommandActionType.LAYOUT_PRESENT,
             // Shell mode switching
-            CommandActionType.SHELL_CLASSIC,
-            CommandActionType.SHELL_AVANUE_VIEWS,
-            CommandActionType.SHELL_LENS,
-            CommandActionType.SHELL_CANVAS,
+            CommandActionType.SHELL_COCKPIT_AVANUE,
+            CommandActionType.SHELL_MAP_VIEWS,
+            CommandActionType.SHELL_SEARCH_AVANUE,
+            CommandActionType.SHELL_SPACE_AVANUE,
             // Shell-specific navigation
-            CommandActionType.STREAM_NEXT_CARD,
-            CommandActionType.STREAM_PREVIOUS_CARD,
-            CommandActionType.CANVAS_ZOOM_IN,
-            CommandActionType.CANVAS_ZOOM_OUT,
+            CommandActionType.MAP_NEXT_CARD,
+            CommandActionType.MAP_PREVIOUS_CARD,
+            CommandActionType.SPACE_ZOOM_IN,
+            CommandActionType.SPACE_ZOOM_OUT,
+            // Workspace voice navigation
+            CommandActionType.WORKSPACE_NEXT_SCREEN,
+            CommandActionType.WORKSPACE_PREVIOUS_SCREEN,
+            CommandActionType.WORKSPACE_OPEN_NEW,
+            CommandActionType.WORKSPACE_CLOSE_SCREEN,
+            CommandActionType.WORKSPACE_OPEN_APP,
             // Content insertion
             CommandActionType.ADD_WEB,
             CommandActionType.ADD_CAMERA,

@@ -104,7 +104,7 @@ object LocalizedVerbProvider {
      * Current locale-specific verbs from VOS files.
      * Set to null before VOS load; built-in verbs used as fallback.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var _localeVerbs: List<LocalizedVerb>? = null
 
     /**

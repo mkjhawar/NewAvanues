@@ -44,7 +44,7 @@ object IosWhisperNative {
 
     private val lock = SynchronizedObject()
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var isLibraryAvailable = false
 
     /**

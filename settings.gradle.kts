@@ -31,25 +31,8 @@ dependencyResolutionManagement {
         maven("https://csspeechstorage.blob.core.windows.net/maven/")
         // Vosk (AlphaCephei) Speech Recognition
         maven("https://alphacephei.com/maven/")
-        // GitLab Package Registry — Vivoka SDK, Sherpa-ONNX, internal artifacts
-        maven {
-            name = "GitLab"
-            url = uri("https://gitlab.com/api/v4/groups/${
-                providers.gradleProperty("gitlabGroupId").getOrElse("augmentalis")
-            }/-/packages/maven")
-            credentials(HttpHeaderCredentials::class) {
-                name = "Private-Token"
-                value = providers.gradleProperty("gitlabToken").orElse(
-                    providers.environmentVariable("GITLAB_TOKEN")
-                ).getOrElse("")
-            }
-            authentication {
-                create<HttpHeaderAuthentication>("header")
-            }
-            content {
-                includeGroup("com.augmentalis.sdk")
-            }
-        }
+        // GitLab Package Registry — disabled (SDK binaries now git-tracked locally)
+        // Re-enable if Maven-hosted artifacts are needed in the future.
         // Kotlin/JS toolchain distributions (Node.js + Yarn)
         ivy("https://nodejs.org/dist") {
             patternLayout { artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]") }

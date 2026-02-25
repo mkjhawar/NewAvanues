@@ -3,7 +3,8 @@ package com.augmentalis.voiceoscore
 import com.augmentalis.voiceoscore.CommandActionType
 import com.augmentalis.voiceoscore.QuantizedCommand
 import com.augmentalis.voiceoscore.ISynonymProvider
-import kotlin.concurrent.Volatile
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Command Matcher - Fuzzy matching for voice input to commands.
@@ -37,26 +38,33 @@ object CommandMatcher {
     /** High-confidence threshold — if any candidate scores this high, skip full sort */
     private const val EARLY_EXIT_THRESHOLD = 0.95f
 
-    /** LRU cache for fuzzy match results. Key = "input|threshold|actionFilter" */
-    private val matchCache = object : LinkedHashMap<String, MatchResult>(128, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MatchResult>?): Boolean {
-            return size > 100
-        }
-    }
+    /** Max entries in the LRU cache */
+    private const val MAX_CACHE_SIZE = 100
 
-    /** Generation counter — incremented on registry changes to invalidate cache */
-    @Volatile
-    private var cacheGeneration: Long = 0
+    /** LRU cache for fuzzy match results. Key = "input|threshold|actionFilter" */
+    private val matchCache = linkedMapOf<String, MatchResult>()
+
+    /** Guards all cache reads/writes and generation checks for thread safety */
+    private val cacheMutex = Mutex()
 
     /** Last known registry generation when cache was valid */
-    @Volatile
     private var lastRegistryGeneration: Long = -1
 
-    /**
-     * Invalidate the fuzzy match cache. Call when registry contents change.
-     */
-    fun invalidateCache() {
-        cacheGeneration++
+    /** Get from LRU cache, promoting entry to most-recently-used position */
+    private fun cacheGet(key: String): MatchResult? {
+        val value = matchCache.remove(key) ?: return null
+        matchCache[key] = value // re-insert at end = most recently used
+        return value
+    }
+
+    /** Put into LRU cache, evicting oldest entry when full. Single eviction
+     *  suffices because we add at most one entry per call. */
+    private fun cachePut(key: String, value: MatchResult) {
+        matchCache.remove(key)
+        matchCache[key] = value
+        if (matchCache.size > MAX_CACHE_SIZE) {
+            matchCache.remove(matchCache.keys.first())
+        }
     }
 
     /**
@@ -74,12 +82,13 @@ object CommandMatcher {
      * @param language Language for synonym expansion (uses defaultLanguage if null)
      * @return MatchResult indicating match type and matched command(s)
      */
-    fun match(
+    suspend fun match(
         voiceInput: String,
         registry: CommandRegistry,
         threshold: Float = 0.7f,
         actionFilter: CommandActionType? = null,
-        language: String? = null
+        language: String? = null,
+        provider: ISynonymProvider? = synonymProvider
     ): MatchResult {
         val normalized = voiceInput.lowercase().trim()
 
@@ -88,7 +97,7 @@ object CommandMatcher {
         }
 
         val lang = language ?: defaultLanguage
-        val expanded = synonymProvider?.expand(normalized, lang) ?: normalized
+        val expanded = provider?.expand(normalized, lang) ?: normalized
 
         // Get commands, optionally filtered by action type
         val commands = if (actionFilter != null) {
@@ -128,14 +137,17 @@ object CommandMatcher {
 
         // --- Fuzzy match path (optimized with cache + pre-filter + early exit) ---
 
-        // Layer 1: LRU cache check
-        val registryGen = registry.generation()
-        if (registryGen != lastRegistryGeneration) {
-            matchCache.clear()
-            lastRegistryGeneration = registryGen
-        }
+        // Layer 1: LRU cache check (mutex protects generation check + cache access atomically)
         val cacheKey = "$normalized|$threshold|${actionFilter?.name ?: ""}"
-        matchCache[cacheKey]?.let { return it }
+        val cached = cacheMutex.withLock {
+            val registryGen = registry.generation()
+            if (registryGen != lastRegistryGeneration) {
+                matchCache.clear()
+                lastRegistryGeneration = registryGen
+            }
+            cacheGet(cacheKey)
+        }
+        if (cached != null) return cached
 
         // Layer 2: Word pre-filter — only score commands sharing at least one word with input
         val inputWords = normalized.split(Regex("\\s+")).filter { it.isNotBlank() }.toSet()
@@ -179,7 +191,7 @@ object CommandMatcher {
                 // Early exit: high-confidence match with clear margin
                 if (bestScore >= EARLY_EXIT_THRESHOLD && bestScore - secondBestScore > 0.1f) {
                     val result = MatchResult.Fuzzy(bestCmd!!, bestScore, expanded != normalized)
-                    matchCache[cacheKey] = result
+                    cacheMutex.withLock { cachePut(cacheKey, result) }
                     return result
                 }
             }
@@ -207,14 +219,15 @@ object CommandMatcher {
             )
         }
 
-        matchCache[cacheKey] = result
+        cacheMutex.withLock { cachePut(cacheKey, result) }
         return result
     }
 
     /**
      * Match with explicit synonym provider (for testing or one-off use).
+     * Thread-safe: passes provider/language as parameters instead of mutating singleton state.
      */
-    fun matchWithSynonyms(
+    suspend fun matchWithSynonyms(
         voiceInput: String,
         registry: CommandRegistry,
         provider: ISynonymProvider,
@@ -222,16 +235,7 @@ object CommandMatcher {
         threshold: Float = 0.7f,
         actionFilter: CommandActionType? = null
     ): MatchResult {
-        val originalProvider = synonymProvider
-        val originalLanguage = defaultLanguage
-        try {
-            synonymProvider = provider
-            defaultLanguage = language
-            return match(voiceInput, registry, threshold, actionFilter, language)
-        } finally {
-            synonymProvider = originalProvider
-            defaultLanguage = originalLanguage
-        }
+        return match(voiceInput, registry, threshold, actionFilter, language, provider)
     }
 
     /**

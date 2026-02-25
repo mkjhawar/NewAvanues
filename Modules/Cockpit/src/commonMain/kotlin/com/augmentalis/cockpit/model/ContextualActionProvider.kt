@@ -106,6 +106,14 @@ object ContextualActionProvider {
                 action("map_layers", "Layers", "layers"),
             )
 
+            FrameContent.TYPE_FILE -> listOf(
+                action("file_navigate_up", "Up", "arrow_upward"),
+                action("file_search", "Search", "search"),
+                action("file_sort", "Sort", "sort"),
+                action("file_view_mode", "View Mode", "view_list"),
+                action("file_select_all", "Select All", "select_all"),
+            )
+
             else -> listOf(
                 action("frame_minimize", "Minimize", "minimize"),
                 action("frame_maximize", "Maximize", "open_in_full"),
@@ -185,6 +193,7 @@ object ContextualActionProvider {
         FrameContent.TYPE_AI_SUMMARY -> "AI Summary"
         FrameContent.TYPE_SCREEN_CAST -> "Cast"
         FrameContent.TYPE_WIDGET -> "Widget"
+        FrameContent.TYPE_FILE -> "File"
         FrameContent.TYPE_EXTERNAL_APP -> "External App"
         else -> "Actions"
     }

@@ -33,7 +33,7 @@ enum class SpeedLevel {
 class SpeedController(
     initialLevel: SpeedLevel = SpeedLevel.NORMAL
 ) {
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var currentLevel: SpeedLevel = initialLevel
 
     companion object {

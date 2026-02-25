@@ -683,33 +683,53 @@ enum class CommandActionType {
     LAYOUT_PRESENT,
 
     // ── Shell Mode Commands ──────────────────────────────────────
-    // Switches between the 4 Cockpit home screen variations.
+    // Switches between the 4 Cockpit home screen shells.
+    // Names follow Avanues brand convention (Chapter 99).
 
-    /** Switch to Classic dashboard shell (original tile grid) */
-    SHELL_CLASSIC,
+    /** Switch to CockpitAvanue dashboard + workspace shell */
+    SHELL_COCKPIT_AVANUE,
 
-    /** Switch to AvanueViews ambient stream shell */
-    SHELL_AVANUE_VIEWS,
+    /** Switch to MapViews ambient card stream shell */
+    SHELL_MAP_VIEWS,
 
-    /** Switch to Lens command palette shell */
-    SHELL_LENS,
+    /** Switch to SearchAvanue command palette shell */
+    SHELL_SEARCH_AVANUE,
 
-    /** Switch to Canvas spatial zen shell */
-    SHELL_CANVAS,
+    /** Switch to SpaceAvanue spatial zen canvas shell */
+    SHELL_SPACE_AVANUE,
 
     // ── Shell-Specific Navigation ────────────────────────────────
 
-    /** AvanueViews: next card in stream */
-    STREAM_NEXT_CARD,
+    /** MapViews: next card in stream */
+    MAP_NEXT_CARD,
 
-    /** AvanueViews: previous card in stream */
-    STREAM_PREVIOUS_CARD,
+    /** MapViews: previous card in stream */
+    MAP_PREVIOUS_CARD,
 
-    /** Canvas: zoom in on canvas */
-    CANVAS_ZOOM_IN,
+    /** SpaceAvanue: zoom in on canvas */
+    SPACE_ZOOM_IN,
 
-    /** Canvas: zoom out on canvas */
-    CANVAS_ZOOM_OUT,
+    /** SpaceAvanue: zoom out on canvas */
+    SPACE_ZOOM_OUT,
+
+    // ── Workspace Navigation ──────────────────────────────────────
+    // Cross-shell navigation commands that work in all shells.
+    // Cycle through frames/screens, open new ones, or close current.
+
+    /** Navigate to next frame/screen in current workspace */
+    WORKSPACE_NEXT_SCREEN,
+
+    /** Navigate to previous frame/screen in current workspace */
+    WORKSPACE_PREVIOUS_SCREEN,
+
+    /** Open a new screen/frame (triggers picker or default content) */
+    WORKSPACE_OPEN_NEW,
+
+    /** Close current screen and return to previous or dashboard */
+    WORKSPACE_CLOSE_SCREEN,
+
+    /** Open a specific app/module by name (metadata carries module ID) */
+    WORKSPACE_OPEN_APP,
 
     // ═══════════════════════════════════════════════════════════════
     // PDF Viewing Actions

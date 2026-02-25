@@ -31,7 +31,7 @@ object StaticCommandRegistry {
     // Falls back to hardcoded lists below when DB not yet loaded
     // ═══════════════════════════════════════════════════════════════════
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var _dbCommands: List<StaticCommand>? = null
 
     /**

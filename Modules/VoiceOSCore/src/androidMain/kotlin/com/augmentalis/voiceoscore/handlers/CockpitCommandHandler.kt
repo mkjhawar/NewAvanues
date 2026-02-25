@@ -41,10 +41,16 @@ class CockpitCommandHandler(
         // Arrangement intents (simplified — auto-selects best LayoutMode)
         "focus", "compare", "overview", "present",
         // Shell mode switching
-        "classic mode", "stream mode", "lens mode", "canvas mode",
+        "cockpit mode", "map mode", "search mode", "space mode",
+        "classic mode", "stream mode", "lens mode", "canvas mode",  // backward compat
         // Shell-specific navigation
-        "next card", "previous card",          // AvanueViews
-        "canvas zoom in", "canvas zoom out",   // Canvas
+        "next card", "previous card",          // MapViews
+        "space zoom in", "space zoom out",     // SpaceAvanue
+        // Workspace voice navigation (cross-shell)
+        "next screen", "previous screen",
+        "open new screen", "new screen",
+        "close screen",
+        "open app",
         // Content insertion
         "add web", "add camera", "add note", "add pdf",
         "add image", "add video", "add whiteboard", "add terminal",

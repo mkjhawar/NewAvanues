@@ -113,6 +113,27 @@ cockpit_scroll_up|cockpit upar scroll karo|panel upar|Active frame upar scroll k
 cockpit_scroll_down|cockpit neeche scroll karo|panel neeche|Active frame neeche scroll karo
 cockpit_zoom_in|cockpit zoom in karo|panel zoom in|Active frame mein zoom in karo
 cockpit_zoom_out|cockpit zoom out karo|panel zoom out|Active frame mein zoom out karo
+# Shell mode switching
+cockpit_shell_cockpit|cockpit mode|classic mode,dashboard mode|CockpitAvanue shell mein badlo
+cockpit_shell_map|map mode|stream mode,map views|MapViews shell mein badlo
+cockpit_shell_search|search mode|lens mode,search avanue|SearchAvanue shell mein badlo
+cockpit_shell_space|space mode|canvas mode,space avanue|SpaceAvanue shell mein badlo
+# Shell-specific navigation
+cockpit_map_next|agla card|agla,dahine swipe karo|MapViews: agla card dikhao
+cockpit_map_prev|pichla card|peeche,bayen swipe karo|MapViews: pichla card dikhao
+cockpit_space_zoom_in|space zoom in|canvas zoom in|SpaceAvanue: canvas zoom in karo
+cockpit_space_zoom_out|space zoom out|canvas zoom out|SpaceAvanue: canvas zoom out karo
+# Arrangement intents
+cockpit_focus|focus karo|focus mode,dhyan do|Maujuda frame par focus karo
+cockpit_compare|compare karo|compare mode,ek saath dekho|Frames ko ek saath compare karo
+cockpit_overview|overview dikhao|overview mode,sab dikhao|Sab frames ka overview dikhao
+cockpit_present|present karo|presentation mode,presentation|Presentation mode mein jao
+# Workspace voice navigation
+cockpit_next_screen|agla screen|agla workspace,aage jao|Agle screen par jao
+cockpit_prev_screen|pichla screen|peeche jao screen,pichla|Pichle screen par jao
+cockpit_new_screen|naya screen kholo|naya screen,naya workspace|Naya screen kholo
+cockpit_close_screen|screen band karo|workspace band karo,screen niklo|Maujuda screen band karo
+cockpit_open_app|app kholo|app launch karo,app shuru karo|Koi bhi app kholo
 # ── NoteAvanue ──
 note_open|note avanue kholo|notes kholo,notes app|NoteAvanue kholein
 note_new|nayi note|note banao,khaali note|Nayi note banaein

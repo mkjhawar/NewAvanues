@@ -154,7 +154,7 @@ fun CockpitScreenContent(
         if (state.layoutMode == LayoutMode.DASHBOARD) {
             // Home screen: render based on shell mode
             when (state.shellMode) {
-                SimplifiedShellMode.CLASSIC -> DashboardLayout(
+                SimplifiedShellMode.COCKPIT_AVANUE -> DashboardLayout(
                     dashboardState = state.dashboardState,
                     onModuleClick = onModuleClick,
                     onSessionClick = onSessionClick,
@@ -162,7 +162,7 @@ fun CockpitScreenContent(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 )
 
-                SimplifiedShellMode.AVANUE_VIEWS -> AvanueViewsStreamLayout(
+                SimplifiedShellMode.MAP_VIEWS -> AvanueViewsStreamLayout(
                     dashboardState = state.dashboardState,
                     onModuleClick = onModuleClick,
                     onSessionClick = onSessionClick,
@@ -171,7 +171,7 @@ fun CockpitScreenContent(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 )
 
-                SimplifiedShellMode.LENS -> LensLayout(
+                SimplifiedShellMode.SEARCH_AVANUE -> LensLayout(
                     dashboardState = state.dashboardState,
                     onModuleClick = onModuleClick,
                     onSessionClick = onSessionClick,
@@ -179,8 +179,9 @@ fun CockpitScreenContent(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 )
 
-                SimplifiedShellMode.CANVAS -> ZenCanvasLayout(
+                SimplifiedShellMode.SPACE_AVANUE -> ZenCanvasLayout(
                     dashboardState = state.dashboardState,
+                    moduleUsageScores = state.moduleUsageScores,
                     onModuleClick = onModuleClick,
                     onVoiceActivate = onVoiceActivate,
                     onSearchClick = { commandBarState = CommandBarState.ADD_FRAME },
@@ -264,7 +265,7 @@ fun CockpitScreenContent(
         }
 
         // Command bar — Classic shell uses full CommandBar, simplified shells use flat bar
-        if (state.shellMode == SimplifiedShellMode.CLASSIC || state.layoutMode == LayoutMode.DASHBOARD) {
+        if (state.shellMode == SimplifiedShellMode.COCKPIT_AVANUE || state.layoutMode == LayoutMode.DASHBOARD) {
             CommandBar(
                 state = commandBarState,
                 currentLayoutMode = state.layoutMode,

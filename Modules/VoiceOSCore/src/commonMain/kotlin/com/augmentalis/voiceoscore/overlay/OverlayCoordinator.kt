@@ -169,7 +169,7 @@ class OverlayCoordinator {
     /**
      * Flag indicating if coordinator has been disposed.
      */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var isDisposed = false
 
     /**

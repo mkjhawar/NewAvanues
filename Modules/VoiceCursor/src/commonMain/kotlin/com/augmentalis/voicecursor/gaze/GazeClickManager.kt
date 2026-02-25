@@ -38,16 +38,16 @@ class GazeClickManager(
     private val _state = MutableStateFlow(GazeState())
     val state: StateFlow<GazeState> = _state.asStateFlow()
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var isEnabled = false
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var dwellStartTimeMs: Long = 0
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastPosition = CursorPosition.Zero
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var anchorPosition = CursorPosition.Zero
 
     private val stateLock = Any()

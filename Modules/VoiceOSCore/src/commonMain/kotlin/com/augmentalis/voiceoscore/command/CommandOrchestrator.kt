@@ -49,9 +49,9 @@ class CommandOrchestrator(
     // Note: These are accessed from single-threaded command generation, but use synchronized for safety
     private val avidAssignments = mutableMapOf<String, Int>()
     private val avidLock = SynchronizedObject()
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var nextAvidNumber = 1
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var currentAppPackage: String? = null
 
     /**

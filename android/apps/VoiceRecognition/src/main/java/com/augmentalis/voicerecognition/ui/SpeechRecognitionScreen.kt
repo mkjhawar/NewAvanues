@@ -316,6 +316,7 @@ fun EngineChip(
         SpeechEngine.AZURE -> "Azure"
         SpeechEngine.APPLE_SPEECH -> "Apple"
         SpeechEngine.WEB_SPEECH -> "Web"
+        SpeechEngine.AVX -> "AVX"
     }
     Box(
         modifier = modifier

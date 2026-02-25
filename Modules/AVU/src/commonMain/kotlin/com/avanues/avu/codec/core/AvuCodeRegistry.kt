@@ -1,5 +1,8 @@
 package com.avanues.avu.codec.core
 
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+
 /**
  * AVU Code Registry - Central registry for all AVU format codes
  *
@@ -23,10 +26,9 @@ package com.avanues.avu.codec.core
  * val legend = AvuCodeRegistry.generateLegend(setOf("SCR", "SUP", "SDL"))
  * ```
  *
- * @author Augmentalis Engineering
  * @since AVU 2.2
  */
-object AvuCodeRegistry {
+object AvuCodeRegistry : SynchronizedObject() {
 
     private val codes = mutableMapOf<String, AvuCodeInfo>()
     private val codesByCategory = mutableMapOf<AvuCodeCategory, MutableList<AvuCodeInfo>>()
@@ -37,8 +39,7 @@ object AvuCodeRegistry {
      * @param info The code metadata
      * @throws IllegalArgumentException if code is already registered with different info
      */
-    @Synchronized
-    fun register(info: AvuCodeInfo) {
+    fun register(info: AvuCodeInfo) = synchronized(this) {
         val existing = codes[info.code]
         if (existing != null && existing != info) {
             throw IllegalArgumentException(
@@ -54,8 +55,7 @@ object AvuCodeRegistry {
      *
      * @param infos List of code metadata
      */
-    @Synchronized
-    fun registerAll(vararg infos: AvuCodeInfo) {
+    fun registerAll(vararg infos: AvuCodeInfo) = synchronized(this) {
         infos.forEach { register(it) }
     }
 
@@ -65,8 +65,7 @@ object AvuCodeRegistry {
      * @param code The 3-letter code
      * @return Code info or null if not registered
      */
-    @Synchronized
-    fun get(code: String): AvuCodeInfo? = codes[code]
+    fun get(code: String): AvuCodeInfo? = synchronized(this) { codes[code] }
 
     /**
      * Get all codes in a category.
@@ -74,9 +73,8 @@ object AvuCodeRegistry {
      * @param category The code category
      * @return List of codes in that category
      */
-    @Synchronized
-    fun getByCategory(category: AvuCodeCategory): List<AvuCodeInfo> {
-        return codesByCategory[category]?.toList() ?: emptyList()
+    fun getByCategory(category: AvuCodeCategory): List<AvuCodeInfo> = synchronized(this) {
+        codesByCategory[category]?.toList() ?: emptyList()
     }
 
     /**
@@ -84,8 +82,7 @@ object AvuCodeRegistry {
      *
      * @return Map of code to info
      */
-    @Synchronized
-    fun getAll(): Map<String, AvuCodeInfo> = codes.toMap()
+    fun getAll(): Map<String, AvuCodeInfo> = synchronized(this) { codes.toMap() }
 
     /**
      * Check if a code is registered.
@@ -93,8 +90,7 @@ object AvuCodeRegistry {
      * @param code The 3-letter code
      * @return true if registered
      */
-    @Synchronized
-    fun isRegistered(code: String): Boolean = codes.containsKey(code)
+    fun isRegistered(code: String): Boolean = synchronized(this) { codes.containsKey(code) }
 
     /**
      * Generate a code legend for file headers.
@@ -103,27 +99,28 @@ object AvuCodeRegistry {
      * @param includeDescriptions Whether to include descriptions
      * @return Formatted legend string
      */
-    @Synchronized
     fun generateLegend(
         filter: Set<String>? = null,
         includeDescriptions: Boolean = false
-    ): String = buildString {
-        appendLine("codes:")
-        val filtered = if (filter != null) {
-            codes.filterKeys { it in filter }
-        } else {
-            codes
-        }
-
-        // Group by category for readability
-        val grouped = filtered.values.groupBy { it.category }
-        grouped.forEach { (category, categoryInfos) ->
-            if (grouped.size > 1) {
-                appendLine("  # ${category.displayName}")
+    ): String = synchronized(this) {
+        buildString {
+            appendLine("codes:")
+            val filtered = if (filter != null) {
+                codes.filterKeys { it in filter }
+            } else {
+                codes
             }
-            categoryInfos.sortedBy { it.code }.forEach { info ->
-                append("  ")
-                appendLine(info.toLegendEntry(includeDescriptions))
+
+            // Group by category for readability
+            val grouped = filtered.values.groupBy { it.category }
+            grouped.forEach { (category, categoryInfos) ->
+                if (grouped.size > 1) {
+                    appendLine("  # ${category.displayName}")
+                }
+                categoryInfos.sortedBy { it.code }.forEach { info ->
+                    append("  ")
+                    appendLine(info.toLegendEntry(includeDescriptions))
+                }
             }
         }
     }
@@ -134,12 +131,13 @@ object AvuCodeRegistry {
      * @param codes Set of codes to include
      * @return Compact legend string
      */
-    @Synchronized
-    fun generateCompactLegend(codes: Set<String>): String = buildString {
-        appendLine("codes:")
-        codes.sorted().forEach { code ->
-            this@AvuCodeRegistry.codes[code]?.let { info ->
-                appendLine("  ${info.toCompactLegend()}")
+    fun generateCompactLegend(codes: Set<String>): String = synchronized(this) {
+        buildString {
+            appendLine("codes:")
+            codes.sorted().forEach { code ->
+                this@AvuCodeRegistry.codes[code]?.let { info ->
+                    appendLine("  ${info.toCompactLegend()}")
+                }
             }
         }
     }
@@ -149,21 +147,22 @@ object AvuCodeRegistry {
      *
      * @return Markdown-formatted documentation
      */
-    @Synchronized
-    fun generateDocumentation(): String = buildString {
-        appendLine("# AVU Code Reference")
-        appendLine()
+    fun generateDocumentation(): String = synchronized(this) {
+        buildString {
+            appendLine("# AVU Code Reference")
+            appendLine()
 
-        val grouped = codes.values.groupBy { it.category }
-        grouped.forEach { (category, categoryInfos) ->
-            appendLine("## ${category.displayName} Codes")
-            appendLine()
-            appendLine("| Code | Name | Format | Description |")
-            appendLine("|------|------|--------|-------------|")
-            categoryInfos.sortedBy { it.code }.forEach { info ->
-                appendLine("| `${info.code}` | ${info.name} | `${info.format}` | ${info.description} |")
+            val grouped = codes.values.groupBy { it.category }
+            grouped.forEach { (category, categoryInfos) ->
+                appendLine("## ${category.displayName} Codes")
+                appendLine()
+                appendLine("| Code | Name | Format | Description |")
+                appendLine("|------|------|--------|-------------|")
+                categoryInfos.sortedBy { it.code }.forEach { info ->
+                    appendLine("| `${info.code}` | ${info.name} | `${info.format}` | ${info.description} |")
+                }
+                appendLine()
             }
-            appendLine()
         }
     }
 
@@ -173,30 +172,28 @@ object AvuCodeRegistry {
      * @param message The AVU message string
      * @return Validation result
      */
-    @Synchronized
-    fun validate(message: String): ValidationResult {
+    fun validate(message: String): ValidationResult = synchronized(this) {
         if (message.length < 4) {
-            return ValidationResult.Invalid("Message too short")
+            return@synchronized ValidationResult.Invalid("Message too short")
         }
 
         val parts = message.split(":", limit = 2)
         if (parts.isEmpty()) {
-            return ValidationResult.Invalid("No code found")
+            return@synchronized ValidationResult.Invalid("No code found")
         }
 
         val code = parts[0]
         if (code.length != 3 || !code.all { it.isUpperCase() }) {
-            return ValidationResult.Invalid("Invalid code format: $code")
+            return@synchronized ValidationResult.Invalid("Invalid code format: $code")
         }
 
         val info = codes[code]
-            ?: return ValidationResult.UnknownCode(code)
+            ?: return@synchronized ValidationResult.UnknownCode(code)
 
         // Count expected fields from format
-        val expectedFields = info.format.split(":").size
         val actualFields = message.split(":").size - 1 // -1 for code itself
 
-        return if (actualFields >= info.fields.count { it.required }) {
+        if (actualFields >= info.fields.count { it.required }) {
             ValidationResult.Valid(info)
         } else {
             ValidationResult.Invalid(
@@ -208,8 +205,7 @@ object AvuCodeRegistry {
     /**
      * Clear all registered codes (useful for testing).
      */
-    @Synchronized
-    fun clear() {
+    fun clear() = synchronized(this) {
         codes.clear()
         codesByCategory.clear()
     }
@@ -217,8 +213,7 @@ object AvuCodeRegistry {
     /**
      * Get count of registered codes.
      */
-    @Synchronized
-    fun count(): Int = codes.size
+    fun count(): Int = synchronized(this) { codes.size }
 }
 
 /**

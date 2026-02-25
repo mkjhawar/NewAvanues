@@ -42,7 +42,7 @@ class WebCommandHandler : BaseHandler() {
             .flatMap { it.phrases }.forEach { add(it) }
     }.distinct()
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var executor: IWebCommandExecutor? = null
 
     /**

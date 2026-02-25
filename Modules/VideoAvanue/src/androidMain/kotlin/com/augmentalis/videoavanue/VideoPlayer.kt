@@ -94,6 +94,7 @@ fun VideoPlayer(
     var isLoading by remember { mutableStateOf(true) }
     var playbackSpeed by remember { mutableStateOf(1f) }
     var isLooping by remember { mutableStateOf(false) }
+    var playerError by remember { mutableStateOf<String?>(null) }
 
     val exoPlayer = remember(uri) {
         ExoPlayer.Builder(context).build().apply {
@@ -105,10 +106,24 @@ fun VideoPlayer(
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
-                isLoading = state == Player.STATE_BUFFERING
-                if (state == Player.STATE_READY) duration = exoPlayer.duration.coerceAtLeast(0)
+                when (state) {
+                    Player.STATE_BUFFERING -> isLoading = true
+                    Player.STATE_READY -> {
+                        isLoading = false
+                        duration = exoPlayer.duration.coerceAtLeast(0)
+                    }
+                    Player.STATE_ENDED -> {
+                        isLoading = false
+                        isPlaying = false
+                    }
+                    Player.STATE_IDLE -> isLoading = false
+                }
             }
             override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                isLoading = false
+                playerError = error.localizedMessage ?: "Playback error"
+            }
         }
         exoPlayer.addListener(listener)
         onDispose { exoPlayer.removeListener(listener) }
@@ -147,6 +162,14 @@ fun VideoPlayer(
                 modifier = Modifier.fillMaxSize()
             )
             if (isLoading) CircularProgressIndicator(Modifier.size(48.dp), color = colors.primary)
+            if (playerError != null) {
+                Text(
+                    playerError!!,
+                    color = colors.error,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
         }
 
         Column(Modifier.fillMaxWidth().background(colors.surface.copy(alpha = 0.85f)).padding(horizontal = 12.dp, vertical = 4.dp)) {

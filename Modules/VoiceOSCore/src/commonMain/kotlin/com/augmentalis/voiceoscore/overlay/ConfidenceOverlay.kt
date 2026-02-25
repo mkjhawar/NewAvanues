@@ -209,7 +209,7 @@ class ConfidenceOverlay : IOverlay {
      */
     val confidenceResult: StateFlow<ConfidenceResult?> = _confidenceResult.asStateFlow()
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var _isDisposed = false
 
     // ═══════════════════════════════════════════════════════════════════════

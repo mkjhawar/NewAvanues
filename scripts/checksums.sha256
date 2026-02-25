@@ -1,0 +1,42 @@
+# SHA-256 checksums for NewAvanues binary dependencies
+# Generated: 2026-02-25
+# Verify with: shasum -a 256 -c scripts/checksums.sha256
+
+# Vivoka SDK AARs
+08b619f19bbb6876bee112e79559d2c6232da3dc4067481aace55f08f5fed1bb  vivoka/vsdk-6.0.0.aar
+20ff7bce326b86400bc85a0cf267e43712224b423203bd0d6ff2d974b193fc6f  vivoka/vsdk-csdk-asr-2.0.0.aar
+8162ab5a3b6a169da2ca0cf9eb9785f604c18e19dc1f18a01a63552c6511a44d  vivoka/vsdk-csdk-core-1.0.1.aar
+
+# Vivoka Android JARs (extracted from AARs for vivoka/Android wrapper module)
+a43051a272fbc2ce30bdf4689656af69b147ec71205e1af58cd5f82283f7458e  vivoka/Android/libs/vsdk-6.0.0.jar
+bfedd8275a42799a2a307b0ad612b0c98cfe521875d674436ca9fa08cec3ae34  vivoka/Android/libs/vsdk-csdk-asr-2.0.0.jar
+6d91dd8b9e80d5518468c3aff721728cdfb05ada9753b04e0ba16b776c8d557c  vivoka/Android/libs/vsdk-csdk-core-1.0.1.jar
+
+# Sherpa-ONNX (AVX speech engine)
+166b107c707771ceb9a97b9d02e07d47ddd116d1ae22e72aa7ffcbb1f735408f  sherpa-onnx/sherpa-onnx.aar
+d16e1c2b08ded19fa7c8e1fff91b5fb43d2dd726d7bc3b6d3e8ace4e4c3e18d6  sherpa-onnx/sherpa-onnx-classes.jar
+6ecc577069e451602b080164d5699a70a354d73395682c887881bad2c56bf846  sherpa-onnx/sherpa-onnx-desktop.jar
+
+# TVM4J Core JARs
+4707694dde33cb9ce9deabd85445cf5d0fa23dbe6c11b5a227bb9829afe7a95f  Modules/AI/ALC/libs/tvm4j_core.jar
+14c28d61743c864511fc9e37d2c9a57d24bb041c2be2a47f9a2170455a4f4caf  Modules/AI/LLM/libs/tvm4j_core.jar
+
+# VLM Models — English (Whisper ONNX, AON-encrypted)
+921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f  VLMFiles/EN/VoiceOS-Tin-EN.bin
+a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002  VLMFiles/EN/VoiceOS-Bas-EN.bin
+c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d  VLMFiles/EN/VoiceOS-Sml-EN.bin
+cc37e93478338ec7700281a7ac30a10128929eb8f427dda2e865faa8f6da4356  VLMFiles/EN/VoiceOS-Med-EN.bin
+bc014af1108c83aaa7eda588aa48260ffbb3c5a05977bc85a7e2a331b63ee435  VLMFiles/EN/VoiceOS-Tin-EN.vlm
+ec0797191f7d9a74498fc5a4ebffaa7fa2bd54cb5afe07959c913cbc443de64f  VLMFiles/EN/VoiceOS-Bas-EN.vlm
+e211423023b614f14acdb31ee0c7653bd8273e04409f72fb69925bd64adbf2dd  VLMFiles/EN/VoiceOS-Sml-EN.vlm
+df1a495bf7ad31275f4030eba131cb2c6d46b9105f82b2f20503be78a62898d9  VLMFiles/EN/VoiceOS-Med-EN.vlm
+
+# VLM Models — Multilingual (Whisper ONNX, AON-encrypted)
+be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21  VLMFiles/MUL/VoiceOS-Tin-MUL.bin
+60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe  VLMFiles/MUL/VoiceOS-Bas-MUL.bin
+1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b  VLMFiles/MUL/VoiceOS-Sml-MUL.bin
+6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208  VLMFiles/MUL/VoiceOS-Med-MUL.bin
+30cff2ee5e7d0c753a15c87bcaa2810ef8d3624e7339d08ff531f73de152bd96  VLMFiles/MUL/VoiceOS-Tin-MUL.vlm
+a58124fd21f16d32710084594d9189777131573cbac70a556a123acefe1c21af  VLMFiles/MUL/VoiceOS-Bas-MUL.vlm
+482165885398ec7775ebbb3cc7dd4dda3e4c7999ec03ca7b7b4088feb09608c2  VLMFiles/MUL/VoiceOS-Sml-MUL.vlm
+bbb42624556b48d3d5e745e62dd015f4aa4d581f352569d5f730e7d63810e11c  VLMFiles/MUL/VoiceOS-Med-MUL.vlm

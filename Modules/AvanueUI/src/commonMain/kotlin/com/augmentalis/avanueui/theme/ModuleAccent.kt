@@ -35,9 +35,9 @@ data class ModuleAccent(
 object AvanueModuleAccents {
     private val overrides = mutableMapOf<String, ModuleAccent>()
 
-    @Volatile private var globalAccent: Color = Color(0xFF007AFF)
-    @Volatile private var globalOnAccent: Color = Color.White
-    @Volatile private var globalAccentMuted: Color = Color(0xFF007AFF).copy(alpha = 0.6f)
+    @kotlin.concurrent.Volatile private var globalAccent: Color = Color(0xFF007AFF)
+    @kotlin.concurrent.Volatile private var globalOnAccent: Color = Color.White
+    @kotlin.concurrent.Volatile private var globalAccentMuted: Color = Color(0xFF007AFF).copy(alpha = 0.6f)
 
     /** Called from AvanueThemeProvider SideEffect on each recomposition */
     fun setGlobalColors(accent: Color, onAccent: Color, accentMuted: Color) {

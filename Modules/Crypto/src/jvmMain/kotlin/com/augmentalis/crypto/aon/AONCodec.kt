@@ -135,6 +135,24 @@ actual object AONCodec {
         }
     }
 
+    actual suspend fun wrap(onnxData: ByteArray, config: AONWrapConfig): ByteArray {
+        val hmacKey = getHmacKey()
+        val currentTime = System.currentTimeMillis() / 1000
+
+        val iv: ByteArray
+        val payload: ByteArray
+
+        if (config.encrypt) {
+            iv = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
+            payload = encryptAesGcm(onnxData, iv)
+        } else {
+            iv = ByteArray(16)
+            payload = onnxData
+        }
+
+        return AONWrapper.buildAonFile(payload, config, hmacKey, currentTime, iv)
+    }
+
     actual fun isAON(data: ByteArray): Boolean {
         if (data.size < AONFormat.MAGIC_SIZE) return false
         for (i in AONFormat.MAGIC.indices) {
@@ -191,6 +209,20 @@ actual object AONCodec {
         return header.allowedPackages.any { pkg ->
             AONFormat.constantTimeEquals(pkg, identityHash)
         }
+    }
+
+    /**
+     * Encrypt ONNX data with AES-256-GCM.
+     * Key: SHA-256(HMAC_KEY). IV: first 12 bytes of ivNonce. Auth tag: 128-bit (appended).
+     */
+    private fun encryptAesGcm(data: ByteArray, ivNonce: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val keyBytes = CryptoDigest.sha256Blocking(AONFormat.getDefaultHmacKey())
+        val secretKey = SecretKeySpec(keyBytes, "AES")
+        val iv = ivNonce.copyOf(12)
+        val gcmSpec = GCMParameterSpec(128, iv)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmSpec)
+        return cipher.doFinal(data)
     }
 
     /**

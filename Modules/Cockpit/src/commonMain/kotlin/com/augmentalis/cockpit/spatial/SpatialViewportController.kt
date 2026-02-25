@@ -55,8 +55,8 @@ class SpatialViewportController(
     // @Volatile ensures writes from updateScreenSize() (UI thread) are immediately visible to
     // the orientation-collection coroutine running on a background thread, preventing JVM data
     // races without the overhead of a full lock for these simple Float reads/writes.
-    @Volatile private var screenWidthPx: Float = screenWidthPx
-    @Volatile private var screenHeightPx: Float = screenHeightPx
+    @kotlin.concurrent.Volatile private var screenWidthPx: Float = screenWidthPx
+    @kotlin.concurrent.Volatile private var screenHeightPx: Float = screenHeightPx
 
     private val _viewportOffset = MutableStateFlow(Offset.Zero)
     /** Current viewport translation offset in pixels */

@@ -89,11 +89,11 @@ class BrowserVoiceOSCallback(
     // Indexed by selectDisambiguationOption() so that user selection "1" maps to
     // the first candidate in the disambiguation list, NOT to the first command in
     // the full 500+ command list. Cleared after the user picks or cancels.
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastDisambiguationMatches: List<VoiceCommandGenerator.MatchResult> = emptyList()
 
     // JavaScript executor for web command execution (set by platform layer)
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var jsExecutor: IJavaScriptExecutor? = null
 
     // Scrape cooldown: prevents redundant command regeneration from rapid DOM mutations.
@@ -890,7 +890,7 @@ class BrowserVoiceOSCallback(
          * Active callback instance for the current browser session.
          * Used by VoiceAvanueAccessibilityService to access web commands.
          */
-        @Volatile
+        @kotlin.concurrent.Volatile
         private var _activeInstance: BrowserVoiceOSCallback? = null
         val activeInstance: BrowserVoiceOSCallback? get() = _activeInstance
 

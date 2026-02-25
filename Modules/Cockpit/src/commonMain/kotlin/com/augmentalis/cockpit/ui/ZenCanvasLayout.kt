@@ -68,9 +68,12 @@ import com.augmentalis.avanueui.theme.AvanueTheme
 import com.augmentalis.cockpit.model.DashboardModule
 import com.augmentalis.cockpit.model.DashboardModuleRegistry
 import com.augmentalis.cockpit.model.DashboardState
+import com.augmentalis.cockpit.model.IslandDepthTier
+import com.augmentalis.cockpit.model.ModuleUsageTracker
+import com.augmentalis.cockpit.model.RankedModule
 
 /**
- * Canvas — Spatial Zen shell.
+ * SpaceAvanue — Spatial Zen shell with usage-based island sizing.
  *
  * Philosophy: "Your workspace is an infinite calm canvas. Content exists in
  * space. You navigate by looking, not by clicking through menus."
@@ -84,9 +87,12 @@ import com.augmentalis.cockpit.model.DashboardState
  * - **Level 2 (2.0x)**: Module — selected module fills 60%, neighbors visible
  * - **Level 3 (4.0x)**: Focus — single module fullscreen, zero chrome
  *
- * Island positions are computed in a staggered organic layout (not a rigid grid)
- * to leverage spatial memory — users remember WHERE things are, not what menu
- * they're in.
+ * Island layout is **usage-driven**: the most-launched modules get the largest
+ * islands near the canvas center (NEAR tier), moderately-used modules occupy
+ * the first ring (MID tier), and rarely-used modules drift to the outer ring
+ * (FAR tier). This creates a self-organizing spatial memory model — users
+ * remember WHERE things are because frequently-used modules are always
+ * in the same prominent position.
  *
  * Responsive adaptation:
  * - Glass: Head-tracked viewport, voice zoom, 3 nearest islands visible
@@ -97,6 +103,7 @@ import com.augmentalis.cockpit.model.DashboardState
 @Composable
 fun ZenCanvasLayout(
     dashboardState: DashboardState,
+    moduleUsageScores: Map<String, Float> = emptyMap(),
     displayProfile: DisplayProfile = DisplayProfile.PHONE,
     onModuleClick: (String) -> Unit,
     onVoiceActivate: () -> Unit,
@@ -110,9 +117,21 @@ fun ZenCanvasLayout(
     var zoomLevel by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
 
-    // Compute island positions based on module count and display profile
-    val islandPositions = remember(modules.size, displayProfile) {
-        computeIslandPositions(modules, displayProfile)
+    // Rank modules by usage and compute island positions with depth tiers
+    val rankedModules = remember(modules, moduleUsageScores) {
+        val sorted = modules.sortedByDescending { moduleUsageScores[it.id] ?: 0f }
+        sorted.mapIndexed { index, module ->
+            RankedModule(
+                module = module,
+                usageScore = moduleUsageScores[module.id] ?: 0f,
+                tier = ModuleUsageTracker.tierForIndex(index),
+            )
+        }
+    }
+
+    // Compute island positions based on ranked modules and display profile
+    val islandPositions = remember(rankedModules.size, displayProfile) {
+        computeIslandPositions(rankedModules, displayProfile)
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -140,15 +159,17 @@ fun ZenCanvasLayout(
                     translationY = panOffset.y
                 }
         ) {
-            // Module islands
+            // Module islands — sized by usage tier (NEAR=large, MID=medium, FAR=small)
             islandPositions.forEachIndexed { index, position ->
-                if (index < modules.size) {
+                if (index < rankedModules.size) {
+                    val ranked = rankedModules[index]
                     ModuleIsland(
-                        module = modules[index],
+                        module = ranked.module,
+                        tier = ranked.tier,
                         position = position,
                         zoomLevel = zoomLevel,
                         displayProfile = displayProfile,
-                        onClick = { onModuleClick(modules[index].id) },
+                        onClick = { onModuleClick(ranked.module.id) },
                     )
                 }
             }
@@ -223,7 +244,7 @@ fun ZenCanvasLayout(
         // Glass: minimal HUD overlay
         if (displayProfile.isGlass) {
             GlassCanvasHud(
-                moduleCount = modules.size,
+                moduleCount = rankedModules.size,
                 zoomLevel = zoomLevel,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -262,57 +283,76 @@ data class IslandPosition(
 )
 
 /**
- * Computes organic staggered positions for module islands.
+ * Computes usage-aware positions for module islands.
  *
- * Uses a honeycomb-inspired layout rather than a rigid grid to create
- * a natural, memorable spatial arrangement. Frequently-used modules
- * gravitate toward the center (first in the list = closer to center).
+ * Modules are pre-sorted by usage (highest first). Positioning follows
+ * a 3-ring honeycomb layout mapped to depth tiers:
+ *
+ * - **NEAR tier** (indices 0-2): Center cluster — the 3 most-used modules
+ *   occupy the center and its two closest hexagonal neighbors.
+ * - **MID tier** (indices 3-6): First ring — 4 moderately-used modules
+ *   in the remaining ring-1 positions.
+ * - **FAR tier** (indices 7+): Outer ring — rarely-used modules at 2x distance.
+ *
+ * This creates a gravitational spatial model: heavy-use modules are close
+ * and large, light-use modules are distant and small.
  */
 private fun computeIslandPositions(
-    modules: List<DashboardModule>,
+    rankedModules: List<RankedModule>,
     profile: DisplayProfile,
 ): List<IslandPosition> {
-    val spacing = when (profile) {
+    val baseSpacing = when (profile) {
         DisplayProfile.GLASS_MICRO -> 80f
         DisplayProfile.GLASS_COMPACT -> 90f
         DisplayProfile.GLASS_STANDARD -> 100f
-        DisplayProfile.PHONE -> 120f
-        DisplayProfile.TABLET -> 140f
+        DisplayProfile.PHONE -> 130f
+        DisplayProfile.TABLET -> 150f
         DisplayProfile.GLASS_HD -> 110f
     }
 
-    // Organic spiral layout: first module at center, others spiral outward
     val positions = mutableListOf<IslandPosition>()
-    if (modules.isEmpty()) return positions
+    if (rankedModules.isEmpty()) return positions
 
-    // Center island
+    // ── NEAR tier: center cluster (up to 3 modules) ──
+    // Module 0: dead center
     positions.add(IslandPosition(0f, 0f))
-
-    // Ring 1: 6 positions around center (hexagonal)
-    val ring1Angles = listOf(0f, 60f, 120f, 180f, 240f, 300f)
-    ring1Angles.forEach { angleDeg ->
-        val rad = angleDeg * (Math.PI.toFloat() / 180f)
+    // Module 1-2: close neighbors at reduced spacing
+    val nearAngles = listOf(-60f, 60f)
+    nearAngles.forEach { angleDeg ->
+        val rad = angleDeg * (kotlin.math.PI.toFloat() / 180f)
         positions.add(
             IslandPosition(
-                xDp = kotlin.math.cos(rad) * spacing,
-                yDp = kotlin.math.sin(rad) * spacing,
+                xDp = kotlin.math.cos(rad) * baseSpacing * 0.8f,
+                yDp = kotlin.math.sin(rad) * baseSpacing * 0.8f,
             )
         )
     }
 
-    // Ring 2: 6 positions at 2x distance, offset by 30 degrees
-    val ring2Angles = listOf(30f, 90f, 150f, 210f, 270f, 330f)
-    ring2Angles.forEach { angleDeg ->
-        val rad = angleDeg * (Math.PI.toFloat() / 180f)
+    // ── MID tier: first ring remaining slots (up to 4 modules) ──
+    val midAngles = listOf(150f, 210f, 270f, 330f)
+    midAngles.forEach { angleDeg ->
+        val rad = angleDeg * (kotlin.math.PI.toFloat() / 180f)
         positions.add(
             IslandPosition(
-                xDp = kotlin.math.cos(rad) * spacing * 2f,
-                yDp = kotlin.math.sin(rad) * spacing * 2f,
+                xDp = kotlin.math.cos(rad) * baseSpacing,
+                yDp = kotlin.math.sin(rad) * baseSpacing,
             )
         )
     }
 
-    return positions.take(modules.size)
+    // ── FAR tier: outer ring (remaining modules) ──
+    val farAngles = listOf(0f, 45f, 90f, 135f, 180f, 225f, 270f, 315f)
+    farAngles.forEach { angleDeg ->
+        val rad = angleDeg * (kotlin.math.PI.toFloat() / 180f)
+        positions.add(
+            IslandPosition(
+                xDp = kotlin.math.cos(rad) * baseSpacing * 1.9f,
+                yDp = kotlin.math.sin(rad) * baseSpacing * 1.9f,
+            )
+        )
+    }
+
+    return positions.take(rankedModules.size)
 }
 
 // ── Composables ─────────────────────────────────────────────────────────────
@@ -356,11 +396,16 @@ private fun DotGridBackground(
 }
 
 /**
- * A single module island on the canvas.
+ * A single module island on the canvas, sized by its usage depth tier.
+ *
+ * - **NEAR**: Large island (100dp / 72dp glass) — most-used modules
+ * - **MID**: Medium island (80dp / 60dp glass) — moderate usage
+ * - **FAR**: Small island (64dp / 48dp glass) — rarely used
  */
 @Composable
 private fun ModuleIsland(
     module: DashboardModule,
+    tier: IslandDepthTier,
     position: IslandPosition,
     zoomLevel: Float,
     displayProfile: DisplayProfile,
@@ -368,9 +413,27 @@ private fun ModuleIsland(
 ) {
     val colors = AvanueTheme.colors
     val accentColor = Color(module.accentColorHex)
+
+    // Tier-based island sizing
     val islandSize = when {
-        displayProfile.isGlass -> 64.dp
-        else -> 80.dp
+        displayProfile.isGlass -> tier.glassSizeDp.dp
+        else -> tier.sizeDp.dp
+    }
+    val iconSize = when (tier) {
+        IslandDepthTier.NEAR -> if (displayProfile.isGlass) 24.dp else 32.dp
+        IslandDepthTier.MID -> if (displayProfile.isGlass) 20.dp else 28.dp
+        IslandDepthTier.FAR -> if (displayProfile.isGlass) 16.dp else 22.dp
+    }
+    val labelFontSize = when (tier) {
+        IslandDepthTier.NEAR -> if (displayProfile.isGlass) 10.sp else 12.sp
+        IslandDepthTier.MID -> if (displayProfile.isGlass) 9.sp else 11.sp
+        IslandDepthTier.FAR -> if (displayProfile.isGlass) 8.sp else 10.sp
+    }
+    // FAR tier islands are slightly translucent to reinforce depth perception
+    val cardAlpha = when (tier) {
+        IslandDepthTier.NEAR -> 1f
+        IslandDepthTier.MID -> 0.9f
+        IslandDepthTier.FAR -> 0.7f
     }
 
     // Convert dp position to pixel offset
@@ -382,6 +445,7 @@ private fun ModuleIsland(
                     y = position.yDp.dp.roundToPx(),
                 )
             }
+            .graphicsLayer { alpha = cardAlpha }
     ) {
         AvanueCard(
             onClick = onClick,
@@ -392,7 +456,7 @@ private fun ModuleIsland(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(8.dp),
+                    .padding(if (tier == IslandDepthTier.FAR) 4.dp else 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -401,16 +465,17 @@ private fun ModuleIsland(
                     moduleIconForCanvas(module.iconName),
                     contentDescription = null,
                     tint = accentColor,
-                    modifier = Modifier.size(if (displayProfile.isGlass) 20.dp else 28.dp)
+                    modifier = Modifier.size(iconSize)
                 )
 
-                if (!displayProfile.isGlass || zoomLevel > 1.5f) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                // Show label if not glass or zoomed in enough
+                if (!displayProfile.isGlass || zoomLevel > 1.5f || tier == IslandDepthTier.NEAR) {
+                    Spacer(modifier = Modifier.height(if (tier == IslandDepthTier.FAR) 2.dp else 4.dp))
                     Text(
                         text = module.displayName,
                         color = colors.textPrimary,
-                        fontSize = if (displayProfile.isGlass) 9.sp else 11.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontSize = labelFontSize,
+                        fontWeight = if (tier == IslandDepthTier.NEAR) FontWeight.SemiBold else FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,

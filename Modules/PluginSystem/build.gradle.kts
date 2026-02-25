@@ -54,6 +54,9 @@ kotlin {
                 // Coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
+                // Atomic operations for KMP thread safety
+                implementation(libs.kotlinx.atomicfu)
+
                 // DateTime
                 implementation(libs.kotlinx.datetime)
 

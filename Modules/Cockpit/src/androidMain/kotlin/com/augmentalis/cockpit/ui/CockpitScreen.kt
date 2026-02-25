@@ -73,6 +73,7 @@ fun CockpitScreen(
     val shellMode by viewModel.shellMode.collectAsState()
     val dashboardState by viewModel.dashboardState.collectAsState()
     val backgroundSceneState by viewModel.backgroundScene.collectAsState()
+    val moduleUsageScores by viewModel.moduleUsageScores.collectAsState()
 
     // Theme state — local until DataStore persistence is wired
     var currentPalette by remember { mutableStateOf(AvanueColorPalette.DEFAULT) }
@@ -168,6 +169,7 @@ fun CockpitScreen(
             currentMaterial = currentMaterial,
             currentAppearance = currentAppearance,
             currentPresetId = currentPresetId,
+            moduleUsageScores = moduleUsageScores,
         ),
         onNavigateBack = onNavigateBack,
         onReturnToDashboard = { viewModel.returnToDashboard() },
@@ -358,33 +360,55 @@ private fun executeCockpitCommand(
         }
 
         // ── Shell Mode Switching ──────────────────────────────────────
-        CommandActionType.SHELL_CLASSIC -> {
-            viewModel.setShellMode(SimplifiedShellMode.CLASSIC)
-            HandlerResult.success("Classic dashboard")
+        CommandActionType.SHELL_COCKPIT_AVANUE -> {
+            viewModel.setShellMode(SimplifiedShellMode.COCKPIT_AVANUE)
+            HandlerResult.success("CockpitAvanue dashboard")
         }
-        CommandActionType.SHELL_AVANUE_VIEWS -> {
-            viewModel.setShellMode(SimplifiedShellMode.AVANUE_VIEWS)
-            HandlerResult.success("AvanueViews stream")
+        CommandActionType.SHELL_MAP_VIEWS -> {
+            viewModel.setShellMode(SimplifiedShellMode.MAP_VIEWS)
+            HandlerResult.success("MapViews stream")
         }
-        CommandActionType.SHELL_LENS -> {
-            viewModel.setShellMode(SimplifiedShellMode.LENS)
-            HandlerResult.success("Lens palette")
+        CommandActionType.SHELL_SEARCH_AVANUE -> {
+            viewModel.setShellMode(SimplifiedShellMode.SEARCH_AVANUE)
+            HandlerResult.success("SearchAvanue palette")
         }
-        CommandActionType.SHELL_CANVAS -> {
-            viewModel.setShellMode(SimplifiedShellMode.CANVAS)
-            HandlerResult.success("Canvas mode")
+        CommandActionType.SHELL_SPACE_AVANUE -> {
+            viewModel.setShellMode(SimplifiedShellMode.SPACE_AVANUE)
+            HandlerResult.success("SpaceAvanue canvas")
         }
 
         // ── Shell-Specific Navigation ─────────────────────────────────
         // These are forwarded to the active shell composable via content actions.
         // The shell-specific composables handle the actual navigation internally.
-        CommandActionType.STREAM_NEXT_CARD,
-        CommandActionType.STREAM_PREVIOUS_CARD,
-        CommandActionType.CANVAS_ZOOM_IN,
-        CommandActionType.CANVAS_ZOOM_OUT -> {
+        CommandActionType.MAP_NEXT_CARD,
+        CommandActionType.MAP_PREVIOUS_CARD,
+        CommandActionType.SPACE_ZOOM_IN,
+        CommandActionType.SPACE_ZOOM_OUT -> {
             // Shell navigation is handled by the Compose UI layer,
             // not by the ViewModel. Return success to acknowledge.
             HandlerResult.success("$actionType")
+        }
+
+        // ── Workspace Voice Navigation ───────────────────────────────
+        CommandActionType.WORKSPACE_NEXT_SCREEN -> {
+            viewModel.nextScreen()
+            HandlerResult.success("Next screen")
+        }
+        CommandActionType.WORKSPACE_PREVIOUS_SCREEN -> {
+            viewModel.previousScreen()
+            HandlerResult.success("Previous screen")
+        }
+        CommandActionType.WORKSPACE_OPEN_NEW -> {
+            viewModel.openNewScreen()
+            HandlerResult.success("New screen opened")
+        }
+        CommandActionType.WORKSPACE_CLOSE_SCREEN -> {
+            viewModel.closeScreen()
+            HandlerResult.success("Screen closed")
+        }
+        CommandActionType.WORKSPACE_OPEN_APP -> {
+            // Module ID is expected in metadata; for now launch default
+            HandlerResult.success("Use 'open [module name]' to launch a specific module")
         }
 
         else -> {

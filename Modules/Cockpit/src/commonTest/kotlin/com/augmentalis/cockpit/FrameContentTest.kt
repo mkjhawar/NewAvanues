@@ -43,14 +43,15 @@ class FrameContentTest {
         assertEquals(FrameContent.TYPE_AI_SUMMARY, FrameContent.AiSummary().typeId)
         assertEquals(FrameContent.TYPE_SCREEN_CAST, FrameContent.ScreenCast().typeId)
         assertEquals(FrameContent.TYPE_WIDGET, FrameContent.Widget().typeId)
+        assertEquals(FrameContent.TYPE_FILE, FrameContent.File().typeId)
         assertEquals(FrameContent.TYPE_EXTERNAL_APP, FrameContent.ExternalApp().typeId)
     }
 
     // ── ALL_TYPES Completeness ────────────────────────────────────
 
     @Test
-    fun `ALL_TYPES contains exactly 17 entries`() {
-        assertEquals(17, FrameContent.ALL_TYPES.size)
+    fun `ALL_TYPES contains exactly 18 entries`() {
+        assertEquals(18, FrameContent.ALL_TYPES.size)
     }
 
     @Test
@@ -59,12 +60,19 @@ class FrameContentTest {
             "web", "pdf", "image", "video", "note", "camera",
             "voice_note", "form", "signature", "voice",
             "map", "whiteboard", "terminal",
-            "ai_summary", "screen_cast", "widget", "external_app"
+            "ai_summary", "screen_cast", "widget",
+            "file", "external_app"
         )
         expected.forEach { typeId ->
             assertTrue(
                 FrameContent.ALL_TYPES.contains(typeId),
                 "ALL_TYPES missing: $typeId"
+            )
+        }
+        FrameContent.ALL_TYPES.forEach { typeId ->
+            assertTrue(
+                expected.contains(typeId),
+                "Unexpected type in ALL_TYPES: $typeId"
             )
         }
     }

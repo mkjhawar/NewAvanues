@@ -158,7 +158,7 @@ fun <T> ArcLayout(
 
                 // Calculate position on arc
                 val angleOffset = distanceFromCenter * itemSpacing
-                val angleRadians = Math.toRadians(angleOffset.toDouble())
+                val angleRadians = angleOffset.toDouble() * kotlin.math.PI / 180.0
 
                 val arcPosition = calculateArcPosition(
                     orientation = orientation,

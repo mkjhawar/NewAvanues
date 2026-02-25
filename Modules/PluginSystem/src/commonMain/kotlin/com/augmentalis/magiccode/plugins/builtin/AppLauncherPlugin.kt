@@ -16,6 +16,8 @@ import com.augmentalis.magiccode.plugins.universal.*
 import com.augmentalis.magiccode.plugins.universal.contracts.voiceoscore.*
 import com.augmentalis.voiceoscore.ActionResult
 import com.augmentalis.voiceoscore.QuantizedCommand
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -297,7 +299,7 @@ interface IAppLauncher {
  *
  * @since 1.0.0
  */
-class AppRegistry {
+class AppRegistry : SynchronizedObject() {
 
     private val apps = mutableMapOf<String, AppInfo>()
     private val aliasIndex = mutableMapOf<String, String>() // alias -> packageName
@@ -314,8 +316,7 @@ class AppRegistry {
      *
      * @param app App information to register
      */
-    @Synchronized
-    fun register(app: AppInfo) {
+    fun register(app: AppInfo) = synchronized(this) {
         apps[app.packageName] = app
 
         // Index aliases for fast lookup
@@ -331,9 +332,8 @@ class AppRegistry {
      * @param packageName Package name of the app to remove
      * @return true if app was removed, false if not found
      */
-    @Synchronized
-    fun unregister(packageName: String): Boolean {
-        val app = apps.remove(packageName) ?: return false
+    fun unregister(packageName: String): Boolean = synchronized(this) {
+        val app = apps.remove(packageName) ?: return@synchronized false
 
         // Remove from alias index
         aliasIndex.remove(app.displayName.lowercase())
@@ -341,7 +341,7 @@ class AppRegistry {
             aliasIndex.remove(alias.lowercase())
         }
 
-        return true
+        true
     }
 
     /**
@@ -355,20 +355,19 @@ class AppRegistry {
      * @param query Search query
      * @return AppInfo if found, null otherwise
      */
-    @Synchronized
-    fun find(query: String): AppInfo? {
+    fun find(query: String): AppInfo? = synchronized(this) {
         val normalizedQuery = query.lowercase().trim()
 
         // Check alias index first (fast path)
         aliasIndex[normalizedQuery]?.let { packageName ->
-            return apps[packageName]
+            return@synchronized apps[packageName]
         }
 
         // Check package name
-        apps[normalizedQuery.lowercase()]?.let { return it }
+        apps[normalizedQuery.lowercase()]?.let { return@synchronized it }
 
         // Fallback: linear search (shouldn't be needed with proper indexing)
-        return apps.values.find { it.matches(query) }
+        apps.values.find { it.matches(query) }
     }
 
     /**
@@ -378,11 +377,10 @@ class AppRegistry {
      * @param limit Maximum results to return
      * @return List of matching apps
      */
-    @Synchronized
-    fun search(query: String, limit: Int = 10): List<AppInfo> {
+    fun search(query: String, limit: Int = 10): List<AppInfo> = synchronized(this) {
         val normalizedQuery = query.lowercase().trim()
 
-        return apps.values
+        apps.values
             .filter { it.partialMatches(query) }
             .sortedBy { app ->
                 // Prioritize exact matches, then by name length
@@ -401,8 +399,7 @@ class AppRegistry {
      *
      * @return List of all registered app info
      */
-    @Synchronized
-    fun getAll(): List<AppInfo> = apps.values.toList()
+    fun getAll(): List<AppInfo> = synchronized(this) { apps.values.toList() }
 
     /**
      * Get apps by category.
@@ -410,16 +407,14 @@ class AppRegistry {
      * @param category Category to filter by
      * @return List of apps in the category
      */
-    @Synchronized
-    fun getByCategory(category: String): List<AppInfo> {
-        return apps.values.filter { it.category == category }
+    fun getByCategory(category: String): List<AppInfo> = synchronized(this) {
+        apps.values.filter { it.category == category }
     }
 
     /**
      * Clear all registered apps.
      */
-    @Synchronized
-    fun clear() {
+    fun clear() = synchronized(this) {
         apps.clear()
         aliasIndex.clear()
     }
@@ -429,8 +424,7 @@ class AppRegistry {
      *
      * @param appList List of apps to register
      */
-    @Synchronized
-    fun registerAll(appList: List<AppInfo>) {
+    fun registerAll(appList: List<AppInfo>) = synchronized(this) {
         appList.forEach { register(it) }
     }
 }

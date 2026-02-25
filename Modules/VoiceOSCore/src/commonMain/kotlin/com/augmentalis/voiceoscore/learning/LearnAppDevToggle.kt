@@ -163,11 +163,11 @@ object LearnAppDevToggle {
     // ==================== State ====================
 
     /** Current active tier */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var currentTier: Tier = Tier.LITE
 
     /** Build type: debug or release */
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var isDebugBuild: Boolean = false
 
     /** Overrides for individual features - synchronized access required */

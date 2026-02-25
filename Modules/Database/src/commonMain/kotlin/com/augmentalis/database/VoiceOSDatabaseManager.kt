@@ -92,7 +92,7 @@ class VoiceOSDatabaseManager private constructor(
     companion object {
         private val lock = SynchronizedObject()
 
-        @Volatile
+        @kotlin.concurrent.Volatile
         private var instance: VoiceOSDatabaseManager? = null
 
         /**

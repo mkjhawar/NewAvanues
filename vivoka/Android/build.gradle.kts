@@ -56,12 +56,11 @@ android {
 }
 
 dependencies {
-    // Vivoka VSDK - Unpacked from AARs to avoid AAR-in-AAR issues
+    // Vivoka VSDK — git-tracked local JARs + jniLibs
     api(files("libs/vsdk-6.0.0.jar"))
     api(files("libs/vsdk-csdk-asr-2.0.0.jar"))
     api(files("libs/vsdk-csdk-core-1.0.1.jar"))
-
-    // Native libraries are in src/main/jniLibs/ (automatically included)
+    // Native libraries from src/main/jniLibs/ (automatically included by AGP)
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
