@@ -65,7 +65,13 @@ kotlin {
             }
         }
 
-        val desktopMain by getting { dependsOn(commonMain) }
+        val desktopMain by getting {
+            dependsOn(commonMain)
+            dependencies {
+                // Compose runtime needed for kotlin.compose plugin on JVM target
+                implementation("org.jetbrains.compose.runtime:runtime:1.7.3")
+            }
+        }
         val desktopTest by getting { dependsOn(commonTest) }
     }
 }

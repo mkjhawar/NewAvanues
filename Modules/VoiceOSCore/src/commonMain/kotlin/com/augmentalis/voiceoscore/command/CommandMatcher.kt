@@ -37,12 +37,11 @@ object CommandMatcher {
     /** High-confidence threshold — if any candidate scores this high, skip full sort */
     private const val EARLY_EXIT_THRESHOLD = 0.95f
 
+    /** Max entries in the LRU cache */
+    private const val MAX_CACHE_SIZE = 100
+
     /** LRU cache for fuzzy match results. Key = "input|threshold|actionFilter" */
-    private val matchCache = object : LinkedHashMap<String, MatchResult>(128, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MatchResult>?): Boolean {
-            return size > 100
-        }
-    }
+    private val matchCache = linkedMapOf<String, MatchResult>()
 
     /** Generation counter — incremented on registry changes to invalidate cache */
     @Volatile
@@ -57,6 +56,22 @@ object CommandMatcher {
      */
     fun invalidateCache() {
         cacheGeneration++
+    }
+
+    /** Get from LRU cache, promoting entry to most-recently-used position */
+    private fun cacheGet(key: String): MatchResult? {
+        val value = matchCache.remove(key) ?: return null
+        matchCache[key] = value // re-insert at end = most recently used
+        return value
+    }
+
+    /** Put into LRU cache, evicting oldest entries when full */
+    private fun cachePut(key: String, value: MatchResult) {
+        matchCache.remove(key)
+        matchCache[key] = value
+        while (matchCache.size > MAX_CACHE_SIZE) {
+            matchCache.remove(matchCache.keys.first())
+        }
     }
 
     /**
@@ -135,7 +150,7 @@ object CommandMatcher {
             lastRegistryGeneration = registryGen
         }
         val cacheKey = "$normalized|$threshold|${actionFilter?.name ?: ""}"
-        matchCache[cacheKey]?.let { return it }
+        cacheGet(cacheKey)?.let { return it }
 
         // Layer 2: Word pre-filter — only score commands sharing at least one word with input
         val inputWords = normalized.split(Regex("\\s+")).filter { it.isNotBlank() }.toSet()
@@ -179,7 +194,7 @@ object CommandMatcher {
                 // Early exit: high-confidence match with clear margin
                 if (bestScore >= EARLY_EXIT_THRESHOLD && bestScore - secondBestScore > 0.1f) {
                     val result = MatchResult.Fuzzy(bestCmd!!, bestScore, expanded != normalized)
-                    matchCache[cacheKey] = result
+                    cachePut(cacheKey, result)
                     return result
                 }
             }
@@ -207,7 +222,7 @@ object CommandMatcher {
             )
         }
 
-        matchCache[cacheKey] = result
+        cachePut(cacheKey, result)
         return result
     }
 

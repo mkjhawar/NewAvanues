@@ -47,6 +47,9 @@ kotlin {
 
                 // DateTime (for DSL execution timing)
                 implementation(libs.kotlinx.datetime)
+
+                // Atomicfu for cross-platform synchronized locks (PluginRegistry)
+                implementation(libs.kotlinx.atomicfu)
             }
         }
 

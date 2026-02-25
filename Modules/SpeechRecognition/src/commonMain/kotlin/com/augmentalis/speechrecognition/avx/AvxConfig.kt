@@ -103,12 +103,9 @@ data class AvxConfig(
      */
     fun effectiveThreadCount(isAndroid: Boolean = true): Int {
         if (numThreads > 0) return numThreads
-        val cores = Runtime.getRuntime().availableProcessors()
-        return if (isAndroid) {
-            (cores / 2).coerceIn(2, 4) // Mobile: conservative
-        } else {
-            (cores / 2).coerceIn(2, 8) // Desktop: more headroom
-        }
+        // Default core estimate for cross-platform (Runtime.availableProcessors() is JVM-only)
+        // Platform-specific callers can set numThreads explicitly for optimal performance
+        return if (isAndroid) 2 else 4
     }
 
     /**
