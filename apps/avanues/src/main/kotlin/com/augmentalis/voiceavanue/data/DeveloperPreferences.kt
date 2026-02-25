@@ -51,6 +51,10 @@ object DeveloperPreferencesKeys {
     val SCROLL_EVENT_DEBOUNCE_MS = longPreferencesKey("dev_scroll_event_debounce_ms")
     val SCREEN_CHANGE_DELAY_MS = longPreferencesKey("dev_screen_change_delay_ms")
 
+    // Cockpit Debug
+    val FORCE_SHELL_MODE = stringPreferencesKey("dev_force_shell_mode")
+    val SHOW_SHELL_DEBUG_OVERLAY = booleanPreferencesKey("dev_show_shell_debug_overlay")
+
     // Developer mode activation
     val DEVELOPER_MODE_ACTIVATED = booleanPreferencesKey("dev_mode_activated")
 }
@@ -103,6 +107,8 @@ class DeveloperPreferencesRepository(
             contentChangeDebounceMs = prefs[DeveloperPreferencesKeys.CONTENT_CHANGE_DEBOUNCE_MS] ?: DeveloperSettings.DEFAULT_CONTENT_CHANGE_DEBOUNCE_MS,
             scrollEventDebounceMs = prefs[DeveloperPreferencesKeys.SCROLL_EVENT_DEBOUNCE_MS] ?: DeveloperSettings.DEFAULT_SCROLL_EVENT_DEBOUNCE_MS,
             screenChangeDelayMs = prefs[DeveloperPreferencesKeys.SCREEN_CHANGE_DELAY_MS] ?: DeveloperSettings.DEFAULT_SCREEN_CHANGE_DELAY_MS,
+            forceShellMode = prefs[DeveloperPreferencesKeys.FORCE_SHELL_MODE] ?: "",
+            showShellDebugOverlay = prefs[DeveloperPreferencesKeys.SHOW_SHELL_DEBUG_OVERLAY] ?: false,
             developerModeActivated = prefs[DeveloperPreferencesKeys.DEVELOPER_MODE_ACTIVATED] ?: false
         )
     }
@@ -123,6 +129,8 @@ class DeveloperPreferencesRepository(
         prefs[DeveloperPreferencesKeys.CONTENT_CHANGE_DEBOUNCE_MS] = s.contentChangeDebounceMs
         prefs[DeveloperPreferencesKeys.SCROLL_EVENT_DEBOUNCE_MS] = s.scrollEventDebounceMs
         prefs[DeveloperPreferencesKeys.SCREEN_CHANGE_DELAY_MS] = s.screenChangeDelayMs
+        prefs[DeveloperPreferencesKeys.FORCE_SHELL_MODE] = s.forceShellMode
+        prefs[DeveloperPreferencesKeys.SHOW_SHELL_DEBUG_OVERLAY] = s.showShellDebugOverlay
         prefs[DeveloperPreferencesKeys.DEVELOPER_MODE_ACTIVATED] = s.developerModeActivated
     }
 }

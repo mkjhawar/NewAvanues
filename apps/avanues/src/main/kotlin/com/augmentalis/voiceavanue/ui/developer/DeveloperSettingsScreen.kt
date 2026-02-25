@@ -10,6 +10,7 @@
  * 2. Feature Flags (debug, verbose, overlay, scanner verbosity, auto-start, synonyms)
  * 3. Engine Selection (STT engine, voice language)
  * 4. Timing / Debounce (content change, scroll event, screen change delay)
+ * 5. Cockpit Debug (force shell mode override, shell debug overlay)
  *
  * Copyright (C) Manoj Jhawar/Aman Jhawar, Intelligent Devices LLC
  */
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -285,6 +287,39 @@ fun DeveloperSettingsScreen(
                     steps = 18,
                     valueLabel = "${settings.screenChangeDelayMs}ms",
                     onValueChange = { viewModel.updateScreenChangeDelay(it.toLong()) }
+                )
+            }
+
+            // ── Section 5: Cockpit Debug ──
+            SettingsSectionHeader(title = "COCKPIT DEBUG")
+            SettingsGroupCard {
+                SettingsDropdownRow(
+                    title = "Force Shell Mode",
+                    subtitle = "Override user's shell selection (empty = no override)",
+                    icon = Icons.Default.Dashboard,
+                    selected = settings.forceShellMode,
+                    options = listOf("", "CLASSIC", "AVANUE_VIEWS", "LENS", "CANVAS"),
+                    optionLabel = { mode ->
+                        when (mode) {
+                            "" -> "None (Use User Setting)"
+                            "CLASSIC" -> "Classic Dashboard"
+                            "AVANUE_VIEWS" -> "AvanueViews Stream"
+                            "LENS" -> "Lens Palette"
+                            "CANVAS" -> "Canvas Spatial"
+                            else -> mode
+                        }
+                    },
+                    onSelected = { viewModel.updateForceShellMode(it) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Force Shell Mode" }
+                )
+
+                SettingsSwitchRow(
+                    title = "Shell Debug Overlay",
+                    subtitle = "Show shell name + frame count badge on screen",
+                    icon = Icons.Default.Visibility,
+                    checked = settings.showShellDebugOverlay,
+                    onCheckedChange = { viewModel.updateShowShellDebugOverlay(it) },
+                    modifier = Modifier.semantics { contentDescription = "Voice: click Shell Debug Overlay" }
                 )
             }
 

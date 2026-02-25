@@ -23,6 +23,15 @@ import com.augmentalis.voiceavanue.ui.settings.providers.SystemSettingsProvider
 import com.augmentalis.voiceavanue.ui.settings.providers.VoiceControlSettingsProvider
 import com.augmentalis.voiceavanue.ui.settings.providers.VoiceCursorSettingsProvider
 import com.augmentalis.voiceavanue.ui.settings.providers.WebAvanueSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.CockpitSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.PDFAvanueSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.PhotoAvanueSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.VideoAvanueSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.NoteAvanueSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.FileAvanueSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.RemoteCastSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.AnnotationAvanueSettingsProvider
+import com.augmentalis.voiceavanue.ui.settings.providers.ImageAvanueSettingsProvider
 import com.augmentalis.webavanue.BrowserRepository
 import dagger.Module
 import dagger.Provides
@@ -67,4 +76,67 @@ object SettingsModule {
         credentialStore: com.augmentalis.voiceavanue.data.SftpCredentialStore
     ): ComposableSettingsProvider =
         SystemSettingsProvider(repository, credentialStore)
+
+    @Provides
+    @IntoSet
+    fun provideCockpitSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        CockpitSettingsProvider(repository)
+
+    @Provides
+    @IntoSet
+    fun providePDFAvanueSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        PDFAvanueSettingsProvider(repository)
+
+    @Provides
+    @IntoSet
+    fun providePhotoAvanueSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        PhotoAvanueSettingsProvider(repository)
+
+    @Provides
+    @IntoSet
+    fun provideVideoAvanueSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        VideoAvanueSettingsProvider(repository)
+
+    @Provides
+    @IntoSet
+    fun provideNoteAvanueSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        NoteAvanueSettingsProvider(repository)
+
+    @Provides
+    @IntoSet
+    fun provideFileAvanueSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        FileAvanueSettingsProvider(repository)
+
+    @Provides
+    @IntoSet
+    fun provideRemoteCastSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        RemoteCastSettingsProvider(repository)
+
+    @Provides
+    @IntoSet
+    fun provideAnnotationAvanueSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        AnnotationAvanueSettingsProvider(repository)
+
+    @Provides
+    @IntoSet
+    fun provideImageAvanueSettings(
+        repository: AvanuesSettingsRepository
+    ): ComposableSettingsProvider =
+        ImageAvanueSettingsProvider(repository)
 }

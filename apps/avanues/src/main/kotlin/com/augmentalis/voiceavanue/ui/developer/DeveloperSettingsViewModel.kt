@@ -101,6 +101,15 @@ class DeveloperSettingsViewModel @Inject constructor(
         repository.updateKey(DeveloperPreferencesKeys.SCREEN_CHANGE_DELAY_MS, ms)
     }
 
+    // Cockpit Debug
+    fun updateForceShellMode(mode: String) = viewModelScope.launch {
+        repository.updateKey(DeveloperPreferencesKeys.FORCE_SHELL_MODE, mode)
+    }
+
+    fun updateShowShellDebugOverlay(enabled: Boolean) = viewModelScope.launch {
+        repository.updateKey(DeveloperPreferencesKeys.SHOW_SHELL_DEBUG_OVERLAY, enabled)
+    }
+
     // Reset all to defaults
     fun resetToDefaults() = viewModelScope.launch {
         repository.updateKey(DeveloperPreferencesKeys.STT_TIMEOUT_MS, 10000L)
@@ -118,5 +127,7 @@ class DeveloperSettingsViewModel @Inject constructor(
         repository.updateKey(DeveloperPreferencesKeys.CONTENT_CHANGE_DEBOUNCE_MS, 300L)
         repository.updateKey(DeveloperPreferencesKeys.SCROLL_EVENT_DEBOUNCE_MS, 150L)
         repository.updateKey(DeveloperPreferencesKeys.SCREEN_CHANGE_DELAY_MS, 200L)
+        repository.updateKey(DeveloperPreferencesKeys.FORCE_SHELL_MODE, "")
+        repository.updateKey(DeveloperPreferencesKeys.SHOW_SHELL_DEBUG_OVERLAY, false)
     }
 }

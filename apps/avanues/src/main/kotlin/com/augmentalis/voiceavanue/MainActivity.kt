@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,7 +50,9 @@ import com.augmentalis.avanueui.display.DisplayProfileResolver
 import com.augmentalis.devicemanager.DeviceCapabilityFactory
 import com.augmentalis.devicemanager.KmpDeviceType
 import com.augmentalis.foundation.settings.models.AvanuesSettings
+import com.augmentalis.foundation.settings.models.DeveloperSettings
 import com.augmentalis.voiceavanue.data.AvanuesSettingsRepository
+import com.augmentalis.voiceavanue.data.DeveloperPreferencesRepository
 import com.augmentalis.voiceavanue.service.VoiceAvanueAccessibilityService
 import com.augmentalis.voiceavanue.ui.browser.BrowserEntryViewModel
 import com.augmentalis.voiceavanue.ui.cockpit.CockpitEntryViewModel
@@ -112,6 +115,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AvanuesApp(
                         startMode = launchMode,
+                        settings = settings,
                         onNavControllerReady = { this@MainActivity.navController = it }
                     )
                 }
@@ -217,9 +221,15 @@ enum class AvanueMode(val route: String, val label: String) {
 @Composable
 fun AvanuesApp(
     startMode: AvanueMode = AvanueMode.HUB,
+    settings: AvanuesSettings = AvanuesSettings(),
     onNavControllerReady: ((NavHostController) -> Unit)? = null
 ) {
     val navController = rememberNavController()
+
+    // Collect developer settings for shell mode override
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val devRepo = remember(context) { DeveloperPreferencesRepository(context) }
+    val devSettings by devRepo.settings.collectAsState(initial = DeveloperSettings())
 
     // Expose navController to activity for onNewIntent handling
     LaunchedEffect(navController) {
@@ -242,7 +252,9 @@ fun AvanuesApp(
                         else -> android.util.Log.w("MainActivity",
                             "Unknown special module: $moduleId — no navigation target")
                     }
-                }
+                },
+                userShellMode = settings.shellMode,
+                devForceShellMode = devSettings.forceShellMode
             )
         }
 
@@ -319,19 +331,21 @@ fun AvanuesApp(
             CockpitScreen(
                 viewModel = cockpitEntry.cockpitViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
+                onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) },
+                userShellMode = settings.shellMode,
+                devForceShellMode = devSettings.forceShellMode
             )
         }
 
         // ── Module-Direct Launcher Routes ──
         // Each launches Cockpit with a specific module auto-opened via launchModule()
-        moduleDirectRoute(AvanueMode.PDF, "pdfavanue", navController)
-        moduleDirectRoute(AvanueMode.IMAGE, "imageavanue", navController)
-        moduleDirectRoute(AvanueMode.VIDEO, "videoavanue", navController)
-        moduleDirectRoute(AvanueMode.NOTE, "noteavanue", navController)
-        moduleDirectRoute(AvanueMode.PHOTO, "photoavanue", navController)
-        moduleDirectRoute(AvanueMode.CAST, "remotecast", navController)
-        moduleDirectRoute(AvanueMode.DRAW, "annotationavanue", navController)
+        moduleDirectRoute(AvanueMode.PDF, "pdfavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.IMAGE, "imageavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.VIDEO, "videoavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.NOTE, "noteavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.PHOTO, "photoavanue", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.CAST, "remotecast", navController, settings.shellMode, devSettings.forceShellMode)
+        moduleDirectRoute(AvanueMode.DRAW, "annotationavanue", navController, settings.shellMode, devSettings.forceShellMode)
     }
 }
 
@@ -343,7 +357,9 @@ fun AvanuesApp(
 private fun NavGraphBuilder.moduleDirectRoute(
     mode: AvanueMode,
     moduleId: String,
-    navController: NavHostController
+    navController: NavHostController,
+    userShellMode: String = "",
+    devForceShellMode: String = ""
 ) {
     composable(mode.route) {
         val cockpitEntry: CockpitEntryViewModel = hiltViewModel()
@@ -355,7 +371,9 @@ private fun NavGraphBuilder.moduleDirectRoute(
         CockpitScreen(
             viewModel = cockpitEntry.cockpitViewModel,
             onNavigateBack = { navController.popBackStack() },
-            onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) }
+            onNavigateToSettings = { navController.navigate(AvanueMode.SETTINGS.route) },
+            userShellMode = userShellMode,
+            devForceShellMode = devForceShellMode
         )
     }
 }
